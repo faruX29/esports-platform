@@ -1,0 +1,40 @@
+name: Sync Esports Matches
+
+on:
+  schedule:
+    # Her 15 dakikada bir çalış (UTC saat diliminde)
+    - cron: '*/15 * * * *'
+  
+  # Manuel çalıştırma seçeneği
+  workflow_dispatch:
+
+jobs:
+  sync-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+      
+      - name: Sync all games
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
+        run: |
+          cd backend
+          python run.py --all-games --limit 50
+      
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Sync failed! Check logs."

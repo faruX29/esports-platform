@@ -1,185 +1,56 @@
 """
-Main ETL script: Sync matches from PandaScore to Supabase
+Sync match data to Supabase database
 """
-from datetime import datetime
-from typing import List, Dict
-import psycopg
 from database import Database
 from etl.pandascore_client import PandaScoreClient
 from etl.data_cleaner import DataCleaner
+import psycopg
+import json
+
 
 class MatchSyncer:
-    """Sync matches from PandaScore to database"""
+    """Sync match data from PandaScore to Supabase"""
     
     def __init__(self):
         self.client = PandaScoreClient()
+        self.cleaner = DataCleaner()
     
-    def sync_team(self, conn: psycopg.Connection, team_data: Dict, game_id: int):
-        """
-        Upsert a single team to database
-        
-        Args:
-            conn: Database connection
-            team_data: Cleaned team dict
-            game_id: Game ID from games table
-        """
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO teams (id, name, slug, acronym, logo_url, game_id, pandascore_data, last_synced_at)
-                VALUES (%(id)s, %(name)s, %(slug)s, %(acronym)s, %(logo_url)s, %(game_id)s, %(pandascore_data)s, NOW())
-                ON CONFLICT (id) DO UPDATE SET
-                    name = EXCLUDED.name,
-                    slug = EXCLUDED.slug,
-                    acronym = EXCLUDED.acronym,
-                    logo_url = EXCLUDED.logo_url,
-                    last_synced_at = NOW(),
-                    updated_at = NOW()
-            """, {
-                'id': team_data['id'],
-                'name': team_data['name'],
-                'slug': team_data.get('slug'),
-                'acronym': team_data.get('acronym', ''),
-                'logo_url': team_data.get('logo_url'),
-                'game_id': game_id,
-                'pandascore_data': psycopg.types.json.Jsonb(team_data)
-            })
-    
-    def sync_tournament(self, conn: psycopg.Connection, tournament_data: Dict, game_id: int) -> int:
-        """
-        Upsert tournament and return its ID
-        
-        Args:
-            conn: Database connection
-            tournament_data: Cleaned tournament dict
-            game_id: Game ID from games table
-        
-        Returns:
-            Tournament ID
-        """
-        if not tournament_data.get('id'):
-            return None
-        
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO tournaments (id, name, slug, game_id, tier, pandascore_data, last_synced_at)
-                VALUES (%(id)s, %(name)s, %(slug)s, %(game_id)s, %(tier)s, %(pandascore_data)s, NOW())
-                ON CONFLICT (id) DO UPDATE SET
-                    name = EXCLUDED.name,
-                    slug = EXCLUDED.slug,
-                    tier = EXCLUDED.tier,
-                    last_synced_at = NOW(),
-                    updated_at = NOW()
-                RETURNING id
-            """, {
-                'id': tournament_data['id'],
-                'name': tournament_data['name'],
-                'slug': tournament_data.get('slug'),
-                'game_id': game_id,
-                'tier': tournament_data.get('tier'),
-                'pandascore_data': psycopg.types.json.Jsonb(tournament_data)
-            })
-            
-            result = cur.fetchone()
-            return result[0] if result else tournament_data['id']
-    
-    def sync_match(self, conn: psycopg.Connection, match_data: Dict, game_id: int):
-        """
-        Upsert a single match to database
-        
-        Args:
-            conn: Database connection
-            match_data: Cleaned match dict
-            game_id: Game ID from games table
-        """
-        # First, sync both teams
-        self.sync_team(conn, match_data['teams']['team_a'], game_id)
-        self.sync_team(conn, match_data['teams']['team_b'], game_id)
-        
-        # Sync tournament
-        tournament_id = self.sync_tournament(conn, match_data['tournament'], game_id)
-        
-        # Then sync the match
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO matches (
-                    id, game_id, tournament_id,
-                    team_a_id, team_b_id,
-                    status, scheduled_at,
-                    match_type, number_of_games, winner_id,
-                    pandascore_data, last_synced_at
-                )
-                VALUES (
-                    %(id)s, %(game_id)s, %(tournament_id)s,
-                    %(team_a_id)s, %(team_b_id)s,
-                    %(status)s, %(scheduled_at)s,
-                    %(match_type)s, %(number_of_games)s, %(winner_id)s,
-                    %(pandascore_data)s, NOW()
-                )
-                ON CONFLICT (id) DO UPDATE SET
-                    status = EXCLUDED.status,
-                    scheduled_at = EXCLUDED.scheduled_at,
-                    winner_id = EXCLUDED.winner_id,
-                    last_synced_at = NOW(),
-                    updated_at = NOW()
-            """, {
-                'id': match_data['id'],
-                'game_id': game_id,
-                'tournament_id': tournament_id,
-                'team_a_id': match_data['teams']['team_a']['id'],
-                'team_b_id': match_data['teams']['team_b']['id'],
-                'status': match_data['status'],
-                'scheduled_at': match_data['scheduled_at'],
-                'match_type': match_data.get('match_type'),
-                'number_of_games': match_data.get('number_of_games'),
-                'winner_id': match_data.get('winner_id'),
-                'pandascore_data': psycopg.types.json.Jsonb(match_data['raw_data'])
-            })
-    
-    def sync_game_matches(self, game_slug: str, limit: int = 50) -> Dict:
+    def sync_game_matches(self, game_slug, limit=50, past=False, page=1):
         """
         Sync matches for a specific game
         
         Args:
-            game_slug: Game identifier ('valorant', 'cs-go', 'lol')
+            game_slug: Game identifier (valorant, csgo, lol)
             limit: Maximum number of matches to fetch
-        
+            past: If True, fetch past matches instead of upcoming
+            
         Returns:
-            Stats dict with counts
+            dict: Sync statistics
         """
-        print(f"\n🎮 Syncing {game_slug.upper()} matches...")
+        print(f"\n🎮 Syncing {game_slug.upper()} {'past' if past else 'upcoming'} matches...")
         
-        # Get game_id from database
-        game_id = Database.get_game_id(game_slug)
-        if not game_id:
-            print(f"❌ Game '{game_slug}' not found in database")
-            return {'error': 'Game not found'}
-        
-        # Fetch matches from PandaScore
-        print(f"📥 Fetching from PandaScore API...")
-        raw_matches = self.client.get_upcoming_matches(game_slug, per_page=limit)
+        # Fetch matches from API
+        print("📥 Fetching from PandaScore API...")
+        if past:
+            raw_matches = self.client.get_past_matches(game_slug, limit, page)
+        else:
+            raw_matches = self.client.get_upcoming_matches(game_slug, limit)
         
         if not raw_matches:
             print("❌ No matches fetched from API")
             return {'fetched': 0, 'cleaned': 0, 'synced': 0}
         
-        print(f"✅ Fetched {len(raw_matches)} matches")
+        # Clean data
+        print("🧹 Cleaning data...")
+        cleaned_matches = self.cleaner.clean_matches(raw_matches)
         
-        # Clean matches
-        print(f"🧹 Cleaning data...")
-        cleaned_matches = DataCleaner.clean_matches(raw_matches)
-        print(f"✅ Cleaned {len(cleaned_matches)} valid matches")
+        if not cleaned_matches:
+            print("❌ No valid matches after cleaning")
+            return {'fetched': len(raw_matches), 'cleaned': 0, 'synced': 0}
         
         # Sync to database
-        print(f"💾 Syncing to database...")
-        synced_count = 0
-        
-        with Database.get_connection() as conn:
-            for match in cleaned_matches:
-                try:
-                    self.sync_match(conn, match, game_id)
-                    synced_count += 1
-                except Exception as e:
-                    print(f"❌ Failed to sync match {match['id']}: {e}")
+        print("💾 Syncing to database...")
+        synced_count = self._upsert_matches(cleaned_matches)
         
         print(f"✅ Synced {synced_count} matches to database")
         
@@ -188,25 +59,154 @@ class MatchSyncer:
             'cleaned': len(cleaned_matches),
             'synced': synced_count
         }
-
-def main():
-    """Main entry point"""
-    print("=" * 60)
-    print("🚀 ESPORTS DATA SYNC")
-    print(f"⏰ Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("=" * 60)
     
-    syncer = MatchSyncer()
+    def _upsert_matches(self, matches):
+        """
+        Upsert matches to database
+        
+        Args:
+            matches: List of cleaned match data
+            
+        Returns:
+            int: Number of matches synced
+        """
+        synced_count = 0
+        
+        with Database.get_connection() as conn:
+            with conn.cursor() as cur:
+                for match in matches:
+                    try:
+                        # Get or create game
+                        game_id = self._get_or_create_game(cur, match['game_slug'])
+                        
+                        # Get or create teams
+                        team_a_id = self._get_or_create_team(
+                            cur, 
+                            match['team_a_id'], 
+                            match['team_a_name'],
+                            match.get('team_a_acronym'),
+                            match.get('team_a_logo')
+                        )
+                        
+                        team_b_id = self._get_or_create_team(
+                            cur, 
+                            match['team_b_id'], 
+                            match['team_b_name'],
+                            match.get('team_b_acronym'),
+                            match.get('team_b_logo')
+                        )
+                        
+                        # Get or create tournament
+                        tournament_id = None
+                        if match.get('tournament_id') and match.get('tournament_name'):
+                            tournament_id = self._get_or_create_tournament(
+                                cur,
+                                match['tournament_id'],
+                                match['tournament_name'],
+                                game_id
+                            )
+                        
+                        # Upsert match with scores
+                        cur.execute("""
+                            INSERT INTO matches (
+                                id, game_id, team_a_id, team_b_id, tournament_id,
+                                scheduled_at, status, serie_id, winner_id,
+                                team_a_score, team_b_score, raw_data
+                            )
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            ON CONFLICT (id) DO UPDATE SET
+                                status = EXCLUDED.status,
+                                winner_id = EXCLUDED.winner_id,
+                                team_a_score = EXCLUDED.team_a_score,
+                                team_b_score = EXCLUDED.team_b_score,
+                                raw_data = EXCLUDED.raw_data,
+                                updated_at = CURRENT_TIMESTAMP
+                        """, (
+                            match['id'],
+                            game_id,
+                            team_a_id,
+                            team_b_id,
+                            tournament_id,
+                            match['scheduled_at'],
+                            match['status'],
+                            match.get('serie_id'),
+                            match.get('winner_id'),
+                            match.get('team_a_score'),
+                            match.get('team_b_score'),
+                            json.dumps(match['raw_data'])
+                        ))
+                        
+                        synced_count += 1
+                        
+                    except psycopg.Error as e:
+                        print(f"⚠️  Error syncing match {match['id']}: {e}")
+                        continue
+                
+                conn.commit()
+        
+        return synced_count
     
-    # Sync Valorant matches
-    stats = syncer.sync_game_matches('valorant', limit=50)
+    def _get_or_create_game(self, cur, game_slug):
+        """Get or create game in database"""
+        if not game_slug:
+            return None
+        
+        game_names = {
+            'valorant': 'Valorant',
+            'csgo': 'Counter-Strike 2',
+            'lol': 'League of Legends'
+        }
+        
+        cur.execute("SELECT id FROM games WHERE slug = %s", (game_slug,))
+        result = cur.fetchone()
+        
+        if result:
+            return result[0]
+        
+        game_name = game_names.get(game_slug, game_slug.title())
+        cur.execute(
+            "INSERT INTO games (slug, name) VALUES (%s, %s) ON CONFLICT (slug) DO NOTHING RETURNING id",
+            (game_slug, game_name)
+        )
+        result = cur.fetchone()
+        return result[0] if result else None
     
-    print("\n" + "=" * 60)
-    print("📊 SYNC COMPLETE")
-    print(f"   Fetched: {stats.get('fetched', 0)} matches")
-    print(f"   Cleaned: {stats.get('cleaned', 0)} matches")
-    print(f"   Synced:  {stats.get('synced', 0)} matches")
-    print("=" * 60)
-
-if __name__ == "__main__":
-    main()
+    def _get_or_create_team(self, cur, team_id, name, acronym=None, logo_url=None):
+        """Get or create team in database"""
+        cur.execute("SELECT id FROM teams WHERE id = %s", (team_id,))
+        result = cur.fetchone()
+        
+        if result:
+            return result[0]
+        
+        cur.execute("""
+            INSERT INTO teams (id, name, acronym, logo_url)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                acronym = EXCLUDED.acronym,
+                logo_url = EXCLUDED.logo_url
+            RETURNING id
+        """, (team_id, name, acronym, logo_url))
+        
+        result = cur.fetchone()
+        return result[0]
+    
+    def _get_or_create_tournament(self, cur, tournament_id, name, game_id):
+        """Get or create tournament in database"""
+        cur.execute("SELECT id FROM tournaments WHERE id = %s", (tournament_id,))
+        result = cur.fetchone()
+        
+        if result:
+            return result[0]
+        
+        cur.execute("""
+            INSERT INTO tournaments (id, name, game_id)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name
+            RETURNING id
+        """, (tournament_id, name, game_id))
+        
+        result = cur.fetchone()
+        return result[0]

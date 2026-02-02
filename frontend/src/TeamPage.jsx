@@ -18,18 +18,18 @@ function TeamPage() {
   async function fetchTeamData() {
     try {
       setLoading(true)
-      
-      // Takım bilgilerini çek
+
+      // Fetch team info
       const { data: teamData, error: teamError } = await supabase
         .from('teams')
         .select('*')
         .eq('id', teamId)
         .single()
-      
+
       if (teamError) throw teamError
       setTeam(teamData)
-      
-      // Takımın maçlarını çek
+
+      // Fetch ALL team matches (upcoming + past)
       const { data: matchesData, error: matchesError } = await supabase
         .from('matches')
         .select(`
@@ -41,17 +41,27 @@ function TeamPage() {
         `)
         .or(`team_a_id.eq.${teamId},team_b_id.eq.${teamId}`)
         .order('scheduled_at', { ascending: false })
-        .limit(50)
-      
+
       if (matchesError) throw matchesError
       setMatches(matchesData || [])
-      
+
     } catch (error) {
       console.error('Error fetching team data:', error)
     } finally {
       setLoading(false)
     }
   }
+
+  // Filter matches
+  const upcomingMatches = matches.filter(m => m.status === 'not_started')
+  const pastMatches = matches.filter(m => m.status === 'finished')
+
+  // Get form (last 5 matches)
+  const recentMatches = pastMatches.slice(0, 5)
+  const form = recentMatches.map(match => {
+    if (!match.winner_id) return 'D' // Draw
+    return match.winner_id === parseInt(teamId) ? 'W' : 'L'
+  })
 
   if (loading) {
     return (
@@ -65,7 +75,7 @@ function TeamPage() {
     return (
       <div style={{ textAlign: 'center', padding: '50px' }}>
         <h2>❌ Team not found</h2>
-        <button 
+        <button
           onClick={() => navigate('/')}
           style={{
             marginTop: '20px',
@@ -83,14 +93,10 @@ function TeamPage() {
     )
   }
 
-  const upcomingMatches = matches.filter(m => m.status === 'not_started')
-  const pastMatches = matches.filter(m => m.status === 'finished')
-  const displayMatches = activeTab === 'upcoming' ? upcomingMatches : pastMatches
-
   return (
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-      {/* Back Button */}
-      <button 
+      {/* Header */}
+      <button
         onClick={() => navigate('/')}
         style={{
           marginBottom: '20px',
@@ -102,100 +108,121 @@ function TeamPage() {
           cursor: 'pointer',
           fontSize: '14px'
         }}
-        onMouseEnter={(e) => e.target.style.backgroundColor = '#444'}
-        onMouseLeave={(e) => e.target.style.backgroundColor = '#333'}
+        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#444'}
+        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#333'}
       >
         ← Back to Matches
       </button>
 
-      {/* Team Header */}
+      {/* Team Info */}
       <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '30px',
+        marginBottom: '40px',
+        padding: '30px',
         backgroundColor: '#1a1a1a',
         borderRadius: '15px',
-        padding: '30px',
-        marginBottom: '30px',
-        textAlign: 'center',
         border: '2px solid #FF4655'
       }}>
         {team.logo_url && (
-          <img 
-            src={team.logo_url} 
+          <img
+            src={team.logo_url}
             alt={team.name}
             style={{
               width: '150px',
               height: '150px',
-              objectFit: 'contain',
-              marginBottom: '20px'
+              objectFit: 'contain'
             }}
           />
         )}
-        
-        <h1 style={{ fontSize: '36px', marginBottom: '10px' }}>
-          {team.name}
-        </h1>
-        
-        {team.acronym && (
-          <div style={{ 
-            fontSize: '18px', 
-            color: '#888',
-            marginBottom: '10px'
-          }}>
-            {team.acronym}
-          </div>
-        )}
-
-        <div style={{ 
-          display: 'flex', 
-          gap: '20px', 
-          justifyContent: 'center',
-          marginTop: '20px',
-          flexWrap: 'wrap'
-        }}>
-          <div style={{ 
-            backgroundColor: '#0a0a0a', 
-            padding: '15px 25px',
-            borderRadius: '10px'
-          }}>
-            <div style={{ fontSize: '12px', color: '#888', marginBottom: '5px' }}>
-              Total Matches
+        <div style={{ flex: 1 }}>
+          <h1 style={{ margin: '0 0 10px 0', fontSize: '48px' }}>
+            {team.name}
+          </h1>
+          {team.acronym && (
+            <div style={{ fontSize: '24px', color: '#888', marginBottom: '20px' }}>
+              {team.acronym}
             </div>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#4CAF50' }}>
+          )}
+          
+          {/* Form Badge */}
+          {form.length > 0 && (
+            <div style={{ display: 'flex', gap: '5px', marginTop: '15px' }}>
+              <span style={{ color: '#888', marginRight: '10px', fontSize: '14px' }}>
+                Recent Form:
+              </span>
+              {form.map((result, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    width: '30px',
+                    height: '30px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '5px',
+                    backgroundColor: 
+                      result === 'W' ? '#4CAF50' : 
+                      result === 'L' ? '#FF4655' : 
+                      '#888',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    fontSize: '14px'
+                  }}
+                >
+                  {result}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Stats */}
+        <div style={{ display: 'flex', gap: '20px' }}>
+          <div style={{
+            textAlign: 'center',
+            padding: '20px',
+            backgroundColor: '#0a0a0a',
+            borderRadius: '10px',
+            minWidth: '120px'
+          }}>
+            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#FF4655' }}>
               {matches.length}
             </div>
+            <div style={{ fontSize: '14px', color: '#888' }}>Total Matches</div>
           </div>
-
-          <div style={{ 
-            backgroundColor: '#0a0a0a', 
-            padding: '15px 25px',
-            borderRadius: '10px'
+          <div style={{
+            textAlign: 'center',
+            padding: '20px',
+            backgroundColor: '#0a0a0a',
+            borderRadius: '10px',
+            minWidth: '120px'
           }}>
-            <div style={{ fontSize: '12px', color: '#888', marginBottom: '5px' }}>
-              Upcoming
-            </div>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#FFB800' }}>
+            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#FFB800' }}>
               {upcomingMatches.length}
             </div>
+            <div style={{ fontSize: '14px', color: '#888' }}>Upcoming</div>
           </div>
-
-          <div style={{ 
-            backgroundColor: '#0a0a0a', 
-            padding: '15px 25px',
-            borderRadius: '10px'
+          <div style={{
+            textAlign: 'center',
+            padding: '20px',
+            backgroundColor: '#0a0a0a',
+            borderRadius: '10px',
+            minWidth: '120px'
           }}>
-            <div style={{ fontSize: '12px', color: '#888', marginBottom: '5px' }}>
-              Completed
-            </div>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#666' }}>
+            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#4CAF50' }}>
               {pastMatches.length}
             </div>
+            <div style={{ fontSize: '14px', color: '#888' }}>Completed</div>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div style={{ 
-        display: 'flex', 
-        gap: '10px', 
+      <div style={{
+        display: 'flex',
+        gap: '10px',
         marginBottom: '20px',
         borderBottom: '2px solid #333'
       }}>
@@ -206,16 +233,15 @@ function TeamPage() {
             backgroundColor: activeTab === 'upcoming' ? '#FF4655' : 'transparent',
             color: 'white',
             border: 'none',
-            borderRadius: '5px 5px 0 0',
+            borderRadius: '8px 8px 0 0',
             cursor: 'pointer',
             fontSize: '16px',
             fontWeight: 'bold',
             transition: 'background-color 0.2s'
           }}
         >
-          📅 Upcoming ({upcomingMatches.length})
+          Upcoming ({upcomingMatches.length})
         </button>
-
         <button
           onClick={() => setActiveTab('past')}
           style={{
@@ -223,148 +249,184 @@ function TeamPage() {
             backgroundColor: activeTab === 'past' ? '#FF4655' : 'transparent',
             color: 'white',
             border: 'none',
-            borderRadius: '5px 5px 0 0',
+            borderRadius: '8px 8px 0 0',
             cursor: 'pointer',
             fontSize: '16px',
             fontWeight: 'bold',
             transition: 'background-color 0.2s'
           }}
         >
-          ✅ Past ({pastMatches.length})
+          Past ({pastMatches.length})
         </button>
       </div>
 
-      {/* Matches List */}
-      {displayMatches.length === 0 ? (
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '50px',
-          backgroundColor: '#1a1a1a',
-          borderRadius: '10px'
-        }}>
-          <h3>📭 No {activeTab} matches</h3>
-        </div>
-      ) : (
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-          gap: '20px'
-        }}>
-          {displayMatches.map((match) => (
-            <div 
+      {/* Matches */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+        gap: '20px'
+      }}>
+        {(activeTab === 'upcoming' ? upcomingMatches : pastMatches).map((match) => {
+          const isTeamA = match.team_a.id === parseInt(teamId)
+          const opponent = isTeamA ? match.team_b : match.team_a
+          const teamScore = isTeamA ? match.team_a_score : match.team_b_score
+          const opponentScore = isTeamA ? match.team_b_score : match.team_a_score
+          const isWinner = match.winner_id === parseInt(teamId)
+          
+          return (
+            <div
               key={match.id}
               style={{
                 border: '1px solid #333',
-                borderRadius: '10px',
+                borderRadius: '12px',
                 padding: '20px',
                 backgroundColor: '#1a1a1a',
-                transition: 'transform 0.2s, box-shadow 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.02)'
-                e.currentTarget.style.boxShadow = '0 5px 15px rgba(255, 70, 85, 0.3)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)'
-                e.currentTarget.style.boxShadow = 'none'
+                position: 'relative'
               }}
             >
-              {/* Game Name */}
-              <div style={{ 
-                fontSize: '12px', 
-                color: '#888', 
-                marginBottom: '10px',
-                textTransform: 'uppercase',
-                fontWeight: 'bold'
-              }}>
-                {match.game?.name || 'Unknown Game'}
-              </div>
-
-              {/* Teams */}
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between',
+              {/* Game Badge */}
+              <div style={{
+                display: 'inline-block',
+                padding: '5px 10px',
+                backgroundColor: '#FF4655',
+                borderRadius: '5px',
+                fontSize: '12px',
+                fontWeight: 'bold',
                 marginBottom: '15px'
               }}>
-                {/* Team A */}
-                <div style={{ 
-                  textAlign: 'center', 
-                  flex: 1,
-                  opacity: match.team_a.id === parseInt(teamId) ? 1 : 0.6
+                {match.game.name}
+              </div>
+
+              {/* Result Badge (for past matches) */}
+              {activeTab === 'past' && match.winner_id && (
+                <div style={{
+                  position: 'absolute',
+                  top: '20px',
+                  right: '20px',
+                  padding: '5px 12px',
+                  backgroundColor: isWinner ? '#4CAF50' : '#FF4655',
+                  borderRadius: '15px',
+                  fontSize: '11px',
+                  fontWeight: 'bold'
                 }}>
-                  {match.team_a.logo_url && (
-                    <img 
-                      src={match.team_a.logo_url} 
-                      alt={match.team_a.name}
-                      style={{ 
-                        width: '40px', 
-                        height: '40px', 
+                  {isWinner ? '✅ WIN' : '❌ LOSS'}
+                </div>
+              )}
+
+              {/* Teams */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '20px',
+                marginBottom: '15px'
+              }}>
+                {/* Current Team */}
+                <div style={{ flex: 1, textAlign: 'center', opacity: 1 }}>
+                  {(isTeamA ? match.team_a : match.team_b).logo_url && (
+                    <img
+                      src={(isTeamA ? match.team_a : match.team_b).logo_url}
+                      alt={team.name}
+                      style={{
+                        width: '60px',
+                        height: '60px',
                         objectFit: 'contain',
-                        marginBottom: '8px'
+                        marginBottom: '10px'
                       }}
                     />
                   )}
-                  <div style={{ fontSize: '13px', fontWeight: 'bold' }}>
-                    {match.team_a.name}
+                  <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
+                    {team.name}
                   </div>
+                  {activeTab === 'past' && teamScore !== null && (
+                    <div style={{
+                      fontSize: '24px',
+                      fontWeight: 'bold',
+                      color: isWinner ? '#4CAF50' : '#FF4655',
+                      marginTop: '5px'
+                    }}>
+                      {teamScore}
+                    </div>
+                  )}
                 </div>
 
                 {/* VS */}
-                <div style={{ 
-                  fontSize: '16px', 
-                  fontWeight: 'bold', 
-                  color: '#FF4655',
-                  padding: '0 15px'
+                <div style={{
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  color: '#FF4655'
                 }}>
                   VS
                 </div>
 
-                {/* Team B */}
-                <div style={{ 
-                  textAlign: 'center', 
-                  flex: 1,
-                  opacity: match.team_b.id === parseInt(teamId) ? 1 : 0.6
-                }}>
-                  {match.team_b.logo_url && (
-                    <img 
-                      src={match.team_b.logo_url} 
-                      alt={match.team_b.name}
-                      style={{ 
-                        width: '40px', 
-                        height: '40px', 
+                {/* Opponent */}
+                <div
+                  onClick={() => navigate(`/team/${opponent.id}`)}
+                  style={{ flex: 1, textAlign: 'center', opacity: 0.6, cursor: 'pointer' }}
+                  onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                  onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+                >
+                  {opponent.logo_url && (
+                    <img
+                      src={opponent.logo_url}
+                      alt={opponent.name}
+                      style={{
+                        width: '60px',
+                        height: '60px',
                         objectFit: 'contain',
-                        marginBottom: '8px'
+                        marginBottom: '10px'
                       }}
                     />
                   )}
-                  <div style={{ fontSize: '13px', fontWeight: 'bold' }}>
-                    {match.team_b.name}
+                  <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
+                    {opponent.name}
                   </div>
+                  {activeTab === 'past' && opponentScore !== null && (
+                    <div style={{
+                      fontSize: '24px',
+                      fontWeight: 'bold',
+                      color: '#888',
+                      marginTop: '5px'
+                    }}>
+                      {opponentScore}
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Tournament */}
-              <div style={{ 
-                fontSize: '12px', 
-                color: '#aaa',
-                marginBottom: '10px',
-                textAlign: 'center'
-              }}>
-                🏆 {match.tournament?.name || 'Unknown Tournament'}
-              </div>
+              {match.tournament && (
+                <div style={{
+                  fontSize: '13px',
+                  color: '#aaa',
+                  marginBottom: '10px',
+                  textAlign: 'center'
+                }}>
+                  🏆 {match.tournament.name}
+                </div>
+              )}
 
-              {/* Time */}
-              <div style={{ 
-                fontSize: '13px', 
-                color: match.status === 'not_started' ? '#4CAF50' : '#666',
+              {/* Date */}
+              <div style={{
+                fontSize: '14px',
+                color: activeTab === 'upcoming' ? '#4CAF50' : '#888',
                 textAlign: 'center',
                 fontWeight: 'bold'
               }}>
                 📅 {new Date(match.scheduled_at).toLocaleString('tr-TR')}
               </div>
             </div>
-          ))}
+          )
+        })}
+      </div>
+
+      {/* No matches message */}
+      {(activeTab === 'upcoming' ? upcomingMatches : pastMatches).length === 0 && (
+        <div style={{
+          textAlign: 'center',
+          padding: '50px',
+          color: '#888'
+        }}>
+          <h3>No {activeTab} matches found</h3>
         </div>
       )}
     </div>

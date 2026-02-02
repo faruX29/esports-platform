@@ -1,97 +1,120 @@
-# 🎮 Esports Data Platform - Backend
+# 🎮 Esports Platform
 
-Professional ETL pipeline for syncing esports data from PandaScore API to Supabase.
+Full-stack esports data platform with Python ETL pipeline and React frontend.
 
-## 🚀 Quick Start
-
-### 1. Install Dependencies
-```bash
-# Activate virtual environment
-.\venv\Scripts\activate
-
-# Install packages
-pip install -r requirements.txt
-```
-
-### 2. Configure Environment
-
-Create `.env` file:
-```env
-PANDASCORE_TOKEN=your_token_here
-PANDASCORE_BASE_URL=https://api.pandascore.co
-DATABASE_URL=postgresql://postgres:password@host:5432/postgres
-LOG_LEVEL=INFO
-SYNC_INTERVAL_MINUTES=15
-BATCH_SIZE=50
-```
-
-### 3. Run ETL
-```bash
-# Sync Valorant matches
-python run.py
-
-# Sync all games
-python run.py --all-games
-
-# Sync specific game with limit
-python run.py --game cs-go --limit 100
-```
-
-## 📁 Project Structure
-```
-backend/
-├── .env                    # Environment variables (SECRET)
-├── config.py              # Configuration management
-├── database.py            # Database connection
-├── run.py                 # Main entry point
-├── requirements.txt       # Python dependencies
-├── etl/                   # ETL scripts
-│   ├── pandascore_client.py  # API client
-│   ├── data_cleaner.py       # Data validation
-│   └── sync_matches.py       # Main sync logic
-└── utils/                 # Utilities
-```
-
-## 🗄️ Database Schema
-
-- **games** - Supported games (valorant, cs-go, lol)
-- **teams** - Esports teams
-- **tournaments** - Tournament information
-- **matches** - Match records with teams and schedule
-
-## 🔧 Commands
-```bash
-# Test database connection
-python database.py
-
-# Test PandaScore API
-python -m etl.pandascore_client
-
-# Test data cleaner
-python -m etl.data_cleaner
-
-# Run full sync
-python run.py
-```
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![React](https://img.shields.io/badge/React-18-61DAFB)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-green)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ## 📊 Features
 
-✅ **PandaScore API Integration** - Fetch live esports data  
-✅ **Data Cleaning** - Filter invalid matches  
-✅ **UPSERT Logic** - No duplicate entries  
-✅ **Multiple Games** - Valorant, CS2, LoL support  
-✅ **Error Handling** - Robust error management  
-✅ **PostgreSQL** - Normalized database schema  
+- **130+ Live Matches** from PandaScore API
+- **3 Games Support:** Valorant, CS2, League of Legends
+- **Team & Tournament Pages**
+- **Favorites System** with localStorage
+- **Auto-refresh** every 30 seconds
+- **Search & Filters** (game, date, teams)
+- **Automated Sync** via GitHub Actions (every 15 minutes)
 
-## 🎯 Next Steps
+## 🛠️ Tech Stack
 
-- [ ] Automated scheduling (GitHub Actions / Cron)
-- [ ] Error logging to file
-- [ ] Discord/Email notifications
-- [ ] Frontend API endpoints
-- [ ] Player statistics sync
+### Backend (Python ETL)
+- Python 3.11+
+- PostgreSQL (Supabase)
+- psycopg3
+- PandaScore API
+- GitHub Actions
 
-## 👨‍💻 Developer
+### Frontend (React)
+- React 18 + Vite
+- React Router
+- Supabase JS Client
+- CSS-in-JS
 
-Built by Ömer Faruk Selçuk  
-Karabük University - Computer Engineering
+## 🚀 Quick Start
+
+### Backend Setup
+```bash
+cd backend
+python -m venv venv
+.\venv\Scripts\activate  # Windows
+source venv/bin/activate  # Mac/Linux
+
+pip install -r requirements.txt
+
+# Create .env file
+# DATABASE_URL=your_supabase_url
+# PANDASCORE_TOKEN=your_api_token
+
+python run.py --all-games --limit 50
+```
+
+### Frontend Setup
+```bash
+cd frontend
+npm install
+
+# Create .env file
+# VITE_SUPABASE_URL=your_supabase_url
+# VITE_SUPABASE_ANON_KEY=your_anon_key
+
+npm run dev
+```
+
+## 📸 Screenshots
+
+### Home Page
+![Home](docs/screenshot-home.png)
+
+### Team Page
+![Team](docs/screenshot-team.png)
+
+### Tournament Page
+![Tournament](docs/screenshot-tournament.png)
+
+## 🗄️ Database Schema
+```sql
+- games (id, name, slug)
+- teams (id, name, acronym, logo_url)
+- tournaments (id, name, tier, game_id)
+- matches (id, game_id, team_a_id, team_b_id, tournament_id, scheduled_at, status)
+```
+
+## 🤖 Automation
+
+GitHub Actions workflow syncs matches automatically:
+- **Schedule:** Every 15 minutes
+- **Manual trigger:** Available via Actions tab
+- **150 matches** fetched per run (50 per game)
+
+## 📚 API Reference
+
+Uses [PandaScore API](https://pandascore.co/) for esports data:
+- `/valorant/matches/upcoming`
+- `/csgo/matches/upcoming`
+- `/lol/matches/upcoming`
+
+## 🎯 Future Features
+
+- [ ] Past matches history
+- [ ] Player statistics
+- [ ] Live match updates (WebSocket)
+- [ ] Dark/Light mode toggle
+- [ ] Notification system
+- [ ] Mobile app (React Native)
+
+## 👨‍💻 Author
+
+**Ömer Faruk Selçuk**  
+Computer Engineering Student, Karabük University
+
+## 📄 License
+
+MIT License - feel free to use this project for learning!
+
+## 🙏 Acknowledgments
+
+- [PandaScore](https://pandascore.co/) for esports API
+- [Supabase](https://supabase.com/) for database hosting
+- [Vite](https://vitejs.dev/) for blazing fast frontend tooling

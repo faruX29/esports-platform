@@ -16,7 +16,7 @@ def main():
         '--game',
         type=str,
         default='valorant',
-        choices=['valorant', 'csgo', 'lol'],  # ← DÜZELTİLDİ: cs-go → csgo
+        choices=['valorant', 'csgo', 'lol'],
         help='Game to sync (default: valorant)'
     )
     
@@ -33,6 +33,18 @@ def main():
         help='Sync all games (valorant, csgo, lol)'
     )
     
+    parser.add_argument(
+        '--past',
+        action='store_true',
+        help='Sync past (finished) matches instead of upcoming'
+    )
+    parser.add_argument(
+        '--page',
+        type=int,
+        default=1,
+        help='Page number for past matches (default: 1)'
+    )
+    
     args = parser.parse_args()
     
     print("=" * 60)
@@ -44,12 +56,12 @@ def main():
     total_stats = {'fetched': 0, 'cleaned': 0, 'synced': 0}
     
     if args.all_games:
-        games = ['valorant', 'csgo', 'lol']  # ← DÜZELTİLDİ: cs-go → csgo
+        games = ['valorant', 'csgo', 'lol']
     else:
         games = [args.game]
     
     for game in games:
-        stats = syncer.sync_game_matches(game, limit=args.limit)
+        stats = syncer.sync_game_matches(game, limit=args.limit, past=args.past, page=args.page if args.past else 1)
         
         total_stats['fetched'] += stats.get('fetched', 0)
         total_stats['cleaned'] += stats.get('cleaned', 0)

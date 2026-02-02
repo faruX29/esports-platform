@@ -6,6 +6,7 @@ import { getFavorites, addFavorite, removeFavorite, isFavorite } from './favorit
 function UpcomingMatches() {
   const navigate = useNavigate()
   const [matches, setMatches] = useState([])
+  const [recentResults, setRecentResults] = useState([])
   const [filteredMatches, setFilteredMatches] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -30,6 +31,7 @@ function UpcomingMatches() {
   useEffect(() => {
     setFavorites(getFavorites())
     fetchMatches()
+    fetchRecentResults()
   }, [gameFilter, sortBy])
 
   // Search and favorites filter effect
@@ -62,6 +64,7 @@ function UpcomingMatches() {
     if (autoRefresh) {
       interval = setInterval(() => {
         fetchMatches()
+        fetchRecentResults()
       }, 30000)
     }
     
@@ -105,8 +108,31 @@ function UpcomingMatches() {
     }
   }
 
+  async function fetchRecentResults() {
+    try {
+      const { data, error } = await supabase
+        .from('matches')
+        .select(`
+          *,
+          team_a:teams!matches_team_a_id_fkey(*),
+          team_b:teams!matches_team_b_id_fkey(*),
+          tournament:tournaments(*),
+          game:games(*)
+        `)
+        .eq('status', 'finished')
+        .order('scheduled_at', { ascending: false })
+        .limit(10)
+
+      if (error) throw error
+      setRecentResults(data || [])
+    } catch (error) {
+      console.error('Error fetching recent results:', error)
+    }
+  }
+
   function handleManualRefresh() {
     fetchMatches()
+    fetchRecentResults()
   }
 
   function clearSearch() {
@@ -226,6 +252,171 @@ function UpcomingMatches() {
           </div>
         )}
       </div>
+
+      {/* RECENT RESULTS SECTION - YENİ! */}
+      {recentResults.length > 0 && (
+        <div style={{ marginBottom: '40px' }}>
+          <h2 style={{ 
+            fontSize: '24px', 
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
+          }}>
+            📊 Recent Results
+          </h2>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+            gap: '15px'
+          }}>
+            {recentResults.map((match) => {
+              const isTeamAWinner = match.winner_id === match.team_a.id
+              
+              return (
+                <div
+                  key={match.id}
+                  onClick={() => openMatchDetails(match)}
+                  style={{
+                    border: '1px solid #333',
+                    borderRadius: '10px',
+                    padding: '15px',
+                    backgroundColor: '#1a1a1a',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s, box-shadow 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-3px)'
+                    e.currentTarget.style.boxShadow = '0 5px 15px rgba(76, 175, 80, 0.2)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = 'none'
+                  }}
+                >
+                  {/* Game Badge */}
+                  <div style={{
+                    display: 'inline-block',
+                    padding: '3px 8px',
+                    backgroundColor: '#4CAF50',
+                    borderRadius: '5px',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    marginBottom: '10px'
+                  }}>
+                    {match.game.name}
+                  </div>
+
+                  {/* Teams with Scores */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '10px'
+                  }}>
+                    {/* Team A */}
+                    <div style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      opacity: isTeamAWinner ? 1 : 0.6
+                    }}>
+                      {match.team_a.logo_url && (
+                        <img
+                          src={match.team_a.logo_url}
+                          alt={match.team_a.name}
+                          style={{
+                            width: '40px',
+                            height: '40px',
+                            objectFit: 'contain'
+                          }}
+                        />
+                      )}
+                      <div>
+                        <div style={{
+                          fontSize: '13px',
+                          fontWeight: 'bold',
+                          color: isTeamAWinner ? '#4CAF50' : 'white'
+                        }}>
+                          {match.team_a.name}
+                        </div>
+                        <div style={{
+                          fontSize: '20px',
+                          fontWeight: 'bold',
+                          color: isTeamAWinner ? '#4CAF50' : '#888'
+                        }}>
+                          {match.team_a_score !== null ? match.team_a_score : '-'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* VS */}
+                    <div style={{
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      color: '#666',
+                      padding: '0 15px'
+                    }}>
+                      VS
+                    </div>
+
+                    {/* Team B */}
+                    <div style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      justifyContent: 'flex-end',
+                      opacity: !isTeamAWinner ? 1 : 0.6
+                    }}>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{
+                          fontSize: '13px',
+                          fontWeight: 'bold',
+                          color: !isTeamAWinner ? '#4CAF50' : 'white'
+                        }}>
+                          {match.team_b.name}
+                        </div>
+                        <div style={{
+                          fontSize: '20px',
+                          fontWeight: 'bold',
+                          color: !isTeamAWinner ? '#4CAF50' : '#888'
+                        }}>
+                          {match.team_b_score !== null ? match.team_b_score : '-'}
+                        </div>
+                      </div>
+                      {match.team_b.logo_url && (
+                        <img
+                          src={match.team_b.logo_url}
+                          alt={match.team_b.name}
+                          style={{
+                            width: '40px',
+                            height: '40px',
+                            objectFit: 'contain'
+                          }}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Tournament */}
+                  {match.tournament && (
+                    <div style={{
+                      fontSize: '12px',
+                      color: '#666',
+                      textAlign: 'center',
+                      marginTop: '8px'
+                    }}>
+                      🏆 {match.tournament.name}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
       
       {/* Arama Kutusu */}
       <div style={{ 
@@ -330,7 +521,6 @@ function UpcomingMatches() {
           </select>
         </div>
 
-        {/* Favorites Toggle */}
         <label style={{ 
           display: 'flex', 
           alignItems: 'center', 
@@ -694,7 +884,7 @@ function UpcomingMatches() {
         }
       `}</style>
 
-      {/* Modal - AYNI KALACAK (değişiklik yok) */}
+      {/* Modal */}
       {showModal && selectedMatch && (
         <div 
           onClick={closeModal}

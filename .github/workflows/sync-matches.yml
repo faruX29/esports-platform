@@ -2,15 +2,21 @@ name: Sync Esports Matches
 
 on:
   schedule:
-    # Her 15 dakikada bir çalış (UTC saat diliminde)
-    - cron: '*/15 * * * *'
+    # Her saat başı çalış (15 dakika yerine - daha az yük)
+    - cron: '0 * * * *'
   
   # Manuel çalıştırma seçeneği
   workflow_dispatch:
 
+# Concurrency: Aynı anda sadece 1 çalışsın
+concurrency:
+  group: sync-matches
+  cancel-in-progress: false  # Eski işi iptal etme, bekle
+
 jobs:
   sync-data:
     runs-on: ubuntu-latest
+    timeout-minutes: 10  # Max 10 dakika
     
     steps:
       - name: Checkout code
@@ -24,9 +30,9 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend
-          pip install -r requirements.txt
+          pip install -r requirements.txt --break-system-packages
       
-      - name: Sync all games
+      - name: Sync upcoming matches only (FAST!)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}

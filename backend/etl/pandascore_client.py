@@ -62,11 +62,12 @@ class PandaScoreClient:
         url = f"{self.base_url}/{game_slug}/matches/past"
         
         params = {
-            'token': self.api_token,
-            'per_page': limit,
-            'page': page,
-            'sort': '-begin_at'
-        }
+    'token': self.api_token,
+    'per_page': limit,
+    'page': page,
+    'sort': '-begin_at',
+    'filter[status]': 'finished'  # YENİ! Sadece finished maçlar
+    }
         
         try:
             print(f"📥 Fetching past matches (page {page})")

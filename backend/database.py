@@ -22,7 +22,10 @@ class Database:
         """
         conn = None
         try:
-            conn = psycopg.connect(Config.DATABASE_URL)
+            conn = psycopg.connect(
+                Config.DATABASE_URL,
+                connect_timeout=30
+                )
             yield conn
             conn.commit()
         except Exception as e:

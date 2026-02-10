@@ -38,7 +38,7 @@ jobs:
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
         run: |
           cd backend
-          python run.py --all-games --limit 50
+          python run.py --all-games --limit 50 --predict
       
       - name: Notify on failure
         if: failure()

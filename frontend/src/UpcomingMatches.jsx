@@ -666,6 +666,28 @@ function UpcomingMatches() {
                 {statusBadge.text}
               </div>
 
+              {/* AI Prediction Badge - YENİ! */}
+              {(match.prediction_team_a && match.prediction_team_b) && (
+                <div style={{
+                  position: 'absolute',
+                  top: '50px',
+                  right: '15px',
+                  padding: '5px 10px',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  borderRadius: '15px',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}>
+                  🔮 AI: {(match.prediction_team_a > match.prediction_team_b 
+                    ? Math.round(match.prediction_team_a * 100) 
+                    : Math.round(match.prediction_team_b * 100))}%
+                </div>
+              )}
+
               {/* Game Name */}
               <div style={{ 
                 fontSize: '12px', 

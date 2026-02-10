@@ -5,6 +5,7 @@ Usage: python run.py [options]
 import argparse
 from datetime import datetime
 from etl.sync_matches import MatchSyncer
+from etl.predict import MatchPredictor
 
 def main():
     """Main entry point with command-line arguments"""
@@ -44,6 +45,12 @@ def main():
         default=1,
         help='Page number for past matches (default: 1)'
     )
+
+    parser.add_argument(
+        '--predict',
+        action='store_true',
+        help='Run AI predictions on upcoming matches'
+    )
     
     args = parser.parse_args()
     
@@ -74,6 +81,18 @@ def main():
     print(f"   Cleaned: {total_stats['cleaned']} matches")
     print(f"   Synced:  {total_stats['synced']} matches")
     print("=" * 60)
+
+    # AI Predictions
+    if args.predict:
+        print("\n" + "=" * 60)
+        print("🧠 AI MATCH PREDICTIONS")
+        print("=" * 60)
+        
+        predictor = MatchPredictor()
+        predictions = predictor.predict_upcoming_matches(limit=150)
+        
+        print(f"\n✅ Generated {len(predictions)} predictions")
+        print("=" * 60)
 
 if __name__ == "__main__":
     main()

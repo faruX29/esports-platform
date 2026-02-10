@@ -6,6 +6,7 @@ import { getFavorites, addFavorite, removeFavorite, isFavorite } from './favorit
 function UpcomingMatches() {
   const navigate = useNavigate()
   const [matches, setMatches] = useState([])
+  const [accuracy, setAccuracy] = useState(null);
   const [recentResults, setRecentResults] = useState([])
   const [filteredMatches, setFilteredMatches] = useState([])
   const [loading, setLoading] = useState(true)
@@ -32,6 +33,7 @@ function UpcomingMatches() {
     setFavorites(getFavorites())
     fetchMatches()
     fetchRecentResults()
+    fetchAccuracy()
   }, [gameFilter, sortBy])
 
   // Search and favorites filter effect
@@ -64,6 +66,7 @@ function UpcomingMatches() {
     if (autoRefresh) {
       interval = setInterval(() => {
         fetchMatches()
+        fetchAccuracy();
         fetchRecentResults()
       }, 30000)
     }
@@ -107,6 +110,23 @@ function UpcomingMatches() {
       setLoading(false)
     }
   }
+
+  const fetchAccuracy = async () => {
+  console.log('🧠 Fetching accuracy...')
+  try {
+    const { data, error } = await supabase
+      .from('ai_accuracy_stats')
+      .select('*')
+      .single();
+
+      console.log('📊 Accuracy data:', data, 'Error:', error);
+    
+    if (error) throw error;
+    setAccuracy(data);
+  } catch (error) {
+    console.error('Error fetching accuracy:', error);
+  }
+};
 
   async function fetchRecentResults() {
     try {
@@ -252,6 +272,29 @@ function UpcomingMatches() {
           </div>
         )}
       </div>
+
+      {/* AI Accuracy Badge */}
+{accuracy && (
+  <div style={{
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px 16px',
+    background: 'linear-gradient(135deg, #ff9500 0%, #ff6b00 100%)',
+    borderRadius: '20px',
+    fontSize: '14px',
+    fontWeight: '600',
+    color: 'white',
+    marginLeft: '12px'
+  }}>
+    <span>🧠</span>
+    <span>AI Accuracy: {accuracy.accuracy_percentage}%</span>
+    <span style={{ fontSize: '12px', opacity: 0.9 }}>
+      ({accuracy.correct_predictions}/{accuracy.total_predictions})
+    </span>
+    <span style={{ fontSize: '11px', opacity: 0.8 }}>Learning Mode</span>
+  </div>
+)}
 
       {/* RECENT RESULTS SECTION - YENİ! */}
       {recentResults.length > 0 && (

@@ -14,12 +14,25 @@
 | GitHub Actions Timeout | ✅ Çözüldü (incremental sync) |
 | Frontend Accuracy Badge | ✅ Dinamik renk (yeşil/sarı/kırmızı) |
 | Supabase RLS | ✅ Tüm tablolar güvenli (6/6) |
+| Oyuncular (players) | ✅ 193 kayıt (50 takım) |
+| Maç istatistikleri (match_stats) | ✅ 20 kayıt — skor + harita detayı |
 | Veri Kaynağı | PandaScore API |
 | Oyunlar | Valorant, CS2, League of Legends |
 
 ---
 
 ## Son Yapılanlar
+
+### 2026-02-19 (4. güncelleme)
+- **Oyuncu & Maç İstatistikleri sistemi eklendi**
+  - `etl/sync_players.py` → yeni `PlayerStatsSyncer` sınıfı
+  - `players` tablosu: 193 oyuncu yüklendi (PandaScore `/teams/{id}`)
+    - `pandascore_id` + `team_pandascore_id` bigint kolonları eklendi (schema fix)
+  - `match_stats` tablosu: 20 kayıt (raw_data JSONB'den, API çağrısı yok)
+    - `(match_id, team_id)` unique index eklendi (tekrar yazma koruması)
+  - `run.py`: `--stats` ve `--players` flag'leri eklendi
+  - Workflow: `--stats` her çalışmaya eklendi, `--players` ayrı step oldu
+  - K/D/A şimdilik yok (PandaScore free tier 403), ileride ele alınacak
 
 ### 2026-02-19 (3. güncelleme)
 - **Supabase RLS tamamlandı** — Tüm 6 tablo güvenli hale getirildi:
@@ -52,7 +65,8 @@
 ### Öncelikli
 - [ ] **Accuracy takibi** — `prediction_team_a` vs gerçek `winner_id` kıyaslaması için ayrı bir script/endpoint yaz
 - [ ] **H2H bonus testi** — H2H aktif/pasif accuracy farkını ölçen bir karşılaştırma çalıştır
-- [x] ~~**Supabase RLS güvenliği**~~ — Tamamlandı (2026-02-19): tüm 6 tablo korumalı
+- [x] ~~**Supabase RLS güvenliği**~~ — Tamamlandı (2026-02-19)
+- [ ] **K/D/A istatistikleri** — PandaScore premium tier gerekiyor; ücretsiz alternatif araştır (HLTV scraping vb.)
 
 ### Orta Vadeli
 - [ ] **Accuracy'yi %50+ çıkar** — Ek feature'lar: son form streak, ev/deplasman avantajı (online maçlarda N/A), tur bazlı ağırlık

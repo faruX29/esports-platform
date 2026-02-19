@@ -6,6 +6,7 @@ import argparse
 from datetime import datetime
 from etl.sync_matches import MatchSyncer
 from etl.predict import MatchPredictor
+from etl.sync_players import PlayerStatsSyncer
 
 def main():
     """Main entry point with command-line arguments"""
@@ -51,7 +52,19 @@ def main():
         action='store_true',
         help='Run AI predictions on upcoming matches'
     )
-    
+
+    parser.add_argument(
+        '--stats',
+        action='store_true',
+        help='Extract match stats from raw_data into match_stats table (fast, no API call)'
+    )
+
+    parser.add_argument(
+        '--players',
+        action='store_true',
+        help='Sync player rosters from PandaScore /teams/{id} endpoint'
+    )
+
     args = parser.parse_args()
     
     print("=" * 60)
@@ -97,6 +110,29 @@ def main():
             predictions = predictor.predict_upcoming_matches(limit=150)
         
         print(f"\n✅ Generated {len(predictions)} predictions")
+        print("=" * 60)
+
+    # Match Stats (raw_data → match_stats tablosu, API çağrısı yok)
+    if args.stats:
+        print("\n" + "=" * 60)
+        print("📊 MATCH STATS SYNC")
+        print("=" * 60)
+        ps = PlayerStatsSyncer()
+        ps.ensure_schema()
+        stats_limit = args.limit * len(games) if args.limit else 200
+        count = ps.sync_match_stats(limit=stats_limit)
+        print(f"✅ {count} maç işlendi")
+        print("=" * 60)
+
+    # Player Rosters (PandaScore /teams/{id} → players tablosu)
+    if args.players:
+        print("\n" + "=" * 60)
+        print("👤 PLAYER ROSTER SYNC")
+        print("=" * 60)
+        ps = PlayerStatsSyncer()
+        ps.ensure_schema()
+        count = ps.sync_team_players(limit=50)
+        print(f"✅ {count} oyuncu eklendi/güncellendi")
         print("=" * 60)
 
 if __name__ == "__main__":

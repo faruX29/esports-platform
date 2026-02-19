@@ -32,14 +32,22 @@ jobs:
           cd backend
           pip install -r requirements.txt --break-system-packages
       
-      - name: Sync upcoming matches only (FAST!)
+      - name: Sync matches + predict + extract stats
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
         run: |
           cd backend
-          python run.py --all-games --limit 50 --predict
-      
+          python run.py --all-games --limit 50 --predict --stats
+
+      - name: Sync player rosters (incremental, max 50 teams)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
+        run: |
+          cd backend
+          python run.py --players
+
       - name: Notify on failure
         if: failure()
         run: |

@@ -13,12 +13,20 @@
 | H2H Sistemi | ✅ Aktif |
 | GitHub Actions Timeout | ✅ Çözüldü (incremental sync) |
 | Frontend Accuracy Badge | ✅ Dinamik renk (yeşil/sarı/kırmızı) |
+| Supabase RLS | ✅ Tüm tablolar güvenli (6/6) |
 | Veri Kaynağı | PandaScore API |
 | Oyunlar | Valorant, CS2, League of Legends |
 
 ---
 
 ## Son Yapılanlar
+
+### 2026-02-19 (3. güncelleme)
+- **Supabase RLS tamamlandı** — Tüm 6 tablo güvenli hale getirildi:
+  - `match_stats` ve `players`: RLS OFF → ON, SELECT politikası eklendi
+  - Tüm tablolara `authenticated` rolü için de SELECT politikası eklendi
+  - INSERT/UPDATE/DELETE: sadece `service_role` (backend) yapabilir
+  - Supabase Advisor'daki 2 kritik uyarı kapatıldı
 
 ### 2026-02-19 (2. güncelleme)
 - **AI Accuracy %40.85 → %75.00** — H2H sistemi devreye girdi (12/16 doğru)
@@ -44,7 +52,7 @@
 ### Öncelikli
 - [ ] **Accuracy takibi** — `prediction_team_a` vs gerçek `winner_id` kıyaslaması için ayrı bir script/endpoint yaz
 - [ ] **H2H bonus testi** — H2H aktif/pasif accuracy farkını ölçen bir karşılaştırma çalıştır
-- [ ] **Supabase RLS güvenliği** — `matches`, `teams`, `tournaments` tablolarına Row Level Security politikaları ekle (okuma public, yazma sadece servis rolü)
+- [x] ~~**Supabase RLS güvenliği**~~ — Tamamlandı (2026-02-19): tüm 6 tablo korumalı
 
 ### Orta Vadeli
 - [ ] **Accuracy'yi %50+ çıkar** — Ek feature'lar: son form streak, ev/deplasman avantajı (online maçlarda N/A), tur bazlı ağırlık

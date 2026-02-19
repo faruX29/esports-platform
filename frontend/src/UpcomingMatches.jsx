@@ -274,27 +274,39 @@ function UpcomingMatches() {
       </div>
 
       {/* AI Accuracy Badge */}
-{accuracy && (
-  <div style={{
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '8px 16px',
-    background: 'linear-gradient(135deg, #ff9500 0%, #ff6b00 100%)',
-    borderRadius: '20px',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: 'white',
-    marginLeft: '12px'
-  }}>
-    <span>🧠</span>
-    <span>AI Accuracy: {accuracy.accuracy_percentage}%</span>
-    <span style={{ fontSize: '12px', opacity: 0.9 }}>
-      ({accuracy.correct_predictions}/{accuracy.total_predictions})
-    </span>
-    <span style={{ fontSize: '11px', opacity: 0.8 }}>Learning Mode</span>
-  </div>
-)}
+{accuracy && (() => {
+  const pct = parseFloat(accuracy.accuracy_percentage)
+  const isHigh   = pct >= 70
+  const isMedium = pct >= 50 && pct < 70
+  const gradient = isHigh
+    ? 'linear-gradient(135deg, #00b09b 0%, #0f9e58 100%)'
+    : isMedium
+    ? 'linear-gradient(135deg, #f7971e 0%, #ffd200 100%)'
+    : 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)'
+  const label = isHigh ? '🔥 High Accuracy' : isMedium ? '📈 Improving' : '🎓 Learning'
+  return (
+    <div style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '8px',
+      padding: '8px 16px',
+      background: gradient,
+      borderRadius: '20px',
+      fontSize: '14px',
+      fontWeight: '600',
+      color: 'white',
+      marginLeft: '12px',
+      boxShadow: isHigh ? '0 0 12px rgba(0,176,155,0.4)' : 'none'
+    }}>
+      <span>🧠</span>
+      <span>AI Accuracy: {accuracy.accuracy_percentage}%</span>
+      <span style={{ fontSize: '12px', opacity: 0.9 }}>
+        ({accuracy.correct_predictions}/{accuracy.total_predictions})
+      </span>
+      <span style={{ fontSize: '11px', opacity: 0.85 }}>{label}</span>
+    </div>
+  )
+})()}
 
       {/* RECENT RESULTS SECTION - YENİ! */}
       {recentResults.length > 0 && (

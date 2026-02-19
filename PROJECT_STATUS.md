@@ -8,10 +8,11 @@
 
 | Alan | Değer |
 |---|---|
-| Veritabanındaki tamamlanmış maç | 2.908 |
-| AI Accuracy | %40.85 |
+| Veritabanındaki tamamlanmış maç | 2.908+ |
+| AI Accuracy | **%75.00** (12/16) — H2H ile %40.85'ten sıçradı |
 | H2H Sistemi | ✅ Aktif |
 | GitHub Actions Timeout | ✅ Çözüldü (incremental sync) |
+| Frontend Accuracy Badge | ✅ Dinamik renk (yeşil/sarı/kırmızı) |
 | Veri Kaynağı | PandaScore API |
 | Oyunlar | Valorant, CS2, League of Legends |
 
@@ -19,7 +20,15 @@
 
 ## Son Yapılanlar
 
-### 2026-02-19
+### 2026-02-19 (2. güncelleme)
+- **AI Accuracy %40.85 → %75.00** — H2H sistemi devreye girdi (12/16 doğru)
+- **Frontend badge dinamikleştirildi** — accuracy'ye göre renk ve etiket:
+  - `≥ %70` → 🔥 Yeşil gradient + "High Accuracy"
+  - `%50–69` → 📈 Sarı gradient + "Improving"
+  - `< %50`  → 🎓 Kırmızı gradient + "Learning"
+- **PROJECT_STATUS.md güncellendi**
+
+### 2026-02-19 (1. güncelleme)
 - **`calculate_h2h_bonus` eklendi** — `etl/predict.py`'da eksik olan H2H metodu yazıldı.
   - İki takım arasındaki tarihsel maçları sorgular
   - Min. 2 karşılaşma yoksa `0.0, 0.0` döner (güvenli fallback)

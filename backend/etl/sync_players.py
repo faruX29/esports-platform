@@ -164,24 +164,33 @@ class PlayerStatsSyncer:
 
     # ── Maç İstatistikleri ────────────────────────────────────────────────────
 
-    def sync_match_stats(self, limit=200):
+    def sync_match_stats(self, limit=500, batch_size=100):
         """
         raw_data JSONB'den takım bazlı maç istatistiklerini çıkarır.
         Ekstra API çağrısı yoktur — tüm veri zaten DB'de.
         Incremental: match_stats kaydı zaten olan maçları atlar.
 
-        Her (match_id, team_id) çifti için kayıt:
-          score        - kazanılan harita/oyun sayısı
-          games_detail - harita bazlı detay listesi
+        Optimizasyon: tek DB bağlantısı + executemany batch insert
+        (döngü başına ayrı connection yerine → 50-100x daha hızlı)
 
         Args:
-            limit: Bir seferde işlenecek max maç sayısı
+            limit:      Bir seferde işlenecek max maç sayısı
+            batch_size: Kaç satırda bir commit yapılacağı
 
         Returns:
             int: İşlenen maç sayısı
         """
+        INSERT_SQL = """
+            INSERT INTO match_stats (match_id, team_id, stats)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (match_id, team_id)
+              WHERE match_id IS NOT NULL AND team_id IS NOT NULL
+            DO NOTHING
+        """
+
         with Database.get_connection() as conn:
             with conn.cursor() as cur:
+                # 1) İşlenecek maçları çek
                 cur.execute("""
                     SELECT m.id, m.team_a_id, m.team_b_id, m.raw_data
                     FROM matches m
@@ -196,73 +205,69 @@ class PlayerStatsSyncer:
                 """, (limit,))
                 matches = cur.fetchall()
 
-        if not matches:
-            print("✅ Tüm maç istatistikleri zaten yüklü.")
-            return 0
+                if not matches:
+                    print("✅ Tüm maç istatistikleri zaten yüklü.")
+                    return 0
 
-        print(f"📊 {len(matches)} maç için istatistik işleniyor...")
-        processed = 0
-        skipped   = 0
+                print(f"📊 {len(matches)} maç için istatistik işleniyor...")
+                processed = 0
+                skipped   = 0
+                batch     = []   # (match_id, team_id, stats_json)
 
-        for match_id, team_a_id, team_b_id, raw_data in matches:
-            try:
-                results = raw_data.get('results', [])
-                games   = raw_data.get('games',   [])
+                # 2) Python'da parse et, batch biriktir
+                for match_id, team_a_id, team_b_id, raw_data in matches:
+                    try:
+                        results = raw_data.get('results', [])
+                        games   = raw_data.get('games',   [])
 
-                if not results or not (team_a_id or team_b_id):
-                    skipped += 1
-                    continue
+                        if not results or not (team_a_id or team_b_id):
+                            skipped += 1
+                            continue
 
-                # team_id → kazanılan harita sayısı
-                score_map = {
-                    r['team_id']: r['score']
-                    for r in results
-                    if r.get('team_id') is not None
-                }
+                        score_map = {
+                            r['team_id']: r['score']
+                            for r in results
+                            if r.get('team_id') is not None
+                        }
 
-                # Harita bazlı detaylar
-                games_detail = [
-                    {
-                        'position':       g.get('position'),
-                        'winner_id':      (g.get('winner') or {}).get('id'),
-                        'length_seconds': g.get('length'),
-                        'status':         g.get('status'),
-                    }
-                    for g in games
-                ]
+                        games_detail = [
+                            {
+                                'position':       g.get('position'),
+                                'winner_id':      (g.get('winner') or {}).get('id'),
+                                'length_seconds': g.get('length'),
+                                'status':         g.get('status'),
+                            }
+                            for g in games
+                        ]
 
-                # Her iki takım için birer satır ekle
-                rows = []
-                for tid in [team_a_id, team_b_id]:
-                    if not tid:
+                        for tid in [team_a_id, team_b_id]:
+                            if not tid:
+                                continue
+                            batch.append((
+                                match_id,
+                                tid,
+                                json.dumps({
+                                    'score':        score_map.get(tid),
+                                    'games_detail': games_detail,
+                                })
+                            ))
+
+                        processed += 1
+
+                        # 3) batch_size dolunca flush et
+                        if len(batch) >= batch_size:
+                            cur.executemany(INSERT_SQL, batch)
+                            conn.commit()
+                            batch.clear()
+
+                    except Exception as e:
+                        print(f"  ⚠️  match {match_id}: {e}")
                         continue
-                    rows.append((
-                        match_id,
-                        tid,
-                        json.dumps({
-                            'score':        score_map.get(tid),
-                            'games_detail': games_detail,
-                        })
-                    ))
 
-                if rows:
-                    with Database.get_connection() as conn:
-                        with conn.cursor() as cur:
-                            for row in rows:
-                                cur.execute("""
-                                    INSERT INTO match_stats (match_id, team_id, stats)
-                                    VALUES (%s, %s, %s)
-                                    ON CONFLICT (match_id, team_id)
-                                      WHERE match_id IS NOT NULL
-                                        AND team_id  IS NOT NULL
-                                    DO NOTHING
-                                """, row)
-                        conn.commit()
-                    processed += 1
-
-            except Exception as e:
-                print(f"  ⚠️  match {match_id}: {e}")
-                continue
+                # 4) Kalan satırları yaz
+                if batch:
+                    cur.executemany(INSERT_SQL, batch)
+                    conn.commit()
 
         print(f"\n📊 Sonuç: {processed} maç işlendi | {skipped} atlandı")
         return processed

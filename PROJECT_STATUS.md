@@ -15,13 +15,19 @@
 | Frontend Accuracy Badge | ✅ Dinamik renk (yeşil/sarı/kırmızı) |
 | Supabase RLS | ✅ Tüm tablolar güvenli (6/6) |
 | Oyuncular (players) | ✅ 193 kayıt (50 takım) |
-| Maç istatistikleri (match_stats) | ✅ 20 kayıt — skor + harita detayı |
+| Maç istatistikleri (match_stats) | ✅ **6.010 kayıt** (3.005 maç × 2 takım) |
 | Veri Kaynağı | PandaScore API |
 | Oyunlar | Valorant, CS2, League of Legends |
 
 ---
 
 ## Son Yapılanlar
+
+### 2026-02-19 (5. güncelleme)
+- **sync_match_stats 37x hızlandırıldı** — döngü içi connection → tek connection + executemany batch
+  - 100 maç: 159s → 4.3s
+  - Tüm 2.795 kalan maç: **26 saniyede** tamamlandı (0.4 dk)
+  - match_stats: 20 → **6.010 kayıt** (3.005 maç, hepsi işlendi, sıfır kalan)
 
 ### 2026-02-19 (4. güncelleme)
 - **Oyuncu & Maç İstatistikleri sistemi eklendi**

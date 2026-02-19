@@ -83,7 +83,53 @@ class MatchPredictor:
                 )
                 
                 return strength
+            
     
+    
+    def calculate_h2h_bonus(self, team_a_id, team_b_id):
+        """
+        Calculate head-to-head bonus based on historical matchups
+
+        Args:
+            team_a_id: Team A ID
+            team_b_id: Team B ID
+
+        Returns:
+            tuple: (bonus_a, bonus_b) small adjustments in range ~[-0.05, +0.05]
+        """
+        with Database.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT
+                        COUNT(*) as total,
+                        SUM(CASE WHEN winner_id = %s THEN 1 ELSE 0 END) as a_wins
+                    FROM matches
+                    WHERE (
+                        (team_a_id = %s AND team_b_id = %s) OR
+                        (team_a_id = %s AND team_b_id = %s)
+                    )
+                    AND status = 'finished'
+                    AND winner_id IS NOT NULL
+                """, (team_a_id, team_a_id, team_b_id, team_b_id, team_a_id))
+
+                result = cur.fetchone()
+                total = result[0] if result else 0
+
+                if total < 2:
+                    return 0.0, 0.0
+
+                a_wins = result[1] if result else 0
+                b_wins = total - a_wins
+
+                a_rate = a_wins / total
+                b_rate = b_wins / total
+
+                # Max ±0.05 bonus (fark ne kadar büyükse o kadar etkili)
+                bonus_a = (a_rate - 0.5) * 0.1
+                bonus_b = (b_rate - 0.5) * 0.1
+
+                return bonus_a, bonus_b
+
     def predict_match(self, match_id):
         """
         Predict match outcome
@@ -117,6 +163,11 @@ class MatchPredictor:
                 # Takım güçlerini hesapla
                 strength_a = self.calculate_team_strength(team_a_id, tier)
                 strength_b = self.calculate_team_strength(team_b_id, tier)
+
+                # H2H bonus ekle
+                h2h_bonus_a, h2h_bonus_b = self.calculate_h2h_bonus(team_a_id, team_b_id)
+                strength_a += h2h_bonus_a
+                strength_b += h2h_bonus_b
                 
                 # Normalize (toplam = 1.0)
                 total_strength = strength_a + strength_b
@@ -165,13 +216,54 @@ class MatchPredictor:
         
         with Database.get_connection() as conn:
             with conn.cursor() as cur:
-                # Upcoming maçları al
+                # Upcoming ve henüz tahmin yapılmamış maçları al
                 cur.execute("""
                     SELECT id
                     FROM matches
                     WHERE status = 'not_started'
                     AND scheduled_at > NOW()
+                    AND prediction_team_a IS NULL
                     ORDER BY scheduled_at ASC
+                    LIMIT %s
+                """, (limit,))
+                
+                matches = cur.fetchall()
+                
+                for match in matches:
+                    match_id = match[0]
+                    try:
+                        result = self.predict_match(match_id)
+                        if result:
+                            predictions.append(result)
+                            print(f"✅ Predicted match {match_id}: Team A {result['team_a_prob']:.1%} vs Team B {result['team_b_prob']:.1%}")
+                            conn.commit()
+                    except Exception as e:
+                        print(f"⚠️  Error predicting match {match_id}: {e}")
+                        continue
+
+        return predictions
+
+    def predict_finished_matches(self, limit=150):
+        """
+        Predict finished matches for accuracy testing
+        
+        Args:
+            limit: Maximum number of matches to predict
+            
+        Returns:
+            list: Prediction results
+        """
+        predictions = []
+        
+        with Database.get_connection() as conn:
+            with conn.cursor() as cur:
+                # Finished ve tahmin yapılmamış maçları al
+                cur.execute("""
+                    SELECT id
+                    FROM matches
+                    WHERE status = 'finished'
+                    AND prediction_team_a IS NULL
+                    ORDER BY scheduled_at DESC
                     LIMIT %s
                 """, (limit,))
                 

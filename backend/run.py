@@ -89,7 +89,12 @@ def main():
         print("=" * 60)
         
         predictor = MatchPredictor()
-        predictions = predictor.predict_upcoming_matches(limit=150)
+
+        # Past mode ise finished maçlara tahmin yap
+        if args.past:
+            predictions = predictor.predict_finished_matches(limit=args.limit or 150)
+        else:
+            predictions = predictor.predict_upcoming_matches(limit=150)
         
         print(f"\n✅ Generated {len(predictions)} predictions")
         print("=" * 60)

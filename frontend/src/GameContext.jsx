@@ -1,20 +1,5 @@
-import js from '@eslint/js'
-import globals from 'globals'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
-import { defineConfig, globalIgnores } from 'eslint/config'
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState } from 'react';
 
-/**
- * GameContext.jsx
- * Global oyun filtresi — tüm sayfalarda (Dashboard, Matches, Rankings) ortak kullanılır.
- *
- * Kullanım:
- *   const { activeGame, setActiveGame } = useGame()
- *   activeGame: 'all' | 'valorant' | 'cs2' | 'lol'
- *
- * GAMES dizisi Navbar'daki GameSelectorBar tarafından render edilir.
- */
 export const GAMES = [
   {
     id:         'all',
@@ -23,7 +8,6 @@ export const GAMES = [
     icon:       '🎮',
     color:      '#aaaaaa',
     soon:       false,
-    /* Supabase'de game_name sütununda eşleşecek alt dizeler */
     patterns:   [],
   },
   {
@@ -42,7 +26,7 @@ export const GAMES = [
     icon:       '🎯',
     color:      '#F0A500',
     soon:       false,
-    patterns:   ['counter-strike', 'cs-go', 'cs2', 'counter strike'],
+    patterns:   ['counter-strike', 'cs-go', 'cs2'],
   },
   {
     id:         'lol',
@@ -64,7 +48,7 @@ export const GAMES = [
   },
 ]
 
-/* ── Yardımcı: verilen oyun adı aktif filtreye uyuyor mu? ───────────────────── */
+/* ── Yardımcı: verilen oyun adı aktif filtreye uyuyor mu? ── */
 export function gameMatchesFilter(gameName = '', activeGameId) {
   if (!activeGameId || activeGameId === 'all') return true
   const game = GAMES.find(g => g.id === activeGameId)
@@ -73,7 +57,7 @@ export function gameMatchesFilter(gameName = '', activeGameId) {
   return game.patterns.some(p => lower.includes(p))
 }
 
-/* ── Context ────────────────────────────────────────────────────────────────── */
+/* ── Context ── */
 const GameContext = createContext(null)
 
 export function GameProvider({ children }) {
@@ -91,27 +75,3 @@ export function useGame() {
   if (!ctx) throw new Error('useGame must be used inside <GameProvider>')
   return ctx
 }
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{js,jsx}'],
-    extends: [
-      js.configs.recommended,
-      reactHooks.configs.flat.recommended,
-      reactRefresh.configs.vite,
-    ],
-    languageOptions: {
-      ecmaVersion: 2020,
-      globals: globals.browser,
-      parserOptions: {
-        ecmaVersion: 'latest',
-        ecmaFeatures: { jsx: true },
-        sourceType: 'module',
-      },
-    },
-    rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
-    },
-  },
-])

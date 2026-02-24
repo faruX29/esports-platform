@@ -23,6 +23,24 @@
 
 ## Son Yapılanlar
 
+### 2026-02-19 (7. güncelleme)
+- **Canlı maç desteği ve Türk takımı filtreleri eklendi**
+  - `UpcomingMatches.jsx`: `🔴 LIVE NOW` bölümü — `matches` tablosundan `status='running'` çekiliyor
+    - Canlı skor (varsa) gösteriliyor; 30s auto-refresh'e dahil edildi
+    - Önceden "kayboluyordu" çünkü `upcoming_matches` view'ı sadece `not_started` içeriyordu
+  - `src/constants.js`: Türk takımı listesi (Eternal Fire, BBL, FUT, Sangal, Galatasaray vb.)
+    - `isTurkishTeam(name)` helper — büyük/küçük harf duyarsız kısmi eşleşme
+  - Türk takımı içeren maç kartlarına `🇹🇷 Turkish Pride` badge + altın çerçeve eklendi
+  - `TeamPage.jsx` Roster: rol badge'leri role'e göre renk aldı (IGL=mor, Sniper=mavi, Entry=kırmızı...)
+    - `ROLE_STYLES` haritası + `getRoleBadge()` helper (18 farklı rol, glow efekti)
+
+### 2026-02-19 (6. güncelleme)
+- **Frontend oyuncu roster bileşenleri eklendi**
+  - `UpcomingMatches.jsx` modal: iki takımın kadrosu yan yana gösteriliyor (player cards)
+  - `TeamPage.jsx`: "Roster" sekmesi eklendi — oyuncu listesi (nickname, rol, fotoğraf)
+  - K/D/A yok (PandaScore free tier 403) — "Premium API gerekli" notu eklendi
+  - Supabase RLS uyumlu sorgular: `players.team_pandascore_id = teams.id`
+
 ### 2026-02-19 (5. güncelleme)
 - **sync_match_stats 37x hızlandırıldı** — döngü içi connection → tek connection + executemany batch
   - 100 maç: 159s → 4.3s

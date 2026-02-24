@@ -7,6 +7,12 @@ on:
   
   # Manuel çalıştırma seçeneği
   workflow_dispatch:
+    inputs:
+      force_rosters:
+        description: 'Tüm kadroları yeniden çek (force)'
+        required: false
+        default: 'false'
+        type: boolean
 
 # Concurrency: Aynı anda sadece 1 çalışsın
 concurrency:
@@ -40,15 +46,19 @@ jobs:
           cd backend
           python run.py --all-games --limit 50 --predict --stats
 
-      - name: Sync player rosters (incremental, max 50 teams)
+      - name: Sync active player rosters (incremental, son 90 gün)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
         run: |
           cd backend
-          python run.py --players
+          # Manuel tetiklemede force=true ise tüm kadroları yenile
+          FORCE_FLAG=""
+          if [ "${{ github.event.inputs.force_rosters }}" = "true" ]; then
+            FORCE_FLAG="--roster-force"
+          fi
+          python run.py --players --roster-days 90 $FORCE_FLAG
 
       - name: Notify on failure
         if: failure()
-        run: |
-          echo "❌ Sync failed! Check logs."
+        run: echo "❌ Sync failed! Check logs."

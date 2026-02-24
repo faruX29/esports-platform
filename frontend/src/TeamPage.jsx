@@ -2,12 +2,38 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 
+const ROLE_STYLES = {
+  igl:      { bg: 'rgba(139,92,246,0.2)',  border: 'rgba(139,92,246,0.55)', color: '#a78bfa', label: 'IGL' },
+  sniper:   { bg: 'rgba(56,189,248,0.15)', border: 'rgba(56,189,248,0.5)',  color: '#38bdf8', label: 'Sniper' },
+  awp:      { bg: 'rgba(56,189,248,0.15)', border: 'rgba(56,189,248,0.5)',  color: '#38bdf8', label: 'AWP' },
+  entry:    { bg: 'rgba(239,68,68,0.2)',   border: 'rgba(239,68,68,0.5)',   color: '#f87171', label: 'Entry' },
+  support:  { bg: 'rgba(234,179,8,0.18)',  border: 'rgba(234,179,8,0.45)',  color: '#fbbf24', label: 'Support' },
+  lurker:   { bg: 'rgba(156,163,175,0.15)',border: 'rgba(156,163,175,0.35)',color: '#9ca3af', label: 'Lurker' },
+  rifler:   { bg: 'rgba(34,197,94,0.15)',  border: 'rgba(34,197,94,0.4)',   color: '#4ade80', label: 'Rifler' },
+  carry:    { bg: 'rgba(251,146,60,0.2)',  border: 'rgba(251,146,60,0.5)',  color: '#fb923c', label: 'Carry' },
+  jungler:  { bg: 'rgba(52,211,153,0.18)', border: 'rgba(52,211,153,0.45)', color: '#34d399', label: 'Jungler' },
+  mid:      { bg: 'rgba(167,139,250,0.2)', border: 'rgba(167,139,250,0.5)', color: '#c4b5fd', label: 'Mid' },
+  top:      { bg: 'rgba(251,191,36,0.15)', border: 'rgba(251,191,36,0.4)',  color: '#fcd34d', label: 'Top' },
+  bot:      { bg: 'rgba(96,165,250,0.18)', border: 'rgba(96,165,250,0.45)', color: '#60a5fa', label: 'Bot' },
+  adc:      { bg: 'rgba(96,165,250,0.18)', border: 'rgba(96,165,250,0.45)', color: '#60a5fa', label: 'ADC' },
+  controller: { bg: 'rgba(20,184,166,0.18)', border: 'rgba(20,184,166,0.45)', color: '#2dd4bf', label: 'Controller' },
+  duelist:  { bg: 'rgba(239,68,68,0.2)',   border: 'rgba(239,68,68,0.5)',   color: '#f87171', label: 'Duelist' },
+  initiator:{ bg: 'rgba(251,146,60,0.2)',  border: 'rgba(251,146,60,0.5)',  color: '#fb923c', label: 'Initiator' },
+  sentinel: { bg: 'rgba(139,92,246,0.2)',  border: 'rgba(139,92,246,0.55)', color: '#a78bfa', label: 'Sentinel' },
+}
+
+function getRoleBadge(role) {
+  const key = role?.toLowerCase()
+  return ROLE_STYLES[key] || { bg: 'rgba(255,70,85,0.15)', border: 'rgba(255,70,85,0.4)', color: '#FF4655', label: role }
+}
+
 function TeamPage() {
   const { teamId } = useParams()
   const navigate = useNavigate()
   
   const [team, setTeam] = useState(null)
   const [matches, setMatches] = useState([])
+  const [players, setPlayers] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('upcoming')
 
@@ -44,6 +70,15 @@ function TeamPage() {
 
       if (matchesError) throw matchesError
       setMatches(matchesData || [])
+
+      // Fetch player roster
+      const { data: playersData } = await supabase
+        .from('players')
+        .select('nickname, real_name, role, image_url')
+        .eq('team_pandascore_id', parseInt(teamId))
+        .order('role')
+
+      setPlayers(playersData || [])
 
     } catch (error) {
       console.error('Error fetching team data:', error)
@@ -258,9 +293,103 @@ function TeamPage() {
         >
           Past ({pastMatches.length})
         </button>
+        <button
+          onClick={() => setActiveTab('roster')}
+          style={{
+            padding: '15px 30px',
+            backgroundColor: activeTab === 'roster' ? '#FF4655' : 'transparent',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px 8px 0 0',
+            cursor: 'pointer',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            transition: 'background-color 0.2s'
+          }}
+        >
+          👥 Roster ({players.length})
+        </button>
       </div>
 
+      {/* Roster Tab */}
+      {activeTab === 'roster' && (
+        <div>
+          {players.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '50px', color: '#888' }}>
+              <h3>No roster data available</h3>
+              <p style={{ fontSize: '14px' }}>Player data for this team has not been synced yet.</p>
+            </div>
+          ) : (
+            <>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                gap: '15px',
+                marginBottom: '20px'
+              }}>
+                {players.map((player, i) => (
+                  <div key={i} style={{
+                    backgroundColor: '#1a1a1a',
+                    border: '1px solid #333',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '10px',
+                    transition: 'border-color 0.2s',
+                  }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = '#FF4655'}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = '#333'}
+                  >
+                    {player.image_url ? (
+                      <img
+                        src={player.image_url}
+                        alt={player.nickname}
+                        style={{ width: '70px', height: '70px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #444' }}
+                      />
+                    ) : (
+                      <div style={{ width: '70px', height: '70px', borderRadius: '50%', backgroundColor: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', border: '2px solid #444' }}>
+                        👤
+                      </div>
+                    )}
+                    <div style={{ fontSize: '16px', fontWeight: 'bold', textAlign: 'center' }}>{player.nickname}</div>
+                    {player.real_name && (
+                      <div style={{ fontSize: '13px', color: '#888', textAlign: 'center' }}>{player.real_name}</div>
+                    )}
+                    {player.role && (() => {
+                      const badge = getRoleBadge(player.role)
+                      return (
+                        <div style={{
+                          padding: '5px 12px',
+                          backgroundColor: badge.bg,
+                          border: `1px solid ${badge.border}`,
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          color: badge.color,
+                          fontWeight: 'bold',
+                          letterSpacing: '0.5px',
+                          textTransform: 'capitalize',
+                          boxShadow: `0 0 6px ${badge.border}`
+                        }}>
+                          {badge.label}
+                        </div>
+                      )
+                    })()}
+                  </div>
+                ))}
+              </div>
+              <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#0d0d0d', borderRadius: '8px', color: '#555', fontSize: '13px' }}>
+                ℹ️ Individual K/D/A stats require PandaScore premium API access
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Matches */}
+      {activeTab !== 'roster' && (
+      <>
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
@@ -428,6 +557,8 @@ function TeamPage() {
         }}>
           <h3>No {activeTab} matches found</h3>
         </div>
+      )}
+      </>
       )}
     </div>
   )

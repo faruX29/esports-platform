@@ -114,7 +114,13 @@ def main():
         games = [args.game]
 
     for game in games:
-        stats = syncer.sync_game_matches(game, limit=args.limit, past=args.past, page=args.page if args.past else 1)
+        # limit'i artır: 50 → 200, past modda daha fazla sayfa tara
+        stats = syncer.sync_game_matches(
+            game,
+            limit=args.limit,
+            past=args.past,
+            page=args.page if args.past else 1,
+        )
 
         total_stats['fetched'] += stats.get('fetched', 0)
         total_stats['cleaned'] += stats.get('cleaned', 0)
@@ -152,7 +158,8 @@ def main():
         print("=" * 60)
         ps = PlayerStatsSyncer()
         ps.ensure_schema()
-        stats_limit = args.limit * len(games) if args.limit else 200
+        # limit'i 200 → 2000 yap: daha fazla geçmiş maç işle
+        stats_limit = max(args.limit * len(games) * 10, 2000)
         count = ps.sync_match_stats(limit=stats_limit)
         print(f"✅ {count} maç işlendi")
         print("=" * 60)

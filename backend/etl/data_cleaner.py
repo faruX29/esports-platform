@@ -95,3 +95,46 @@ class DataCleaner:
         
         print(f"✅ Cleaned {len(cleaned_matches)} valid matches")
         return cleaned_matches
+
+    def clean_match(self, raw):
+        """Clean a single match from PandaScore API response."""
+        # ...existing code...
+
+        # ── Tournament bilgisi ──────────────────────────────────────
+        tournament    = raw.get('tournament') or {}
+        league        = raw.get('league')     or {}
+        serie         = raw.get('serie')      or {}
+
+        # begin_at hiyerarşi: tournament > serie > league
+        t_begin = (
+            tournament.get('begin_at') or
+            serie.get('begin_at')      or
+            league.get('begin_at')
+        )
+        t_end = (
+            tournament.get('end_at') or
+            serie.get('end_at')      or
+            league.get('end_at')
+        )
+
+        # tier: PandaScore'da league.tier veya tournament.tier
+        t_tier   = tournament.get('tier') or league.get('tier')
+        t_region = league.get('region') or tournament.get('region')
+
+        # Tier normalize et:
+        # PandaScore: 'S', 'A', 'B', 'C' veya 's_tier', 'a_tier' gibi gelebilir
+        if t_tier:
+            t_tier = t_tier.upper().replace('_TIER', '').strip()
+            if t_tier not in ('S', 'A', 'B', 'C'):
+                t_tier = None   # bilinmeyen tier'ları DROP et
+
+        return {
+            # ...existing fields...
+            'tournament_id':       tournament.get('id') or raw.get('tournament_id'),
+            'tournament_name':     tournament.get('name') or raw.get('league_name', ''),
+            'tournament_begin_at': t_begin,
+            'tournament_end_at':   t_end,
+            'tournament_tier':     t_tier,
+            'tournament_region':   t_region,
+            # ...existing fields...
+        }

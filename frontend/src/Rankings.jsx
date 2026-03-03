@@ -117,7 +117,7 @@ function FavStar({ teamId, favs, onToggle }) {
 /* ─── Rankings — default export ─────────────────────────────────────────────── */
 export default function Rankings() {
   const navigate       = useNavigate()
-  const { activeGame } = useGame()
+  const { activeGame, setActiveGame } = useGame()
 
   const [teams,   setTeams]   = useState([])
   const [loading, setLoading] = useState(true)
@@ -126,15 +126,20 @@ export default function Rankings() {
   const [search,  setSearch]  = useState('')
   const [sortKey, setSortKey] = useState('rating')
 
-  /* ── Veri Çekme: SADECE matches tablosu ────────────────────────────────── */
+  // "all" gelirse varsayılan olarak 'valorant' seç
+  useEffect(() => {
+    if (!activeGame || activeGame === 'all') {
+      setActiveGame('valorant')
+    }
+  }, [])
+
   const fetchRankings = useCallback(async () => {
+    // activeGame 'all' ise henüz yönlendirme olmadı, bekle
+    if (!activeGame || activeGame === 'all') return
+
     setLoading(true)
     setError(null)
     try {
-      /*
-       * matches tablosundan direkt oku — match_stats'a bağımlılık YOK.
-       * Vitality gibi istatistik tablosunda kaydı olmayan takımlar da gelir.
-       */
       const { data: matchData, error: matchErr } = await supabase
         .from('matches')
         .select(`
@@ -145,26 +150,17 @@ export default function Rankings() {
           game:games(name)
         `)
         .eq('status', 'finished')
-        .not('winner_id', 'is', null)       // kazananı belli olmayan maçları atla
-        .limit(8000)                         // büyük havuz → daha fazla takım
+        .not('winner_id', 'is', null)
+        .limit(8000)
       if (matchErr) throw matchErr
 
-      /* ── Takım bazlı istatistik map'i ── */
       const map = {}
-
       const ensureTeam = (teamObj, gameName) => {
         if (!teamObj?.id) return
         const tid = teamObj.id
         if (!map[tid]) {
-          map[tid] = {
-            team:   teamObj,
-            wins:   0,
-            losses: 0,
-            total:  0,
-            game:   gameName || '',
-          }
+          map[tid] = { team: teamObj, wins: 0, losses: 0, total: 0, game: gameName || '' }
         }
-        // Oyun adını ilk karşılaşılana göre doldur
         if (!map[tid].game && gameName) map[tid].game = gameName
       }
 
@@ -172,7 +168,6 @@ export default function Rankings() {
         const gName = m.game?.name || ''
         ensureTeam(m.team_a, gName)
         ensureTeam(m.team_b, gName)
-
         if (m.team_a?.id) {
           map[m.team_a.id].total++
           if (m.winner_id === m.team_a.id) map[m.team_a.id].wins++
@@ -185,30 +180,22 @@ export default function Rankings() {
         }
       }
 
-      /* ── WinRate + Rating hesapla ── */
       let arr = Object.values(map)
-        .filter(t => t.total >= 5)                    // min 5 maç eşiği
+        .filter(t => t.total >= 5)
         .map(t => {
           const winRate = t.wins / t.total
-          return {
-            ...t,
-            winRatePct: Math.round(winRate * 100),
-            rating:     calcRating(t.wins, winRate),
-          }
+          return { ...t, winRatePct: Math.round(winRate * 100), rating: calcRating(t.wins, winRate) }
         })
 
-      /* ── Oyun filtresi (GameContext) ── */
-      if (activeGame && activeGame !== 'all') {
-        const pats = {
-          valorant: ['valorant'],
-          cs2:      ['counter-strike', 'cs-go', 'cs2'],
-          lol:      ['league of legends', 'league-of-legends'],
-        }[activeGame] || []
-        if (pats.length > 0) {
-          arr = arr.filter(t =>
-            pats.some(p => (t.game || '').toLowerCase().includes(p))
-          )
-        }
+      // Oyun filtresi — 'all' artık gelmeyecek ama güvenlik için bırakıyoruz
+      const patMap = {
+        valorant: ['valorant'],
+        cs2:      ['counter-strike', 'cs-go', 'cs2'],
+        lol:      ['league of legends', 'league-of-legends'],
+      }
+      const pats = patMap[activeGame] || []
+      if (pats.length > 0) {
+        arr = arr.filter(t => pats.some(p => (t.game || '').toLowerCase().includes(p)))
       }
 
       setTeams(arr)
@@ -266,6 +253,34 @@ export default function Rankings() {
           Rating = (G×3)+(Win%×100) · min 5 maç ·{' '}
           <span style={{ color: '#555' }}>{teams.length} takım</span>
         </p>
+      </div>
+
+      {/* Oyun seçici — "All" YOK */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+        {[
+          { id: 'valorant', label: 'VALORANT', icon: '⚡', color: '#FF4655' },
+          { id: 'cs2',      label: 'CS2',       icon: '🎯', color: '#F0A500' },
+          { id: 'lol',      label: 'LoL',       icon: '🏆', color: '#C89B3C' },
+        ].map(g => {
+          const active = activeGame === g.id
+          return (
+            <button
+              key={g.id}
+              onClick={() => setActiveGame(g.id)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '9px 18px', borderRadius: 12,
+                border: active ? `1.5px solid ${g.color}` : '1.5px solid #2a2a2a',
+                background: active ? `${g.color}22` : '#111',
+                color: active ? g.color : '#666',
+                fontSize: 13, fontWeight: active ? 800 : 500,
+                cursor: 'pointer', transition: 'all .18s',
+              }}
+            >
+              {g.icon} {g.label}
+            </button>
+          )
+        })}
       </div>
 
       {/* Hata */}

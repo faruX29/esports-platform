@@ -98,6 +98,18 @@ def main():
         help='--league-sync için hangi oyunlar (varsayılan: hepsi)'
     )
 
+    parser.add_argument(
+        '--fix-stale',
+        action='store_true',
+        help='X saat önce başlamış ama hâlâ running olan maçları finished yap',
+    )
+    parser.add_argument(
+        '--stale-hours',
+        type=int,
+        default=6,
+        help='--fix-stale için eşik (saat, varsayılan: 6)',
+    )
+
     args = parser.parse_args()
 
     print("=" * 60)
@@ -207,6 +219,10 @@ def main():
               f"{result['leagues_scanned']} lig tarandı | "
               f"{result['errors']} hata")
         print("=" * 60)
+
+    if args.fix_stale:
+        print("\n🕒 Stale match cleanup...")
+        syncer.mark_stale_matches_finished(hours_ago=args.stale_hours)
 
 if __name__ == "__main__":
     main()

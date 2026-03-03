@@ -55,21 +55,19 @@ function UpcomingMatches() {
 
   // Search and favorites filter effect
   useEffect(() => {
-    let filtered = matches
+    let filtered = matches.filter(m => m.status !== 'finished')  // ← EKLENDİ
 
-    // Arama filtresi
     if (searchQuery.trim() !== '') {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(match => 
-        match.team_a_name.toLowerCase().includes(query) ||
-        match.team_b_name.toLowerCase().includes(query) ||
-        match.tournament_name.toLowerCase().includes(query)
+      const q = searchQuery.toLowerCase()
+      filtered = filtered.filter(match =>
+        match.team_a_name.toLowerCase().includes(q) ||
+        match.team_b_name.toLowerCase().includes(q) ||
+        match.tournament_name.toLowerCase().includes(q)
       )
     }
 
-    // Favoriler filtresi
     if (showFavoritesOnly && favorites.length > 0) {
-      filtered = filtered.filter(match => 
+      filtered = filtered.filter(match =>
         favorites.includes(match.team_a_id) || favorites.includes(match.team_b_id)
       )
     }
@@ -97,37 +95,37 @@ function UpcomingMatches() {
   async function fetchMatches() {
     try {
       setLoading(true)
-      
+
       let query = supabase
-        .from('upcoming_matches')
+        .from('upcoming_matches')   // view zaten not_started filtreli
         .select('*')
-      
+
+      // ── Güvenlik katmanı: view'dan sızmış finished maçları kes ──
+      // (view'ın Supabase tarafında güncellenmemiş olması ihtimaline karşı)
+      query = query.neq('status', 'finished')
+
       if (gameFilter !== 'all') {
         const patterns = GAME_FILTER_PATTERNS[gameFilter] ?? []
         if (patterns.length > 0) {
-          // ilike ile büyük/küçük harf ve alias bağımsız eşleştirme
-          query = query.or(
-            patterns.map(p => `game_name.ilike.%${p}%`).join(',')
-          )
+          query = query.or(patterns.map(p => `game_name.ilike.%${p}%`).join(','))
         } else {
           query = query.ilike('game_name', `%${gameFilter}%`)
         }
       }
-      
-      if (sortBy === 'date-asc') {
-        query = query.order('scheduled_at', { ascending: true })
-      } else if (sortBy === 'date-desc') {
-        query = query.order('scheduled_at', { ascending: false })
-      }
-      
+
+      if (sortBy === 'date-asc')  query = query.order('scheduled_at', { ascending: true })
+      else if (sortBy === 'date-desc') query = query.order('scheduled_at', { ascending: false })
+
       query = query.limit(50)
-      
+
       const { data, error } = await query
-      
       if (error) throw error
-      
-      setMatches(data || [])
-      setFilteredMatches(data || [])
+
+      // ── İkinci güvenlik katmanı: JS tarafında da filtrele ──────────
+      const clean = (data || []).filter(m => m.status !== 'finished')
+
+      setMatches(clean)
+      setFilteredMatches(clean)
       setLastUpdate(new Date())
     } catch (error) {
       console.error('Error fetching matches:', error)
@@ -713,22 +711,28 @@ function UpcomingMatches() {
                       background: '#111',
                       border: isLive
                         ? '1.5px solid rgba(255,70,85,.6)'
-                        : '1.5px solid rgba(255,215,0,.35)',
+                        : hasTurkish
+                        ? '1.5px solid rgba(212,175,55,.5)'
+                        : '1.5px solid #222',
                       borderRadius: '16px',
                       padding: '14px',
                       cursor: 'pointer',
                       transition: 'transform .2s cubic-bezier(.34,1.56,.64,1), box-shadow .2s, border-color .2s',
-                      boxShadow: isLive ? '0 0 16px rgba(255,70,85,.18)' : '0 0 12px rgba(255,215,0,.05)',
+                      boxShadow: isLive ? '0 0 16px rgba(255,70,85,.18)' : hasTurkish ? '0 0 14px rgba(212,175,55,.08)' : 'none',
                     }}
                     onMouseEnter={e => {
                       e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)'
-                      e.currentTarget.style.boxShadow = '0 10px 28px rgba(255,215,0,.2)'
+                      e.currentTarget.style.boxShadow = isLive
+                        ? '0 12px 36px rgba(255,70,85,.45)'
+                        : hasTurkish
+                        ? '0 12px 32px rgba(255,70,85,.22), 0 0 0 1.5px rgba(212,175,55,.3)'
+                        : '0 12px 32px rgba(255,70,85,.22)'
                       e.currentTarget.style.borderColor = '#FFD700'
                     }}
                     onMouseLeave={e => {
                       e.currentTarget.style.transform = 'none'
-                      e.currentTarget.style.boxShadow = isLive ? '0 0 16px rgba(255,70,85,.18)' : '0 0 12px rgba(255,215,0,.05)'
-                      e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.6)' : 'rgba(255,215,0,.35)'
+                      e.currentTarget.style.boxShadow = isLive ? '0 0 20px rgba(255,70,85,.2)' : hasTurkish ? '0 0 14px rgba(212,175,55,.08)' : 'none'
+                      e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.6)' : hasTurkish ? 'rgba(212,175,55,.5)' : '#222'
                     }}
                   >
                     {/* Game + Status */}

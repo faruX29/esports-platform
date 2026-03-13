@@ -9,7 +9,7 @@
  * • Turkish Pride efekti
  */
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useParams, useNavigate, Link }               from 'react-router-dom'
+import { useParams, useNavigate }                     from 'react-router-dom'
 import { supabase }                                   from './supabaseClient'
 import { isTurkishTeam }                              from './constants'
 
@@ -37,6 +37,38 @@ function gameIcon(name = '') {
   if (n.includes('league')  || n.includes('legends'))     return '🏆'
   if (n.includes('dota'))                                  return '🔮'
   return '🎮'
+}
+
+function normalizeTierKey(value) {
+  if (!value) return null
+  const normalized = String(value).toUpperCase().replace(/\s+/g, '').replace('_TIER', '')
+  if (['S', 'A', 'B', 'C'].includes(normalized)) return normalized
+  return null
+}
+
+function getTierMeta(rawTier) {
+  const key = normalizeTierKey(rawTier)
+  if (key && TIER_META[key]) return { ...TIER_META[key], key }
+  if (!rawTier) return null
+  return {
+    key: rawTier,
+    color: '#aaa',
+    bg: 'rgba(255,255,255,.08)',
+    border: 'rgba(170,170,170,.35)',
+    label: `Tier ${rawTier}`,
+  }
+}
+
+function canonicalRoundLabel(roundInfo = '') {
+  const s = String(roundInfo || '').toLowerCase().trim()
+  if (!s) return 'Matches'
+
+  if (/(quarter|qf|1\/4|çeyrek)/.test(s)) return 'Quarter-Final'
+  if (/(semi|sf|yarı)/.test(s)) return 'Semi-Final'
+  if (/(grand\s*final|gf|büyük\s*final)/.test(s)) return 'Grand Final'
+  if (/(final|f\b)/.test(s)) return 'Final'
+
+  return roundInfo
 }
 
 // round-robin mi elimination mı?
@@ -320,6 +352,7 @@ function BracketMatchCard({ m, navigate, gc }) {
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
+        position: 'relative',
         borderRadius: 10, overflow: 'hidden',
         border: m.status === 'running'
           ? '1.5px solid rgba(255,70,85,.6)'
@@ -335,14 +368,22 @@ function BracketMatchCard({ m, navigate, gc }) {
         display: 'flex', flexDirection: 'column',
       }}
     >
-      {/* LIVE badge */}
+      {/* LIVE pulse */}
       {m.status === 'running' && (
         <div style={{
-          background: 'rgba(255,70,85,.15)',
-          padding: '2px 8px', textAlign: 'center',
+          position: 'absolute', top: 7, right: 8,
+          display: 'flex', alignItems: 'center', gap: 5,
           fontSize: 9, color: '#FF4655', fontWeight: 800,
-          animation: 'pulse 1.2s infinite', flexShrink: 0,
-        }}>🔴 LIVE</div>
+          letterSpacing: '.6px', textTransform: 'uppercase',
+          zIndex: 3,
+        }}>
+          <span style={{
+            width: 7, height: 7, borderRadius: '50%',
+            background: '#FF4655', boxShadow: '0 0 0 0 rgba(255,70,85,.7)',
+            animation: 'livePulse 1.2s infinite',
+          }} />
+          Live
+        </div>
       )}
 
       {/* Team rows */}
@@ -407,9 +448,7 @@ function BracketView({ matches, navigate, gc }) {
     const grouped = {}
     for (const m of matches) {
       const raw   = m.round_info || m.round || ''
-      const label = ROUND_ORDER.find(r =>
-        raw.toLowerCase().replace(/[^a-z\- ]/g, '').includes(r.toLowerCase())
-      ) ?? (raw.trim() || 'Matches')
+      const label = canonicalRoundLabel(raw)
 
       if (!grouped[label]) grouped[label] = []
       grouped[label].push(m)
@@ -422,6 +461,13 @@ function BracketView({ matches, navigate, gc }) {
     }
     for (const r of Object.keys(grouped)) {
       if (!ordered[r]) ordered[r] = grouped[r]
+    }
+
+    // Her round'u zaman sırasına göre sabitle.
+    for (const key of Object.keys(ordered)) {
+      ordered[key] = [...ordered[key]].sort(
+        (a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at)
+      )
     }
     return ordered
   }, [matches])
@@ -449,8 +495,8 @@ function BracketView({ matches, navigate, gc }) {
           // (sonraki sütun varsa ve bu sütun çift sayıda maç içeriyorsa)
           const nextRk        = roundKeys[colIdx + 1]
           const nextCount     = nextRk ? rounds[nextRk].length : 0
-          const showConnector = nextRk && colMatches.length >= 2 &&
-                                colMatches.length === nextCount * 2
+          const pairCount     = Math.max(0, Math.min(nextCount, Math.floor(colMatches.length / 2)))
+          const showConnector = nextRk && pairCount > 0
 
           return (
             <div key={rk} style={{ display: 'flex', alignItems: 'flex-start' }}>
@@ -491,7 +537,7 @@ function BracketView({ matches, navigate, gc }) {
               {/* Connector SVG */}
               {showConnector && (
                 <BracketConnectors
-                  pairCount={nextCount}
+                  pairCount={pairCount}
                   cardH={BRACKET_CARD_H}
                   cardGap={BRACKET_CARD_GAP}
                   headerH={BRACKET_HEADER_H}
@@ -545,6 +591,22 @@ function MatchListCard({ m, navigate, gc }) {
         e.currentTarget.style.boxShadow   = isLive ? '0 0 16px rgba(255,70,85,.18)' : 'none'
       }}
     >
+      {isLive && (
+        <div style={{
+          position: 'absolute', top: 8, right: 10,
+          display: 'flex', alignItems: 'center', gap: 5,
+          fontSize: 9, fontWeight: 800, color: '#FF4655',
+          letterSpacing: '.6px', textTransform: 'uppercase', zIndex: 3,
+        }}>
+          <span style={{
+            width: 7, height: 7, borderRadius: '50%',
+            background: '#FF4655', boxShadow: '0 0 0 0 rgba(255,70,85,.7)',
+            animation: 'livePulse 1.2s infinite',
+          }} />
+          Live
+        </div>
+      )}
+
       {/* TR stripe */}
       {hasTR && (
         <div style={{
@@ -572,13 +634,6 @@ function MatchListCard({ m, navigate, gc }) {
                 background: `${gc}18`, border: `1px solid ${gc}44`, color: gc,
                 fontWeight: 700 }}>
                 {m.round_info}
-              </span>
-            )}
-            {isLive && (
-              <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 8,
-                background: 'rgba(255,70,85,.2)', border: '1px solid rgba(255,70,85,.5)',
-                color: '#FF4655', fontWeight: 800, animation: 'pulse 1.2s infinite' }}>
-                🔴 LIVE
               </span>
             )}
           </div>
@@ -719,7 +774,7 @@ export default function TournamentPage() {
   const gName = tournament?.game?.name ?? ''
   const gc    = gameColor(gName)
   const gi    = gameIcon(gName)
-  const tier  = tournament?.tier ? (TIER_META[tournament.tier] ?? null) : null
+  const tier  = getTierMeta(tournament?.tier)
   const isTR  = isTurkishTeam(tournament?.name ?? '') || tournament?.region === 'TR'
 
   // ── Loading ───────────────────────────────────────────────────
@@ -754,6 +809,11 @@ export default function TournamentPage() {
       <style>{`
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
         @keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:.5} }
+        @keyframes livePulse {
+          0%   { box-shadow: 0 0 0 0 rgba(255,70,85,.75); }
+          70%  { box-shadow: 0 0 0 8px rgba(255,70,85,0); }
+          100% { box-shadow: 0 0 0 0 rgba(255,70,85,0); }
+        }
         @keyframes fadeUp  { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
       `}</style>
 
@@ -832,6 +892,15 @@ export default function TournamentPage() {
                 padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700,
                 background: tier.bg, border: `1px solid ${tier.border}`, color: tier.color,
               }}>{tier.label}</span>
+            )}
+
+            {tournament.region && (
+              <span style={{
+                padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700,
+                background: 'rgba(255,255,255,.06)', border: '1px solid #333', color: '#aaa',
+              }}>
+                📍 {String(tournament.region).toUpperCase()}
+              </span>
             )}
 
             {format !== 'unknown' && (

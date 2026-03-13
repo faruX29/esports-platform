@@ -11,11 +11,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate }           from 'react-router-dom'
 import { supabase }                         from './supabaseClient'
 import { getRoleBadge }                     from './roleHelper'
-import {
-  getFollowedPlayers, followPlayer,
-  unfollowPlayer,     isFollowedPlayer,
-} from './favoritesHelper'
 import { isTurkishTeam } from './constants'
+import { useUser } from './context/UserContext'
+import { summarizePlayerMatchStats, metricBars } from './utils/playerMetrics'
 
 // ─── Yardımcılar ────────────────────────────────────────────────────────────
 
@@ -201,7 +199,7 @@ function MatchRow({ match, teamId }) {
 }
 
 // ─── Scout Metrik Paneli ─────────────────────────────────────────────────────
-function ScoutPanel({ analytics }) {
+function ScoutPanel({ analytics, individual }) {
   if (!analytics) return null
 
   const {
@@ -211,6 +209,7 @@ function ScoutPanel({ analytics }) {
 
   const impactColor = impactScore >= 70 ? '#4CAF50' : impactScore >= 45 ? '#FFB800' : '#FF4655'
   const mapLabels   = { 1: 'Game 1', 2: 'Game 2', 3: 'Decider' }
+  const individualBars = individual ? metricBars(individual) : null
 
   return (
     <div style={{ marginBottom: 24 }}>
@@ -264,6 +263,24 @@ function ScoutPanel({ analytics }) {
         </div>
       </div>
 
+      {individual && (
+        <div style={{ background: '#0d0d0d', borderRadius: 14, border: '1px solid #1e1e1e', padding: '14px 16px', marginBottom: 10 }}>
+          <div style={{ fontSize: 11, color: '#444', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 12 }}>
+            🎯 Individual Performance (Player Match Stats)
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(100px,1fr))', gap: 10, marginBottom: 12 }}>
+            <StatBox icon="⚔️" value={individual.totalKills} label="Kills" color="#ff6a7f" />
+            <StatBox icon="☠️" value={individual.totalDeaths} label="Deaths" color="#f3f3f3" />
+            <StatBox icon="🤝" value={individual.totalAssists} label="Assists" color="#93c5fd" />
+            <StatBox icon="📌" value={`${Math.round(individual.hsPct)}%`} label="HS%" color="#fff" />
+          </div>
+          <ProgressBar pct={individualBars.kdBar} color="#ff6a7f" label="K/D Ratio" value={individual.kd.toFixed(2)} />
+          <ProgressBar pct={individualBars.hsBar} color="#f1f1f1" label="Headshot Rate" value={`${Math.round(individual.hsPct)}%`} />
+          <ProgressBar pct={individualBars.winBar} color="#4CAF50" label="Win Rate" value={`${Math.round(individual.winRate)}%`} />
+          <ProgressBar pct={individualBars.impactBar} color="#ff9aa9" label="Impact Score" value={`${Math.round(individual.impact)}`} />
+        </div>
+      )}
+
       {/* Map win rates */}
       <div style={{ background: '#0d0d0d', borderRadius: 14, border: '1px solid #1e1e1e', padding: '14px 16px', marginBottom: 10 }}>
         <div style={{ fontSize: 11, color: '#444', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 12 }}>
@@ -305,9 +322,11 @@ function ScoutPanel({ analytics }) {
         </div>
       )}
 
-      <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, background: 'rgba(255,184,0,.05)', border: '1px solid rgba(255,184,0,.15)', fontSize: 11, color: '#555' }}>
-        ℹ️ Bireysel K/D/A mevcut değil — PandaScore ücretsiz tier sadece harita skoru ve takım sonucu sağlar.
-      </div>
+      {!individual && (
+        <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, background: 'rgba(255,184,0,.05)', border: '1px solid rgba(255,184,0,.15)', fontSize: 11, color: '#555' }}>
+          ℹ️ Bireysel oyuncu satiri bulunamadi; takim bazli scout verisi gosteriliyor.
+        </div>
+      )}
     </div>
   )
 }
@@ -377,14 +396,15 @@ const NAT_FLAGS = {
 export default function PlayerPage() {
   const { id }   = useParams()        // players.id (UUID)
   const navigate = useNavigate()
+  const { togglePlayerFollow, isPlayerFollowed } = useUser()
 
   const [player,    setPlayer]    = useState(null)
   const [team,      setTeam]      = useState(null)
   const [matches,   setMatches]   = useState([])
   const [analytics, setAnalytics] = useState(null)
+  const [individualStats, setIndividualStats] = useState(null)
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState(null)
-  const [followed,  setFollowed]  = useState(false)
 
   const fetchAll = useCallback(async () => {
     setLoading(true); setError(null)
@@ -397,10 +417,9 @@ export default function PlayerPage() {
         .single()
       if (pErr) throw pErr
       setPlayer(p)
-      setFollowed(isFollowedPlayer(p.id))
 
       // Paralel: takım + istatistikler + maçlar
-      const [teamRes, statsRes] = await Promise.all([
+      const [teamRes, statsRes, playerStatsRes] = await Promise.all([
         p.team_pandascore_id
           ? supabase.from('teams').select('id, name, logo_url, acronym, location').eq('id', p.team_pandascore_id).single()
           : { data: null, error: null },
@@ -409,6 +428,11 @@ export default function PlayerPage() {
           .select('match_id, team_id, stats')
           .eq('team_id', p.team_pandascore_id)
           .limit(60),
+        supabase
+          .from('player_match_stats')
+          .select('*')
+          .eq('player_id', p.id)
+          .limit(500),
       ])
 
       if (teamRes.data) setTeam(teamRes.data)
@@ -435,6 +459,17 @@ export default function PlayerPage() {
           setMatches(mData || [])
         }
       }
+
+      if (!playerStatsRes.error) {
+        const summary = summarizePlayerMatchStats(playerStatsRes.data || [])
+        if (summary.sampleMatches > 0) {
+          setIndividualStats(summary)
+        } else {
+          setIndividualStats(null)
+        }
+      } else {
+        setIndividualStats(null)
+      }
     } catch (e) {
       setError(e.message)
     } finally {
@@ -446,13 +481,7 @@ export default function PlayerPage() {
 
   function handleToggleFollow() {
     if (!player) return
-    if (followed) {
-      unfollowPlayer(player.id)
-      setFollowed(false)
-    } else {
-      followPlayer({ id: player.id, nickname: player.nickname, role: player.role, image_url: player.image_url, team_pandascore_id: player.team_pandascore_id })
-      setFollowed(true)
-    }
+    togglePlayerFollow(player.id)
   }
 
   // ── Loading ────────────────────────────────────────────────────
@@ -482,6 +511,7 @@ export default function PlayerPage() {
   const badge   = getRoleBadge(player.role)
   const isTR    = player.nationality === 'TR' || player.nationality === 'TUR' || isTurkishTeam(team?.name ?? '')
   const flag    = NAT_FLAGS[player.nationality] ?? (isTR ? '🇹🇷' : null)
+  const followed = isPlayerFollowed(player.id)
 
   // ── Render ────────────────────────────────────────────────────
   return (
@@ -612,10 +642,12 @@ export default function PlayerPage() {
             />
             <StatBox
               icon="🎯"
-              value={Math.round(analytics.impactScore)}
+              value={Math.round(individualStats?.impact ?? analytics.impactScore)}
               label="Impact"
-              color={analytics.impactScore >= 70 ? '#4CAF50' : analytics.impactScore >= 45 ? '#818cf8' : '#FF4655'}
+              color={(individualStats?.impact ?? analytics.impactScore) >= 70 ? '#4CAF50' : (individualStats?.impact ?? analytics.impactScore) >= 45 ? '#818cf8' : '#FF4655'}
             />
+            {individualStats && <StatBox icon="📌" value={`${Math.round(individualStats.hsPct)}%`} label="HS%" color="#f4f4f4" />}
+            {individualStats && <StatBox icon="⚡" value={individualStats.kd.toFixed(2)} label="K/D" color="#ff6a7f" />}
           </div>
         )}
       </div>
@@ -624,7 +656,7 @@ export default function PlayerPage() {
       <div style={{ padding: '0 20px' }}>
 
         {/* Scout Analytics */}
-        <ScoutPanel analytics={analytics} />
+        <ScoutPanel analytics={analytics} individual={individualStats} />
 
         {/* Maç geçmişi */}
         {matches.length > 0 && (

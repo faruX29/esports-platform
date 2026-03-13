@@ -1,20 +1,27 @@
 /**
  * App.jsx — Router + Navbar + GameSelectorBar
  */
-import { BrowserRouter as Router, Routes, Route, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { GameProvider, useGame, GAMES } from './GameContext'
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { UserProvider } from './context/UserContext'
+import { AuthProvider } from './context/AuthContext'
 
 import Dashboard      from './Dashboard'
 import Matches        from './Matches'
-import MatchDetail    from './MatchDetail'
-import Rankings       from './Rankings'
+import MatchDetailPage from './MatchDetailPage'
+import RankingsPage   from './pages/RankingsPage'
 import TeamPage       from './TeamPage'
 import TournamentPage from './TournamentPage'
-import PlayerSearch   from './PlayerSearch'
+import PlayersPage    from './pages/PlayersPage'
 import PlayerPage     from './PlayerPage'
 import SearchPage     from './SearchPage'
-import NewsPage       from './NewsPage'
+import ProfileSettings from './ProfileSettings'
+import ProtectedRoute from './components/ProtectedRoute'
+import NavbarComponent from './components/Navbar'
+import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
+import NewsPage from './pages/NewsPage'
 
 import './App.css'
 
@@ -300,59 +307,6 @@ function NavSearch() {
   )
 }
 
-/* ─── Navbar ────────────────────────────────────────────────────────────────── */
-function Navbar() {
-  const location = useLocation()
-
-  return (
-    <nav style={{
-      position: 'sticky', top: 0, zIndex: 1000,
-      background: 'rgba(10,10,10,.92)',
-      backdropFilter: 'blur(12px)',
-      borderBottom: '1px solid #141414',
-    }}>
-      <div style={{
-        maxWidth: 1240, margin: '0 auto',
-        display: 'flex', alignItems: 'center',
-        gap: 4, padding: '0 16px', height: 52,
-      }}>
-        {/* Logo */}
-        <NavLink to="/" style={{ textDecoration: 'none', marginRight: 8, flexShrink: 0 }}>
-          <span style={{
-            fontSize: 16, fontWeight: 900, letterSpacing: '-0.5px',
-            background: 'linear-gradient(135deg,#FF4655,#F0A500)',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-          }}>⚡ EsportsHub</span>
-        </NavLink>
-
-        {/* Nav links */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-          {NAV_LINKS.map(l => (
-            <NavLink
-              key={l.to} to={l.to} end={l.end}
-              style={({ isActive }) => ({
-                textDecoration: 'none',
-                padding: '5px 11px',
-                borderRadius: 8,
-                fontSize: 12, fontWeight: isActive ? 700 : 500,
-                color: isActive ? '#fff' : '#555',
-                background: isActive ? 'rgba(255,255,255,.07)' : 'transparent',
-                transition: 'all .15s',
-                whiteSpace: 'nowrap',
-              })}
-              onMouseEnter={e => { if (!e.currentTarget.classList.contains('active')) e.currentTarget.style.color = '#aaa' }}
-              onMouseLeave={e => { if (!e.currentTarget.classList.contains('active')) e.currentTarget.style.color = '#555' }}
-            >{l.label}</NavLink>
-          ))}
-        </div>
-
-        {/* Search bar — sağa sabitli */}
-        <NavSearch />
-      </div>
-    </nav>
-  )
-}
-
 /* ─── GameSelectorBar ───────────────────────────────────────────────────────── */
 function GameSelectorBar() {
   const { activeGame, setActiveGame } = useGame()
@@ -409,19 +363,22 @@ function GameSelectorBar() {
 function AppShell() {
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0a', color: 'white' }}>
-      <Navbar />
+      <NavbarComponent navLinks={NAV_LINKS} SearchComponent={NavSearch} />
       <GameSelectorBar />
       <Routes>
         <Route path="/"                         element={<Dashboard />}      />
         <Route path="/matches"                  element={<Matches />}        />
-        <Route path="/match/:id"                element={<MatchDetail />}    />
-        <Route path="/rankings"                 element={<Rankings />}       />
+        <Route path="/match/:id"                element={<MatchDetailPage />} />
+        <Route path="/rankings"                 element={<RankingsPage />}   />
         <Route path="/team/:teamId"             element={<TeamPage />}       />
         <Route path="/tournament/:tournamentId" element={<TournamentPage />} />
-        <Route path="/players"                  element={<PlayerSearch />}   />
+        <Route path="/players"                  element={<PlayersPage />}    />
         <Route path="/player/:id"               element={<PlayerPage />}     />
         <Route path="/search"                   element={<SearchPage />}     />
         <Route path="/news"                     element={<NewsPage />}       />
+        <Route path="/login"                    element={<LoginPage />}      />
+        <Route path="/register"                 element={<RegisterPage />}   />
+        <Route path="/settings"                 element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
       </Routes>
     </div>
   )
@@ -431,9 +388,13 @@ function AppShell() {
 export default function App() {
   return (
     <Router>
-      <GameProvider>
-        <AppShell />
-      </GameProvider>
+      <AuthProvider>
+        <UserProvider>
+          <GameProvider>
+            <AppShell />
+          </GameProvider>
+        </UserProvider>
+      </AuthProvider>
     </Router>
   )
 }

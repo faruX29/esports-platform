@@ -7,7 +7,8 @@ import { useNavigate, Link }                from 'react-router-dom'
 import { supabase }                         from './supabaseClient'
 import { useGame, gameMatchesFilter }       from './GameContext'
 import { isTurkishTeam }                   from './constants'
-import { getFavorites, toggleFavorite, isFavorite } from './favoritesHelper'
+import { useUser }                          from './context/UserContext'
+import { summarizePlayerMatchStats, pickRowTimestamp } from './utils/playerMetrics'
 
 /* ── Skeleton ─────────────────────────────────────────────────────────────── */
 function Sk({ w = '100%', h = '16px', r = '8px' }) {
@@ -35,15 +36,10 @@ function getStatusBadge(status) {
 
 /* ── FavoritesBar ─────────────────────────────────────────────────────────── */
 function FavoritesBar({ navigate }) {
-  const [favTeamIds, setFavTeamIds] = useState(() => getFavorites())
+  const { followedTeamIds, toggleTeamFollow, isTeamFollowed } = useUser()
+  const favTeamIds = followedTeamIds
   const [matches,    setMatches]    = useState([])
   const [loading,    setLoading]    = useState(false)
-
-  useEffect(() => {
-    const onStorage = () => setFavTeamIds(getFavorites())
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
-  }, [])
 
   useEffect(() => {
     if (!favTeamIds.length) { setMatches([]); return }
@@ -119,8 +115,8 @@ function FavoritesBar({ navigate }) {
             const isFin  = m.status === 'finished'
             const aWon   = isFin && m.winner_id === (m.team_a_id || m.team_a?.id)
             const bWon   = isFin && m.winner_id === (m.team_b_id || m.team_b?.id)
-            const favA   = isFavorite(m.team_a_id || m.team_a?.id)
-            const favB   = isFavorite(m.team_b_id || m.team_b?.id)
+            const favA   = isTeamFollowed(m.team_a_id || m.team_a?.id)
+            const favB   = isTeamFollowed(m.team_b_id || m.team_b?.id)
             return (
               <div
                 key={m.id}
@@ -459,12 +455,20 @@ function UpcomingRow({ match: m, onClick }) {
 export default function Dashboard() {
   const navigate       = useNavigate()
   const { activeGame } = useGame()
+  const {
+    followedTeamIds,
+    followedPlayerIds,
+    toggleTeamFollow,
+  } = useUser()
 
   const [liveMatches,     setLiveMatches]     = useState([])
   const [upcomingMatches, setUpcomingMatches] = useState([])
+  const [myFeedMatches,   setMyFeedMatches]   = useState([])
+  const [liveFavCount,    setLiveFavCount]    = useState(0)
+  const [dreamTeam, setDreamTeam] = useState([])
+  const [dreamLoading, setDreamLoading] = useState(false)
   const [stats,           setStats]           = useState({ total: 0, live: 0, today: 0, teams: 0 })
   const [loading,         setLoading]         = useState(true)
-  const [favorites,       setFavorites]       = useState(() => getFavorites())
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -513,9 +517,139 @@ export default function Dashboard() {
 
   function handleToggleFav(teamId) {
     if (!teamId) return
-    toggleFavorite(teamId)
-    setFavorites(getFavorites())
+    toggleTeamFollow(teamId)
   }
+
+  useEffect(() => {
+    async function fetchMyFeed() {
+      try {
+        // Takip edilen oyunculardan takım ID'lerini topla.
+        let teamIds = [...followedTeamIds]
+
+        if (followedPlayerIds.length > 0) {
+          const { data: playerRows } = await supabase
+            .from('players')
+            .select('id, team_pandascore_id')
+            .in('id', followedPlayerIds)
+
+          const playerTeamIds = (playerRows || [])
+            .map(p => p.team_pandascore_id)
+            .filter(Boolean)
+
+          teamIds = [...new Set([...teamIds, ...playerTeamIds])]
+        }
+
+        if (teamIds.length === 0) {
+          setMyFeedMatches([])
+          setLiveFavCount(0)
+          return
+        }
+
+        const orFilter = teamIds
+          .flatMap(id => [`team_a_id.eq.${id}`, `team_b_id.eq.${id}`])
+          .join(',')
+
+        const now = new Date()
+        const soon = new Date(now)
+        soon.setDate(now.getDate() + 5)
+
+        const { data } = await supabase
+          .from('matches')
+          .select(`
+            id, status, scheduled_at,
+            team_a_id, team_b_id, winner_id,
+            team_a_score, team_b_score,
+            team_a:teams!matches_team_a_id_fkey(id,name,logo_url),
+            team_b:teams!matches_team_b_id_fkey(id,name,logo_url),
+            tournament:tournaments(id,name),
+            game:games(id,name)
+          `)
+          .or(orFilter)
+          .in('status', ['not_started', 'running'])
+          .gte('scheduled_at', now.toISOString())
+          .lte('scheduled_at', soon.toISOString())
+          .order('scheduled_at', { ascending: true })
+          .limit(40)
+
+        const filtered = (data || [])
+          .filter(m => gameMatchesFilter(m.game?.name || '', activeGame))
+
+        setMyFeedMatches(filtered)
+        setLiveFavCount(filtered.filter(m => m.status === 'running').length)
+      } catch (e) {
+        console.error('Dashboard my-feed fetch:', e.message)
+      }
+    }
+
+    fetchMyFeed()
+  }, [followedTeamIds, followedPlayerIds, activeGame])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function fetchDreamTeam() {
+      setDreamLoading(true)
+      try {
+        const [statsRes, playersRes, teamsRes] = await Promise.all([
+          supabase.from('player_match_stats').select('*').limit(12000),
+          supabase.from('players').select('id,nickname,image_url,team_pandascore_id').limit(2000),
+          supabase.from('teams').select('id,name,logo_url').limit(800),
+        ])
+
+        if (statsRes.error || playersRes.error || teamsRes.error) {
+          if (!cancelled) setDreamTeam([])
+          return
+        }
+
+        const weekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000)
+        const rows = (statsRes.data || []).filter(row => {
+          const ts = pickRowTimestamp(row)
+          if (!ts) return true
+          const d = new Date(ts).getTime()
+          return Number.isFinite(d) ? d >= weekAgo : true
+        })
+
+        const byPlayer = new Map()
+        for (const row of rows) {
+          const pid = row?.player_id
+          if (!pid) continue
+          if (!byPlayer.has(pid)) byPlayer.set(pid, [])
+          byPlayer.get(pid).push(row)
+        }
+
+        const playersMap = new Map((playersRes.data || []).map(p => [String(p.id), p]))
+        const teamsMap = new Map((teamsRes.data || []).map(t => [String(t.id), t]))
+
+        const ranked = [...byPlayer.entries()].map(([pid, list]) => {
+          const p = playersMap.get(String(pid))
+          if (!p) return null
+          const summary = summarizePlayerMatchStats(list)
+          const team = p.team_pandascore_id ? teamsMap.get(String(p.team_pandascore_id)) : null
+          const score = (summary.impact * 0.6) + (summary.kd * 20) + (summary.winRate * 0.2)
+          return {
+            id: p.id,
+            nickname: p.nickname,
+            image_url: p.image_url,
+            team,
+            score,
+            ...summary,
+          }
+        }).filter(Boolean)
+          .filter(x => x.sampleMatches > 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 5)
+
+        if (!cancelled) setDreamTeam(ranked)
+      } catch {
+        if (!cancelled) setDreamTeam([])
+      } finally {
+        if (!cancelled) setDreamLoading(false)
+      }
+    }
+
+    fetchDreamTeam()
+    return () => { cancelled = true }
+  }, [])
 
   /* ── Stat tile tanımları ── */
   const statTiles = [
@@ -530,6 +664,60 @@ export default function Dashboard() {
 
       {/* ── Favorites Bar ── */}
       <FavoritesBar navigate={navigate} />
+
+      {/* ── My Feed / Notification ── */}
+      {(followedTeamIds.length > 0 || followedPlayerIds.length > 0) && (
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{
+              fontSize: 11, fontWeight: 800, color: '#ff6b7a',
+              letterSpacing: '1.5px', textTransform: 'uppercase',
+            }}>
+              🧠 My Feed
+            </span>
+            <span style={{
+              padding: '1px 8px', borderRadius: 8,
+              background: 'rgba(255,107,122,.12)', color: '#ff6b7a',
+              fontSize: 10, fontWeight: 700,
+            }}>
+              {myFeedMatches.length}
+            </span>
+            <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(255,107,122,.3),transparent)' }} />
+          </div>
+
+          {liveFavCount > 0 && (
+            <div style={{
+              marginBottom: 12,
+              padding: '10px 14px', borderRadius: 12,
+              background: 'radial-gradient(circle at 10% 50%, rgba(255,70,85,.25), rgba(255,70,85,.05) 45%, transparent 90%)',
+              border: '1px solid rgba(255,70,85,.45)',
+              boxShadow: '0 0 24px rgba(255,70,85,.25)',
+              display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#FF4655', animation: 'livePulse 1.2s infinite' }} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#FF4655' }}>
+                {liveFavCount} takip edilen maç şu anda canlı!
+              </span>
+            </div>
+          )}
+
+          {myFeedMatches.length === 0 ? (
+            <div style={{
+              padding: '14px 16px', borderRadius: 12,
+              background: '#0e0e0e', border: '1px solid #181818',
+              fontSize: 11, color: '#3a3a3a', textAlign: 'center',
+            }}>
+              Takip ettiğin takımlar/oyuncular için yakın tarihli maç yok.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {myFeedMatches.slice(0, 8).map(m => (
+                <UpcomingRow key={m.id} match={m} onClick={() => navigate(`/match/${m.id}`)} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ══════════════════════════════════════════════════════════════════
           Bento Grid — Hero (sol 2 sütun) + 4 Stat tile (sağ 2 sütun)
@@ -612,6 +800,43 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* ── Weekly Dream Team Leaderboard ── */}
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <span style={{ fontSize: 11, fontWeight: 800, color: '#ff9aa9', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
+            🧬 Dream Team (Week)
+          </span>
+          <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(255,154,169,.3),transparent)' }} />
+        </div>
+
+        <div style={{ border: '1px solid #222', borderRadius: 14, background: 'radial-gradient(circle at 8% 8%, rgba(200,16,46,.18), transparent 35%), #0f0f0f', overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '60px 1.3fr 1fr .7fr .7fr .7fr .7fr', gap: 8, padding: '11px 14px', borderBottom: '1px solid #202020', fontSize: 10, color: '#8b8b8b', textTransform: 'uppercase', letterSpacing: '.6px' }}>
+            <div>Rank</div><div>Player</div><div>Team</div><div>K/D</div><div>HS%</div><div>Impact</div><div>Score</div>
+          </div>
+          {dreamLoading && <div style={{ padding: 14, color: '#777', fontSize: 12 }}>Dream Team hesaplanıyor...</div>}
+          {!dreamLoading && dreamTeam.length === 0 && <div style={{ padding: 14, color: '#777', fontSize: 12 }}>Haftalık oyuncu verisi bulunamadı.</div>}
+          {!dreamLoading && dreamTeam.map((p, idx) => (
+            <div key={p.id} onClick={() => navigate(`/player/${p.id}`)} style={{ display: 'grid', gridTemplateColumns: '60px 1.3fr 1fr .7fr .7fr .7fr .7fr', gap: 8, alignItems: 'center', padding: '11px 14px', borderBottom: '1px solid #191919', cursor: 'pointer', background: idx === 0 ? 'linear-gradient(90deg, rgba(200,16,46,.22), transparent 62%)' : 'transparent' }}>
+              <div style={{ fontWeight: 800, color: '#f4f4f4' }}>#{idx + 1}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                {p.image_url
+                  ? <img src={p.image_url} alt={p.nickname || ''} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: '1px solid #333' }} />
+                  : <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#222' }} />}
+                <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nickname || 'Unknown'}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                {p.team?.logo_url ? <img src={p.team.logo_url} alt={p.team?.name || ''} style={{ width: 20, height: 20, objectFit: 'contain' }} /> : <div style={{ width: 20, height: 20, borderRadius: 6, background: '#222' }} />}
+                <span style={{ fontSize: 11, color: '#bbb', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.team?.name || 'Free Agent'}</span>
+              </div>
+              <div style={{ fontWeight: 700 }}>{p.kd.toFixed(2)}</div>
+              <div style={{ fontWeight: 700 }}>{Math.round(p.hsPct)}%</div>
+              <div style={{ fontWeight: 800, color: '#ff9aa9' }}>{Math.round(p.impact)}</div>
+              <div style={{ fontWeight: 800, color: '#fff' }}>{Math.round(p.score)}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* ── LIVE Section ─────────────────────────────────────────────────── */}
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
@@ -649,7 +874,7 @@ export default function Dashboard() {
                 key={m.id}
                 match={m}
                 onClick={() => navigate(`/match/${m.id}`)}
-                favs={favorites}
+                favs={followedTeamIds}
                 onToggleFav={handleToggleFav}
               />
             ))}

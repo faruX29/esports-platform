@@ -3,7 +3,7 @@ import { useParams, useNavigate }           from 'react-router-dom'
 import { supabase }                         from './supabaseClient'
 import { getRoleBadge }                     from './roleHelper'
 import { isTurkishTeam }                   from './constants'
-import { getFavorites, addFavorite, removeFavorite, isFavorite } from './favoritesHelper'
+import { useUser }                          from './context/UserContext'
 
 // ── Yardımcılar ───────────────────────────────────────────────────────────────
 function calcTeamRating(wins, total) {
@@ -283,6 +283,7 @@ function MatchCard({ match, teamId, navigate }) {
 export default function TeamPage() {
   const { teamId } = useParams()
   const navigate   = useNavigate()
+  const { toggleTeamFollow, isTeamFollowed } = useUser()
 
   const [team,     setTeam]     = useState(null)
   const [matches,  setMatches]  = useState([])
@@ -290,7 +291,6 @@ export default function TeamPage() {
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState(null)
   const [activeTab, setActiveTab] = useState('roster')
-  const [isFav,    setIsFav]    = useState(false)
 
   // ── Veri çekme ──────────────────────────────────────────────────
   const fetchTeamData = useCallback(async () => {
@@ -326,7 +326,6 @@ export default function TeamPage() {
       setTeam(teamRes.data)
       setMatches(matchRes.data || [])
       setPlayers(playerRes.data || [])
-      setIsFav(isFavorite(parseInt(teamId)))
     } catch (e) {
       setError(e.message)
     } finally {
@@ -362,9 +361,10 @@ export default function TeamPage() {
   })()
 
   // ── Toggle Favorite ────────────────────────────────────────────
+  const parsedTeamId = parseInt(teamId)
+  const isFav = isTeamFollowed(parsedTeamId)
   function handleToggleFav() {
-    if (isFav) { removeFavorite(parseInt(teamId)); setIsFav(false) }
-    else        { addFavorite(parseInt(teamId));    setIsFav(true)  }
+    toggleTeamFollow(parsedTeamId)
   }
 
   // ── Loading ────────────────────────────────────────────────────

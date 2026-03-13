@@ -32,6 +32,24 @@ const GAME_META = {
   dota:             { icon: '🔮', color: '#9d2226', label: 'Dota 2'          },
 }
 
+function normalizeTierKey(value) {
+  if (!value) return null
+  const normalized = String(value).toUpperCase().replace(/\s+/g, '').replace('_TIER', '')
+  if (['S', 'A', 'B', 'C'].includes(normalized)) return normalized
+  return null
+}
+
+function getTierMeta(rawTier) {
+  const key = normalizeTierKey(rawTier)
+  if (key && TIER_META[key]) return { ...TIER_META[key], key }
+  return {
+    key: rawTier || '-',
+    color: '#888',
+    bg: 'rgba(136,136,136,.12)',
+    label: rawTier ? `Tier ${rawTier}` : 'Tier N/A',
+  }
+}
+
 function slugToGame(name = '') {
   const n = name.toLowerCase()
   if (n.includes('valorant'))                 return GAME_META.valorant
@@ -203,8 +221,7 @@ function PlayerCard({ player, navigate }) {
 
 function TournamentCard({ t, navigate, highlighted }) {
   const gm   = slugToGame(t.game?.name ?? t.name ?? '')
-  const tier = TIER_META[t.tier] ||
-    { color: '#555', bg: 'rgba(100,100,100,.1)', label: `Tier ${t.tier || '?'}` }
+  const tier = getTierMeta(t.tier)
   const isTR = isTurkishTeam(t.name ?? '') || t.region === 'TR'
   const [hov, setHov] = useState(false)
 
@@ -257,6 +274,14 @@ function TournamentCard({ t, navigate, highlighted }) {
             background: tier.bg, border: `1px solid ${tier.color}55`, color: tier.color }}>
             {tier.label}
           </span>
+          {t.region && (
+            <span style={{
+              padding: '3px 9px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+              background: 'rgba(255,255,255,.06)', border: '1px solid #333', color: '#aaa',
+            }}>
+              📍 {String(t.region).toUpperCase()}
+            </span>
+          )}
         </div>
 
         {/* Name */}
@@ -784,15 +809,51 @@ export default function SearchPage() {
           .limit(16),
       ])
 
+      if (teamRes.error || playerRes.error) {
+        const baseMsg = [teamRes.error?.message, playerRes.error?.message]
+          .filter(Boolean)
+          .join(' | ')
+
+        // Kolon geçişlerinde once eski schema'yi destekleyen fallback dene.
+        if (/location|nationality/i.test(baseMsg)) {
+          const [teamFallback, playerFallback] = await Promise.all([
+            supabase
+              .from('teams')
+              .select('id, name, acronym, logo_url')
+              .ilike('name', `%${q}%`)
+              .limit(12),
+            supabase
+              .from('players')
+              .select('id, nickname, real_name, role, image_url, team_pandascore_id')
+              .or(`nickname.ilike.%${q}%,real_name.ilike.%${q}%`)
+              .limit(16),
+          ])
+
+          if (teamFallback.error || playerFallback.error) {
+            throw new Error(
+              `Search fallback failed: ${teamFallback.error?.message || ''} ${playerFallback.error?.message || ''}`.trim()
+            )
+          }
+
+          setTeams(teamFallback.data || [])
+          setPlayers(playerFallback.data || [])
+          setSearchDone(true)
+          return
+        }
+
+        throw new Error(baseMsg || 'Search query failed')
+      }
+
       console.log(`🔍 Search "${q}": teams=${teamRes.data?.length}, players=${playerRes.data?.length}`)
-      if (teamRes.error)   console.error('Teams search error:',   teamRes.error)
-      if (playerRes.error) console.error('Players search error:', playerRes.error)
 
       setTeams(teamRes.data   || [])
       setPlayers(playerRes.data || [])
       setSearchDone(true)
     } catch (e) {
-      console.error('runSearch error:', e)
+      console.error('runSearch error:', e.message || e)
+      setTeams([])
+      setPlayers([])
+      setSearchDone(true)
     } finally {
       setLoading(false)
     }

@@ -76,7 +76,9 @@ class MatchSyncer:
 
         with Database.get_connection() as conn:
             with conn.cursor() as cur:
-                for match in matches:
+                for i, match in enumerate(matches):
+                    savepoint_name = f"sp_match_{i}"
+                    cur.execute(f'SAVEPOINT "{savepoint_name}"')
                     try:
                         game_id = self._get_or_create_game(cur, match['game_slug'])
 
@@ -179,11 +181,18 @@ class MatchSyncer:
                                 json.dumps(match['raw_data']),
                             ),
                         )
+                        cur.execute(f'RELEASE SAVEPOINT "{savepoint_name}"')
                         synced_count += 1
 
-                    except psycopg.Error as e:
+                    except Exception as e:
                         print(f"⚠️  Error syncing match {match.get('id')}: {e}")
-                        conn.rollback()   # bu maçı atla, diğerlerine devam et
+                        # Sadece hatalı satırı geri al, başarılı satırları koru.
+                        try:
+                            cur.execute(f'ROLLBACK TO SAVEPOINT "{savepoint_name}"')
+                            cur.execute(f'RELEASE SAVEPOINT "{savepoint_name}"')
+                        except psycopg.Error:
+                            # Savepoint geri alınamazsa transaction'ı temizle.
+                            conn.rollback()
                         continue
 
                 conn.commit()
@@ -243,27 +252,12 @@ class MatchSyncer:
         Get or create tournament in database.
         Artık begin_at, end_at, tier ve region alanlarını da yazıyor.
         """
-        cur.execute("SELECT id FROM tournaments WHERE id = %s", (tournament_id,))
-        result = cur.fetchone()
-
-        if result:
-            # Mevcut kayıt: eksik alanları güncelle (NULL override etme)
-            cur.execute("""
-                UPDATE tournaments SET
-                    name     = COALESCE(EXCLUDED.name,     tournaments.name),
-                    begin_at = COALESCE(%s, tournaments.begin_at),
-                    end_at   = COALESCE(%s, tournaments.end_at),
-                    tier     = COALESCE(%s, tournaments.tier),
-                    region   = COALESCE(%s, tournaments.region)
-                WHERE id = %s
-            """, (begin_at, end_at, tier, region, tournament_id))
-            return result[0]
-
         cur.execute("""
             INSERT INTO tournaments (id, name, game_id, begin_at, end_at, tier, region)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (id) DO UPDATE SET
-                name     = EXCLUDED.name,
+                name     = COALESCE(EXCLUDED.name, tournaments.name),
+                game_id  = COALESCE(EXCLUDED.game_id, tournaments.game_id),
                 begin_at = COALESCE(EXCLUDED.begin_at, tournaments.begin_at),
                 end_at   = COALESCE(EXCLUDED.end_at,   tournaments.end_at),
                 tier     = COALESCE(EXCLUDED.tier,     tournaments.tier),

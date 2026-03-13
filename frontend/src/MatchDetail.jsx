@@ -1,13 +1,13 @@
 /**
  * MatchDetail.jsx
- * Hero + Skor | Twitch embed | Harita skorları | H2H | Kadro | MVP Oylama
- * toggleFavorite → favoritesHelper.js
+ * Hero + Skor | AI Win Probability | Live Scoreboard | Harita istatistikleri | H2H | Kadro | MVP Oylama
+ * Follow state -> UserContext
  */
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, Link }             from 'react-router-dom'
 import { supabase }                                 from './supabaseClient'
 import { isTurkishTeam }                           from './constants'
-import { getFavorites, toggleFavorite }            from './favoritesHelper'
+import { useUser }                                 from './context/UserContext'
 
 /* ─── Voter fingerprint ─────────────────────────────────────────────────────── */
 const VOTER_KEY = 'esports_voter_id'
@@ -38,6 +38,155 @@ function gameShort(n = '') {
   if (s.includes('counter') || s.includes('cs')) return 'CS2'
   if (s.includes('league'))                       return 'LoL'
   return n.slice(0, 4).toUpperCase() || '?'
+}
+
+const toNum = v => {
+  const n = Number(v)
+  return Number.isFinite(n) ? n : null
+}
+const clamp = (v, min, max) => Math.min(Math.max(v, min), max)
+const idEq = (a, b) => Number(a) === Number(b)
+
+function buildMapWinStats(h2hMatches, teamAId, teamBId) {
+  const agg = {}
+  for (const m of (h2hMatches || [])) {
+    const games = m?.raw_data?.games || []
+    for (const g of games) {
+      const rawName = g?.map?.name || g?.map || 'Unknown'
+      const name = String(rawName).trim() || 'Unknown'
+      if (!agg[name]) agg[name] = { map: name, total: 0, teamAWins: 0, teamBWins: 0 }
+      const wId = g?.winner?.id ?? g?.winner_id
+      if (wId == null) continue
+      agg[name].total += 1
+      if (idEq(wId, teamAId)) agg[name].teamAWins += 1
+      if (idEq(wId, teamBId)) agg[name].teamBWins += 1
+    }
+  }
+
+  return Object.values(agg)
+    .map(x => ({
+      ...x,
+      teamAWinRate: x.total > 0 ? Math.round((x.teamAWins / x.total) * 100) : 0,
+      teamBWinRate: x.total > 0 ? Math.round((x.teamBWins / x.total) * 100) : 0,
+    }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 8)
+}
+
+function buildAIWinModel(matchStatsRows, teamAId, teamBId, directPredictionA) {
+  function teamSignals(teamId) {
+    let sample = 0
+    let wins = 0
+    let kills = 0
+    let deaths = 0
+
+    for (const row of (matchStatsRows || [])) {
+      if (!idEq(row.team_id, teamId)) continue
+      const s = row.stats || {}
+      const score = toNum(s.score)
+      const opp = toNum(s.opponent_score)
+      if (score != null && opp != null) {
+        sample += 1
+        if (score > opp) wins += 1
+      } else if (typeof s.result === 'string') {
+        sample += 1
+        const r = s.result.toLowerCase()
+        if (r.includes('win')) wins += 1
+      }
+
+      const k = toNum(s.kills ?? s.total_kills ?? s?.kda?.kills)
+      const d = toNum(s.deaths ?? s.total_deaths ?? s?.kda?.deaths)
+      if (k != null) kills += k
+      if (d != null) deaths += d
+    }
+
+    const winRate = sample > 0 ? wins / sample : 0.5
+    const kd = deaths > 0 ? kills / deaths : (kills > 0 ? 2 : 1)
+    const kdSignal = clamp(kd / 2.2, 0.1, 1)
+    const strength = (winRate * 0.75) + (kdSignal * 0.25)
+    return { sample, strength }
+  }
+
+  const a = teamSignals(teamAId)
+  const b = teamSignals(teamBId)
+  let byStats = 0.5
+  if ((a.strength + b.strength) > 0) byStats = a.strength / (a.strength + b.strength)
+
+  const blendedA = directPredictionA != null
+    ? clamp((byStats * 0.8) + (directPredictionA * 0.2), 0.05, 0.95)
+    : clamp(byStats, 0.05, 0.95)
+
+  const sampleFactor = clamp((a.sample + b.sample) / 30, 0, 1)
+  const diffFactor = Math.abs(blendedA - 0.5) * 2
+  const confidence = Math.round(clamp((diffFactor * 0.7) + (sampleFactor * 0.3), 0.35, 0.95) * 100)
+
+  return {
+    teamA: Math.round(blendedA * 100),
+    teamB: 100 - Math.round(blendedA * 100),
+    confidence,
+    samples: a.sample + b.sample,
+  }
+}
+
+function buildLivePlayerBoard(matchRaw, rosters, teamAId, teamBId) {
+  const acc = {}
+  const upsert = (teamId, source) => {
+    if (teamId == null || !source) return
+    const pid = source.player_id ?? source.id ?? source?.player?.id ?? source?.slug ?? source?.nickname
+    if (pid == null) return
+    const key = `${teamId}:${pid}`
+    if (!acc[key]) {
+      acc[key] = {
+        player_id: pid,
+        team_id: teamId,
+        nickname: source.nickname || source.name || source?.player?.name || source?.player?.slug || 'Unknown',
+        kills: 0,
+        deaths: 0,
+        assists: 0,
+      }
+    }
+    acc[key].kills += toNum(source.kills ?? source.k) || 0
+    acc[key].deaths += toNum(source.deaths ?? source.d) || 0
+    acc[key].assists += toNum(source.assists ?? source.a) || 0
+  }
+
+  const games = matchRaw?.games || []
+  for (const g of games) {
+    const lists = []
+    if (Array.isArray(g?.players)) lists.push(g.players)
+    if (Array.isArray(g?.player_stats)) lists.push(g.player_stats)
+    if (Array.isArray(g?.teams)) {
+      for (const t of g.teams) {
+        if (Array.isArray(t?.players)) {
+          lists.push(t.players.map(p => ({ ...p, team_id: p.team_id ?? t.id ?? t.team_id })))
+        }
+      }
+    }
+    for (const lst of lists) {
+      for (const p of lst) {
+        const teamId = p.team_id ?? p?.team?.id ?? p.opponent_id
+        upsert(teamId, p)
+      }
+    }
+  }
+
+  const withFallback = (teamId, roster) => {
+    const rows = Object.values(acc).filter(r => idEq(r.team_id, teamId))
+    if (rows.length > 0) return rows.sort((x, y) => y.kills - x.kills)
+    return (roster || []).map(p => ({
+      player_id: p.id,
+      team_id: teamId,
+      nickname: p.nickname || 'Unknown',
+      kills: 0,
+      deaths: 0,
+      assists: 0,
+    }))
+  }
+
+  return {
+    teamA: withFallback(teamAId, rosters.teamA),
+    teamB: withFallback(teamBId, rosters.teamB),
+  }
 }
 
 /* ─── Skeleton ──────────────────────────────────────────────────────────────── */
@@ -77,8 +226,7 @@ function RoleBadge({ role }) {
 }
 
 /* ─── FavButton ─────────────────────────────────────────────────────────────── */
-function FavButton({ teamId, favs, onToggle }) {
-  const active = favs.includes(teamId)
+function FavButton({ teamId, active, onToggle }) {
   return (
     <button
       onClick={e => { e.preventDefault(); e.stopPropagation(); onToggle(teamId) }}
@@ -206,6 +354,21 @@ function MVPVoting({ matchId, players, isFinished }) {
     fetchVotes()
   }, [matchId, fetchVotes])
 
+  useEffect(() => {
+    if (!matchId) return undefined
+
+    const channel = supabase
+      .channel(`mvp_votes_${matchId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'match_mvp_votes', filter: `match_id=eq.${matchId}` },
+        () => { fetchVotes() }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [matchId, fetchVotes])
+
   async function castVote(player) {
     if (votedFor || voting || !isFinished) return
     setVoting(true); setVoteError(null)
@@ -316,13 +479,16 @@ function MVPVoting({ matchId, players, isFinished }) {
 export default function MatchDetail() {
   const { id }   = useParams()
   const navigate = useNavigate()
-  const [favs, setFavs] = useState(() => getFavorites())
+  const { isTeamFollowed, toggleTeamFollow } = useUser()
 
   const [match,   setMatch]   = useState(null)
   const [players, setPlayers] = useState({ teamA: [], teamB: [] })
   const [maps,    setMaps]    = useState([])
+  const [mapStats, setMapStats] = useState([])
   const [h2h,     setH2h]     = useState({ matches: [], teamAWins: 0, teamBWins: 0, draws: 0, total: 0, teamAId: null, teamBId: null })
   const [streams, setStreams]  = useState([])
+  const [aiWin, setAiWin] = useState({ teamA: 50, teamB: 50, confidence: 50, samples: 0 })
+  const [liveBoard, setLiveBoard] = useState({ teamA: [], teamB: [] })
 
   const [loadingMatch,   setLoadingMatch]   = useState(true)
   const [loadingDetails, setLoadingDetails] = useState(true)
@@ -353,18 +519,23 @@ export default function MatchDetail() {
     const aId = m.team_a_id||m.team_a?.id
     const bId = m.team_b_id||m.team_b?.id
     try {
-      const [plA, plB, h2hRes] = await Promise.all([
+      const [plA, plB, h2hRes, statsRes] = await Promise.all([
         supabase.from('players').select('id,nickname,real_name,role,image_url').eq('team_pandascore_id', aId).order('role'),
         supabase.from('players').select('id,nickname,real_name,role,image_url').eq('team_pandascore_id', bId).order('role'),
         supabase.from('matches')
-          .select('id,winner_id,status,team_a_id,team_b_id,team_a_score,team_b_score,scheduled_at,team_a:teams!matches_team_a_id_fkey(id,name,logo_url),team_b:teams!matches_team_b_id_fkey(id,name,logo_url)')
+          .select('id,winner_id,status,team_a_id,team_b_id,team_a_score,team_b_score,scheduled_at,raw_data,team_a:teams!matches_team_a_id_fkey(id,name,logo_url),team_b:teams!matches_team_b_id_fkey(id,name,logo_url)')
           .eq('status','finished')
           .or(`and(team_a_id.eq.${aId},team_b_id.eq.${bId}),and(team_a_id.eq.${bId},team_b_id.eq.${aId})`)
-          .order('scheduled_at',{ascending:false}).limit(8),
+          .order('scheduled_at',{ascending:false}).limit(5000),
+        supabase.from('match_stats')
+          .select('team_id,stats')
+          .in('team_id', [aId, bId])
+          .limit(220),
       ])
-      setPlayers({ teamA:plA.data||[], teamB:plB.data||[] })
+      const rosters = { teamA:plA.data||[], teamB:plB.data||[] }
+      setPlayers(rosters)
       const h = (h2hRes.data||[]).filter(x=>x.id!==parseInt(id))
-      setH2h({ matches:h, teamAWins:h.filter(x=>x.winner_id===aId).length, teamBWins:h.filter(x=>x.winner_id===bId).length, draws:h.filter(x=>!x.winner_id).length, total:h.length, teamAId:aId, teamBId:bId })
+      setH2h({ matches:h, teamAWins:h.filter(x=>idEq(x.winner_id, aId)).length, teamBWins:h.filter(x=>idEq(x.winner_id, bId)).length, draws:h.filter(x=>!x.winner_id).length, total:h.length, teamAId:aId, teamBId:bId })
       const games = m.raw_data?.games||[]
       setMaps(games.map(g=>({
         map_name:     g.map?.name||g.map||null,
@@ -373,18 +544,20 @@ export default function MatchDetail() {
         team_b_score: g.results?.find(r=>r.team_id===bId)?.score??null,
         length_seconds: g.length||null,
       })))
+      setMapStats(buildMapWinStats(h, aId, bId))
+      setAiWin(buildAIWinModel(statsRes.data || [], aId, bId, m.prediction_team_a))
+      setLiveBoard(buildLivePlayerBoard(m.raw_data, rosters, aId, bId))
     } catch (e) { console.warn('details:', e.message) }
     finally { setLoadingDetails(false) }
   }, [id])
 
   useEffect(() => { fetchMatch() }, [fetchMatch])
   useEffect(() => { if (match) fetchDetails(match) }, [match, fetchDetails])
-
-  /* ── Favori toggle ── */
-  function handleToggleFav(teamId) {
-    const { list } = toggleFavorite(teamId)
-    setFavs([...list])
-  }
+  useEffect(() => {
+    if (match?.status !== 'running') return undefined
+    const timer = setInterval(() => { fetchMatch() }, 15000)
+    return () => clearInterval(timer)
+  }, [match?.status, fetchMatch])
 
   /* ── Loading / error ── */
   if (loadingMatch) return (
@@ -416,12 +589,12 @@ export default function MatchDetail() {
   const isLive= match.status === 'running'
   const isFin = match.status === 'finished'
   const hasTR = isTurkishTeam(aName) || isTurkishTeam(bName)
-  const pctA  = match.prediction_team_a != null ? Math.round(match.prediction_team_a * 100) : null
-  const pctB  = pctA != null ? 100 - pctA : null
+  const pctA  = aiWin.teamA
+  const pctB  = aiWin.teamB
   const aWon  = isFin && (match.winner_id === aId || match.winner_id === parseInt(aId))
   const bWon  = isFin && !aWon && !!match.winner_id
-  const favA  = favs.includes(aId)
-  const favB  = favs.includes(bId)
+  const favA  = isTeamFollowed(aId)
+  const favB  = isTeamFollowed(bId)
 
   const twitchCh = (() => {
     const s = streams.find(s => (s.embed_url || s.raw_url || '').toLowerCase().includes('twitch.tv'))
@@ -467,8 +640,7 @@ export default function MatchDetail() {
                 {aLogo ? <img src={aLogo} alt={aName} style={{ width: 72, height: 72, objectFit: 'contain', filter: isFin && bWon ? 'grayscale(80%)' : 'none' }} /> : <div style={{ width: 72, height: 72, background: '#1a1a1a', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🛡️</div>}
                 <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (aWon ? '#4CAF50' : '#555') : '#fff' }}>{aName}{isTurkishTeam(aName) && ' 🇹🇷'}</div>
               </div>
-              {/* ← favoritesHelper bağlandı */}
-              <FavButton teamId={aId} favs={favs} onToggle={handleToggleFav} />
+              <FavButton teamId={aId} active={favA} onToggle={toggleTeamFollow} />
             </div>
 
             {/* Skor */}
@@ -479,18 +651,18 @@ export default function MatchDetail() {
               }
               <div style={{ fontSize: 12, fontWeight: 700, color: isLive ? '#FF4655' : '#4CAF50', marginTop: 4 }}>{isLive ? '● Canlı' : fmtTime(match.scheduled_at)}</div>
               <div style={{ fontSize: 10, color: '#383838', marginTop: 2 }}>{fmtDate(match.scheduled_at)}</div>
-              {pctA != null && (
-                <div style={{ marginTop: 10, padding: '0 6px' }}>
-                  <div style={{ height: 5, borderRadius: 3, overflow: 'hidden', display: 'flex' }}>
-                    <div style={{ flex: pctA, background: 'linear-gradient(90deg,#667eea,#764ba2)', borderRadius: '3px 0 0 3px' }} />
-                    <div style={{ flex: pctB, background: '#1a1a1a', borderRadius: '0 3px 3px 0' }} />
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2, fontSize: 9, fontWeight: 700 }}>
-                    <span style={{ color: pctA >= 50 ? '#a78bfa' : '#333' }}>{pctA}%</span>
-                    <span style={{ color: pctB >= 50 ? '#a78bfa' : '#333' }}>{pctB}%</span>
-                  </div>
+              <div style={{ marginTop: 10, padding: '0 6px', minWidth: 170 }}>
+                <div style={{ fontSize: 9, fontWeight: 800, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 4 }}>AI Win Probability</div>
+                <div style={{ height: 8, borderRadius: 4, overflow: 'hidden', display: 'flex', border: '1px solid #222' }}>
+                  <div style={{ flex: pctA, background: 'linear-gradient(90deg,#4ade80,#22c55e)', borderRadius: '4px 0 0 4px' }} />
+                  <div style={{ flex: pctB, background: 'linear-gradient(90deg,#60a5fa,#3b82f6)', borderRadius: '0 4px 4px 0' }} />
                 </div>
-              )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3, fontSize: 10, fontWeight: 800 }}>
+                  <span style={{ color: '#4ade80' }}>{aName}: {pctA}%</span>
+                  <span style={{ color: '#60a5fa' }}>{pctB}% :{bName}</span>
+                </div>
+                <div style={{ marginTop: 2, fontSize: 9, color: '#3b3b3b' }}>Confidence Score: %{aiWin.confidence} · sample: {aiWin.samples}</div>
+              </div>
             </div>
 
             {/* Team B */}
@@ -499,11 +671,18 @@ export default function MatchDetail() {
                 {bLogo ? <img src={bLogo} alt={bName} style={{ width: 72, height: 72, objectFit: 'contain', filter: isFin && aWon ? 'grayscale(80%)' : 'none' }} /> : <div style={{ width: 72, height: 72, background: '#1a1a1a', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🛡️</div>}
                 <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (bWon ? '#4CAF50' : '#555') : '#fff' }}>{isTurkishTeam(bName) && '🇹🇷 '}{bName}</div>
               </div>
-              {/* ← favoritesHelper bağlandı */}
-              <FavButton teamId={bId} favs={favs} onToggle={handleToggleFav} />
+              <FavButton teamId={bId} active={favB} onToggle={toggleTeamFollow} />
             </div>
           </div>
         </div>
+
+        <LiveScoreboard
+          isLive={isLive}
+          teamAName={aName}
+          teamBName={bName}
+          teamABoard={liveBoard.teamA}
+          teamBBoard={liveBoard.teamB}
+        />
 
         {/* Twitch */}
         {twitchCh && isLive && <div style={{ marginTop: 20 }}><TwitchEmbed channel={twitchCh} /></div>}
@@ -534,6 +713,29 @@ export default function MatchDetail() {
                       <div style={{ textAlign: 'center', fontSize: 10, color: '#282828', minWidth: 50 }}>TOPLAM</div>
                       <div style={{ fontSize: 20, fontWeight: 900, color: bWon ? '#4CAF50' : '#2a2a2a', fontVariantNumeric: 'tabular-nums' }}>{match.team_b_score ?? '—'}</div>
                     </div>
+                    {mapStats.length > 0 && (
+                      <div style={{ marginTop: 12, background: '#0a0a0a', borderRadius: 10, border: '1px solid #191919', padding: 10 }}>
+                        <div style={{ fontSize: 10, fontWeight: 800, color: '#4a4a4a', marginBottom: 8, textTransform: 'uppercase' }}>Map Win Rates</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {mapStats.map(m => (
+                            <div key={m.map} style={{ background: '#101010', borderRadius: 8, border: '1px solid #1b1b1b', padding: '7px 8px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 10 }}>
+                                <span style={{ color: '#9ca3af', fontWeight: 700 }}>{m.map}</span>
+                                <span style={{ color: '#3d3d3d' }}>{m.total} map</span>
+                              </div>
+                              <div style={{ height: 6, borderRadius: 4, overflow: 'hidden', display: 'flex' }}>
+                                <div style={{ width: `${m.teamAWinRate}%`, background: '#4ade80' }} />
+                                <div style={{ width: `${m.teamBWinRate}%`, background: '#60a5fa' }} />
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3, fontSize: 9, fontWeight: 700 }}>
+                                <span style={{ color: '#4ade80' }}>{aName} {m.teamAWinRate}%</span>
+                                <span style={{ color: '#60a5fa' }}>{m.teamBWinRate}% {bName}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )
               }
@@ -555,8 +757,12 @@ export default function MatchDetail() {
                       <span style={{ color: h2h.teamAWins >= h2h.teamBWins ? '#4CAF50' : '#444', fontWeight: 700 }}>{aName} {h2h.teamAWins}G</span>
                       <span style={{ color: h2h.teamBWins > h2h.teamAWins ? '#4CAF50' : '#444', fontWeight: 700 }}>{h2h.teamBWins}G {bName}</span>
                     </div>
+                    <div style={{ marginBottom: 10, background: '#0a0a0a', border: '1px solid #191919', borderRadius: 8, padding: '7px 9px', display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
+                      <span style={{ color: '#666' }}>Rekabet Skoru</span>
+                      <span style={{ color: '#ddd', fontWeight: 800 }}>{aName} {h2h.teamAWins} - {h2h.teamBWins} {bName}</span>
+                    </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      {h2h.matches.slice(0, 5).map(m => (
+                      {h2h.matches.slice(0, 12).map(m => (
                         <div key={m.id} onClick={() => navigate(`/match/${m.id}`)} style={{ cursor: 'pointer' }}>
                           <H2HRow match={m} refTeamAId={h2h.teamAId} />
                         </div>
@@ -627,6 +833,42 @@ export default function MatchDetail() {
         @keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:.4} }
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
       `}</style>
+    </div>
+  )
+}
+
+function LiveScoreboard({ teamAName, teamBName, teamABoard, teamBBoard, isLive }) {
+  if (!isLive) return null
+
+  const table = (title, rows, accent) => (
+    <div style={{ background: '#0d0d0d', border: '1px solid #1b1b1b', borderRadius: 12, padding: 10 }}>
+      <div style={{ fontSize: 11, fontWeight: 800, color: accent, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.8px' }}>{title}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 40px 40px 40px', gap: 6, fontSize: 9, color: '#444', marginBottom: 6, padding: '0 4px' }}>
+        <span>Oyuncu</span><span style={{ textAlign: 'right' }}>K</span><span style={{ textAlign: 'right' }}>D</span><span style={{ textAlign: 'right' }}>A</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {(rows || []).slice(0, 6).map(p => (
+          <div key={`${title}_${p.player_id}`} style={{ display: 'grid', gridTemplateColumns: '1fr 40px 40px 40px', gap: 6, alignItems: 'center', background: '#111', border: '1px solid #1a1a1a', borderRadius: 8, padding: '6px 8px' }}>
+            <span style={{ fontSize: 11, color: '#cfcfcf', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nickname}</span>
+            <span style={{ textAlign: 'right', fontSize: 11, color: '#4ade80', fontVariantNumeric: 'tabular-nums' }}>{p.kills ?? 0}</span>
+            <span style={{ textAlign: 'right', fontSize: 11, color: '#fb7185', fontVariantNumeric: 'tabular-nums' }}>{p.deaths ?? 0}</span>
+            <span style={{ textAlign: 'right', fontSize: 11, color: '#93c5fd', fontVariantNumeric: 'tabular-nums' }}>{p.assists ?? 0}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
+  return (
+    <div style={{ marginTop: 16, marginBottom: 4, background: 'linear-gradient(160deg,#170d0f,#0d0d0d)', borderRadius: 16, border: '1px solid rgba(255,70,85,.25)', padding: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 900, color: '#FF4655', textTransform: 'uppercase', letterSpacing: '1px' }}>Canli Scoreboard</div>
+        <div style={{ fontSize: 10, color: '#7a3038' }}>K/D/A anlik performans</div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        {table(teamAName, teamABoard, '#4ade80')}
+        {table(teamBName, teamBBoard, '#60a5fa')}
+      </div>
     </div>
   )
 }

@@ -32,6 +32,30 @@ const GAME_META = {
   dota:             { icon: '🔮', color: '#9d2226', label: 'Dota 2'          },
 }
 
+const GAME_ID_TO_SLUG = {
+  valorant: 'valorant',
+  cs2: 'csgo',
+  lol: 'lol',
+  dota2: 'dota2',
+}
+
+const GAME_SLUG_TO_ID = {
+  valorant: 'valorant',
+  csgo: 'cs2',
+  'counter-strike': 'cs2',
+  'counter-strike-2': 'cs2',
+  cs2: 'cs2',
+  lol: 'lol',
+  dota: 'dota2',
+  dota2: 'dota2',
+}
+
+function toGameIdFromParam(value) {
+  if (!value) return undefined
+  const normalized = String(value).trim().toLowerCase()
+  return GAME_SLUG_TO_ID[normalized] || (GAMES.some(g => g.id === normalized) ? normalized : undefined)
+}
+
 function normalizeTierKey(value) {
   if (!value) return null
   const normalized = String(value).toUpperCase().replace(/\s+/g, '').replace('_TIER', '')
@@ -569,12 +593,15 @@ function DebugPanel({ info, onClose }) {
 export default function SearchPage() {
   const navigate                        = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const initialYear = Number(searchParams.get('year'))
+  const initialTier = normalizeTierKey(searchParams.get('tier'))
+  const initialGameId = toGameIdFromParam(searchParams.get('game'))
 
   // ── State ──────────────────────────────────────────────────────
   const [query,       setQuery]       = useState(searchParams.get('q') || '')
-  const [activeYear,  setActiveYear]  = useState(null)
-  const [gameId,      setGameId]      = useState(undefined)   // filtreler ayrı state
-  const [tierId,      setTierId]      = useState(undefined)   // referans sorunu yok
+  const [activeYear,  setActiveYear]  = useState(YEARS.includes(initialYear) ? initialYear : null)
+  const [gameId,      setGameId]      = useState(initialGameId)   // filtreler ayrı state
+  const [tierId,      setTierId]      = useState(initialTier || undefined)   // referans sorunu yok
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const [teams,       setTeams]       = useState([])
@@ -600,9 +627,13 @@ export default function SearchPage() {
 
   // ── URL senkron ────────────────────────────────────────────────
   useEffect(() => {
-    if (query) setSearchParams({ q: query }, { replace: true })
-    else       setSearchParams({},           { replace: true })
-  }, [query])  // eslint-disable-line
+    const params = {}
+    if (query) params.q = query
+    if (activeYear != null) params.year = String(activeYear)
+    if (tierId) params.tier = tierId
+    if (gameId) params.game = GAME_ID_TO_SLUG[gameId] || gameId
+    setSearchParams(params, { replace: true })
+  }, [query, activeYear, tierId, gameId, setSearchParams])
 
   // ── İlk yükleme ────────────────────────────────────────────────
   useEffect(() => {
@@ -657,42 +688,79 @@ export default function SearchPage() {
       appliedFilters: [], rawCount: null, error: null,
     }
 
+    const yearStart = activeYear != null ? `${activeYear}-01-01T00:00:00.000Z` : null
+    const yearEnd = activeYear != null ? `${activeYear + 1}-01-01T00:00:00.000Z` : null
+
+    const applyGameFilter = (rows = []) => {
+      if (gameId == null || gameId === '') return rows
+      const selectedSlug = GAME_ID_TO_SLUG[gameId] || String(gameId).toLowerCase()
+      const gameEntry = GAMES.find(g => g.id === gameId)
+      if (!gameEntry?.patterns?.length) return rows
+
+      return rows.filter(t => {
+        const gameName = String(t?.game?.name || '').toLowerCase()
+        const gameSlug = String(t?.game?.slug || '').toLowerCase()
+        const tournamentName = String(t?.name || '').toLowerCase()
+        if (gameSlug && (gameSlug === selectedSlug || gameSlug.includes(selectedSlug))) return true
+        return gameEntry.patterns.some(p =>
+          gameName.includes(p.toLowerCase()) || tournamentName.includes(p.toLowerCase())
+        )
+      })
+    }
+
     try {
-      let q = supabase
-        .from('tournaments')
-        .select('id, name, tier, begin_at, end_at, region, game:games(id, name, slug)')
-        .order('begin_at', { ascending: false, nullsFirst: false })  // NULL'lar sona
-        .limit(80)
+      // begin_at sıralaması bazı ortamlarda 400 döndürebildiği için id fallback ekliyoruz.
+      const buildBaseQuery = (orderBy = 'begin_at') => {
+        let base = supabase
+          .from('tournaments')
+          .select('id, name, tier, begin_at, end_at, region, game:games(id, name, slug)')
+          .order(orderBy, { ascending: false })
+          .limit(120)
+
+        if (activeYear != null) {
+          base = base
+            .not('begin_at', 'is', null)
+            .gte('begin_at', yearStart)
+            .lt('begin_at', yearEnd)
+        }
+
+        if (tierId != null && tierId !== '') {
+          base = base.eq('tier', tierId)
+        }
+
+        return base
+      }
+
+      let q = buildBaseQuery('begin_at')
 
       // ── GUARD 1: Yıl filtresi ────────────────────────────────────
       // begin_at NULL olabilir → yalnızca NOT NULL satırlarla sorgula
       if (activeYear != null) {
-        q = q
-          .not('begin_at', 'is', null)                    // NULL'ları dışla
-          .gte('begin_at', `${activeYear}-01-01`)
-          .lt( 'begin_at', `${activeYear + 1}-01-01`)
         dbg.appliedFilters.push(`year=${activeYear}`)
       }
 
       // ── GUARD 2: Tier filtresi ───────────────────────────────────
       if (tierId != null && tierId !== '') {
-        q = q.eq('tier', tierId)
         dbg.appliedFilters.push(`tier=${tierId}`)
       }
 
       // ── GUARD 3: Oyun filtresi ───────────────────────────────────
       if (gameId != null && gameId !== '') {
-        const gameEntry = GAMES.find(g => g.id === gameId)
-        if (gameEntry?.patterns?.length > 0) {
-          const orStr = gameEntry.patterns
-            .map(p => `name.ilike.%${p}%`)
-            .join(',')
-          q = q.or(orStr)
-          dbg.appliedFilters.push(`game=${gameId}`)
-        }
+        dbg.appliedFilters.push(`game=${GAME_ID_TO_SLUG[gameId] || gameId} (slug/client-side)`)
       }
 
-      const { data, error } = await q
+      let { data, error } = await q
+
+      if (error) {
+        console.warn('⚠️ begin_at order failed, retrying with id order...', error.message)
+        q = buildBaseQuery('id')
+        const retried = await q
+        data = retried.data
+        error = retried.error
+        if (!error) {
+          dbg.orderFallback = 'id'
+        }
+      }
 
       if (error) {
         // begin_at kolonu yok hatası → kolonsuz fallback sorgu
@@ -705,10 +773,12 @@ export default function SearchPage() {
         throw error
       }
 
-      dbg.rawCount = data?.length ?? 0
+      const filteredData = applyGameFilter(data || [])
+
+      dbg.rawCount = filteredData.length
       console.log('🏆 fetchTournaments:', dbg)
 
-      setTournaments(data || [])
+      setTournaments(filteredData)
       setDebugInfo(dbg)
     } catch (e) {
       console.error('fetchTournaments catch:', e)
@@ -741,8 +811,8 @@ export default function SearchPage() {
       // Yıl filtresi → matches.scheduled_at üzerinden
       if (activeYear != null) {
         q = q
-          .gte('scheduled_at', `${activeYear}-01-01`)
-          .lt( 'scheduled_at', `${activeYear + 1}-01-01`)
+          .gte('scheduled_at', `${activeYear}-01-01T00:00:00.000Z`)
+          .lt( 'scheduled_at', `${activeYear + 1}-01-01T00:00:00.000Z`)
         dbg.appliedFilters = dbg.appliedFilters || []
         dbg.appliedFilters.push(`year=${activeYear} (via matches.scheduled_at)`)
       }
@@ -751,7 +821,7 @@ export default function SearchPage() {
         q = q.eq('tournament.tier', tierId)
       }
 
-      q = q.limit(500)   // daha fazla maç → unique turnuva sayısı artar
+      q = q.order('scheduled_at', { ascending: false }).limit(500)
 
       const { data, error } = await q
       if (error) throw error
@@ -767,9 +837,13 @@ export default function SearchPage() {
           // Oyun filtresi client-side uygula
           if (gameId != null && gameId !== '') {
             const gameEntry = GAMES.find(g => g.id === gameId)
-            const match = gameEntry?.patterns?.some(p =>
+            const selectedSlug = GAME_ID_TO_SLUG[gameId] || String(gameId).toLowerCase()
+            const gameSlug = String(t?.game?.slug || '').toLowerCase()
+            const matchBySlug = gameSlug && (gameSlug === selectedSlug || gameSlug.includes(selectedSlug))
+            const matchByPattern = gameEntry?.patterns?.some(p =>
               t.name?.toLowerCase().includes(p)
             )
+            const match = matchBySlug || matchByPattern
             if (!match) continue
           }
 
@@ -1184,9 +1258,7 @@ export default function SearchPage() {
                 color: '#383838', background: '#0d0d0d', borderRadius: 16,
                 border: '1px dashed #1e1e1e' }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>🏆</div>
-                <div style={{ fontSize: 15, color: '#444', marginBottom: 6 }}>
-                  Bu kriterlerde turnuva bulunamadı
-                </div>
+                <div style={{ fontSize: 15, color: '#444', marginBottom: 6 }}>Sonuç bulunamadı</div>
                 <div style={{ fontSize: 12, color: '#2a2a2a', marginBottom: 20 }}>
                   {hasActiveFilters
                     ? 'Filtreler sonuçları daraltıyor olabilir'

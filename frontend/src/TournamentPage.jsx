@@ -8,7 +8,7 @@
  * • Match List — Upcoming / Past sekmeleri
  * • Turkish Pride efekti
  */
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useNavigate }                     from 'react-router-dom'
 import { supabase }                                   from './supabaseClient'
 import { isTurkishTeam }                              from './constants'
@@ -59,29 +59,196 @@ function getTierMeta(rawTier) {
   }
 }
 
-function canonicalRoundLabel(roundInfo = '') {
-  const s = String(roundInfo || '').toLowerCase().trim()
-  if (!s) return 'Matches'
+function getMatchTimestamp(match) {
+  return match?.begin_at || match?.scheduled_at || null
+}
 
-  if (/(quarter|qf|1\/4|çeyrek)/.test(s)) return 'Quarter-Final'
-  if (/(semi|sf|yarı)/.test(s)) return 'Semi-Final'
-  if (/(grand\s*final|gf|büyük\s*final)/.test(s)) return 'Grand Final'
-  if (/(final|f\b)/.test(s)) return 'Final'
+function inferBracketStageFromText(text = '', bracketSide = 'upper') {
+  const s = String(text || '').toLowerCase().trim()
+  if (!s) return null
 
-  return roundInfo
+  if (/(3rd|third|bronze|decider|placement)/.test(s)) return 'Third Place Decider'
+
+  if (bracketSide === 'lower') {
+    const roundNum = s.match(/(?:lower|lb|loser)[\s_-]*(?:round|r)?[\s_-]*(\d+)/)
+    if (roundNum?.[1]) return `Lower Round ${roundNum[1]}`
+    if (/(lower[\s_-]*semi|lb[\s_-]*semi|semi[\s_-]*final|semifinal|\bsf\b)/.test(s)) return 'Lower Semi-final'
+    if (/(lower[\s_-]*final|lb[\s_-]*final|\blf\b|\bfinal\b)/.test(s)) return 'Lower Final'
+    return 'Lower Round 1'
+  }
+
+  if (/(semi[\s_-]*final|semifinal|\bsf\b|round[\s_-]*of[\s_-]*4|round[\s_-]*4|ro4|1\/2)/.test(s)) return 'Semi-finals'
+  if (/(quarter[\s_-]*final|quarterfinal|\bqf\b|round[\s_-]*of[\s_-]*8|round[\s_-]*8|ro8|round[\s_-]*of[\s_-]*16|ro16|round[\s_-]*16|\br16\b|1\/8\s*final|1\/8|1\/4)/.test(s)) return 'Quarter-finals'
+  if (/(grand[\s_-]*final|\bgf\b)/.test(s)) return 'Grand final'
+
+  // "Upper Final" çoğunlukla GF öncesi eşleşme olduğundan Semi-final kolonunda tutulur.
+  if (/(upper[\s_-]*final|\bfinal\b|finals?)/.test(s)) return 'Semi-finals'
+
+  return null
+}
+
+function inferBracketSide(match) {
+  const raw = [match?.bracket_type, match?.stage_name, match?.round_info, match?.name]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  if (!raw) return 'upper'
+  if (/(lower|lb|loser)/.test(raw)) return 'lower'
+  if (/(upper|ub|winner|quarter|semi|grand\s*final|\bqf\b|\bsf\b)/.test(raw)) return 'upper'
+  return 'upper'
+}
+
+function buildBracketStages(matches = []) {
+  const sortedByTime = [...matches].sort((a, b) => {
+    const ta = getMatchTimestamp(a) ? new Date(getMatchTimestamp(a)).getTime() : 0
+    const tb = getMatchTimestamp(b) ? new Date(getMatchTimestamp(b)).getTime() : 0
+    return ta - tb
+  })
+
+  const resolved = sortedByTime.map(m => {
+    const bracketSide = inferBracketSide(m)
+
+    const stageFromRound = inferBracketStageFromText(m?.round_info, bracketSide)
+    if (stageFromRound) {
+      return { ...m, __stage: stageFromRound, __stageSource: 'round_info', __bracketSide: bracketSide }
+    }
+
+    const stageFromName = inferBracketStageFromText(m?.name, bracketSide)
+    if (stageFromName) {
+      return { ...m, __stage: stageFromName, __stageSource: 'name', __bracketSide: bracketSide }
+    }
+
+    const fallbackStage = bracketSide === 'lower' ? 'Lower Round 1' : 'Quarter-finals'
+    console.warn('[TournamentPage][Bracket][InferredStage]', {
+      matchId: m?.id,
+      round_info: m?.round_info ?? null,
+      name: m?.name ?? null,
+      bracket_type: m?.bracket_type ?? null,
+      stage_name: m?.stage_name ?? null,
+      reason: 'No stage keyword, using bracket-side default stage',
+      assignedSide: bracketSide,
+      assignedStage: fallbackStage,
+    })
+
+    return {
+      ...m,
+      __stage: fallbackStage,
+      __stageSource: 'side-default',
+      __bracketSide: bracketSide,
+    }
+  })
+
+  return resolved
 }
 
 // round-robin mi elimination mı?
 function detectFormat(matches) {
   if (!matches?.length) return 'unknown'
   // round_info alanı varsa kullan
-  const rounds = [...new Set(matches.map(m => m.round_info).filter(Boolean))]
+  const rounds = [...new Set(matches.map(m => m.round_info || m.name).filter(Boolean))]
   if (rounds.some(r => /final|semi|quarter|bracket/i.test(r))) return 'elimination'
   if (rounds.some(r => /group|round|week/i.test(r)))           return 'roundrobin'
   // bracket_position varsa elimination
   if (matches.some(m => m.bracket_position != null))           return 'elimination'
   // fallback: maç sayısı az + tekrar eden takım çiftleri az → elimination
   return rounds.length > 0 ? 'roundrobin' : 'elimination'
+}
+
+function detectStageMode(tournament, matches, format) {
+  const rootStageText = [tournament?.stage_type, tournament?.stage_name]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  const stageText = [
+    tournament?.stage_type,
+    tournament?.stage_name,
+    ...(matches || []).flatMap(m => [m?.stage_type, m?.stage_name, m?.round_info]),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  const hasLeagueStyle = /(swiss|groups?|round\s*robin|\brr\b)/.test(stageText)
+  const hasBracketSignals = /(play[\s_-]*offs?|elimination|knockout|bracket|quarter|semi|grand\s*final|lower|upper)/.test(stageText)
+  const hasStageHints = Boolean(rootStageText) || (matches || []).some(m => Boolean(m?.stage_type || m?.stage_name))
+  const stageUndetermined = !hasStageHints && !hasLeagueStyle && !hasBracketSignals
+
+  // Güvenli varsayılan: stage tipi belirlenemiyorsa liste görünümü.
+  const bracketEnabled = !hasLeagueStyle && hasBracketSignals && !stageUndetermined
+
+  return {
+    hasLeagueStyle,
+    hasBracketSignals,
+    hasStageHints,
+    stageUndetermined,
+    format,
+    bracketEnabled,
+  }
+}
+
+function getRoundDisplayLabel(match) {
+  return match?.round_info || match?.stage_name || 'Round'
+}
+
+function StageListView({ matches, navigate, gc }) {
+  const grouped = useMemo(() => {
+    const sorted = [...(matches || [])].sort((a, b) => {
+      const ta = getMatchTimestamp(a) ? new Date(getMatchTimestamp(a)).getTime() : 0
+      const tb = getMatchTimestamp(b) ? new Date(getMatchTimestamp(b)).getTime() : 0
+      return ta - tb
+    })
+
+    const bucket = {}
+    for (const m of sorted) {
+      const ts = getMatchTimestamp(m)
+      const d = ts ? new Date(ts) : null
+      const dateKey = d && !Number.isNaN(d.getTime())
+        ? d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })
+        : 'Tarih Bilinmiyor'
+
+      const roundKey = getRoundDisplayLabel(m)
+      if (!bucket[dateKey]) bucket[dateKey] = {}
+      if (!bucket[dateKey][roundKey]) bucket[dateKey][roundKey] = []
+      bucket[dateKey][roundKey].push(m)
+    }
+    return bucket
+  }, [matches])
+
+  const dateKeys = Object.keys(grouped)
+  if (dateKeys.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '28px', color: '#555' }}>
+        Bu aşamada listelenecek maç bulunamadı.
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {dateKeys.map(dateKey => (
+        <div key={dateKey} style={{ border: '1px solid #1b1b1b', borderRadius: 12, background: '#0c0c0c', padding: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: gc, letterSpacing: '.9px', marginBottom: 8 }}>
+            📅 {dateKey}
+          </div>
+
+          {Object.entries(grouped[dateKey]).map(([roundKey, list]) => (
+            <div key={`${dateKey}-${roundKey}`} style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 10, color: '#7a7a7a', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.8px' }}>
+                {roundKey}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 10 }}>
+                {list.map(m => (
+                  <MatchListCard key={m.id} m={m} navigate={navigate} gc={gc} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
 }
 
 // ─── Utility ────────────────────────────────────────────────────────────────
@@ -267,73 +434,29 @@ function StandingsTable({ matches, navigate }) {
 
 // ─── Bracket ─────────────────────────────────────────────────────────────────
 
-const ROUND_ORDER  = ['Quarter-Final', 'Semi-Final', 'Final', 'Grand Final']
+const UPPER_ROUND_ORDER = ['Quarter-finals', 'Semi-finals', 'Grand final']
+const LOWER_ROUND_ORDER = ['Lower Round 1', 'Lower Round 2', 'Lower Round 3', 'Lower Round 4', 'Lower Semi-final', 'Lower Final']
 const ROUND_LABELS = {
-  'Quarter-Final': { icon: '⚔️',  color: '#818cf8', short: 'QF', order: 0 },
-  'Semi-Final':    { icon: '🔥',  color: '#FF8C00', short: 'SF', order: 1 },
-  'Final':         { icon: '🏆',  color: '#FFD700', short: 'F',  order: 2 },
-  'Grand Final':   { icon: '👑',  color: '#FFD700', short: 'GF', order: 3 },
-}
-
-/* ─── SVG Connector ─────────────────────────────────────────────────────────
-   İki sütun arasındaki bağlantı çizgisi.
-   leftCards: sol sütundaki kart sayısı → her çift bir sonraki karta bağlanır.
-   cardH    : kart yüksekliği (px)
-   gap      : kartlar arası gap (px)
-*/
-function BracketConnectors({ pairCount, cardH, cardGap, headerH }) {
-  // Her pair için bir connector: sol'dan 2 kart → sağ'da 1 kart
-  const connW = 32   // svg genişliği
-  const totalH = pairCount * (cardH * 2 + cardGap) + (pairCount - 1) * cardGap
-
-  return (
-    <svg
-      width={connW}
-      height={totalH + headerH}
-      style={{ flexShrink: 0, alignSelf: 'flex-start', marginTop: headerH }}
-      overflow="visible"
-    >
-      {Array.from({ length: pairCount }).map((_, i) => {
-        // Sol sütun: kardeş kartların orta Y'leri
-        const topCardMidY    = i * (cardH * 2 + cardGap * 2) + cardH / 2
-        const bottomCardMidY = topCardMidY + cardH + cardGap
-        const midY           = (topCardMidY + bottomCardMidY) / 2
-
-        return (
-          <g key={i}>
-            {/* üst kart → merkez */}
-            <path
-              d={`M 0 ${topCardMidY} H ${connW / 2} V ${midY}`}
-              fill="none" stroke="#2a2a2a" strokeWidth="1.5"
-              strokeDasharray="4 3"
-            />
-            {/* alt kart → merkez */}
-            <path
-              d={`M 0 ${bottomCardMidY} H ${connW / 2} V ${midY}`}
-              fill="none" stroke="#2a2a2a" strokeWidth="1.5"
-              strokeDasharray="4 3"
-            />
-            {/* merkez → sağ */}
-            <path
-              d={`M ${connW / 2} ${midY} H ${connW}`}
-              fill="none" stroke="#FF4655" strokeWidth="1.5"
-              opacity="0.5"
-            />
-            {/* merkez nokta */}
-            <circle cx={connW / 2} cy={midY} r="3"
-              fill="#FF4655" opacity="0.6" />
-          </g>
-        )
-      })}
-    </svg>
-  )
+  'Quarter-finals': { icon: '⚔️', color: '#818cf8', short: 'QF' },
+  'Semi-finals':    { icon: '🔥', color: '#FF8C00', short: 'SF' },
+  'Grand final':    { icon: '👑', color: '#FFD700', short: 'GF' },
+  'Lower Round 1':  { icon: '🛣️', color: '#94a3b8', short: 'LB R1' },
+  'Lower Round 2':  { icon: '🛣️', color: '#94a3b8', short: 'LB R2' },
+  'Lower Round 3':  { icon: '🛣️', color: '#94a3b8', short: 'LB R3' },
+  'Lower Round 4':  { icon: '🛣️', color: '#94a3b8', short: 'LB R4' },
+  'Lower Semi-final': { icon: '⚔️', color: '#60a5fa', short: 'LB SF' },
+  'Lower Final':      { icon: '🏁', color: '#38bdf8', short: 'LB F' },
 }
 
 const BRACKET_CARD_H   = 88   // px — BracketMatchCard yüksekliği
 const BRACKET_CARD_GAP = 10   // px — kartlar arası gap
 const BRACKET_HEADER_H = 44   // px — round header yüksekliği
+const BRACKET_CARD_W   = 200
+const BRACKET_COL_GAP  = 76
+const BRACKET_TOP_PAD  = 8
+const CONNECTOR_MODE = 'orthogonal'
 
-function BracketMatchCard({ m, navigate, gc }) {
+function BracketMatchCard({ m, navigate, gc, highlightPath = false }) {
   const aId   = m.team_a?.id || m.team_a_id
   const bId   = m.team_b?.id || m.team_b_id
   const aWon  = m.status === 'finished' && (m.winner_id === aId)
@@ -356,9 +479,13 @@ function BracketMatchCard({ m, navigate, gc }) {
         borderRadius: 10, overflow: 'hidden',
         border: m.status === 'running'
           ? '1.5px solid rgba(255,70,85,.6)'
+          : highlightPath
+          ? '1.5px solid rgba(255,70,85,.55)'
           : hov ? `1.5px solid ${gc}88` : '1.5px solid #1e1e1e',
         boxShadow: m.status === 'running'
           ? '0 0 14px rgba(255,70,85,.2)'
+          : highlightPath
+          ? '0 0 16px rgba(255,70,85,.18)'
           : hov ? `0 4px 16px ${gc}20` : 'none',
         cursor: m.team_a ? 'pointer' : 'default',
         background: '#0d0d0d',
@@ -443,110 +570,278 @@ function BracketMatchCard({ m, navigate, gc }) {
   )
 }
 
-function BracketView({ matches, navigate, gc }) {
-  const rounds = useMemo(() => {
-    const grouped = {}
-    for (const m of matches) {
-      const raw   = m.round_info || m.round || ''
-      const label = canonicalRoundLabel(raw)
+function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'upper' }) {
+  const scrollRef = useRef(null)
+  const dragRef = useRef({ isDown: false, moved: false, startX: 0, scrollLeft: 0 })
+  const [isDragging, setIsDragging] = useState(false)
 
-      if (!grouped[label]) grouped[label] = []
-      grouped[label].push(m)
+  const prepared = useMemo(() => {
+    const source = (resolvedMatches || buildBracketStages(matches))
+      .filter(m => m.__bracketSide === bracketSide)
+
+    const roundOrder = bracketSide === 'lower' ? LOWER_ROUND_ORDER : UPPER_ROUND_ORDER
+    const main = Object.fromEntries(roundOrder.map(k => [k, []]))
+    let thirdPlace = null
+
+    for (const m of source) {
+      if (m.__stage === 'Third Place Decider') {
+        if (!thirdPlace) thirdPlace = m
+        continue
+      }
+      if (main[m.__stage]) {
+        main[m.__stage].push(m)
+      }
     }
 
-    // Sırala: ROUND_ORDER'a göre, sonra alfabetik
-    const ordered = {}
-    for (const r of ROUND_ORDER) {
-      if (grouped[r]) ordered[r] = grouped[r]
-    }
-    for (const r of Object.keys(grouped)) {
-      if (!ordered[r]) ordered[r] = grouped[r]
+    for (const key of Object.keys(main)) {
+      main[key] = main[key].sort((a, b) => {
+        const ta = getMatchTimestamp(a) ? new Date(getMatchTimestamp(a)).getTime() : 0
+        const tb = getMatchTimestamp(b) ? new Date(getMatchTimestamp(b)).getTime() : 0
+        return ta - tb
+      })
     }
 
-    // Her round'u zaman sırasına göre sabitle.
-    for (const key of Object.keys(ordered)) {
-      ordered[key] = [...ordered[key]].sort(
-        (a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at)
-      )
-    }
-    return ordered
-  }, [matches])
+    return { main, thirdPlace, roundOrder }
+  }, [matches, resolvedMatches, bracketSide])
 
-  const roundKeys = Object.keys(rounds)
+  const roundKeys = prepared.roundOrder.filter(k => prepared.main[k]?.length > 0)
+
+  const layout = useMemo(() => {
+    const columns = roundKeys.map((rk, colIdx) => {
+      const colMatches = prepared.main[rk]
+      const x = colIdx * (BRACKET_CARD_W + BRACKET_COL_GAP)
+      const yOffset = colIdx > 0 ? colIdx * (BRACKET_CARD_H + BRACKET_CARD_GAP) : 0
+
+      const cards = colMatches.map((m, idx) => {
+        const y = BRACKET_TOP_PAD + BRACKET_HEADER_H + yOffset + idx * (BRACKET_CARD_H + BRACKET_CARD_GAP)
+        const winnerId = m?.winner_id || null
+
+        return {
+          m,
+          idx,
+          x,
+          y,
+          centerY: y + BRACKET_CARD_H / 2,
+          winnerId,
+        }
+      })
+
+      return { rk, colIdx, x, yOffset, cards }
+    })
+
+    const edges = []
+    for (let c = 0; c < columns.length - 1; c++) {
+      const leftCards = columns[c].cards
+      const rightCards = columns[c + 1].cards
+
+      leftCards.forEach((srcCard, srcIdx) => {
+        const src = srcCard.m
+        const winnerId = src?.winner_id || null
+
+        let targetIndex = -1
+        if (winnerId) {
+          targetIndex = rightCards.findIndex(rc => {
+            const t = rc.m
+            const ta = t?.team_a?.id || t?.team_a_id
+            const tb = t?.team_b?.id || t?.team_b_id
+            return winnerId === ta || winnerId === tb
+          })
+        }
+
+        // Winner eşleşmesi yoksa bracket akışını bozmamak için index-pair fallback.
+        if (targetIndex === -1 && rightCards.length > 0) {
+          targetIndex = Math.min(Math.floor(srcIdx / 2), rightCards.length - 1)
+        }
+
+        if (targetIndex < 0) return
+        const dstCard = rightCards[targetIndex]
+        edges.push({
+          key: `${c}-${srcCard.idx}-${targetIndex}`,
+          from: { x: srcCard.x + BRACKET_CARD_W, y: srcCard.centerY },
+          to: { x: dstCard.x, y: dstCard.centerY },
+          highlight: Boolean(winnerId),
+          sourceId: src?.id,
+          targetId: dstCard.m?.id,
+        })
+      })
+    }
+
+    const width = Math.max(BRACKET_CARD_W, columns.length * BRACKET_CARD_W + Math.max(0, columns.length - 1) * BRACKET_COL_GAP)
+    const maxCardBottom = columns.flatMap(col => col.cards.map(card => card.y + BRACKET_CARD_H))
+      .reduce((acc, v) => Math.max(acc, v), BRACKET_TOP_PAD + BRACKET_HEADER_H)
+    const height = maxCardBottom + BRACKET_TOP_PAD
+
+    return { columns, edges, width, height }
+  }, [roundKeys, prepared])
+
+  const highlightedSourceIds = useMemo(
+    () => new Set(layout.edges.filter(e => e.highlight).map(e => e.sourceId).filter(Boolean)),
+    [layout.edges]
+  )
+
+  const onMouseDown = (e) => {
+    const el = scrollRef.current
+    if (!el) return
+    dragRef.current = {
+      isDown: true,
+      moved: false,
+      startX: e.clientX,
+      scrollLeft: el.scrollLeft,
+    }
+    setIsDragging(true)
+  }
+
+  const onMouseMove = (e) => {
+    if (!dragRef.current.isDown) return
+    const el = scrollRef.current
+    if (!el) return
+    const dx = e.clientX - dragRef.current.startX
+    if (Math.abs(dx) > 3) dragRef.current.moved = true
+    el.scrollLeft = dragRef.current.scrollLeft - dx
+  }
+
+  const endDrag = () => {
+    dragRef.current.isDown = false
+    setIsDragging(false)
+  }
+
   if (roundKeys.length === 0) return (
     <div style={{ textAlign: 'center', padding: '32px', color: '#383838', fontSize: 13 }}>
-      round_info verisi olmadan bracket oluşturulamıyor —
-      maçlar aşağıdaki Match List'te listelendi.
+      Playoff verisi bulunamadı.
     </div>
   )
 
   return (
-    <div style={{ overflowX: 'auto', paddingBottom: 12 }}>
+    <div>
+      <div style={{ fontSize: 10, color: '#4a4a4a', marginBottom: 8, textAlign: 'right' }}>
+        Drag to scroll →
+      </div>
       <div style={{
-        display: 'flex', alignItems: 'flex-start',
-        gap: 0,  // connector SVG gap'i halleder
-        minWidth: 'max-content',
-        padding: '8px 4px 8px',
-      }}>
-        {roundKeys.map((rk, colIdx) => {
-          const meta       = ROUND_LABELS[rk] || { icon: '🎮', color: gc, short: rk }
-          const colMatches = rounds[rk]
-          // Bu sütundan sonra bir connector gerekiyor mu?
-          // (sonraki sütun varsa ve bu sütun çift sayıda maç içeriyorsa)
-          const nextRk        = roundKeys[colIdx + 1]
-          const nextCount     = nextRk ? rounds[nextRk].length : 0
-          const pairCount     = Math.max(0, Math.min(nextCount, Math.floor(colMatches.length / 2)))
-          const showConnector = nextRk && pairCount > 0
+        overflowX: 'auto',
+        overflowY: 'hidden',
+        paddingBottom: 12,
+        cursor: isDragging ? 'grabbing' : 'grab',
+        userSelect: isDragging ? 'none' : 'auto',
+      }}
+      ref={scrollRef}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={endDrag}
+      onMouseLeave={endDrag}
+      >
+        <div style={{
+          position: 'relative',
+          width: layout.width,
+          height: layout.height,
+          minWidth: 'max-content',
+        }}>
+          {/* Connector layer */}
+          <svg
+            width={layout.width}
+            height={layout.height}
+            style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'visible' }}
+          >
+            <defs>
+              <filter id="winnerGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="2.6" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
 
-          return (
-            <div key={rk} style={{ display: 'flex', alignItems: 'flex-start' }}>
-              {/* Sütun */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                {/* Round header */}
+            {layout.edges.map(edge => {
+              const { from, to, highlight, key } = edge
+              const midX = from.x + ((to.x - from.x) / 2)
+              const d = CONNECTOR_MODE === 'orthogonal'
+                ? `M ${from.x} ${from.y} H ${midX} V ${to.y} H ${to.x}`
+                : `M ${from.x} ${from.y} C ${from.x + 20} ${from.y}, ${to.x - 20} ${to.y}, ${to.x} ${to.y}`
+
+              return (
+                <g key={key}>
+                  <path
+                    d={d}
+                    fill="none"
+                    stroke={highlight ? 'rgba(255,70,85,.2)' : 'rgba(42,42,42,.55)'}
+                    strokeWidth={highlight ? 3 : 2}
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d={d}
+                    fill="none"
+                    stroke={highlight ? '#FF4655' : '#4a4a4a'}
+                    strokeWidth={highlight ? 1.4 : 1}
+                    strokeLinecap="round"
+                    strokeDasharray={highlight ? undefined : '4 4'}
+                    filter={highlight ? 'url(#winnerGlow)' : undefined}
+                  />
+                </g>
+              )
+            })}
+          </svg>
+
+          {/* Columns */}
+          {layout.columns.map(col => {
+            const meta = ROUND_LABELS[col.rk] || { icon: '🎮', color: gc, short: col.rk }
+
+            return (
+              <div
+                key={col.rk}
+                style={{
+                  position: 'absolute',
+                  left: col.x,
+                  top: BRACKET_TOP_PAD,
+                  width: BRACKET_CARD_W,
+                }}
+              >
                 <div style={{
-                  display: 'flex', alignItems: 'center', gap: 5,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                   padding: '5px 12px', borderRadius: 20, marginBottom: 10,
                   background: `${meta.color}15`,
                   border: `1px solid ${meta.color}33`,
-                  height: BRACKET_HEADER_H - 10 - 10,
-                  alignSelf: 'stretch', justifyContent: 'center',
+                  height: BRACKET_HEADER_H - 10,
                 }}>
                   <span style={{ fontSize: 12 }}>{meta.icon}</span>
                   <span style={{
                     fontSize: 10, fontWeight: 800,
                     color: meta.color, letterSpacing: '1px', textTransform: 'uppercase',
-                  }}>{rk}</span>
-                  <span style={{ fontSize: 9, color: '#444' }}>({colMatches.length})</span>
+                  }}>{col.rk}</span>
+                  <span style={{ fontSize: 9, color: '#444' }}>({col.cards.length})</span>
                 </div>
 
-                {/* Cards — dikey ortalanmış */}
-                <div style={{
-                  display: 'flex', flexDirection: 'column',
-                  gap: BRACKET_CARD_GAP,
-                  // Final/GF kartları dikey olarak (toplamın yarısı boşluk bırakır → optik ortalama)
-                  marginTop: colIdx > 0
-                    ? (colIdx * (BRACKET_CARD_H + BRACKET_CARD_GAP))
-                    : 0,
-                }}>
-                  {colMatches.map(m => (
-                    <BracketMatchCard key={m.id} m={m} navigate={navigate} gc={gc} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: BRACKET_CARD_GAP, marginTop: col.yOffset }}>
+                  {col.cards.map(card => (
+                    <BracketMatchCard
+                      key={card.m.id}
+                      m={card.m}
+                      navigate={navigate}
+                      gc={gc}
+                      highlightPath={highlightedSourceIds.has(card.m.id)}
+                    />
                   ))}
                 </div>
               </div>
-
-              {/* Connector SVG */}
-              {showConnector && (
-                <BracketConnectors
-                  pairCount={pairCount}
-                  cardH={BRACKET_CARD_H}
-                  cardGap={BRACKET_CARD_GAP}
-                  headerH={BRACKET_HEADER_H}
-                />
-              )}
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
+
+      {bracketSide === 'upper' && prepared.thirdPlace && (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 10, color: '#5a5a5a', marginBottom: 8, letterSpacing: '.8px', textTransform: 'uppercase' }}>
+            3rd Place Decider
+          </div>
+          <div style={{ width: BRACKET_CARD_W }}>
+            <BracketMatchCard
+              m={prepared.thirdPlace}
+              navigate={navigate}
+              gc={gc}
+              highlightPath={false}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -694,7 +989,7 @@ function MatchListCard({ m, navigate, gc }) {
         {/* Date */}
         <div style={{ marginTop: 10, fontSize: 10, color: '#383838',
           textAlign: 'center', borderTop: '1px solid #111', paddingTop: 8 }}>
-          📅 {fmtDateTime(m.scheduled_at)}
+          📅 {fmtDateTime(getMatchTimestamp(m))}
         </div>
       </div>
     </div>
@@ -712,32 +1007,33 @@ export default function TournamentPage() {
   const [loading,     setLoading]     = useState(true)
   const [error,       setError]       = useState(null)
   const [activeTab,   setActiveTab]   = useState('upcoming')
+  const [viewOverride, setViewOverride] = useState('auto') // auto | list | bracket
 
   // ── Veri çekme ────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      const [tourRes, matchRes] = await Promise.all([
-        supabase
-          .from('tournaments')
-          .select('*, game:games(id, name, slug)')
-          .eq('id', tournamentId)
-          .single(),
-
+      const fetchMatchesWithRoundHints = () => (
         supabase
           .from('matches')
           .select(`
-            id, status, scheduled_at,
-            team_a_id, team_b_id, winner_id,
-            team_a_score, team_b_score,
-            round_info,
+            *,
             team_a:teams!matches_team_a_id_fkey(id, name, logo_url, acronym),
             team_b:teams!matches_team_b_id_fkey(id, name, logo_url, acronym),
             game:games(id, name)
           `)
           .eq('tournament_id', tournamentId)
           .order('scheduled_at', { ascending: true })
-          .limit(400),
+          .limit(400)
+      )
+
+      const [tourRes, matchRes] = await Promise.all([
+        supabase
+          .from('tournaments')
+          .select('*, game:games(id, name, slug)')
+          .eq('id', tournamentId)
+          .single(),
+        fetchMatchesWithRoundHints(),
       ])
 
       if (tourRes.error)  throw tourRes.error
@@ -758,17 +1054,62 @@ export default function TournamentPage() {
   // ── Türevler ─────────────────────────────────────────────────
   const upcomingMatches = useMemo(() =>
     matches.filter(m => ['not_started', 'running'].includes(m.status))
-      .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at)),
+      .sort((a, b) => {
+        const ta = getMatchTimestamp(a) ? new Date(getMatchTimestamp(a)).getTime() : 0
+        const tb = getMatchTimestamp(b) ? new Date(getMatchTimestamp(b)).getTime() : 0
+        return ta - tb
+      }),
     [matches]
   )
   const pastMatches = useMemo(() =>
     matches.filter(m => m.status === 'finished')
-      .sort((a, b) => new Date(b.scheduled_at) - new Date(a.scheduled_at)),
+      .sort((a, b) => {
+        const ta = getMatchTimestamp(a) ? new Date(getMatchTimestamp(a)).getTime() : 0
+        const tb = getMatchTimestamp(b) ? new Date(getMatchTimestamp(b)).getTime() : 0
+        return tb - ta
+      }),
     [matches]
   )
 
   // ── Format algılama ───────────────────────────────────────────
   const format = detectFormat(matches)
+  const stageMode = useMemo(() => detectStageMode(tournament, matches, format), [tournament, matches, format])
+  const effectiveViewMode = useMemo(() => {
+    if (viewOverride === 'list') return 'list'
+    if (viewOverride === 'bracket') return 'bracket'
+    return stageMode.bracketEnabled ? 'bracket' : 'list'
+  }, [viewOverride, stageMode])
+
+  useEffect(() => {
+    const title = stageMode.bracketEnabled
+      ? 'TOURNAMENT VIEW MODE: BRACKET'
+      : 'TOURNAMENT VIEW MODE: LIST'
+
+    console.log(
+      `%c${title}`,
+      'font-size:18px;font-weight:900;color:#ffffff;background:#C8102E;padding:8px 12px;border-radius:6px;letter-spacing:.8px;'
+    )
+    console.log('%cStage decision payload', 'font-size:13px;font-weight:800;color:#C8102E;')
+    console.table({
+      hasLeagueStyle: stageMode.hasLeagueStyle,
+      hasBracketSignals: stageMode.hasBracketSignals,
+      hasStageHints: stageMode.hasStageHints,
+      stageUndetermined: stageMode.stageUndetermined,
+      format: stageMode.format,
+      bracketEnabled: stageMode.bracketEnabled,
+      viewOverride,
+      effectiveViewMode,
+    })
+  }, [stageMode, viewOverride, effectiveViewMode])
+  const resolvedBracketMatches = useMemo(() => buildBracketStages(matches), [matches])
+  const upperBracketMatches = useMemo(
+    () => resolvedBracketMatches.filter(m => m.__bracketSide === 'upper'),
+    [resolvedBracketMatches]
+  )
+  const lowerBracketMatches = useMemo(
+    () => resolvedBracketMatches.filter(m => m.__bracketSide === 'lower'),
+    [resolvedBracketMatches]
+  )
 
   // ── Stil değerleri ───────────────────────────────────────────
   const gName = tournament?.game?.name ?? ''
@@ -949,6 +1290,39 @@ export default function TournamentPage() {
       {/* ══════════════ CONTENT ════════════════════════════════════ */}
       <div style={{ padding: '0 20px', animation: 'fadeUp .3s ease' }}>
 
+        {/* ── DEV: Manual View Override ─────────────────────────── */}
+        <div style={{
+          marginBottom: 16,
+          display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+          background: '#0d0d0d', border: '1px solid #202020', borderRadius: 12,
+          padding: '8px 10px',
+        }}>
+          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: '#666' }}>
+            Dev View Override
+          </span>
+          {[{ id: 'auto', label: 'Auto' }, { id: 'list', label: 'List View' }, { id: 'bracket', label: 'Bracket View' }].map(opt => {
+            const active = viewOverride === opt.id
+            return (
+              <button
+                key={opt.id}
+                onClick={() => setViewOverride(opt.id)}
+                style={{
+                  padding: '6px 11px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                  fontSize: 12, fontWeight: 700,
+                  background: active ? 'rgba(255,70,85,.18)' : '#141414',
+                  color: active ? '#FF4655' : '#777',
+                  outline: active ? '1px solid rgba(255,70,85,.45)' : '1px solid #222',
+                }}
+              >
+                {opt.label}
+              </button>
+            )
+          })}
+          <span style={{ marginLeft: 'auto', fontSize: 11, color: '#555' }}>
+            Current: {effectiveViewMode === 'bracket' ? 'Bracket' : 'List'}
+          </span>
+        </div>
+
         {/* ── STANDINGS (round-robin) ─────────────────────────────── */}
         {format !== 'elimination' && pastMatches.length > 0 && (
           <div style={{ marginBottom: 36 }}>
@@ -958,7 +1332,7 @@ export default function TournamentPage() {
         )}
 
         {/* ── BRACKETS (elimination) ─────────────────────────────── */}
-        {format === 'elimination' && matches.length > 0 && (
+        {effectiveViewMode === 'bracket' && matches.length > 0 && (
           <div style={{ marginBottom: 36 }}>
             <ST icon="🏆" label="Playoff Ağacı"
               right={
@@ -967,13 +1341,65 @@ export default function TournamentPage() {
                 </span>
               }
             />
-            {/* Bracket container */}
+            {/* Bracket containers */}
             <div style={{
               background: '#0a0a0a', borderRadius: 16,
               border: '1px solid #1a1a1a', padding: '16px',
-              overflowX: 'auto',
             }}>
-              <BracketView matches={matches} navigate={navigate} gc={gc} />
+              <div style={{ marginBottom: 18 }}>
+                <div style={{
+                  fontSize: 11, fontWeight: 800, color: '#ff6b7a',
+                  letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: 8,
+                }}>
+                  Upper Bracket
+                </div>
+                <BracketView
+                  matches={matches}
+                  resolvedMatches={upperBracketMatches}
+                  navigate={navigate}
+                  gc={gc}
+                  bracketSide="upper"
+                />
+              </div>
+
+              {lowerBracketMatches.length > 0 && (
+                <>
+                  <div style={{ height: 1, background: 'linear-gradient(90deg,transparent,#202020,transparent)', margin: '12px 0 14px' }} />
+
+                  <div>
+                    <div style={{
+                      fontSize: 11, fontWeight: 800, color: '#60a5fa',
+                      letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: 8,
+                    }}>
+                      Lower Bracket
+                    </div>
+                    <BracketView
+                      matches={matches}
+                      resolvedMatches={lowerBracketMatches}
+                      navigate={navigate}
+                      gc={gc}
+                      bracketSide="lower"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── NON-BRACKET STAGE LIST ───────────────────────────── */}
+        {effectiveViewMode === 'list' && matches.length > 0 && (
+          <div style={{ marginBottom: 36 }}>
+            <ST
+              icon="📋"
+              label={stageMode.hasLeagueStyle ? 'Stage Matches (Swiss / Groups / Round Robin)' : 'Stage Match List'}
+              right={<span style={{ fontSize: 10, color: '#4a4a4a' }}>Tarih ve round bazli</span>}
+            />
+            <div style={{
+              background: '#0a0a0a', borderRadius: 16,
+              border: '1px solid #1a1a1a', padding: '16px',
+            }}>
+              <StageListView matches={matches} navigate={navigate} gc={gc} />
             </div>
           </div>
         )}

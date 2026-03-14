@@ -1,6 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
+import { GAMES, useGame } from '../GameContext'
+import { isTurkishTeam } from '../constants'
+import {
+  NEWS_LIMIT,
+  HERO_TIERS,
+  buildFinishedStory,
+  buildUpcomingStory,
+} from '../utils/newsStories'
+
+const GAME_FILTERS = GAMES.filter(game => !game.soon && game.id !== 'all' && ['valorant', 'cs2', 'lol'].includes(game.id))
 
 function fmtDate(iso) {
   if (!iso) return 'N/A'
@@ -13,95 +24,39 @@ function fmtDate(iso) {
   })
 }
 
-function pickTag(item) {
-  if (item.type === 'upset') return 'Surpriz Sonuc'
-  if (item.type === 'blowout') return 'Buyuk Fark'
-  if (item.type === 'mvp') return 'Oyuncu Performansi'
-  return 'Mac Ozeti'
+function NewsTrustLayer({ item, onReport }) {
+  return (
+    <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed #282828', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+      <span style={{ fontSize: 11, color: '#8f8f8f' }}>PandaScore verileriyle otomatik uretilmistir.</span>
+      <button
+        onClick={e => {
+          e.stopPropagation()
+          onReport(item)
+        }}
+        style={{
+          border: '1px solid #353535',
+          background: '#121212',
+          color: '#d6d6d6',
+          borderRadius: 8,
+          padding: '5px 8px',
+          fontSize: 11,
+          cursor: 'pointer',
+        }}
+      >
+        Hata Bildir
+      </button>
+    </div>
+  )
 }
 
-function buildStoryFromMatch(match, statsByMatch) {
-  const aName = match.team_a?.name || 'Team A'
-  const bName = match.team_b?.name || 'Team B'
-  const aScore = Number(match.team_a_score ?? 0)
-  const bScore = Number(match.team_b_score ?? 0)
-  const winner = Number(match.winner_id)
-  const aId = Number(match.team_a_id || match.team_a?.id)
-  const bId = Number(match.team_b_id || match.team_b?.id)
-  const winnerName = winner === aId ? aName : winner === bId ? bName : 'Beraberlik'
-  const loserName = winner === aId ? bName : aName
-  const margin = Math.abs(aScore - bScore)
-  const predA = typeof match.prediction_team_a === 'number' ? match.prediction_team_a : null
-  const actualAWin = winner === aId
-  const upset = predA != null && ((predA > 0.6 && !actualAWin) || (predA < 0.4 && actualAWin))
-
-  const statsRows = statsByMatch.get(match.id) || []
-  const scoreRows = statsRows
-    .map(r => ({
-      team_id: Number(r.team_id),
-      score: Number(r.stats?.score ?? 0),
-      opp: Number(r.stats?.opponent_score ?? 0),
-    }))
-    .filter(r => Number.isFinite(r.score))
-
-  const topImpact = scoreRows.sort((x, y) => y.score - x.score)[0]
-  const impactTeam = topImpact?.team_id === aId ? aName : topImpact?.team_id === bId ? bName : null
-
-  const tournament = match.tournament?.name || 'Playoffs'
-  const publishedAt = match.scheduled_at || new Date().toISOString()
-
-  if (upset) {
-    return {
-      id: `upset_${match.id}`,
-      matchId: match.id,
-      type: 'upset',
-      title: `Playoffs'ta Surpriz Sonuc: ${winnerName} Kazandi!`,
-      summary: `${tournament} sahnesinde beklentilerin aksine ${winnerName}, ${loserName} karsisinda ${aScore}:${bScore} ile galip geldi. Tahmin modelleri farkli bir sonuca isaret ederken gelen galibiyet tablonun dengesini degistirdi.`,
-      publishedAt,
-      tournament,
-      heroScore: `${aName} ${aScore} - ${bScore} ${bName}`,
-      tag: pickTag({ type: 'upset' }),
-      priority: 100,
-    }
-  }
-
-  if (margin >= 2) {
-    return {
-      id: `blowout_${match.id}`,
-      matchId: match.id,
-      type: 'blowout',
-      title: `${winnerName}, ${tournament} macinda net ustunluk kurdu`,
-      summary: `${winnerName}, ${loserName} karsisinda ${aScore}:${bScore} skoruyla farkli kazandi. Serinin temposu boyunca kontrolu elinde tutan ekip, turnuva rekabetinde kritik bir adim atti.`,
-      publishedAt,
-      tournament,
-      heroScore: `${aName} ${aScore} - ${bScore} ${bName}`,
-      tag: pickTag({ type: 'blowout' }),
-      priority: 80,
-    }
-  }
-
-  return {
-    id: `summary_${match.id}`,
-    matchId: match.id,
-    type: impactTeam ? 'mvp' : 'summary',
-    title: `${tournament}: ${winnerName} kritik galibiyet aldi`,
-    summary: impactTeam
-      ? `${aName} ile ${bName} arasindaki seride ${winnerName} ${aScore}:${bScore} ile sonuca gitti. Mac istatistiklerinde one cikan ${impactTeam}, sonucun belirleyici faktoru oldu.`
-      : `${aName} ile ${bName} arasindaki karsilasmada ${winnerName}, ${aScore}:${bScore} skoruyla kazandi. Sonuc, turnuvada puan dengesini yeniden sekillendirdi.`,
-    publishedAt,
-    tournament,
-    heroScore: `${aName} ${aScore} - ${bScore} ${bName}`,
-    tag: pickTag({ type: impactTeam ? 'mvp' : 'summary' }),
-    priority: 60,
-  }
-}
-
-function NewsCard({ item, likes, liked, comments, onLike, onComment, canInteract }) {
+function NewsCard({ item, likes, liked, comments, onLike, onComment, canInteract, onOpenDetail, onReport }) {
   const [commentInput, setCommentInput] = useState('')
   const [sending, setSending] = useState(false)
+  const { visuals } = item
 
   async function submitComment(e) {
     e.preventDefault()
+    e.stopPropagation()
     const text = commentInput.trim()
     if (!text) return
     setSending(true)
@@ -114,81 +69,173 @@ function NewsCard({ item, likes, liked, comments, onLike, onComment, canInteract
   }
 
   return (
-    <article style={{ background: '#0f0f10', border: '1px solid #1f1f20', borderRadius: 14, padding: 14 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
-        <span style={{ fontSize: 10, color: '#c61b33', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1 }}>{item.tag}</span>
-        <span style={{ fontSize: 10, color: '#6a6a6a' }}>{fmtDate(item.publishedAt)}</span>
-      </div>
-      <h3 style={{ margin: '8px 0 6px', fontSize: 18, lineHeight: 1.25 }}>{item.title}</h3>
-      <div style={{ fontSize: 12, color: '#8a8a8a', marginBottom: 8 }}>{item.tournament} · {item.heroScore}</div>
-      <p style={{ margin: 0, color: '#cfcfcf', lineHeight: 1.5 }}>{item.summary}</p>
+    <article
+      onClick={() => onOpenDetail(item)}
+      style={{
+        background: 'linear-gradient(180deg,#101010 0%,#0b0b0b 100%)',
+        border: '1px solid #1f1f22',
+        borderRadius: 18,
+        padding: 16,
+        boxShadow: visuals.turkish ? '0 18px 40px rgba(200,16,46,.08)' : 'none',
+        position: 'relative',
+        overflow: 'hidden',
+        cursor: 'pointer',
+      }}
+    >
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        background: visuals.turkish
+          ? 'radial-gradient(circle at 10% 10%, rgba(200,16,46,.18), transparent 34%)'
+          : 'radial-gradient(circle at 85% 0%, rgba(255,255,255,.05), transparent 28%)',
+      }} />
 
-      <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <button
-          disabled={!canInteract}
-          onClick={() => onLike(item.id)}
-          style={{
-            border: `1px solid ${liked ? '#c61b33' : '#333'}`,
-            background: liked ? 'rgba(198,27,51,.16)' : '#151515',
-            color: liked ? '#ff6a7f' : '#b1b1b1',
-            borderRadius: 8,
-            padding: '6px 10px',
-            cursor: canInteract ? 'pointer' : 'not-allowed',
-            fontSize: 12,
-          }}
-        >
-          ♥ Begen ({likes})
-        </button>
-        <span style={{ fontSize: 12, color: '#888' }}>Yorum: {comments.length}</span>
-        {!canInteract && <span style={{ fontSize: 11, color: '#6a6a6a' }}>Etkilesim icin giris yapin</span>}
-      </div>
-
-      {comments.length > 0 && (
-        <div style={{ marginTop: 10, borderTop: '1px solid #232323', paddingTop: 8, display: 'grid', gap: 7 }}>
-          {comments.slice(0, 3).map(c => (
-            <div key={c.id} style={{ fontSize: 12, color: '#c7c7c7', background: '#121212', borderRadius: 8, padding: '7px 9px', border: '1px solid #1f1f1f' }}>
-              <div style={{ fontSize: 10, color: '#777', marginBottom: 3 }}>{c.author}</div>
-              {c.comment_text}
-            </div>
-          ))}
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 10, color: '#f4f4f4', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, padding: '4px 8px', borderRadius: 999, background: `${visuals.gameColor}22`, border: `1px solid ${visuals.gameColor}55` }}>
+              {item.tag}
+            </span>
+            <span style={{ fontSize: 10, color: '#d8d8d8', padding: '4px 8px', borderRadius: 999, background: 'rgba(255,255,255,.04)', border: '1px solid #272727' }}>
+              {visuals.gameLabel}
+            </span>
+            <span style={{ fontSize: 10, color: HERO_TIERS.has(visuals.tier) ? '#ffb3bd' : '#a5a5a5', padding: '4px 8px', borderRadius: 999, background: HERO_TIERS.has(visuals.tier) ? 'rgba(200,16,46,.18)' : 'rgba(255,255,255,.03)', border: HERO_TIERS.has(visuals.tier) ? '1px solid rgba(200,16,46,.35)' : '1px solid #242424' }}>
+              Tier {visuals.tier}
+            </span>
+          </div>
+          <span style={{ fontSize: 10, color: '#7f7f7f' }}>{fmtDate(item.publishedAt)}</span>
         </div>
-      )}
 
-      {canInteract && (
-        <form onSubmit={submitComment} style={{ marginTop: 10, display: 'flex', gap: 8 }}>
-          <input
-            value={commentInput}
-            onChange={e => setCommentInput(e.target.value)}
-            placeholder="Yorum yaz..."
-            style={{ flex: 1, background: '#131313', border: '1px solid #2a2a2a', borderRadius: 8, color: '#f5f5f5', padding: '8px 10px', fontSize: 12 }}
-          />
-          <button disabled={sending || !commentInput.trim()} style={{ border: '1px solid #444', background: '#1b1b1b', color: '#ddd', borderRadius: 8, padding: '8px 10px', fontSize: 12, cursor: 'pointer' }}>
-            Gonder
+        <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 12, alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {visuals.teamA.logo_url
+              ? <img src={visuals.teamA.logo_url} alt={visuals.teamA.name || ''} style={{ width: 34, height: 34, objectFit: 'contain', borderRadius: 10, background: '#111', padding: 4, border: '1px solid #242424' }} />
+              : <div style={{ width: 34, height: 34, borderRadius: 10, background: '#151515', border: '1px solid #242424' }} />}
+            {visuals.teamB.logo_url
+              ? <img src={visuals.teamB.logo_url} alt={visuals.teamB.name || ''} style={{ width: 34, height: 34, objectFit: 'contain', borderRadius: 10, background: '#111', padding: 4, border: '1px solid #242424' }} />
+              : <div style={{ width: 34, height: 34, borderRadius: 10, background: '#151515', border: '1px solid #242424' }} />}
+          </div>
+
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 11, color: '#a9a9a9', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{visuals.tournamentName}</div>
+            <h3 style={{ margin: 0, fontSize: 19, lineHeight: 1.3 }}>{item.title}</h3>
+          </div>
+
+          {visuals.turkish && (
+            <div style={{ fontSize: 10, fontWeight: 800, color: '#ffd9df', padding: '5px 8px', borderRadius: 999, border: '1px solid rgba(200,16,46,.38)', background: 'rgba(200,16,46,.16)' }}>
+              Turkish Pride
+            </div>
+          )}
+        </div>
+
+        <div style={{ fontSize: 14, color: '#f0d3d8', marginBottom: 8, fontWeight: 700 }}>{item.heroScore}</div>
+        <p style={{ margin: 0, color: '#c6c6c6', lineHeight: 1.6 }}>{item.summary}</p>
+
+        <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            disabled={!canInteract}
+            onClick={e => {
+              e.stopPropagation()
+              onLike(item.id)
+            }}
+            style={{
+              border: `1px solid ${liked ? '#c61b33' : '#333'}`,
+              background: liked ? 'rgba(198,27,51,.16)' : '#151515',
+              color: liked ? '#ff6a7f' : '#b1b1b1',
+              borderRadius: 8,
+              padding: '6px 10px',
+              cursor: canInteract ? 'pointer' : 'not-allowed',
+              fontSize: 12,
+            }}
+          >
+            ♥ Begen ({likes})
           </button>
-        </form>
-      )}
+          <span style={{ fontSize: 12, color: '#888' }}>Yorum: {comments.length}</span>
+          {!canInteract && <span style={{ fontSize: 11, color: '#6a6a6a' }}>Etkilesim icin giris yapin</span>}
+        </div>
+
+        {comments.length > 0 && (
+          <div style={{ marginTop: 10, borderTop: '1px solid #232323', paddingTop: 8, display: 'grid', gap: 7 }}>
+            {comments.slice(0, 3).map(comment => (
+              <div key={comment.id} style={{ fontSize: 12, color: '#c7c7c7', background: '#121212', borderRadius: 8, padding: '7px 9px', border: '1px solid #1f1f1f' }}>
+                <div style={{ fontSize: 10, color: '#777', marginBottom: 3 }}>{comment.author}</div>
+                {comment.comment_text}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {canInteract && (
+          <form onSubmit={submitComment} style={{ marginTop: 10, display: 'flex', gap: 8 }} onClick={e => e.stopPropagation()}>
+            <input
+              value={commentInput}
+              onChange={e => setCommentInput(e.target.value)}
+              placeholder='Yorum yaz...'
+              style={{ flex: 1, background: '#131313', border: '1px solid #2a2a2a', borderRadius: 8, color: '#f5f5f5', padding: '8px 10px', fontSize: 12 }}
+            />
+            <button disabled={sending || !commentInput.trim()} style={{ border: '1px solid #444', background: '#1b1b1b', color: '#ddd', borderRadius: 8, padding: '8px 10px', fontSize: 12, cursor: 'pointer' }}>
+              Gonder
+            </button>
+          </form>
+        )}
+
+        <NewsTrustLayer item={item} onReport={onReport} />
+      </div>
     </article>
   )
 }
 
 export default function NewsPage() {
+  const navigate = useNavigate()
   const { user, profile } = useAuth()
+  const { activeGame, setActiveGame } = useGame()
+  const defaultGameId = GAME_FILTERS.find(game => game.id === activeGame)?.id || 'valorant'
+  const selectedGameId = GAME_FILTERS.find(game => game.id === activeGame)?.id || defaultGameId
+
   const [loading, setLoading] = useState(true)
   const [stories, setStories] = useState([])
   const [likesByNews, setLikesByNews] = useState({})
   const [likedSet, setLikedSet] = useState(new Set())
   const [commentsByNews, setCommentsByNews] = useState({})
+  const commentsWarningShownRef = useRef(false)
 
-  const hero = stories[0] || null
-  const agenda = stories.slice(1)
+  const isMissingNewsCommentsTable = useCallback((err) => {
+    if (!err) return false
+    const code = String(err.code || '')
+    const message = String(err.message || '').toLowerCase()
+    return code === '42P01' || message.includes('news_comments') || message.includes('relation')
+  }, [])
 
-  const hydrateInteractions = useCallback(async (newsIds) => {
+  const warnMissingCommentsTable = useCallback((err) => {
+    if (commentsWarningShownRef.current) return
+    commentsWarningShownRef.current = true
+    console.warn('news_comments tablosu bulunamadi, yorum ozelligi fallback modunda calisiyor.', err?.message || err)
+  }, [])
+
+  useEffect(() => {
+    if (!GAME_FILTERS.some(game => game.id === activeGame)) {
+      setActiveGame(defaultGameId)
+    }
+  }, [activeGame, defaultGameId, setActiveGame])
+
+  const hydrateInteractions = useCallback(async newsIds => {
     if (!newsIds.length) return
 
-    const [{ data: likesRows }, { data: commentsRows }] = await Promise.all([
+    const [{ data: likesRows }, commentsRes] = await Promise.all([
       supabase.from('news_likes').select('id,news_id,user_id').in('news_id', newsIds),
       supabase.from('news_comments').select('id,news_id,user_id,comment_text,created_at').in('news_id', newsIds).order('created_at', { ascending: false }),
     ])
+
+    let commentsRows = commentsRes?.data || []
+    if (commentsRes?.error) {
+      if (isMissingNewsCommentsTable(commentsRes.error)) {
+        warnMissingCommentsTable(commentsRes.error)
+        commentsRows = []
+      } else {
+        throw commentsRes.error
+      }
+    }
 
     const likeMap = {}
     const liked = new Set()
@@ -209,52 +256,55 @@ export default function NewsPage() {
     setLikesByNews(likeMap)
     setLikedSet(liked)
     setCommentsByNews(commentMap)
-  }, [user?.id, profile?.username])
+  }, [isMissingNewsCommentsTable, profile?.username, user?.id, warnMissingCommentsTable])
 
   const loadStories = useCallback(async () => {
     setLoading(true)
     try {
       const now = new Date()
       const since = new Date(now.getTime() - (24 * 60 * 60 * 1000))
+      const upcomingUntil = new Date(now.getTime() + (72 * 60 * 60 * 1000))
 
-      let { data: matches, error } = await supabase
-        .from('matches')
-        .select(`
-          id, scheduled_at, status, winner_id,
-          team_a_id, team_b_id, team_a_score, team_b_score,
-          prediction_team_a,
-          team_a:teams!matches_team_a_id_fkey(id,name),
-          team_b:teams!matches_team_b_id_fkey(id,name),
-          tournament:tournaments(id,name)
-        `)
-        .eq('status', 'finished')
-        .gte('scheduled_at', since.toISOString())
-        .order('scheduled_at', { ascending: false })
-        .limit(40)
+      const commonSelect = `
+        id, scheduled_at, status, winner_id,
+        team_a_id, team_b_id, team_a_score, team_b_score,
+        prediction_team_a, prediction_team_b,
+        team_a:teams!matches_team_a_id_fkey(id,name,logo_url),
+        team_b:teams!matches_team_b_id_fkey(id,name,logo_url),
+        tournament:tournaments(id,name,tier),
+        game:games(id,name,slug)
+      `
 
-      if (error) throw error
-
-      if (!matches || matches.length === 0) {
-        const fallbackRes = await supabase
+      const [finishedRes, upcomingRes] = await Promise.all([
+        supabase
           .from('matches')
-          .select(`
-            id, scheduled_at, status, winner_id,
-            team_a_id, team_b_id, team_a_score, team_b_score,
-            prediction_team_a,
-            team_a:teams!matches_team_a_id_fkey(id,name),
-            team_b:teams!matches_team_b_id_fkey(id,name),
-            tournament:tournaments(id,name)
-          `)
+          .select(commonSelect)
           .eq('status', 'finished')
+          .gte('scheduled_at', since.toISOString())
           .order('scheduled_at', { ascending: false })
-          .limit(24)
-        matches = fallbackRes.data || []
-      }
+          .limit(14),
+        supabase
+          .from('matches')
+          .select(commonSelect)
+          .eq('status', 'not_started')
+          .gte('scheduled_at', now.toISOString())
+          .lte('scheduled_at', upcomingUntil.toISOString())
+          .order('scheduled_at', { ascending: true })
+          .limit(10),
+      ])
 
-      const matchIds = matches.map(m => m.id)
-      const { data: statsRows } = matchIds.length
+      if (finishedRes.error) throw finishedRes.error
+      if (upcomingRes.error) throw upcomingRes.error
+
+      const finishedMatches = finishedRes.data || []
+      const upcomingMatches = upcomingRes.data || []
+
+      const matchIds = finishedMatches.map(match => match.id)
+      const { data: statsRows, error: statsError } = matchIds.length
         ? await supabase.from('match_stats').select('match_id,team_id,stats').in('match_id', matchIds)
-        : { data: [] }
+        : { data: [], error: null }
+
+      if (statsError) throw statsError
 
       const statsByMatch = new Map()
       for (const row of (statsRows || [])) {
@@ -262,12 +312,16 @@ export default function NewsPage() {
         statsByMatch.get(row.match_id).push(row)
       }
 
-      const generated = matches
-        .map(m => buildStoryFromMatch(m, statsByMatch))
-        .sort((a, b) => b.priority - a.priority || new Date(b.publishedAt) - new Date(a.publishedAt))
+      const generated = [
+        ...finishedMatches.map(match => buildFinishedStory(match, statsByMatch, isTurkishTeam)),
+        ...upcomingMatches.map(match => buildUpcomingStory(match, isTurkishTeam)),
+      ]
+        .filter(story => story.visuals.gameId)
+        .sort((left, right) => right.priority - left.priority || new Date(right.publishedAt) - new Date(left.publishedAt))
+        .slice(0, NEWS_LIMIT)
 
       setStories(generated)
-      await hydrateInteractions(generated.map(x => x.id))
+      await hydrateInteractions(generated.map(item => item.id))
     } catch (err) {
       console.error('NewsPage loadStories:', err.message || err)
       setStories([])
@@ -276,8 +330,17 @@ export default function NewsPage() {
     }
   }, [hydrateInteractions])
 
-  useEffect(() => { loadStories() }, [loadStories])
+  useEffect(() => {
+    loadStories()
+  }, [loadStories])
 
+  const filteredStories = useMemo(() => {
+    return stories.filter(story => story.visuals.gameId === selectedGameId)
+  }, [selectedGameId, stories])
+
+  const heroIndex = filteredStories.findIndex(story => HERO_TIERS.has(story.visuals.tier))
+  const hero = heroIndex >= 0 ? filteredStories[heroIndex] : (filteredStories[0] || null)
+  const agenda = filteredStories.filter(story => story.id !== hero?.id)
   const canInteract = !!user?.id
 
   async function toggleLike(newsId) {
@@ -306,38 +369,111 @@ export default function NewsPage() {
 
   async function addComment(newsId, text) {
     if (!canInteract) return
-    const { data, error } = await supabase
-      .from('news_comments')
-      .insert({ news_id: newsId, user_id: user.id, comment_text: text })
-      .select('id,news_id,user_id,comment_text,created_at')
-      .single()
+    try {
+      const { data, error } = await supabase
+        .from('news_comments')
+        .insert({ news_id: newsId, user_id: user.id, comment_text: text })
+        .select('id,news_id,user_id,comment_text,created_at')
+        .single()
 
-    if (!error && data) {
-      setCommentsByNews(prev => ({
-        ...prev,
-        [newsId]: [
-          {
-            ...data,
-            author: profile?.username || 'Sen',
-          },
-          ...(prev[newsId] || []),
-        ],
-      }))
+      if (error) {
+        if (isMissingNewsCommentsTable(error)) {
+          warnMissingCommentsTable(error)
+          return
+        }
+        throw error
+      }
+
+      if (data) {
+        setCommentsByNews(prev => ({
+          ...prev,
+          [newsId]: [
+            {
+              ...data,
+              author: profile?.username || 'Sen',
+            },
+            ...(prev[newsId] || []),
+          ],
+        }))
+      }
+    } catch (error) {
+      console.error('addComment error:', error?.message || error)
     }
   }
 
-  const emptyMsg = useMemo(() => !loading && stories.length === 0, [loading, stories.length])
+  async function reportStoryIssue(item) {
+    const payload = {
+      news_id: item.id,
+      match_id: item.matchId,
+      game_id: item.visuals.gameId,
+      status: item.status,
+      title: item.title,
+    }
+
+    try {
+      const { error } = await supabase.from('news_feedback').insert({
+        news_id: item.id,
+        reported_by: user?.id || null,
+        payload,
+      })
+
+      if (error) throw error
+      window.alert('Geri bildirimin alindi. Tesekkurler!')
+    } catch {
+      try {
+        await navigator.clipboard.writeText(JSON.stringify(payload))
+      } catch {
+        // no-op
+      }
+      window.alert('Geri bildirim altyapisi hazir degil. Haber ozeti panoya kopyalandi.')
+    }
+  }
+
+  function openStoryDetail(item) {
+    navigate(`/news/${item.id}`, {
+      state: {
+        story: item,
+      },
+    })
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#090909', color: '#f2f2f2' }}>
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: '22px 16px 48px' }}>
-        <div style={{ borderRadius: 16, border: '1px solid #1f1f1f', overflow: 'hidden', marginBottom: 18 }}>
+        <div style={{ borderRadius: 18, border: '1px solid #1f1f1f', overflow: 'hidden', marginBottom: 18, background: 'linear-gradient(180deg,#0b0b0b 0%,#111 100%)' }}>
           <div style={{ background: 'linear-gradient(90deg,#C8102E,#8c0e20 45%,#f4f4f4)', color: '#fff', fontSize: 11, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase', textAlign: 'center', padding: 8 }}>
             Esports News Desk
           </div>
-          <div style={{ padding: 18, background: 'radial-gradient(circle at 78% 20%, rgba(198,27,51,.15), transparent 40%), #111' }}>
+          <div style={{ padding: 18, background: 'radial-gradient(circle at 78% 20%, rgba(198,27,51,.18), transparent 36%), radial-gradient(circle at 10% 12%, rgba(255,255,255,.05), transparent 24%), #111' }}>
             <h1 style={{ margin: 0, fontSize: 34, lineHeight: 1.1 }}>Gunun E-Spor Bulteni</h1>
-            <p style={{ margin: '8px 0 0', color: '#9b9b9b', fontSize: 14 }}>Son maclardan AI destekli, otomatik uretilen manset ve gundem haberleri.</p>
+            <p style={{ margin: '8px 0 16px', color: '#9b9b9b', fontSize: 14 }}>
+              Tier oncelikli mansetler, skora dayali sonuc haberleri ve yaklasan haftanin maclari tek akista.
+            </p>
+
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {GAME_FILTERS.map(game => {
+                const active = game.id === selectedGameId
+                return (
+                  <button
+                    key={game.id}
+                    onClick={() => setActiveGame(game.id)}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: 999,
+                      border: active ? `1px solid ${game.color}` : '1px solid #2a2a2a',
+                      background: active ? `${game.color}22` : '#121212',
+                      color: active ? '#ffffff' : '#9e9e9e',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      letterSpacing: '.2px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {game.icon} {game.shortLabel || game.label}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
 
@@ -346,21 +482,57 @@ export default function NewsPage() {
         {hero && (
           <section style={{ marginBottom: 18 }}>
             <div style={{ marginBottom: 8, fontSize: 11, color: '#c61b33', textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 800 }}>Manset</div>
-            <article style={{ borderRadius: 16, padding: 18, border: '1px solid #2a2a2a', background: 'linear-gradient(145deg,#151515,#101010)' }}>
-              <div style={{ fontSize: 11, color: '#888' }}>{fmtDate(hero.publishedAt)} · {hero.tournament}</div>
-              <h2 style={{ margin: '10px 0 8px', fontSize: 30, lineHeight: 1.15 }}>{hero.title}</h2>
-              <div style={{ color: '#bcbcbc', marginBottom: 8 }}>{hero.heroScore}</div>
-              <p style={{ margin: 0, color: '#d8d8d8', lineHeight: 1.6 }}>{hero.summary}</p>
+            <article onClick={() => openStoryDetail(hero)} style={{ borderRadius: 18, padding: 20, border: '1px solid #2a2a2a', background: 'linear-gradient(145deg,#171717,#101010)', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
+              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: hero.visuals.turkish ? 'radial-gradient(circle at 12% 18%, rgba(200,16,46,.22), transparent 34%)' : 'radial-gradient(circle at 90% 10%, rgba(255,255,255,.05), transparent 24%)' }} />
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 10, color: '#ffd2d8', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.1, padding: '5px 9px', borderRadius: 999, background: 'rgba(200,16,46,.18)', border: '1px solid rgba(200,16,46,.38)' }}>
+                      Manset
+                    </span>
+                    <span style={{ fontSize: 10, color: '#f0f0f0', padding: '5px 9px', borderRadius: 999, background: `${hero.visuals.gameColor}22`, border: `1px solid ${hero.visuals.gameColor}55` }}>
+                      {hero.visuals.gameLabel}
+                    </span>
+                    <span style={{ fontSize: 10, color: '#f7b6bf', padding: '5px 9px', borderRadius: 999, background: 'rgba(200,16,46,.18)', border: '1px solid rgba(200,16,46,.34)' }}>
+                      Tier {hero.visuals.tier}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 11, color: '#a0a0a0' }}>{fmtDate(hero.publishedAt)}</div>
+                </div>
 
-              <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <button
-                  disabled={!canInteract}
-                  onClick={() => toggleLike(hero.id)}
-                  style={{ border: `1px solid ${likedSet.has(hero.id) ? '#c61b33' : '#383838'}`, background: likedSet.has(hero.id) ? 'rgba(198,27,51,.18)' : '#151515', color: likedSet.has(hero.id) ? '#ff6a7f' : '#c8c8c8', borderRadius: 9, padding: '7px 11px', cursor: canInteract ? 'pointer' : 'not-allowed' }}
-                >
-                  ♥ Begen ({likesByNews[hero.id] || 0})
-                </button>
-                <span style={{ fontSize: 12, color: '#8b8b8b' }}>Yorum: {(commentsByNews[hero.id] || []).length}</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 16, alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {hero.visuals.teamA.logo_url
+                      ? <img src={hero.visuals.teamA.logo_url} alt={hero.visuals.teamA.name || ''} style={{ width: 56, height: 56, objectFit: 'contain', borderRadius: 14, background: '#111', padding: 6, border: '1px solid #2c2c2c' }} />
+                      : <div style={{ width: 56, height: 56, borderRadius: 14, background: '#151515', border: '1px solid #2c2c2c' }} />}
+                    {hero.visuals.teamB.logo_url
+                      ? <img src={hero.visuals.teamB.logo_url} alt={hero.visuals.teamB.name || ''} style={{ width: 56, height: 56, objectFit: 'contain', borderRadius: 14, background: '#111', padding: 6, border: '1px solid #2c2c2c' }} />
+                      : <div style={{ width: 56, height: 56, borderRadius: 14, background: '#151515', border: '1px solid #2c2c2c' }} />}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ color: '#b3b3b3', fontSize: 12, marginBottom: 6 }}>{hero.visuals.tournamentName}</div>
+                    <h2 style={{ margin: '0 0 10px', fontSize: 32, lineHeight: 1.1 }}>{hero.title}</h2>
+                    <div style={{ color: '#f0d3d8', fontSize: 17, fontWeight: 700 }}>{hero.heroScore}</div>
+                  </div>
+                </div>
+
+                <p style={{ margin: 0, color: '#d8d8d8', lineHeight: 1.7 }}>{hero.summary}</p>
+
+                <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <button
+                    disabled={!canInteract}
+                    onClick={e => {
+                      e.stopPropagation()
+                      toggleLike(hero.id)
+                    }}
+                    style={{ border: `1px solid ${likedSet.has(hero.id) ? '#c61b33' : '#383838'}`, background: likedSet.has(hero.id) ? 'rgba(198,27,51,.18)' : '#151515', color: likedSet.has(hero.id) ? '#ff6a7f' : '#c8c8c8', borderRadius: 9, padding: '7px 11px', cursor: canInteract ? 'pointer' : 'not-allowed' }}
+                  >
+                    ♥ Begen ({likesByNews[hero.id] || 0})
+                  </button>
+                  <span style={{ fontSize: 12, color: '#8b8b8b' }}>Yorum: {(commentsByNews[hero.id] || []).length}</span>
+                </div>
+
+                <NewsTrustLayer item={hero} onReport={reportStoryIssue} />
               </div>
             </article>
           </section>
@@ -368,7 +540,7 @@ export default function NewsPage() {
 
         <section>
           <div style={{ marginBottom: 10, fontSize: 11, color: '#f4f4f4', textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 800 }}>Gundem</div>
-          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))' }}>
+          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))' }}>
             {agenda.map(item => (
               <NewsCard
                 key={item.id}
@@ -379,13 +551,15 @@ export default function NewsPage() {
                 onLike={toggleLike}
                 onComment={addComment}
                 canInteract={canInteract}
+                onOpenDetail={openStoryDetail}
+                onReport={reportStoryIssue}
               />
             ))}
           </div>
         </section>
 
-        {emptyMsg && (
-          <div style={{ marginTop: 18, color: '#777', fontSize: 13 }}>Su an haber uretecek yeterli mac verisi bulunamadi.</div>
+        {!loading && filteredStories.length === 0 && (
+          <div style={{ marginTop: 18, color: '#777', fontSize: 13 }}>Su an secili oyun icin gosterilecek taze haber bulunamadi.</div>
         )}
       </div>
     </div>

@@ -22,6 +22,7 @@ import NavbarComponent from './components/Navbar'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import NewsPage from './pages/NewsPage'
+import NewsDetailPage from './pages/NewsDetailPage'
 
 import './App.css'
 
@@ -376,6 +377,7 @@ function AppShell() {
         <Route path="/player/:id"               element={<PlayerPage />}     />
         <Route path="/search"                   element={<SearchPage />}     />
         <Route path="/news"                     element={<NewsPage />}       />
+        <Route path="/news/:newsId"             element={<NewsDetailPage />} />
         <Route path="/login"                    element={<LoginPage />}      />
         <Route path="/register"                 element={<RegisterPage />}   />
         <Route path="/settings"                 element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />

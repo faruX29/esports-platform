@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import { GAMES, useGame } from '../GameContext'
+import { getRoleBadge } from '../roleHelper'
 import { useUser } from '../context/UserContext'
-import { summarizePlayerMatchStats, metricBars } from '../utils/playerMetrics'
+import { summarizePlayerMatchStats, metricBars, pickRowTimestamp } from '../utils/playerMetrics'
 
 function toNum(v) {
   const n = Number(v)
@@ -55,18 +57,94 @@ function extractTeamFallbackMetrics(rows) {
   }
 }
 
-function getRoleColor(role = '') {
-  const r = role.toLowerCase()
-  if (r.includes('support')) return '#5bc0ff'
-  if (r.includes('carry') || r.includes('adc')) return '#ff8f4b'
-  if (r.includes('mid')) return '#b082ff'
-  if (r.includes('jung')) return '#7de07d'
-  if (r.includes('sniper') || r.includes('rifler')) return '#f87086'
-  return '#d2d2d2'
+function normalizeGameId(raw) {
+  const value = String(raw || '').trim().toLowerCase()
+  if (!value) return null
+  if (value === 'valorant') return 'valorant'
+  if (value === 'cs2' || value === 'csgo' || value.includes('counter') || value.includes('cs-go')) return 'cs2'
+  if (value === 'lol' || value.includes('league')) return 'lol'
+  if (value === 'dota2' || value === 'dota' || value.includes('dota')) return 'dota2'
+  return null
+}
+
+function resolveRowGameId(row, matchGameById) {
+  return normalizeGameId(
+    row?.game_id ??
+    row?.game?.id ??
+    row?.game?.slug ??
+    row?.game?.name ??
+    matchGameById.get(String(row?.match_id || ''))
+  )
+}
+
+function normalizeRoleForGame(role, gameId) {
+  const value = String(role || '').trim().toLowerCase()
+
+  if (gameId === 'lol') {
+    if (value === 'adc') return 'adc'
+    if (value === 'bot' || value === 'bottom') return 'bot'
+    if (value.includes('top')) return 'top'
+    if (value.includes('jung')) return 'jungler'
+    if (value.includes('mid')) return 'mid'
+    if (value.includes('support') || value === 'sup') return 'support'
+    if (value.includes('carry')) return 'carry'
+    return 'General'
+  }
+
+  if (gameId === 'valorant') {
+    if (value.includes('duelist')) return 'duelist'
+    if (value.includes('controller')) return 'controller'
+    if (value.includes('initiator')) return 'initiator'
+    if (value.includes('sentinel')) return 'sentinel'
+    return 'General'
+  }
+
+  if (gameId === 'cs2') {
+    if (value === 'awp' || value.includes('sniper')) return 'sniper'
+    if (value.includes('igl')) return 'igl'
+    if (value.includes('entry')) return 'entry'
+    if (value.includes('support')) return 'support'
+    if (value.includes('lurk')) return 'lurker'
+    if (value.includes('rifl')) return 'rifler'
+    return 'General'
+  }
+
+  return role || 'General'
 }
 
 function fmt(value, digits = 2) {
   return Number.isFinite(value) ? value.toFixed(digits) : '0.00'
+}
+
+function GameFilterTabs({ activeGame, setActiveGame }) {
+  const games = GAMES.filter(game => !game.soon && game.id !== 'all')
+
+  return (
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      {games.map(game => {
+        const active = game.id === activeGame
+        return (
+          <button
+            key={game.id}
+            onClick={() => setActiveGame(game.id)}
+            style={{
+              padding: '8px 14px',
+              borderRadius: 999,
+              border: active ? `1px solid ${game.color}` : '1px solid #2a2a2a',
+              background: active ? `${game.color}22` : '#121212',
+              color: active ? '#ffffff' : '#9e9e9e',
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: '.2px',
+              cursor: 'pointer',
+            }}
+          >
+            {game.icon} {game.shortLabel || game.label}
+          </button>
+        )
+      })}
+    </div>
+  )
 }
 
 function CompareCard({ player, onClear }) {
@@ -117,7 +195,11 @@ function CompareCard({ player, onClear }) {
 
 export default function PlayersPage() {
   const navigate = useNavigate()
+  const { activeGame, setActiveGame } = useGame()
   const { isPlayerFollowed, togglePlayerFollow } = useUser()
+  const defaultGameId = GAMES.find(game => !game.soon && game.id !== 'all')?.id || 'valorant'
+  const selectedGameId = activeGame && activeGame !== 'all' ? activeGame : defaultGameId
+  const isHeadshotRelevant = selectedGameId === 'valorant' || selectedGameId === 'cs2'
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -130,8 +212,24 @@ export default function PlayersPage() {
   const [minKd, setMinKd] = useState(0.8)
   const [minHs, setMinHs] = useState(10)
   const [sortKey, setSortKey] = useState('impact')
+  const [compareMode, setCompareMode] = useState(false)
   const [compareAId, setCompareAId] = useState('')
   const [compareBId, setCompareBId] = useState('')
+
+  useEffect(() => {
+    if (!activeGame || activeGame === 'all') {
+      setActiveGame(defaultGameId)
+    }
+  }, [activeGame, setActiveGame, defaultGameId])
+
+  useEffect(() => {
+    setRoleFilter('all')
+    setCompareAId('')
+    setCompareBId('')
+    if (!isHeadshotRelevant) {
+      setMinHs(0)
+    }
+  }, [selectedGameId, isHeadshotRelevant])
 
   useEffect(() => {
     let cancelled = false
@@ -166,8 +264,11 @@ export default function PlayersPage() {
         if (cancelled) return
 
         const teamsById = new Map((teamsRes.data || []).map(t => [String(t.id), t]))
-        const playerStatsById = new Map()
+        const playersById = new Map((playersRes.data || []).map(player => [String(player.id), player]))
         const teamStatsByTeam = new Map()
+        const playerStatsByGame = new Map()
+        const playerRolesByGame = new Map()
+        const playerTeamsByGame = new Map()
 
         let granularReady = true
         if (playerStatsRes.error) {
@@ -181,11 +282,50 @@ export default function PlayersPage() {
 
         if (granularReady) {
           setMetricsSource('player_match_stats')
+          const unresolvedMatchIds = [...new Set((playerStatsRes.data || [])
+            .filter(row => !normalizeGameId(row?.game_id ?? row?.game?.id ?? row?.game?.slug ?? row?.game?.name) && row?.match_id)
+            .map(row => row.match_id))]
+
+          const matchGameById = new Map()
+          for (let index = 0; index < unresolvedMatchIds.length; index += 400) {
+            const batch = unresolvedMatchIds.slice(index, index + 400)
+            const { data: matchesData, error: matchesError } = await supabase
+              .from('matches')
+              .select('id,game:games(id,name,slug)')
+              .in('id', batch)
+
+            if (matchesError) throw matchesError
+
+            for (const match of (matchesData || [])) {
+              matchGameById.set(String(match.id), normalizeGameId(match?.game?.slug ?? match?.game?.id ?? match?.game?.name))
+            }
+          }
+
           for (const row of (playerStatsRes.data || [])) {
-            const pid = row?.player_id
-            if (!pid) continue
-            if (!playerStatsById.has(pid)) playerStatsById.set(pid, [])
-            playerStatsById.get(pid).push(row)
+            const pid = String(row?.player_id || '')
+            const gameId = resolveRowGameId(row, matchGameById)
+            if (!pid || !gameId) continue
+
+            if (!playerStatsByGame.has(pid)) playerStatsByGame.set(pid, new Map())
+            if (!playerRolesByGame.has(pid)) playerRolesByGame.set(pid, new Map())
+            if (!playerTeamsByGame.has(pid)) playerTeamsByGame.set(pid, new Map())
+
+            const scopedStats = playerStatsByGame.get(pid)
+            if (!scopedStats.has(gameId)) scopedStats.set(gameId, [])
+            scopedStats.get(gameId).push(row)
+
+            const normalizedRole = normalizeRoleForGame(row?.role ?? playersById.get(pid)?.role, gameId)
+            if (normalizedRole) {
+              playerRolesByGame.get(pid).set(gameId, normalizedRole)
+            }
+
+            const currentTeam = playerTeamsByGame.get(pid).get(gameId)
+            const candidateTeamId = row?.team_id ?? row?.team_pandascore_id ?? playersById.get(pid)?.team_pandascore_id
+            const rowTime = pickRowTimestamp(row) ? new Date(pickRowTimestamp(row)).getTime() : 0
+            const currentTime = currentTeam?.timestamp || 0
+            if (candidateTeamId && rowTime >= currentTime) {
+              playerTeamsByGame.get(pid).set(gameId, { teamId: String(candidateTeamId), timestamp: rowTime })
+            }
           }
         } else {
           for (const row of (teamStatsRes.data || [])) {
@@ -201,21 +341,34 @@ export default function PlayersPage() {
           const teamId = p.team_pandascore_id
           const key = teamId ? String(teamId) : ''
           const team = key ? teamsById.get(key) : null
-          const metrics = granularReady
-            ? summarizePlayerMatchStats(playerStatsById.get(p.id) || [])
-            : extractTeamFallbackMetrics(teamStatsByTeam.get(key) || [])
+          const pid = String(p.id)
+          const scopedStats = playerStatsByGame.get(pid) || new Map()
+          const scopedRoles = playerRolesByGame.get(pid) || new Map()
+          const scopedTeams = playerTeamsByGame.get(pid) || new Map()
+          const gameStats = {}
+
+          if (granularReady) {
+            for (const [gameId, rows] of scopedStats.entries()) {
+              const metrics = summarizePlayerMatchStats(rows || [])
+              const scopedTeamId = scopedTeams.get(gameId)?.teamId || key
+              gameStats[gameId] = {
+                ...metrics,
+                team: scopedTeamId ? teamsById.get(String(scopedTeamId)) || team : team,
+                role: scopedRoles.get(gameId) || normalizeRoleForGame(p.role, gameId),
+              }
+            }
+          } else {
+            gameStats[selectedGameId] = {
+              ...extractTeamFallbackMetrics(teamStatsByTeam.get(key) || []),
+              team,
+              role: normalizeRoleForGame(p.role, selectedGameId),
+            }
+          }
 
           return {
             ...p,
             team,
-            kd: metrics.kd,
-            hsPct: metrics.hsPct,
-            impact: metrics.impact,
-            winRate: metrics.winRate,
-            sampleMatches: metrics.sampleMatches,
-            totalKills: metrics.totalKills,
-            totalDeaths: metrics.totalDeaths,
-            totalAssists: metrics.totalAssists,
+            gameStats,
           }
         })
 
@@ -234,25 +387,41 @@ export default function PlayersPage() {
     return () => { cancelled = true }
   }, [])
 
+  const gamePlayers = useMemo(() => {
+    return players
+      .map(player => {
+        const scoped = player.gameStats?.[selectedGameId]
+        if (!scoped || (scoped.sampleMatches || 0) <= 0) return null
+
+        return {
+          ...player,
+          ...scoped,
+          team: scoped.team || player.team || null,
+          role: scoped.role || normalizeRoleForGame(player.role, selectedGameId),
+        }
+      })
+      .filter(Boolean)
+  }, [players, selectedGameId])
+
   const roleOptions = useMemo(() => {
-    const set = new Set(players.map(p => p.role).filter(Boolean))
+    const set = new Set(gamePlayers.map(player => player.role).filter(Boolean))
     return ['all', ...[...set].sort((a, b) => a.localeCompare(b, 'tr'))]
-  }, [players])
+  }, [gamePlayers])
 
   const nationalityOptions = useMemo(() => {
-    const set = new Set(players.map(p => p.nationality).filter(Boolean))
+    const set = new Set(gamePlayers.map(player => player.nationality).filter(Boolean))
     return ['all', ...[...set].sort((a, b) => a.localeCompare(b, 'tr'))]
-  }, [players])
+  }, [gamePlayers])
 
   const visiblePlayers = useMemo(() => {
     const q = search.trim().toLowerCase()
 
-    const filtered = players.filter(p => {
+    const filtered = gamePlayers.filter(p => {
       const matchesSearch = !q || (p.nickname || '').toLowerCase().includes(q) || (p.real_name || '').toLowerCase().includes(q)
       const matchesRole = roleFilter === 'all' || p.role === roleFilter
       const matchesNat = nationality === 'all' || p.nationality === nationality
       const matchesKd = p.kd >= minKd
-      const matchesHs = p.hsPct >= minHs
+      const matchesHs = !isHeadshotRelevant || p.hsPct >= minHs
       return matchesSearch && matchesRole && matchesNat && matchesKd && matchesHs
     })
 
@@ -264,13 +433,18 @@ export default function PlayersPage() {
     })
 
     return filtered
-  }, [players, search, roleFilter, nationality, minKd, minHs, sortKey])
+  }, [gamePlayers, search, roleFilter, nationality, minKd, minHs, sortKey, isHeadshotRelevant])
 
   useEffect(() => {
+    if (!compareMode) return
     if (visiblePlayers.length === 0) return
-    if (!compareAId) setCompareAId(String(visiblePlayers[0].id))
-    if (!compareBId && visiblePlayers.length > 1) setCompareBId(String(visiblePlayers[1].id))
-  }, [visiblePlayers, compareAId, compareBId])
+    if (!compareAId || !visiblePlayers.some(player => String(player.id) === String(compareAId))) {
+      setCompareAId(String(visiblePlayers[0].id))
+    }
+    if (!compareBId || !visiblePlayers.some(player => String(player.id) === String(compareBId))) {
+      setCompareBId(String(visiblePlayers[1]?.id || ''))
+    }
+  }, [visiblePlayers, compareAId, compareBId, compareMode])
 
   const compareA = useMemo(() => visiblePlayers.find(p => String(p.id) === String(compareAId)) || null, [visiblePlayers, compareAId])
   const compareB = useMemo(() => visiblePlayers.find(p => String(p.id) === String(compareBId)) || null, [visiblePlayers, compareBId])
@@ -287,34 +461,49 @@ export default function PlayersPage() {
       <div style={{ position: 'relative', zIndex: 1 }}>
         <h1 style={{ margin: 0, fontSize: 30, letterSpacing: '.5px' }}>Player Scout Engine</h1>
         <p style={{ margin: '8px 0 16px', color: '#a8a8a8', fontSize: 13 }}>
-          K/D, Headshot yuzdesi ve Impact sinyallerine gore filtreleyip siralayin. Veri kaynagi: {metricsSource === 'player_match_stats' ? 'player_match_stats' : 'team fallback'}
+          Secili oyuna gore oyunculari listeleyin. Veri kaynagi: {metricsSource === 'player_match_stats' ? 'player_match_stats' : 'team fallback'}
         </p>
 
-        <div style={{
-          border: '1px solid #2a2a2a',
-          background: '#101010d9',
-          borderRadius: 14,
-          padding: 14,
-          marginBottom: 14,
-        }}>
-          <div style={{ fontSize: 11, color: '#ff9aa9', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.9px', marginBottom: 10 }}>
-            Compare
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 10, marginBottom: 10 }}>
-            <select value={compareAId} onChange={e => setCompareAId(e.target.value)} style={{ height: 36, borderRadius: 10, border: '1px solid #333', background: '#131313', color: '#fff', padding: '0 10px' }}>
-              <option value=''>Oyuncu A sec</option>
-              {visiblePlayers.map(p => <option key={p.id} value={p.id}>{p.nickname}</option>)}
-            </select>
-            <select value={compareBId} onChange={e => setCompareBId(e.target.value)} style={{ height: 36, borderRadius: 10, border: '1px solid #333', background: '#131313', color: '#fff', padding: '0 10px' }}>
-              <option value=''>Oyuncu B sec</option>
-              {visiblePlayers.map(p => <option key={p.id} value={p.id}>{p.nickname}</option>)}
-            </select>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 10 }}>
-            <CompareCard player={compareA} onClear={() => setCompareAId('')} />
-            <CompareCard player={compareB} onClear={() => setCompareBId('')} />
-          </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+          <GameFilterTabs activeGame={selectedGameId} setActiveGame={setActiveGame} />
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 10, color: '#d4d4d4', fontSize: 12, fontWeight: 700 }}>
+            <input
+              type='checkbox'
+              checked={compareMode}
+              onChange={e => setCompareMode(e.target.checked)}
+              style={{ accentColor: '#c8102e', width: 16, height: 16 }}
+            />
+            Compare Mode
+          </label>
         </div>
+
+        {compareMode && (
+          <div style={{
+            border: '1px solid #2a2a2a',
+            background: '#101010d9',
+            borderRadius: 14,
+            padding: 14,
+            marginBottom: 14,
+          }}>
+            <div style={{ fontSize: 11, color: '#ff9aa9', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.9px', marginBottom: 10 }}>
+              Compare
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 10, marginBottom: 10 }}>
+              <select value={compareAId} onChange={e => setCompareAId(e.target.value)} style={{ height: 36, borderRadius: 10, border: '1px solid #333', background: '#131313', color: '#fff', padding: '0 10px' }}>
+                <option value=''>Oyuncu A sec</option>
+                {visiblePlayers.map(p => <option key={p.id} value={p.id}>{p.nickname}</option>)}
+              </select>
+              <select value={compareBId} onChange={e => setCompareBId(e.target.value)} style={{ height: 36, borderRadius: 10, border: '1px solid #333', background: '#131313', color: '#fff', padding: '0 10px' }}>
+                <option value=''>Oyuncu B sec</option>
+                {visiblePlayers.map(p => <option key={p.id} value={p.id}>{p.nickname}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 10 }}>
+              <CompareCard player={compareA} onClear={() => setCompareAId('')} />
+              <CompareCard player={compareB} onClear={() => setCompareBId('')} />
+            </div>
+          </div>
+        )}
 
         <div style={{
           border: '1px solid #2a2a2a',
@@ -339,7 +528,7 @@ export default function PlayersPage() {
             style={{ height: 36, borderRadius: 10, border: '1px solid #333', background: '#131313', color: '#fff', padding: '0 10px' }}
           >
             {roleOptions.map(role => (
-              <option key={role} value={role}>{role === 'all' ? 'Tum Roller' : role}</option>
+              <option key={role} value={role}>{role === 'all' ? 'Tum Roller' : getRoleBadge(role).label}</option>
             ))}
           </select>
 
@@ -369,14 +558,21 @@ export default function PlayersPage() {
             <input type='range' min='0.5' max='2.5' step='0.05' value={minKd} onChange={e => setMinKd(Number(e.target.value))} />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <label style={{ fontSize: 11, color: '#a1a1a1' }}>Min HS%: {Math.round(minHs)}%</label>
-            <input type='range' min='0' max='80' step='1' value={minHs} onChange={e => setMinHs(Number(e.target.value))} />
-          </div>
+          {isHeadshotRelevant ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: 11, color: '#a1a1a1' }}>Min HS%: {Math.round(minHs)}%</label>
+              <input type='range' min='0' max='80' step='1' value={minHs} onChange={e => setMinHs(Number(e.target.value))} />
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, color: '#8f8f8f', fontSize: 11 }}>
+              <span>HS filtresi bu oyun icin kapali.</span>
+              <span>LoL scout listesi role ve K/D odakli calisir.</span>
+            </div>
+          )}
         </div>
 
         <div style={{ fontSize: 12, color: '#8d8d8d', marginBottom: 8 }}>
-          {visiblePlayers.length} oyuncu listelendi
+          {visiblePlayers.length} oyuncu listelendi · {GAMES.find(game => game.id === selectedGameId)?.label || selectedGameId}
         </div>
 
         <div style={{ overflowX: 'auto' }}>
@@ -415,7 +611,7 @@ export default function PlayersPage() {
 
             {!loading && !error && visiblePlayers.map((player, idx) => {
             const followed = isPlayerFollowed(player.id)
-            const roleColor = getRoleColor(player.role)
+            const roleBadge = getRoleBadge(player.role)
             return (
               <div
                 key={player.id}
@@ -438,7 +634,9 @@ export default function PlayersPage() {
                     : <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#212121' }} />}
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.nickname || 'Unknown'}</div>
-                    <div style={{ fontSize: 11, color: roleColor }}>{player.role || 'Role N/A'}</div>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', marginTop: 3, padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700, background: roleBadge.bg, color: roleBadge.color, border: `1px solid ${roleBadge.border}` }}>
+                      {roleBadge.label}
+                    </div>
                   </div>
                 </div>
 
@@ -481,7 +679,7 @@ export default function PlayersPage() {
         </div>
 
         <div style={{ marginTop: 10, fontSize: 11, color: '#7a7a7a' }}>
-          Not: K/D ve HS% metrikleri once player_match_stats uzerinden bireysel hesaplanir; tablo mevcut degilse gecici fallback kullanilir.
+          Not: Oyuncu listesi secili oyunda en az bir `player_match_stats` kaydi olan oyunculardan uretilir; tablo mevcut degilse gecici team fallback kullanilir.
         </div>
       </div>
     </div>

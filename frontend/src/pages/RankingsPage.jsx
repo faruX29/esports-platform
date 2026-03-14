@@ -88,7 +88,7 @@ function buildPowerRankings(matches, activeGame) {
 }
 
 function GameFilterTabs({ activeGame, setActiveGame }) {
-  const games = GAMES.filter(g => !g.soon)
+  const games = GAMES.filter(g => !g.soon && g.id !== 'all')
 
   return (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -122,12 +122,19 @@ export default function RankingsPage() {
   const navigate = useNavigate()
   const { activeGame, setActiveGame } = useGame()
   const { isTeamFollowed, toggleTeamFollow } = useUser()
+  const defaultGameId = GAMES.find(g => !g.soon && g.id !== 'all')?.id || 'valorant'
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
   const [sortKey, setSortKey] = useState('power')
   const [rows, setRows] = useState([])
+
+  useEffect(() => {
+    if (!activeGame || activeGame === 'all') {
+      setActiveGame(defaultGameId)
+    }
+  }, [activeGame, setActiveGame, defaultGameId])
 
   useEffect(() => {
     let cancelled = false
@@ -211,6 +218,9 @@ export default function RankingsPage() {
           <h1 style={{ margin: 0, fontSize: 30, letterSpacing: '.5px' }}>Global Power Rankings</h1>
           <p style={{ margin: '8px 0 0', color: '#a8a8a8', fontSize: 13 }}>
             Win Rate ve Impact Score karmasiyla uretilen dinamik global guc siralamasi.
+          </p>
+          <p style={{ margin: '6px 0 0', color: '#7f7f7f', fontSize: 12 }}>
+            Siralama her zaman tek bir oyuna gore hesaplanir.
           </p>
         </div>
 

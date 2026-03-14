@@ -12,6 +12,12 @@ import { isTurkishTeam }                   from './constants'
 
 const PAGE_SIZE = 50   // 20 → 50
 
+const FALLBACK_GAME_IDS = {
+  valorant: 1,
+  cs2: 2,
+  lol: 3,
+}
+
 // ── Game adı → Supabase ilike pattern'leri ──────────────────────────────────
 // games tablosundaki name değerleriyle birebir eşleşmeli
 const GAME_DB_PATTERNS = {
@@ -19,6 +25,32 @@ const GAME_DB_PATTERNS = {
   cs2:      ['Counter-Strike 2', 'CS2', 'cs-go', 'Counter-Strike'],
   lol:      ['League of Legends', 'LoL', 'league-of-legends'],
   dota2:    ['Dota 2', 'dota'],
+}
+
+function resolveGameId(activeGame, gameNames) {
+  if (!activeGame || activeGame === 'all') return null
+
+  const normalized = String(activeGame).toLowerCase()
+  const dbGame = (gameNames || []).find(g =>
+    g?.slug?.toLowerCase() === normalized ||
+    (normalized === 'cs2' ? g?.name?.toLowerCase()?.includes('counter') :
+      normalized === 'lol' ? g?.name?.toLowerCase()?.includes('league') :
+      g?.name?.toLowerCase()?.includes(normalized))
+  )
+
+  return dbGame?.id ?? FALLBACK_GAME_IDS[normalized] ?? null
+}
+
+function matchTimeIso(match) {
+  return match?.scheduled_at ?? match?.begin_at ?? match?.created_at ?? null
+}
+
+function formatMatchTime(match, localeOptions) {
+  const iso = matchTimeIso(match)
+  if (!iso) return 'TBA'
+  const time = new Date(iso)
+  if (Number.isNaN(time.getTime())) return 'TBA'
+  return time.toLocaleString('tr-TR', localeOptions)
 }
 
 function Matches() {
@@ -37,6 +69,7 @@ function Matches() {
   const [lastUpdate, setLastUpdate]               = useState(new Date())
   const [autoRefresh, setAutoRefresh]             = useState(false)
   const [gameNames, setGameNames]                 = useState([])   // DB'deki gerçek game isimleri
+  const [gamesLoading, setGamesLoading]           = useState(true)
 
   // ── Pagination ──────────────────────────────────────────────────
   const [currentPage, setCurrentPage] = useState(1)
@@ -60,17 +93,27 @@ function Matches() {
 
   // DB'deki gerçek oyun isimlerini bir kez çek (debug için)
   useEffect(() => {
-    supabase.from('games').select('id, name, slug').then(({ data }) => {
-      if (data) {
-        setGameNames(data)
-        console.log('🎮 DB Games:', data.map(g => `${g.name} (${g.slug})`))
+    let cancelled = false
+
+    async function loadGames() {
+      setGamesLoading(true)
+      const { data } = await supabase.from('games').select('id, name, slug')
+
+      if (!cancelled) {
+        const rows = data || []
+        setGameNames(rows)
+        console.log('🎮 DB Games:', (rows || []).map(g => `${g?.name ?? '?'} (${g?.slug ?? '?'})`))
+        setGamesLoading(false)
       }
-    })
+    }
+
+    loadGames()
+    return () => { cancelled = true }
   }, [])
 
   useEffect(() => {
     fetchMatches()
-  }, [activeGame, sortBy, activeTab, currentPage])  // activeGame değişince tekrar çek
+  }, [activeGame, sortBy, activeTab, currentPage, gamesLoading, gameNames])  // activeGame değişince tekrar çek
 
   useEffect(() => {
     applyFilters()
@@ -81,7 +124,7 @@ function Matches() {
     let interval
     if (autoRefresh) interval = setInterval(fetchMatches, 30000)
     return () => { if (interval) clearInterval(interval) }
-  }, [autoRefresh, activeGame, sortBy, activeTab, currentPage])
+  }, [autoRefresh, activeGame, sortBy, activeTab, currentPage, gamesLoading])
 
   // ── Supabase game filtresi builder ─────────────────────────────
   function buildGameFilter(query) {
@@ -113,63 +156,64 @@ function Matches() {
   // ── Ana veri çekme ──────────────────────────────────────────────
   async function fetchMatches() {
     try {
+      if (activeGame !== 'all' && gamesLoading) {
+        return
+      }
+
       setLoading(true)
       setError(null)
 
-      const statusFilter = activeTab === 'upcoming'
-        ? ['not_started', 'running']
-        : ['finished']
+      const nowIso = new Date().toISOString()
 
       const from = (currentPage - 1) * PAGE_SIZE
       const to   = from + PAGE_SIZE - 1
 
-      // ── Temel sorgu ──
-      let query = supabase
-        .from('matches')
-        .select(`
-          id, status, scheduled_at,
-          team_a_id, team_b_id, winner_id,
-          team_a_score, team_b_score,
-          game_id,
-          prediction_team_a, prediction_team_b, prediction_confidence,
-          team_a:teams!matches_team_a_id_fkey(id, name, logo_url, acronym),
-          team_b:teams!matches_team_b_id_fkey(id, name, logo_url, acronym),
-          tournament:tournaments(id, name, tier),
-          game:games(id, name, slug)
-        `, { count: 'exact' })
-        .in('status', statusFilter)
+      const buildQuery = () => {
+        let query = supabase
+          .from('matches')
+          .select(`
+            id, status, scheduled_at,
+            team_a_id, team_b_id, winner_id,
+            team_a_score, team_b_score,
+            game_id,
+            prediction_team_a, prediction_team_b, prediction_confidence,
+            team_a:teams!matches_team_a_id_fkey(id, name, logo_url, acronym),
+            team_b:teams!matches_team_b_id_fkey(id, name, logo_url, acronym),
+            tournament:tournaments(id, name, tier),
+            game:games(id, name, slug)
+          `, { count: 'exact' })
 
-      // ── Game filtresi SUNUCU tarafında ──
-      if (activeGame && activeGame !== 'all') {
-        // gameNames yüklendiyse id ile, yoksa slug ile dene
-        const dbGame = gameNames.find(g =>
-          g.slug?.toLowerCase() === activeGame.toLowerCase() ||
-          g.name?.toLowerCase().includes(
-            activeGame === 'cs2' ? 'counter' :
-            activeGame === 'lol' ? 'league' :
-            activeGame
-          )
-        )
-
-        if (dbGame?.id) {
-          console.log(`🎯 Game filter: ${dbGame.name} (id=${dbGame.id})`)
-          query = query.eq('game_id', dbGame.id)
+        if (activeTab === 'upcoming') {
+          query = query
+            .eq('status', 'not_started')
+            .gt('scheduled_at', nowIso)
         } else {
-          // gameNames henüz gelmedi → slug üzerinden dene
-          console.log(`⚠️ Game names not loaded yet, using slug filter for: ${activeGame}`)
-          query = query.eq('game:games.slug', activeGame === 'cs2' ? 'csgo' : activeGame)
+          query = query.eq('status', 'finished')
         }
+
+        // ── Game filtresi SUNUCU tarafında ──
+        if (activeGame && activeGame !== 'all') {
+          const gameId = resolveGameId(activeGame, gameNames)
+          if (!gameId) {
+            throw new Error(`Game filter id bulunamadi: ${activeGame}`)
+          }
+
+          console.log(`🎯 Game filter id=${gameId} (${activeGame})`)
+          query = query.eq('game_id', gameId)
+        }
+
+        query = query.order('scheduled_at', {
+          ascending: sortBy === 'date-asc',
+        })
+        query = query.order('id', {
+          ascending: sortBy === 'date-asc',
+        })
+
+        query = query.range(from, to)
+        return query
       }
 
-      // ── Sıralama ──
-      query = query.order('scheduled_at', {
-        ascending: sortBy === 'date-asc',
-      })
-
-      // ── Sayfalama ──
-      query = query.range(from, to)
-
-      const { data, error: fetchError, count } = await query
+      let { data, error: fetchError, count } = await buildQuery()
 
       if (fetchError) {
         console.error('Supabase error:', fetchError)
@@ -180,7 +224,7 @@ function Matches() {
 
       if (data?.length === 0 && gameNames.length > 0) {
         // Hangi game_id'lerin DB'de olduğunu logla
-        console.warn('⚠️ 0 matches returned. DB games:', gameNames.map(g => `${g.slug}=${g.id}`))
+        console.warn('⚠️ 0 matches returned. DB games:', (gameNames || []).map(g => `${g?.slug ?? '?'}=${g?.id ?? '?'}`))
       }
 
       setMatches(data || [])
@@ -272,10 +316,8 @@ function Matches() {
   // ── Game filtresi debug banner ──────────────────────────────────
   function GameDebugBanner() {
     if (activeGame === 'all' || gameNames.length === 0) return null
-    const dbGame = gameNames.find(g =>
-      g.slug?.toLowerCase() === activeGame.toLowerCase() ||
-      g.name?.toLowerCase().includes(activeGame === 'cs2' ? 'counter' : activeGame === 'lol' ? 'league' : activeGame)
-    )
+    const dbGameId = resolveGameId(activeGame, gameNames)
+    const dbGame = (gameNames || []).find(g => Number(g?.id) === Number(dbGameId))
     return (
       <div style={{
         textAlign: 'center', fontSize: 11, color: '#444',
@@ -283,7 +325,7 @@ function Matches() {
         background: '#0d0d0d', borderRadius: 8, display: 'inline-block',
       }}>
         🎮 Filtre: <span style={{ color: '#666' }}>
-          {dbGame ? `${dbGame.name} (id=${dbGame.id})` : `slug="${activeGame}" — DB'de eşleşme yok!`}
+          {dbGame ? `${dbGame?.name ?? '?'} (id=${dbGame?.id ?? '?'})` : `id bulunamadi: "${activeGame}"`}
         </span>
       </div>
     )
@@ -432,7 +474,7 @@ function Matches() {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 20 }}>
         {[
-          { key: 'upcoming', label: '⏳ Upcoming / Live' },
+          { key: 'upcoming', label: '⏳ Upcoming' },
           { key: 'past',     label: '✅ Past Results'   },
         ].map(t => (
           <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
@@ -506,13 +548,13 @@ function Matches() {
           {/* DB games listesi */}
           {gameNames.length > 0 && (
             <div style={{ marginTop: 12, fontSize: 11, color: '#333' }}>
-              DB'deki oyunlar: {gameNames.map(g => `${g.name}(${g.slug})`).join(' · ')}
+              DB'deki oyunlar: {(gameNames || []).map(g => `${g?.name ?? '?'}(${g?.slug ?? '?'})`).join(' · ')}
             </div>
           )}
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
-          {filteredMatches.map(match => {
+          {(filteredMatches || []).map(match => {
             const statusBadge = getStatusBadge(match.status)
             const isLive      = match.status === 'running'
             const teamAFav    = isFavorite(match.team_a_id)
@@ -673,7 +715,7 @@ function Matches() {
                       🏆 {match.tournament?.name ?? '—'}
                     </div>
                     <div style={{ fontSize: 11, fontWeight: 600, color: isLive ? '#FF4655' : '#4CAF50', flexShrink: 0, background: isLive ? 'rgba(255,70,85,.1)' : 'rgba(76,175,80,.1)', padding: '2px 8px', borderRadius: 6 }}>
-                      {isLive ? '🔴 LIVE' : new Date(match.scheduled_at).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                      {isLive ? '🔴 LIVE' : formatMatchTime(match, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
                 </div>
@@ -718,7 +760,7 @@ function Matches() {
               <div style={{ marginBottom: 15 }}>
                 <div style={{ color: '#888', fontSize: 14, marginBottom: 5 }}>📅 Scheduled</div>
                 <div style={{ fontSize: 16, fontWeight: 'bold', color: '#4CAF50' }}>
-                  {new Date(selectedMatch.scheduled_at).toLocaleString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  {formatMatchTime(selectedMatch, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
               <div>
@@ -761,9 +803,9 @@ function Matches() {
                     { label: selectedMatch.team_b?.name, players: modalPlayers.teamB }].map(({ label, players }) => (
                     <div key={label}>
                       <div style={{ fontSize: 13, fontWeight: 'bold', color: '#aaa', marginBottom: 8, textAlign: 'center' }}>{label}</div>
-                      {players.length === 0
+                      {(players || []).length === 0
                         ? <div style={{ fontSize: 12, color: '#555', textAlign: 'center' }}>No data</div>
-                        : players.map((p, i) => (
+                        : (players || []).map((p, i) => (
                           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, padding: 6, background: '#0d0d0d', borderRadius: 8 }}>
                             {p.image_url ? <img src={p.image_url} alt={p.nickname} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} /> : <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#1e1e1e' }} />}
                             <div>

@@ -8,7 +8,7 @@ import { supabase }                         from './supabaseClient'
 import { useGame, gameMatchesFilter }       from './GameContext'
 import { isTurkishTeam }                   from './constants'
 import { useUser }                          from './context/UserContext'
-import { summarizePlayerMatchStats, pickRowTimestamp } from './utils/playerMetrics'
+
 
 /* ── Skeleton ─────────────────────────────────────────────────────────────── */
 function Sk({ w = '100%', h = '16px', r = '8px' }) {
@@ -203,8 +203,6 @@ function FavoritesBar({ navigate }) {
     </div>
   )
 }
-
-/* ── AI Win Bar ───────────────────────────────────────────────────────────── */
 /*
  * Kartı şişirmemek için:
  *  - Yükseklik minimal (bar 3px, yazılar 8px)
@@ -473,8 +471,7 @@ export default function Dashboard() {
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
-      const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999)
+      const nowIso = new Date().toISOString()
 
       const selectStr = `
         id, status, scheduled_at,
@@ -492,11 +489,13 @@ export default function Dashboard() {
           .limit(18),
         supabase.from('matches').select(selectStr)
           .eq('status', 'not_started')
-          .gte('scheduled_at', todayStart.toISOString())
-          .lte('scheduled_at', todayEnd.toISOString())
+          .gt('scheduled_at', nowIso)
           .order('scheduled_at', { ascending: true })
           .limit(30),
       ])
+
+      if (liveRes.error) throw liveRes.error
+      if (upcomingRes.error) throw upcomingRes.error
 
       const live     = (liveRes.data     || []).filter(m => gameMatchesFilter(m.game?.name || '', activeGame))
       const upcoming = (upcomingRes.data || []).filter(m => gameMatchesFilter(m.game?.name || '', activeGame))
@@ -590,53 +589,127 @@ export default function Dashboard() {
     async function fetchDreamTeam() {
       setDreamLoading(true)
       try {
-        const [statsRes, playersRes, teamsRes] = await Promise.all([
-          supabase.from('player_match_stats').select('*').limit(12000),
-          supabase.from('players').select('id,nickname,image_url,team_pandascore_id').limit(2000),
-          supabase.from('teams').select('id,name,logo_url').limit(800),
-        ])
+        const dreamGameId = ['valorant', 'cs2', 'lol'].includes(activeGame) ? activeGame : 'valorant'
+        const sinceIso = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)).toISOString()
 
-        if (statsRes.error || playersRes.error || teamsRes.error) {
+        const { data: recentMatches, error: matchesErr } = await supabase
+          .from('matches')
+          .select('id,scheduled_at,game:games(id,name,slug)')
+          .eq('status', 'finished')
+          .gte('scheduled_at', sinceIso)
+          .order('scheduled_at', { ascending: false })
+          .limit(1200)
+
+        if (matchesErr) {
           if (!cancelled) setDreamTeam([])
           return
         }
 
-        const weekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000)
-        const rows = (statsRes.data || []).filter(row => {
-          const ts = pickRowTimestamp(row)
-          if (!ts) return true
-          const d = new Date(ts).getTime()
-          return Number.isFinite(d) ? d >= weekAgo : true
-        })
+        const filteredMatchIds = (recentMatches || [])
+          .filter(match => gameMatchesFilter(match.game?.name || match.game?.slug || '', dreamGameId))
+          .map(match => match.id)
 
-        const byPlayer = new Map()
-        for (const row of rows) {
-          const pid = row?.player_id
-          if (!pid) continue
-          if (!byPlayer.has(pid)) byPlayer.set(pid, [])
-          byPlayer.get(pid).push(row)
+        if (filteredMatchIds.length === 0) {
+          if (!cancelled) setDreamTeam([])
+          return
         }
 
-        const playersMap = new Map((playersRes.data || []).map(p => [String(p.id), p]))
-        const teamsMap = new Map((teamsRes.data || []).map(t => [String(t.id), t]))
+        const { data: statRows, error: statErr } = await supabase
+          .from('player_match_stats')
+          .select('id,player_id,match_id,impact_score,stats,created_at')
+          .in('match_id', filteredMatchIds)
+          .limit(25000)
 
-        const ranked = [...byPlayer.entries()].map(([pid, list]) => {
-          const p = playersMap.get(String(pid))
-          if (!p) return null
-          const summary = summarizePlayerMatchStats(list)
-          const team = p.team_pandascore_id ? teamsMap.get(String(p.team_pandascore_id)) : null
-          const score = (summary.impact * 0.6) + (summary.kd * 20) + (summary.winRate * 0.2)
-          return {
-            id: p.id,
-            nickname: p.nickname,
-            image_url: p.image_url,
-            team,
-            score,
-            ...summary,
+        if (statErr) {
+          if (!cancelled) setDreamTeam([])
+          return
+        }
+
+        const getImpactScore = row => {
+          if (typeof row?.impact_score === 'number' && Number.isFinite(row.impact_score)) return row.impact_score
+          const nested = row?.stats || {}
+          const fallback = Number(nested.impact_score ?? nested.impact ?? nested.rating ?? nested.mvp_score ?? 0)
+          return Number.isFinite(fallback) ? fallback : 0
+        }
+
+        const getRowTs = row => {
+          const ts = row?.created_at || row?.updated_at || row?.date || null
+          if (!ts) return 0
+          const ms = new Date(ts).getTime()
+          return Number.isFinite(ms) ? ms : 0
+        }
+
+        const byPlayer = new Map()
+        for (const row of (statRows || [])) {
+          const playerId = row?.player_id
+          if (!playerId) continue
+          if (!byPlayer.has(playerId)) {
+            byPlayer.set(playerId, { totalImpact: 0, sampleMatches: 0, latestTs: 0, lastImpact: 0 })
           }
-        }).filter(Boolean)
-          .filter(x => x.sampleMatches > 0)
-          .sort((a, b) => b.score - a.score)
+
+          const impact = getImpactScore(row)
+          const ts = getRowTs(row)
+          const entry = byPlayer.get(playerId)
+          entry.totalImpact += impact
+          entry.sampleMatches += 1
+          if (ts >= entry.latestTs) {
+            entry.latestTs = ts
+            entry.lastImpact = impact
+          }
+        }
+
+        const playerIds = [...byPlayer.keys()]
+        if (playerIds.length === 0) {
+          if (!cancelled) setDreamTeam([])
+          return
+        }
+
+        const { data: playersRows, error: playersErr } = await supabase
+          .from('players')
+          .select('id,nickname,image_url,team_pandascore_id')
+          .in('id', playerIds)
+
+        if (playersErr) {
+          if (!cancelled) setDreamTeam([])
+          return
+        }
+
+        const teamIds = [...new Set((playersRows || []).map(row => row.team_pandascore_id).filter(Boolean))]
+        const { data: teamsRows } = teamIds.length
+          ? await supabase.from('teams').select('id,name,logo_url').in('id', teamIds)
+          : { data: [] }
+
+        const playersMap = new Map((playersRows || []).map(row => [String(row.id), row]))
+        const teamsMap = new Map((teamsRows || []).map(row => [String(row.id), row]))
+
+        const ranked = [...byPlayer.entries()]
+          .map(([playerId, agg]) => {
+            const player = playersMap.get(String(playerId))
+            if (!player || agg.sampleMatches <= 0) return null
+
+            const avgImpact = agg.totalImpact / agg.sampleMatches
+            const momentum = avgImpact > 0
+              ? ((agg.lastImpact - avgImpact) / Math.max(Math.abs(avgImpact), 1)) * 100
+              : 0
+
+            const team = player.team_pandascore_id
+              ? teamsMap.get(String(player.team_pandascore_id))
+              : null
+
+            return {
+              id: player.id,
+              nickname: player.nickname,
+              image_url: player.image_url,
+              team,
+              avgImpact,
+              sampleMatches: agg.sampleMatches,
+              lastImpact: agg.lastImpact,
+              momentum,
+              score: avgImpact,
+            }
+          })
+          .filter(Boolean)
+          .sort((a, b) => b.avgImpact - a.avgImpact)
           .slice(0, 5)
 
         if (!cancelled) setDreamTeam(ranked)
@@ -649,7 +722,15 @@ export default function Dashboard() {
 
     fetchDreamTeam()
     return () => { cancelled = true }
-  }, [])
+  }, [activeGame])
+
+  const dreamGameLabel = activeGame === 'all'
+    ? 'VAL'
+    : activeGame === 'cs2'
+      ? 'CS2'
+      : activeGame === 'lol'
+        ? 'LoL'
+        : 'VAL'
 
   /* ── Stat tile tanımları ── */
   const statTiles = [
@@ -806,17 +887,20 @@ export default function Dashboard() {
           <span style={{ fontSize: 11, fontWeight: 800, color: '#ff9aa9', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
             🧬 Dream Team (Week)
           </span>
+          <span style={{ fontSize: 10, color: '#9e9e9e', padding: '2px 8px', borderRadius: 999, border: '1px solid #2c2c2c' }}>
+            Son 7 Gun • {dreamGameLabel}
+          </span>
           <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(255,154,169,.3),transparent)' }} />
         </div>
 
         <div style={{ border: '1px solid #222', borderRadius: 14, background: 'radial-gradient(circle at 8% 8%, rgba(200,16,46,.18), transparent 35%), #0f0f0f', overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '60px 1.3fr 1fr .7fr .7fr .7fr .7fr', gap: 8, padding: '11px 14px', borderBottom: '1px solid #202020', fontSize: 10, color: '#8b8b8b', textTransform: 'uppercase', letterSpacing: '.6px' }}>
-            <div>Rank</div><div>Player</div><div>Team</div><div>K/D</div><div>HS%</div><div>Impact</div><div>Score</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1fr .9fr .9fr .9fr', gap: 8, padding: '11px 14px', borderBottom: '1px solid #202020', fontSize: 10, color: '#8b8b8b', textTransform: 'uppercase', letterSpacing: '.6px' }}>
+            <div>Rank</div><div>Player</div><div>Team</div><div>Matches</div><div>Avg Impact</div><div>Momentum</div>
           </div>
           {dreamLoading && <div style={{ padding: 14, color: '#777', fontSize: 12 }}>Dream Team hesaplanıyor...</div>}
           {!dreamLoading && dreamTeam.length === 0 && <div style={{ padding: 14, color: '#777', fontSize: 12 }}>Haftalık oyuncu verisi bulunamadı.</div>}
           {!dreamLoading && dreamTeam.map((p, idx) => (
-            <div key={p.id} onClick={() => navigate(`/player/${p.id}`)} style={{ display: 'grid', gridTemplateColumns: '60px 1.3fr 1fr .7fr .7fr .7fr .7fr', gap: 8, alignItems: 'center', padding: '11px 14px', borderBottom: '1px solid #191919', cursor: 'pointer', background: idx === 0 ? 'linear-gradient(90deg, rgba(200,16,46,.22), transparent 62%)' : 'transparent' }}>
+            <div key={p.id} onClick={() => navigate(`/player/${p.id}`)} style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1fr .9fr .9fr .9fr', gap: 8, alignItems: 'center', padding: '11px 14px', borderBottom: '1px solid #191919', cursor: 'pointer', background: idx === 0 ? 'linear-gradient(90deg, rgba(200,16,46,.22), transparent 62%)' : 'transparent' }}>
               <div style={{ fontWeight: 800, color: '#f4f4f4' }}>#{idx + 1}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                 {p.image_url
@@ -828,10 +912,11 @@ export default function Dashboard() {
                 {p.team?.logo_url ? <img src={p.team.logo_url} alt={p.team?.name || ''} style={{ width: 20, height: 20, objectFit: 'contain' }} /> : <div style={{ width: 20, height: 20, borderRadius: 6, background: '#222' }} />}
                 <span style={{ fontSize: 11, color: '#bbb', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.team?.name || 'Free Agent'}</span>
               </div>
-              <div style={{ fontWeight: 700 }}>{p.kd.toFixed(2)}</div>
-              <div style={{ fontWeight: 700 }}>{Math.round(p.hsPct)}%</div>
-              <div style={{ fontWeight: 800, color: '#ff9aa9' }}>{Math.round(p.impact)}</div>
-              <div style={{ fontWeight: 800, color: '#fff' }}>{Math.round(p.score)}</div>
+              <div style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{p.sampleMatches}</div>
+              <div style={{ fontWeight: 800, color: '#ff9aa9', fontVariantNumeric: 'tabular-nums' }}>{p.avgImpact.toFixed(2)}</div>
+              <div style={{ fontWeight: 700, color: p.momentum >= 0 ? '#7ee787' : '#ff9aa9', fontVariantNumeric: 'tabular-nums' }}>
+                {p.momentum >= 0 ? '+' : ''}{p.momentum.toFixed(1)}%
+              </div>
             </div>
           ))}
         </div>
@@ -886,7 +971,7 @@ export default function Dashboard() {
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
           <span style={{ fontSize: 11, fontWeight: 800, color: '#4CAF50', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-            ⏳ Bugün
+            ⏳ Upcoming
           </span>
           {!loading && (
             <span style={{ padding: '1px 7px', borderRadius: 8, background: 'rgba(76,175,80,.15)', color: '#4CAF50', fontSize: 10, fontWeight: 700 }}>
@@ -908,7 +993,7 @@ export default function Dashboard() {
           </div>
         ) : upcomingMatches.length === 0 ? (
           <div style={{ padding: '16px', borderRadius: 14, background: '#0e0e0e', border: '1px solid #181818', textAlign: 'center', fontSize: 11, color: '#2a2a2a' }}>
-            Bugün için planlanmış maç bulunamadı
+            Yaklaşan maç bulunamadı
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>

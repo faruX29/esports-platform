@@ -142,6 +142,155 @@ function buildBracketStages(matches = []) {
   return resolved
 }
 
+function toFloatTime(value) {
+  if (!value) return 0
+  const ts = new Date(value).getTime()
+  return Number.isFinite(ts) ? ts : 0
+}
+
+function parseTemplateSampleParams(sampleParams = {}) {
+  const matchMap = new Map()
+  const entries = Object.entries(sampleParams || {})
+
+  for (const [rawKey, rawVal] of entries) {
+    const key = String(rawKey || '').toLowerCase()
+    const val = String(rawVal || '').trim()
+    if (!val) continue
+
+    const m = key.match(/^r(\d+)m(\d+)(t1|t2|win)$/)
+    if (!m) continue
+    const round = Number(m[1])
+    const match = Number(m[2])
+    const field = m[3]
+    const id = `r${round}m${match}`
+
+    if (!matchMap.has(id)) {
+      matchMap.set(id, {
+        id,
+        round,
+        match,
+        team_a_name: null,
+        team_b_name: null,
+        winner_name: null,
+      })
+    }
+
+    const item = matchMap.get(id)
+    if (field === 't1') item.team_a_name = val
+    if (field === 't2') item.team_b_name = val
+    if (field === 'win') {
+      item.winner_name = val === '1' ? item.team_a_name : val === '2' ? item.team_b_name : val
+    }
+  }
+
+  return [...matchMap.values()]
+}
+
+function extractLiquipediaBracketMatches(tournament) {
+  const rows = tournament?.extra_metadata?.liquipedia?.brackets
+  if (!Array.isArray(rows) || rows.length === 0) return []
+
+  const fromCargo = rows
+    .map((row, idx) => ({
+      id: row?.MatchId ? `lp-cargo-${row.MatchId}` : `lp-cargo-${idx}`,
+      team_a_name: row?.Team1 || row?.Opponent1 || null,
+      team_b_name: row?.Team2 || row?.Opponent2 || null,
+      winner_name: row?.Winner || null,
+      begin_at: row?.DateTime_UTC || row?.Date || null,
+      best_of: row?.BestOf || null,
+      source: row?.source || 'cargo',
+    }))
+    .filter(m => m.team_a_name || m.team_b_name)
+
+  if (fromCargo.length > 0) {
+    return fromCargo.sort((a, b) => toFloatTime(a.begin_at) - toFloatTime(b.begin_at))
+  }
+
+  const fromTemplates = []
+  rows.forEach((row, idx) => {
+    const parsed = parseTemplateSampleParams(row?.sample_params || {})
+    parsed.forEach(item => {
+      fromTemplates.push({
+        id: `lp-tpl-${idx}-${item.id}`,
+        team_a_name: item.team_a_name,
+        team_b_name: item.team_b_name,
+        winner_name: item.winner_name,
+        begin_at: null,
+        best_of: null,
+        source: row?.source || 'wikitext_template',
+        inferred_round: item.round,
+      })
+    })
+  })
+
+  return fromTemplates.filter(m => m.team_a_name || m.team_b_name)
+}
+
+function buildLiquipediaBracketStages(tournament) {
+  const raw = extractLiquipediaBracketMatches(tournament)
+  if (raw.length === 0) return []
+
+  const focus = raw.length > 7 ? raw.slice(-7) : raw
+  const count = focus.length
+  let qfCount = 0
+  let sfCount = 0
+  let gfCount = 0
+
+  if (count >= 7) {
+    qfCount = 4; sfCount = 2; gfCount = 1
+  } else if (count === 6) {
+    qfCount = 3; sfCount = 2; gfCount = 1
+  } else if (count === 5) {
+    qfCount = 2; sfCount = 2; gfCount = 1
+  } else if (count === 4) {
+    qfCount = 2; sfCount = 1; gfCount = 1
+  } else if (count === 3) {
+    qfCount = 1; sfCount = 1; gfCount = 1
+  } else if (count === 2) {
+    qfCount = 0; sfCount = 1; gfCount = 1
+  } else {
+    qfCount = 0; sfCount = 0; gfCount = 1
+  }
+
+  return focus.map((m, idx) => {
+    const stage = idx < qfCount
+      ? 'Quarter-finals'
+      : idx < qfCount + sfCount
+      ? 'Semi-finals'
+      : 'Grand final'
+
+    const aName = m.team_a_name || 'TBD'
+    const bName = m.team_b_name || 'TBD'
+    const aId = `${m.id}-a-${aName}`
+    const bId = `${m.id}-b-${bName}`
+    const winnerRaw = (m.winner_name || '').toLowerCase()
+    const winnerId = winnerRaw && winnerRaw === aName.toLowerCase()
+      ? aId
+      : winnerRaw && winnerRaw === bName.toLowerCase()
+      ? bId
+      : null
+
+    return {
+      id: m.id,
+      status: winnerId ? 'finished' : 'not_started',
+      begin_at: m.begin_at,
+      round_info: stage,
+      team_a: { id: aId, name: aName, logo_url: null },
+      team_b: { id: bId, name: bName, logo_url: null },
+      team_a_id: aId,
+      team_b_id: bId,
+      winner_id: winnerId,
+      team_a_score: null,
+      team_b_score: null,
+      __stage: stage,
+      __stageSource: 'liquipedia',
+      __bracketSide: 'upper',
+      __clickable: false,
+      __source: 'liquipedia',
+    }
+  })
+}
+
 // round-robin mi elimination mı?
 function detectFormat(matches) {
   if (!matches?.length) return 'unknown'
@@ -468,10 +617,11 @@ function BracketMatchCard({ m, navigate, gc, highlightPath = false }) {
   const isTRA = isTurkishTeam(aName)
   const isTRB = isTurkishTeam(bName)
   const [hov, setHov] = useState(false)
+  const canNavigate = m?.__clickable !== false && Boolean(m?.team_a && m?.id)
 
   return (
     <div
-      onClick={() => m.team_a && navigate(`/match/${m.id}`)}
+      onClick={() => canNavigate && navigate(`/match/${m.id}`)}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
@@ -487,7 +637,7 @@ function BracketMatchCard({ m, navigate, gc, highlightPath = false }) {
           : highlightPath
           ? '0 0 16px rgba(255,70,85,.18)'
           : hov ? `0 4px 16px ${gc}20` : 'none',
-        cursor: m.team_a ? 'pointer' : 'default',
+        cursor: canNavigate ? 'pointer' : 'default',
         background: '#0d0d0d',
         transition: 'all .18s',
         width: 200,
@@ -510,6 +660,19 @@ function BracketMatchCard({ m, navigate, gc, highlightPath = false }) {
             animation: 'livePulse 1.2s infinite',
           }} />
           Live
+        </div>
+      )}
+
+      {highlightPath && (
+        <div style={{
+          position: 'absolute', top: 7, left: 8,
+          zIndex: 3, fontSize: 8, fontWeight: 800,
+          letterSpacing: '.6px', textTransform: 'uppercase',
+          color: '#FF9AA5', background: 'rgba(255,70,85,.14)',
+          border: '1px solid rgba(255,70,85,.35)', borderRadius: 8,
+          padding: '2px 6px',
+        }}>
+          Winner Path
         </div>
       )}
 
@@ -1074,11 +1237,13 @@ export default function TournamentPage() {
   // ── Format algılama ───────────────────────────────────────────
   const format = detectFormat(matches)
   const stageMode = useMemo(() => detectStageMode(tournament, matches, format), [tournament, matches, format])
+  const liquipediaBracketMatches = useMemo(() => buildLiquipediaBracketStages(tournament), [tournament])
+  const hasLiquipediaBracket = liquipediaBracketMatches.length > 0
   const effectiveViewMode = useMemo(() => {
     if (viewOverride === 'list') return 'list'
     if (viewOverride === 'bracket') return 'bracket'
-    return stageMode.bracketEnabled ? 'bracket' : 'list'
-  }, [viewOverride, stageMode])
+    return (hasLiquipediaBracket || stageMode.bracketEnabled) ? 'bracket' : 'list'
+  }, [viewOverride, stageMode, hasLiquipediaBracket])
 
   useEffect(() => {
     const title = stageMode.bracketEnabled
@@ -1097,10 +1262,11 @@ export default function TournamentPage() {
       stageUndetermined: stageMode.stageUndetermined,
       format: stageMode.format,
       bracketEnabled: stageMode.bracketEnabled,
+      hasLiquipediaBracket,
       viewOverride,
       effectiveViewMode,
     })
-  }, [stageMode, viewOverride, effectiveViewMode])
+  }, [stageMode, hasLiquipediaBracket, viewOverride, effectiveViewMode])
   const resolvedBracketMatches = useMemo(() => buildBracketStages(matches), [matches])
   const upperBracketMatches = useMemo(
     () => resolvedBracketMatches.filter(m => m.__bracketSide === 'upper'),
@@ -1117,6 +1283,9 @@ export default function TournamentPage() {
   const gi    = gameIcon(gName)
   const tier  = getTierMeta(tournament?.tier)
   const isTR  = isTurkishTeam(tournament?.name ?? '') || tournament?.region === 'TR'
+  const liquipediaMeta = tournament?.extra_metadata?.liquipedia || null
+  const liquipediaLocation = liquipediaMeta?.location || null
+  const liquipediaPrizePool = liquipediaMeta?.prize_pool || null
 
   // ── Loading ───────────────────────────────────────────────────
   if (loading) return (
@@ -1244,6 +1413,24 @@ export default function TournamentPage() {
               </span>
             )}
 
+            {liquipediaLocation && (
+              <span style={{
+                padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700,
+                background: 'rgba(255,70,85,.12)', border: '1px solid rgba(255,70,85,.35)', color: '#ff8c97',
+              }}>
+                🧭 {liquipediaLocation}
+              </span>
+            )}
+
+            {liquipediaPrizePool && (
+              <span style={{
+                padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700,
+                background: 'rgba(255,215,0,.12)', border: '1px solid rgba(255,215,0,.35)', color: '#FFD700',
+              }}>
+                💰 {liquipediaPrizePool}
+              </span>
+            )}
+
             {format !== 'unknown' && (
               <span style={{
                 padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700,
@@ -1332,7 +1519,7 @@ export default function TournamentPage() {
         )}
 
         {/* ── BRACKETS (elimination) ─────────────────────────────── */}
-        {effectiveViewMode === 'bracket' && matches.length > 0 && (
+        {effectiveViewMode === 'bracket' && (matches.length > 0 || hasLiquipediaBracket) && (
           <div style={{ marginBottom: 36 }}>
             <ST icon="🏆" label="Playoff Ağacı"
               right={
@@ -1346,41 +1533,71 @@ export default function TournamentPage() {
               background: '#0a0a0a', borderRadius: 16,
               border: '1px solid #1a1a1a', padding: '16px',
             }}>
-              <div style={{ marginBottom: 18 }}>
-                <div style={{
-                  fontSize: 11, fontWeight: 800, color: '#ff6b7a',
-                  letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: 8,
-                }}>
-                  Upper Bracket
-                </div>
-                <BracketView
-                  matches={matches}
-                  resolvedMatches={upperBracketMatches}
-                  navigate={navigate}
-                  gc={gc}
-                  bracketSide="upper"
-                />
-              </div>
-
-              {lowerBracketMatches.length > 0 && (
+              {hasLiquipediaBracket ? (
                 <>
-                  <div style={{ height: 1, background: 'linear-gradient(90deg,transparent,#202020,transparent)', margin: '12px 0 14px' }} />
+                  <div style={{
+                    fontSize: 11, fontWeight: 800, color: '#ff6b7a',
+                    letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: 8,
+                  }}>
+                    Liquipedia Pro Bracket
+                  </div>
 
-                  <div>
+                  <div style={{
+                    marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 6,
+                    border: '1px solid rgba(255,70,85,.35)', borderRadius: 999, padding: '4px 10px',
+                    background: 'rgba(255,70,85,.1)', color: '#ff9aa5', fontSize: 10, fontWeight: 700,
+                    letterSpacing: '.6px', textTransform: 'uppercase',
+                  }}>
+                    Winner Path highlighted
+                  </div>
+
+                  <BracketView
+                    matches={liquipediaBracketMatches}
+                    resolvedMatches={liquipediaBracketMatches}
+                    navigate={navigate}
+                    gc={gc}
+                    bracketSide="upper"
+                  />
+                </>
+              ) : (
+                <>
+                  <div style={{ marginBottom: 18 }}>
                     <div style={{
-                      fontSize: 11, fontWeight: 800, color: '#60a5fa',
+                      fontSize: 11, fontWeight: 800, color: '#ff6b7a',
                       letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: 8,
                     }}>
-                      Lower Bracket
+                      Upper Bracket
                     </div>
                     <BracketView
                       matches={matches}
-                      resolvedMatches={lowerBracketMatches}
+                      resolvedMatches={upperBracketMatches}
                       navigate={navigate}
                       gc={gc}
-                      bracketSide="lower"
+                      bracketSide="upper"
                     />
                   </div>
+
+                  {lowerBracketMatches.length > 0 && (
+                    <>
+                      <div style={{ height: 1, background: 'linear-gradient(90deg,transparent,#202020,transparent)', margin: '12px 0 14px' }} />
+
+                      <div>
+                        <div style={{
+                          fontSize: 11, fontWeight: 800, color: '#60a5fa',
+                          letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: 8,
+                        }}>
+                          Lower Bracket
+                        </div>
+                        <BracketView
+                          matches={matches}
+                          resolvedMatches={lowerBracketMatches}
+                          navigate={navigate}
+                          gc={gc}
+                          bracketSide="lower"
+                        />
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </div>

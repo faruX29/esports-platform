@@ -7,6 +7,7 @@ from datetime import datetime
 from etl.sync_matches import MatchSyncer
 from etl.predict import MatchPredictor
 from etl.sync_players import PlayerStatsSyncer
+from etl.adapters import LiquipediaAdapter
 
 def main():
     """Main entry point with command-line arguments"""
@@ -110,6 +111,25 @@ def main():
         help='--fix-stale için eşik (saat, varsayılan: 6)',
     )
 
+    parser.add_argument(
+        '--liquipedia-enrich',
+        action='store_true',
+        help='Liquipedia MediaWiki API ile Data Enrichment çalıştır',
+    )
+    parser.add_argument(
+        '--liquipedia-limit',
+        type=int,
+        default=50,
+        help='Liquipedia enrichment için her bölümde işlenecek max kayıt (varsayılan: 50)',
+    )
+    parser.add_argument(
+        '--liquipedia-sections',
+        nargs='+',
+        choices=['all', 'tournaments', 'teams', 'players'],
+        default=['all'],
+        help='Liquipedia enrichment bölümleri (varsayılan: all)',
+    )
+
     args = parser.parse_args()
 
     print("=" * 60)
@@ -120,31 +140,46 @@ def main():
     syncer = MatchSyncer()
     total_stats = {'fetched': 0, 'cleaned': 0, 'synced': 0}
 
-    if args.all_games:
-        games = ['valorant', 'csgo', 'lol']
+    has_non_enrichment_work = any([
+        args.predict,
+        args.stats,
+        args.players,
+        args.missing_rosters,
+        args.league_sync,
+        args.fix_stale,
+        args.past,
+        args.all_games,
+    ])
+    should_sync_matches = not args.liquipedia_enrich or has_non_enrichment_work
+
+    if should_sync_matches:
+        if args.all_games:
+            games = ['valorant', 'csgo', 'lol']
+        else:
+            games = [args.game]
+
+        for game in games:
+            # limit'i artır: 50 → 200, past modda daha fazla sayfa tara
+            stats = syncer.sync_game_matches(
+                game,
+                limit=args.limit,
+                past=args.past,
+                page=args.page if args.past else 1,
+            )
+
+            total_stats['fetched'] += stats.get('fetched', 0)
+            total_stats['cleaned'] += stats.get('cleaned', 0)
+            total_stats['synced'] += stats.get('synced', 0)
+
+        print("\n" + "=" * 60)
+        print("📊 TOTAL SYNC RESULTS")
+        print(f"   Games synced: {len(games)}")
+        print(f"   Fetched: {total_stats['fetched']} matches")
+        print(f"   Cleaned: {total_stats['cleaned']} matches")
+        print(f"   Synced:  {total_stats['synced']} matches")
+        print("=" * 60)
     else:
-        games = [args.game]
-
-    for game in games:
-        # limit'i artır: 50 → 200, past modda daha fazla sayfa tara
-        stats = syncer.sync_game_matches(
-            game,
-            limit=args.limit,
-            past=args.past,
-            page=args.page if args.past else 1,
-        )
-
-        total_stats['fetched'] += stats.get('fetched', 0)
-        total_stats['cleaned'] += stats.get('cleaned', 0)
-        total_stats['synced'] += stats.get('synced', 0)
-
-    print("\n" + "=" * 60)
-    print("📊 TOTAL SYNC RESULTS")
-    print(f"   Games synced: {len(games)}")
-    print(f"   Fetched: {total_stats['fetched']} matches")
-    print(f"   Cleaned: {total_stats['cleaned']} matches")
-    print(f"   Synced:  {total_stats['synced']} matches")
-    print("=" * 60)
+        print("\nℹ️ Skipping PandaScore match sync (Liquipedia-only run).")
 
     # AI Predictions
     if args.predict:
@@ -223,6 +258,23 @@ def main():
     if args.fix_stale:
         print("\n🕒 Stale match cleanup...")
         syncer.mark_stale_matches_finished(hours_ago=args.stale_hours)
+
+    if args.liquipedia_enrich:
+        print("\n" + "=" * 60)
+        print("🌐 LIQUIPEDIA DATA ENRICHMENT")
+        print("=" * 60)
+        adapter = LiquipediaAdapter()
+        result = adapter.run(
+            limit=args.liquipedia_limit,
+            sections=tuple(args.liquipedia_sections),
+        )
+        for section, stats in result.items():
+            print(
+                f"  - {section}: processed={stats.get('processed', 0)} | "
+                f"updated={stats.get('updated', 0)} | skipped={stats.get('skipped', 0)} | "
+                f"diagnostics={stats.get('diagnostic_count', 0)}"
+            )
+        print("=" * 60)
 
 if __name__ == "__main__":
     main()

@@ -12,6 +12,10 @@ class Config:
     # PandaScore API
     PANDASCORE_TOKEN = os.getenv('PANDASCORE_TOKEN')
     PANDASCORE_BASE_URL = os.getenv('PANDASCORE_BASE_URL', 'https://api.pandascore.co')
+
+    # Liquipedia MediaWiki API
+    LIQUIPEDIA_USER_AGENT = os.getenv('LIQUIPEDIA_USER_AGENT')
+    LIQUIPEDIA_API_KEY = os.getenv('LIQUIPEDIA_API_KEY')
     
     # Database
     DATABASE_URL = os.getenv('DATABASE_URL')

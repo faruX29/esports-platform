@@ -95,6 +95,28 @@ Uses [PandaScore API](https://pandascore.co/) for esports data:
 - `/csgo/matches/upcoming`
 - `/lol/matches/upcoming`
 
+## 🌐 Liquipedia Enrichment (New)
+
+Liquipedia MediaWiki API enrichment can be run on top of PandaScore core data.
+
+Environment:
+- `LIQUIPEDIA_USER_AGENT` (required by policy, include contact info)
+- `LIQUIPEDIA_API_KEY` (optional)
+
+Examples:
+```bash
+# all sections
+python run.py --liquipedia-enrich --liquipedia-limit 30
+
+# only tournaments + teams
+python run.py --liquipedia-enrich --liquipedia-sections tournaments teams --liquipedia-limit 20
+```
+
+What gets enriched into `extra_metadata` JSONB:
+- `tournaments`: location, prize pool, bracket candidates
+- `teams`: recent transfer/roster-change rows
+- `players`: career history rows
+
 ## 🎯 Future Features
 
 - [ ] Past matches history

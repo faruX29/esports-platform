@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from typing import Any, Dict, Iterable, List, Optional, Tuple
@@ -213,26 +214,50 @@ class LiquipediaAdapter(BaseDataAdapter):
 
         for row in rows:
             service = LiquipediaService(game_slug=row.get("game_slug") or "valorant")
-            source_name = row.get("real_name") or row.get("nickname") or ""
+            nickname = str(row.get("nickname") or "").strip()
+            real_name = str(row.get("real_name") or "").strip()
+            lookup_name = real_name or nickname
 
-            career_rows = service.get_player_career(source_name)
+            profile_payload = service.get_player_profile(lookup_name)
+            career_rows = profile_payload.get("career_history", [])
+
             matched_history = self._best_match_rows(
-                source_name=source_name,
+                source_name=nickname or lookup_name,
                 rows=career_rows,
                 possible_name_keys=("Player",),
-                threshold=0.68,
+                threshold=0.64,
             )
 
-            if not matched_history:
+            if not matched_history and real_name and nickname:
+                matched_history = self._best_match_rows(
+                    source_name=real_name,
+                    rows=career_rows,
+                    possible_name_keys=("Player",),
+                    threshold=0.64,
+                )
+
+            social_links = profile_payload.get("social_links") or {}
+            nationality = profile_payload.get("nationality")
+            age = profile_payload.get("age")
+            former_teams = profile_payload.get("former_teams") or []
+            real_name_lp = profile_payload.get("real_name")
+
+            has_profile_data = bool(social_links or nationality or age or former_teams or real_name_lp)
+            if not matched_history and not has_profile_data:
                 skipped += 1
-                diagnostics.append(f"Player skipped id={row.get('id')} name={source_name} | no matched career rows")
+                diagnostics.append(f"Player skipped id={row.get('id')} name={lookup_name} | no matched profile/career rows")
                 if service.last_errors:
                     diagnostics.extend([f"  -> {item}" for item in service.last_errors[:2]])
                 continue
 
             payload = {
                 "game_slug": row.get("game_slug"),
-                "matched_name": source_name,
+                "matched_name": profile_payload.get("matched_name") or lookup_name,
+                "real_name": real_name_lp,
+                "age": age,
+                "nationality": nationality,
+                "former_teams": former_teams,
+                "social_links": social_links,
                 "career_history": matched_history,
             }
 
@@ -352,7 +377,23 @@ class LiquipediaAdapter(BaseDataAdapter):
                 )
 
     def _normalize(self, value: str) -> str:
-        lowered = value.lower()
+        lowered = value.casefold()
+        lowered = unicodedata.normalize("NFKD", lowered)
+        lowered = "".join(ch for ch in lowered if not unicodedata.combining(ch))
+
+        leet_map = str.maketrans({
+            "$": "s",
+            "0": "o",
+            "1": "i",
+            "3": "e",
+            "4": "a",
+            "5": "s",
+            "7": "t",
+            "8": "b",
+            "|": "i",
+        })
+        lowered = lowered.translate(leet_map)
+        lowered = lowered.replace("_", " ").replace("-", " ").replace(".", " ")
         lowered = re.sub(r"[^a-z0-9\s]", " ", lowered)
         return re.sub(r"\s+", " ", lowered).strip()
 
@@ -362,11 +403,23 @@ class LiquipediaAdapter(BaseDataAdapter):
         if not left_norm or not right_norm:
             return 0.0
 
+        if left_norm == right_norm:
+            return 1.0
+
         sequence = SequenceMatcher(None, left_norm, right_norm).ratio()
         left_tokens = set(left_norm.split())
         right_tokens = set(right_norm.split())
         token_overlap = len(left_tokens & right_tokens) / max(len(left_tokens | right_tokens), 1)
-        return (sequence * 0.7) + (token_overlap * 0.3)
+
+        left_compact = left_norm.replace(" ", "")
+        right_compact = right_norm.replace(" ", "")
+        compact_sequence = SequenceMatcher(None, left_compact, right_compact).ratio()
+
+        contains_bonus = 0.0
+        if left_compact in right_compact or right_compact in left_compact:
+            contains_bonus = 0.08
+
+        return min(1.0, (sequence * 0.45) + (token_overlap * 0.20) + (compact_sequence * 0.35) + contains_bonus)
 
     def _best_match_rows(
         self,

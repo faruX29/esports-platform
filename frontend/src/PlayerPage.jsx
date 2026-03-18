@@ -392,6 +392,15 @@ const NAT_FLAGS = {
   DK: '🇩🇰', FI: '🇫🇮', NO: '🇳🇴', PL: '🇵🇱', PT: '🇵🇹',
 }
 
+const SOCIAL_ICON_MAP = {
+  twitter: { icon: '𝕏', label: 'X/Twitter' },
+  twitch: { icon: '🎮', label: 'Twitch' },
+  youtube: { icon: '▶', label: 'YouTube' },
+  instagram: { icon: '◎', label: 'Instagram' },
+  tiktok: { icon: '♪', label: 'TikTok' },
+  steam: { icon: 'S', label: 'Steam' },
+}
+
 // ─── Ana Bileşen ─────────────────────────────────────────────────────────────
 export default function PlayerPage() {
   const { id }   = useParams()        // players.id (UUID)
@@ -412,7 +421,7 @@ export default function PlayerPage() {
       // 1) Oyuncu bilgisi
       const { data: p, error: pErr } = await supabase
         .from('players')
-        .select('id, nickname, real_name, role, image_url, nationality, team_pandascore_id')
+        .select('id, nickname, real_name, role, image_url, nationality, team_pandascore_id, extra_metadata')
         .eq('id', id)
         .single()
       if (pErr) throw pErr
@@ -512,6 +521,9 @@ export default function PlayerPage() {
   const isTR    = player.nationality === 'TR' || player.nationality === 'TUR' || isTurkishTeam(team?.name ?? '')
   const flag    = NAT_FLAGS[player.nationality] ?? (isTR ? '🇹🇷' : null)
   const followed = isPlayerFollowed(player.id)
+  const liquipediaMeta = player?.extra_metadata?.liquipedia || {}
+  const socials = Object.entries(liquipediaMeta.social_links || {}).filter(([_, href]) => typeof href === 'string' && href.trim())
+  const formerTeams = Array.isArray(liquipediaMeta.former_teams) ? liquipediaMeta.former_teams.slice(0, 6) : []
 
   // ── Render ────────────────────────────────────────────────────
   return (
@@ -624,6 +636,44 @@ export default function PlayerPage() {
               </div>
             ) : (
               <div style={{ fontSize: 12, color: '#383838', fontStyle: 'italic' }}>Takım bilgisi yok (Free Agent?)</div>
+            )}
+
+            {socials.length > 0 && (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+                {socials.map(([network, href]) => {
+                  const meta = SOCIAL_ICON_MAP[network] || { icon: '●', label: network }
+                  return (
+                    <a
+                      key={network}
+                      href={href}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={meta.label}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        textDecoration: 'none',
+                        borderRadius: 999, padding: '5px 10px',
+                        border: '1px solid rgba(200,16,46,.42)',
+                        background: 'radial-gradient(circle at 20% 20%, rgba(200,16,46,.44), rgba(0,0,0,.88))',
+                        color: '#fff', fontSize: 11, fontWeight: 700,
+                      }}
+                    >
+                      <span>{meta.icon}</span>
+                      <span>{meta.label}</span>
+                    </a>
+                  )
+                })}
+              </div>
+            )}
+
+            {formerTeams.length > 0 && (
+              <div style={{ marginTop: 10, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {formerTeams.map(teamName => (
+                  <span key={teamName} style={{ fontSize: 10, color: '#f0c2c8', border: '1px solid rgba(200,16,46,.3)', borderRadius: 8, padding: '3px 7px', background: 'rgba(200,16,46,.08)' }}>
+                    {teamName}
+                  </span>
+                ))}
+              </div>
             )}
           </div>
         </div>

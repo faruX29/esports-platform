@@ -7,6 +7,7 @@ import os
 import re
 import threading
 import time
+from datetime import datetime
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -57,10 +58,12 @@ class LiquipediaService:
         self.wiki = self.WIKI_BY_GAME.get(game_slug, "valorant")
         self.base_url = f"https://liquipedia.net/{self.wiki}/api.php"
 
-        user_agent = os.getenv(
+        user_agent = (os.getenv(
             "LIQUIPEDIA_USER_AGENT",
-            "EsportsHubPro/1.0 (Contact: [SENIN_MAILIN])",
-        )
+            "EsportsHubPro/1.0 (Contact: ops@esportshub.local)",
+        ) or "").strip()
+        if not user_agent:
+            user_agent = "EsportsHubPro/1.0 (Contact: ops@esportshub.local)"
 
         self.session = requests.Session()
         self.session.headers.update({
@@ -158,8 +161,12 @@ class LiquipediaService:
                 except ValueError:
                     wait_seconds = 60.0
                 wait_seconds = self._mark_shared_cooldown(wait_seconds, reason="429 Too Many Requests")
-                print(f"⏸️ Liquipedia cooldown active for {wait_seconds:.0f}s due to HTTP 429")
-                time.sleep(wait_seconds)
+                bounded_wait = min(wait_seconds, 5.0)
+                print(
+                    f"⏸️ Liquipedia cooldown scheduled ({wait_seconds:.0f}s persisted), "
+                    f"retrying in {bounded_wait:.0f}s due to HTTP 429"
+                )
+                time.sleep(bounded_wait)
                 continue
 
             response.raise_for_status()
@@ -482,21 +489,318 @@ class LiquipediaService:
             ),
         ], context=f"team_transfers:{team_name}")
 
-    def get_player_career(self, player_name: str) -> List[Dict[str, Any]]:
-        safe_name = player_name.replace("'", "\\'")
-        return self.run_candidates([
-            CargoCandidate(
-                tables="PlayerHistory",
-                fields="Player,Team,Role,DateStart,DateEnd,Status",
-                where=f"Player='{safe_name}'",
-                order_by="DateStart DESC",
-                limit=30,
-            ),
-            CargoCandidate(
-                tables="PlayerHistory",
-                fields="Player,Team,Role,DateStart,DateEnd,Status",
-                where=f"Player LIKE '%{safe_name}%'",
-                order_by="DateStart DESC",
-                limit=30,
-            ),
-        ], context=f"player_career:{player_name}")
+    def _clean_wikitext_value(self, value: str) -> str:
+        text = str(value or "")
+        text = re.sub(r"<!--.*?-->", "", text, flags=re.S)
+        text = re.sub(r"\[\[(?:[^\]|]+\|)?([^\]]+)\]\]", r"\1", text)
+        text = re.sub(r"\[https?://[^\s\]]+\s+([^\]]+)\]", r"\1", text)
+        text = re.sub(r"\{\{[^{}]*\}\}", "", text)
+        text = text.replace("''", "")
+        text = re.sub(r"<[^>]+>", "", text)
+        text = re.sub(r"\s+", " ", text)
+        return text.strip(" |\t\n\r")
+
+    def _extract_infobox_player_params(self, wikitext: str) -> Dict[str, str]:
+        text = wikitext or ""
+        lower = text.lower()
+        idx = lower.find("{{infobox")
+        while idx != -1:
+            block_start = idx
+            depth = 0
+            i = block_start
+            while i < len(text) - 1:
+                pair = text[i:i + 2]
+                if pair == "{{":
+                    depth += 1
+                    i += 2
+                    continue
+                if pair == "}}":
+                    depth -= 1
+                    i += 2
+                    if depth == 0:
+                        break
+                    continue
+                i += 1
+
+            block = text[block_start:i] if i > block_start else ""
+            head = block[:120].lower()
+            if "player" in head:
+                params: Dict[str, str] = {}
+                for line in block.splitlines():
+                    stripped = line.strip()
+                    if not stripped.startswith("|") or "=" not in stripped:
+                        continue
+                    key, val = stripped[1:].split("=", 1)
+                    params[key.strip()] = val.strip()
+                return params
+            idx = lower.find("{{infobox", idx + 9)
+        return {}
+
+    def _extract_year_range(self, text: str) -> Tuple[Optional[str], Optional[str]]:
+        raw = str(text or "")
+        match = re.search(r"(19\d{2}|20\d{2})\s*[\-–]\s*(19\d{2}|20\d{2}|present|now)", raw, flags=re.I)
+        if match:
+            return match.group(1), match.group(2)
+        single = re.search(r"(19\d{2}|20\d{2})", raw)
+        if single:
+            return single.group(1), None
+        return None, None
+
+    def _extract_wikilinks(self, text: str) -> List[str]:
+        out: List[str] = []
+        for m in re.finditer(r"\[\[([^\]]+)\]\]", text or ""):
+            chunk = m.group(1)
+            if ":" in chunk:
+                continue
+            display = chunk.split("|", 1)[-1].strip()
+            clean = self._clean_wikitext_value(display)
+            if clean and clean not in out:
+                out.append(clean)
+        return out
+
+    def _extract_career_from_wikitext(self, player_name: str, wikitext: str) -> List[Dict[str, Any]]:
+        text = wikitext or ""
+        section_match = re.search(
+            r"==+\s*(Career|History|Competitive\s+history)\s*==+(.+?)(?:\n==+[^=]+==+|$)",
+            text,
+            flags=re.I | re.S,
+        )
+        section = section_match.group(2) if section_match else text
+
+        rows: List[Dict[str, Any]] = []
+        seen = set()
+
+        table_rows = re.findall(r"\|-\s*(.+?)(?=\n\|-|\n\|\}|$)", section, flags=re.S)
+        for row_text in table_rows:
+            year_start, year_end = self._extract_year_range(row_text)
+            links = self._extract_wikilinks(row_text)
+            team_name = None
+            for link in links:
+                lk = link.lower()
+                if lk in {player_name.lower(), "present", "unknown"}:
+                    continue
+                if len(link) <= 2:
+                    continue
+                team_name = link
+                break
+            if not team_name:
+                continue
+            key = (team_name.lower(), year_start or "", year_end or "")
+            if key in seen:
+                continue
+            seen.add(key)
+            rows.append({
+                "Player": player_name,
+                "Team": team_name,
+                "DateStart": year_start,
+                "DateEnd": year_end,
+                "Status": "former" if year_end and str(year_end).lower() not in {"present", "now"} else "active_or_unknown",
+            })
+
+        if rows:
+            return rows
+
+        fallback_links = self._extract_wikilinks(section)
+        for link in fallback_links:
+            lk = link.lower()
+            if lk == player_name.lower() or len(link) <= 2:
+                continue
+            if lk in seen:
+                continue
+            seen.add(lk)
+            rows.append({
+                "Player": player_name,
+                "Team": link,
+                "DateStart": None,
+                "DateEnd": None,
+                "Status": "unknown",
+            })
+            if len(rows) >= 20:
+                break
+        return rows
+
+    def get_player_career(self, player_name: str, wikitext: Optional[str] = None) -> List[Dict[str, Any]]:
+        text = wikitext or ""
+        if not text:
+            page_candidates = [player_name, player_name.replace(" ", "_")]
+            try:
+                _, text = self.get_page_wikitext(page_candidates)
+            except BaseException as err:
+                self._record_error("player_career", f"page fetch failed player={player_name} -> {err}")
+                text = ""
+            if not text:
+                try:
+                    titles = self.search_page_titles(player_name, limit=5)
+                    _, text = self.get_page_wikitext(titles)
+                except BaseException as err:
+                    self._record_error("player_career", f"search fetch failed player={player_name} -> {err}")
+                    text = ""
+        if not text:
+            self._record_error("player_career", f"No wikitext fetched for player={player_name}")
+            return []
+        return self._extract_career_from_wikitext(player_name, text)
+
+    def _normalize_social_url(self, value: str) -> str:
+        raw = str(value or "").strip()
+        if not raw:
+            return ""
+
+        template = re.search(r"\{\{\s*(?:twitter|x|twitch|youtube|instagram|tiktok)\s*\|([^}|]+)", raw, flags=re.I)
+        if template:
+            raw = template.group(1).strip()
+
+        if "[http" in raw:
+            m = re.search(r"\[(https?://[^\s\]]+)", raw)
+            if m:
+                return m.group(1)
+
+        raw = self._clean_wikitext_value(raw)
+        if raw.startswith("http://") or raw.startswith("https://"):
+            return raw
+
+        handle = raw.lstrip("@")
+        if "twitter.com/" in raw or "x.com/" in raw:
+            return f"https://{raw.lstrip('/')}"
+        if "twitch.tv/" in raw:
+            return f"https://{raw.lstrip('/')}"
+        if "youtube.com/" in raw or "youtu.be/" in raw:
+            return f"https://{raw.lstrip('/')}"
+        if "instagram.com/" in raw:
+            return f"https://{raw.lstrip('/')}"
+
+        return handle
+
+    def _extract_age(self, row: Dict[str, Any]) -> Optional[int]:
+        age_val = row.get("Age") or row.get("age")
+        if age_val not in (None, ""):
+            try:
+                age_num = int(float(str(age_val).strip()))
+                if 10 <= age_num <= 80:
+                    return age_num
+            except Exception:
+                pass
+
+        birth = str(row.get("Birthdate") or row.get("birth_date") or row.get("birthdate") or "").strip()
+        if not birth:
+            return None
+
+        age_template = re.search(r"(19\d{2}|20\d{2})\D+(\d{1,2})\D+(\d{1,2})", birth)
+        if age_template:
+            try:
+                year = int(age_template.group(1))
+                estimated = datetime.utcnow().year - year
+                return estimated if 10 <= estimated <= 80 else None
+            except Exception:
+                pass
+
+        match = re.search(r"(19\d{2}|20\d{2})", birth)
+        if not match:
+            return None
+        try:
+            year = int(match.group(1))
+        except ValueError:
+            return None
+
+        current_year = datetime.utcnow().year
+        estimated = current_year - year
+        return estimated if 10 <= estimated <= 80 else None
+
+    def _extract_social_links(self, row: Dict[str, Any]) -> Dict[str, str]:
+        links: Dict[str, str] = {}
+        social_key_map = {
+            "twitter": ("Twitter", "twitter", "X", "XAccount", "TwitterName", "x"),
+            "twitch": ("Twitch", "TwitchName"),
+            "youtube": ("YouTube", "Youtube", "YT", "youtube"),
+            "instagram": ("Instagram", "Insta"),
+            "tiktok": ("TikTok", "Tiktok"),
+            "steam": ("Steam",),
+        }
+
+        for target_key, source_keys in social_key_map.items():
+            for source_key in source_keys:
+                value = self._normalize_social_url(str(row.get(source_key) or ""))
+                if value:
+                    links[target_key] = value
+                    break
+        return links
+
+    def get_player_profile(self, player_name: str) -> Dict[str, Any]:
+        self.last_errors = []
+        page_candidates = [player_name, player_name.replace(" ", "_")]
+        try:
+            page_title, wikitext = self.get_page_wikitext(page_candidates)
+        except BaseException as err:
+            self._record_error("player_profile", f"page fetch failed player={player_name} -> {err}")
+            page_title, wikitext = "", ""
+        if not wikitext:
+            try:
+                searched_titles = self.search_page_titles(player_name, limit=5)
+                page_title, wikitext = self.get_page_wikitext(searched_titles)
+            except BaseException as err:
+                self._record_error("player_profile", f"search fetch failed player={player_name} -> {err}")
+                page_title, wikitext = "", ""
+
+        if not wikitext:
+            self._record_error("player_profile", f"No wikitext fetched for player={player_name}")
+            return {
+                "matched_name": player_name,
+                "real_name": None,
+                "age": None,
+                "nationality": None,
+                "current_team": None,
+                "former_teams": [],
+                "career_history": [],
+                "social_links": {},
+                "raw_profile": {},
+                "page": "",
+            }
+
+        infobox = self._extract_infobox_player_params(wikitext)
+        matched_name = self._clean_wikitext_value(
+            infobox.get("id")
+            or infobox.get("name")
+            or page_title
+            or player_name
+        )
+
+        normalized_infobox = {
+            "RealName": self._clean_wikitext_value(infobox.get("name") or infobox.get("realname") or ""),
+            "Birthdate": infobox.get("birth_date") or infobox.get("birthdate") or "",
+            "Age": self._clean_wikitext_value(infobox.get("age") or ""),
+            "Country": self._clean_wikitext_value(infobox.get("country") or infobox.get("nationality") or ""),
+            "Nationality": self._clean_wikitext_value(infobox.get("nationality") or ""),
+            "Team": self._clean_wikitext_value(infobox.get("team") or infobox.get("current_team") or ""),
+            "Twitter": infobox.get("twitter") or infobox.get("x") or "",
+            "Twitch": infobox.get("twitch") or "",
+            "YouTube": infobox.get("youtube") or infobox.get("yt") or "",
+            "Instagram": infobox.get("instagram") or "",
+            "TikTok": infobox.get("tiktok") or "",
+            "Steam": infobox.get("steam") or "",
+        }
+
+        career_rows = self.get_player_career(matched_name or player_name, wikitext=wikitext)
+
+        former_teams: List[str] = []
+        seen_teams = set()
+        for row in career_rows:
+            team_name = str(row.get("Team") or "").strip()
+            if not team_name:
+                continue
+            team_key = team_name.lower()
+            if team_key in seen_teams:
+                continue
+            seen_teams.add(team_key)
+            former_teams.append(team_name)
+
+        return {
+            "matched_name": matched_name or player_name,
+            "real_name": normalized_infobox.get("RealName") or None,
+            "age": self._extract_age(normalized_infobox),
+            "nationality": normalized_infobox.get("Country") or normalized_infobox.get("Nationality") or None,
+            "current_team": normalized_infobox.get("Team") or None,
+            "former_teams": former_teams,
+            "career_history": career_rows,
+            "social_links": self._extract_social_links(normalized_infobox),
+            "raw_profile": normalized_infobox,
+            "page": page_title,
+        }

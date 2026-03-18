@@ -105,10 +105,123 @@ function PlayerAvatar({ src, name, size = 64 }) {
   )
 }
 
+const NAT_FLAGS = {
+  TR: '🇹🇷', US: '🇺🇸', DE: '🇩🇪', FR: '🇫🇷', BR: '🇧🇷',
+  KR: '🇰🇷', CN: '🇨🇳', RU: '🇷🇺', GB: '🇬🇧', SE: '🇸🇪',
+  DK: '🇩🇰', FI: '🇫🇮', NO: '🇳🇴', PL: '🇵🇱', PT: '🇵🇹',
+}
+
+const SOCIAL_ICON_MAP = {
+  twitter: { icon: '𝕏', label: 'X/Twitter' },
+  twitch: { icon: '🎮', label: 'Twitch' },
+  youtube: { icon: '▶', label: 'YouTube' },
+  instagram: { icon: '◎', label: 'Instagram' },
+  tiktok: { icon: '♪', label: 'TikTok' },
+  steam: { icon: 'S', label: 'Steam' },
+}
+
+function toArray(value) {
+  return Array.isArray(value) ? value : []
+}
+
+function getPlayerSocials(player) {
+  const links = player?.extra_metadata?.liquipedia?.social_links || {}
+  return Object.entries(links)
+    .filter(([_, href]) => typeof href === 'string' && href.trim())
+    .slice(0, 4)
+}
+
+function parseTransferDate(value) {
+  if (!value) return null
+  const t = Date.parse(value)
+  if (Number.isNaN(t)) return null
+  return new Date(t)
+}
+
+function getTeamTransfers(team) {
+  const rows = toArray(team?.extra_metadata?.liquipedia?.transfers)
+  return rows
+    .map(item => {
+      const dateObj = parseTransferDate(item?.Date)
+      return {
+        dateRaw: item?.Date || null,
+        dateObj,
+        player: item?.Player || 'Unknown',
+        role: item?.Role || null,
+        changeType: String(item?.JoinOrLeave || '').toLowerCase(),
+        oldTeam: item?.OldTeam || null,
+        newTeam: item?.NewTeam || null,
+      }
+    })
+    .sort((a, b) => {
+      const at = a.dateObj ? a.dateObj.getTime() : 0
+      const bt = b.dateObj ? b.dateObj.getTime() : 0
+      return bt - at
+    })
+    .slice(0, 8)
+}
+
+function TransferTimeline({ transfers }) {
+  if (!transfers.length) {
+    return (
+      <div style={{ marginTop: 18, padding: '14px 16px', borderRadius: 12, background: '#0d0d0d', border: '1px solid #1a1a1a', color: '#444', fontSize: 12, textAlign: 'center' }}>
+        Transfer akisi henuz bulunamadi.
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ marginTop: 18, background: 'linear-gradient(160deg, rgba(200,16,46,.14), rgba(0,0,0,0) 48%)', border: '1px solid rgba(200,16,46,.28)', borderRadius: 14, padding: '16px 14px 6px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: '.8px', color: '#ffd9de', textTransform: 'uppercase' }}>Son Transferler</div>
+        <div style={{ fontSize: 11, color: '#ff9cab' }}>Transfer Market</div>
+      </div>
+
+      <div style={{ display: 'grid', gap: 10 }}>
+        {transfers.map((item, index) => {
+          const isIncoming = item.changeType.includes('join') || item.changeType.includes('add') || item.changeType.includes('in')
+          const accent = isIncoming ? '#22c55e' : '#FF4655'
+          const label = isIncoming ? 'IN' : 'OUT'
+          const dateLabel = item.dateObj
+            ? item.dateObj.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })
+            : (item.dateRaw || '—')
+
+          return (
+            <div key={`${item.player}-${index}`} style={{ display: 'grid', gridTemplateColumns: '18px 1fr', gap: 12, alignItems: 'stretch' }}>
+              <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', marginTop: 8, background: accent, boxShadow: `0 0 12px ${accent}AA` }} />
+                {index < transfers.length - 1 && (
+                  <div style={{ position: 'absolute', top: 22, width: 2, bottom: -10, background: 'linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,.05))' }} />
+                )}
+              </div>
+
+              <div style={{ background: '#111', border: '1px solid #232323', borderLeft: `3px solid ${accent}`, borderRadius: 10, padding: '9px 11px', display: 'grid', gap: 5 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: '#f5f5f5' }}>{item.player}</div>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: accent, border: `1px solid ${accent}77`, borderRadius: 999, padding: '2px 7px', background: `${accent}1A` }}>{label}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                  {item.oldTeam && <span style={{ fontSize: 11, color: '#898989' }}>From: {item.oldTeam}</span>}
+                  {item.newTeam && <span style={{ fontSize: 11, color: '#d8d8d8' }}>To: {item.newTeam}</span>}
+                  {item.role && <span style={{ fontSize: 10, color: '#ffadb8', border: '1px solid rgba(200,16,46,.35)', borderRadius: 7, padding: '1px 6px' }}>{item.role}</span>}
+                  <span style={{ fontSize: 10, color: '#666', marginLeft: 'auto' }}>{dateLabel}</span>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── PlayerCard ────────────────────────────────────────────────────────────────
 function PlayerCard({ player }) {
   const navigate = useNavigate()          // ← navigate hook ekle
   const badge    = getRoleBadge(player.role)
+  const natCode = String(player.nationality || '').toUpperCase()
+  const flag = NAT_FLAGS[natCode]
+  const socials = getPlayerSocials(player)
 
   return (
     <div
@@ -136,6 +249,9 @@ function PlayerCard({ player }) {
         {player.real_name && (
           <div style={{ fontSize: 11, color: '#555', marginTop: 2 }}>{player.real_name}</div>
         )}
+        {flag && (
+          <div style={{ fontSize: 11, color: '#bcbcbc', marginTop: 4 }}>{flag} {natCode}</div>
+        )}
       </div>
 
       {player.role ? (
@@ -151,6 +267,34 @@ function PlayerCard({ player }) {
       {/* Profil linki göstergesi */}
       {player.id && (
         <div style={{ fontSize: 9, color: '#383838', marginTop: -4 }}>profili gör →</div>
+      )}
+
+      {socials.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
+          {socials.map(([network, href]) => {
+            const meta = SOCIAL_ICON_MAP[network] || { icon: '●', label: network }
+            return (
+              <a
+                key={network}
+                href={href}
+                target="_blank"
+                rel="noreferrer"
+                onClick={e => e.stopPropagation()}
+                title={meta.label}
+                style={{
+                  width: 24, height: 24, borderRadius: 999,
+                  display: 'grid', placeItems: 'center',
+                  textDecoration: 'none',
+                  border: '1px solid rgba(200,16,46,.45)',
+                  background: 'radial-gradient(circle at 30% 30%, rgba(200,16,46,.45), rgba(0,0,0,.86))',
+                  color: '#fff', fontSize: 11, fontWeight: 800,
+                }}
+              >
+                {meta.icon}
+              </a>
+            )
+          })}
+        </div>
       )}
     </div>
   )
@@ -315,7 +459,7 @@ export default function TeamPage() {
           .limit(200),
 
         supabase.from('players')
-          .select('id, nickname, real_name, role, image_url, nationality')
+          .select('id, nickname, real_name, role, image_url, nationality, extra_metadata')
           .eq('team_pandascore_id', parseInt(teamId))
           .order('role'),
       ])
@@ -342,6 +486,7 @@ export default function TeamPage() {
   const losses          = pastMatches.filter(m => m.winner_id && m.winner_id !== parseInt(teamId)).length
   const rating          = calcTeamRating(wins, wins + losses)
   const isTR            = isTurkishTeam(team?.name ?? '')
+  const teamTransfers   = getTeamTransfers(team)
 
   // Last 10 matches form
   const form = [...pastMatches]
@@ -570,6 +715,9 @@ export default function TeamPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 14 }}>
                 {players.map((p, i) => <PlayerCard key={p.id ?? i} player={p} />)}
               </div>
+
+              <TransferTimeline transfers={teamTransfers} />
+
               <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 10, background: '#0d0d0d', border: '1px solid #1a1a1a', fontSize: 12, color: '#383838', textAlign: 'center' }}>
                 ℹ️ Bireysel K/D/A istatistikleri PandaScore premium API erişimi gerektirir
               </div>

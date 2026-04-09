@@ -1,5 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
+import { Cat } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import BRANDING from '../branding.config'
 
 function AuthWidget() {
   const navigate = useNavigate()
@@ -51,15 +53,18 @@ export default function Navbar({ navLinks, SearchComponent }) {
         height: 58,
       }}>
         <NavLink to="/" style={{ textDecoration: 'none', marginRight: 8, flexShrink: 0, display: 'inline-flex', alignItems: 'center', height: 34 }}>
-          <span style={{
-            fontSize: 16,
-            fontWeight: 900,
-            letterSpacing: '-0.5px',
-            background: 'linear-gradient(135deg,#FF4655,#F0A500)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-          }}>
-            ⚡ EsportsHub
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Cat size={14} strokeWidth={2.2} color="#F0A500" />
+            <span style={{
+              fontSize: 16,
+              fontWeight: 900,
+              letterSpacing: '-0.5px',
+              background: 'linear-gradient(135deg,#FF4655,#F0A500)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}>
+              ⚡ {BRANDING.shortName}
+            </span>
           </span>
         </NavLink>
 

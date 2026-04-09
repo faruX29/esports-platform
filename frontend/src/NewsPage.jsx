@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { isTurkishTeam } from './constants'
+import BRANDING from './branding.config'
 
 // ─── Static data ─────────────────────────────────────────────────────────────
 
@@ -14,7 +15,7 @@ const STATIC_NEWS = [
     tag: 'TOURNAMENT',
     image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400&h=220&fit=crop',
     turkish: false,
-    source: 'EsportsHub AI',
+    source: BRANDING.aiNewsSource,
   },
   {
     id: 2,
@@ -26,7 +27,7 @@ const STATIC_NEWS = [
     tag: 'TÜRK ESPOR',
     image: 'https://images.unsplash.com/photo-1560253023-3ec5d502959f?w=400&h=220&fit=crop',
     turkish: true,
-    source: 'EsportsHub',
+    source: BRANDING.newsSource,
   },
   {
     id: 3,
@@ -50,7 +51,7 @@ const STATIC_NEWS = [
     tag: 'TRANSFER',
     image: 'https://images.unsplash.com/photo-1542751110-97427bbecfd8?w=400&h=220&fit=crop',
     turkish: true,
-    source: 'EsportsHub',
+    source: BRANDING.newsSource,
   },
   {
     id: 5,
@@ -317,7 +318,7 @@ export default function NewsPage() {
         </div>
         <div style={{ fontSize: 14, color: '#666', maxWidth: 460, margin: '0 auto' }}>
           Yapay zeka destekli haber özetleri, maç analizleri ve kişiselleştirilmiş içerik
-          yakında EsportsHub\'da. Şimdiden takip et.
+          yakında {BRANDING.shortName}'da. Şimdiden takip et.
         </div>
         <div style={{
           marginTop: 16, display: 'inline-block',

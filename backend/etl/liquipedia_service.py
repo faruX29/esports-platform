@@ -48,7 +48,44 @@ class LiquipediaService:
         "valorant": "valorant",
         "cs2": "counterstrike",
         "csgo": "counterstrike",
+        "cs-go": "counterstrike",
+        "counter-strike": "counterstrike",
+        "counterstrike": "counterstrike",
         "lol": "leagueoflegends",
+        "league-of-legends": "leagueoflegends",
+        "leagueoflegends": "leagueoflegends",
+    }
+    PLAYER_BOOTSTRAP: Dict[str, Dict[str, Any]] = {
+        "s1mple": {
+            "matched_name": "s1mple",
+            "real_name": "Oleksandr Kostyliev",
+            "nationality": "Ukraine",
+            "social_links": {"twitter": "https://x.com/s1mpleO"},
+        },
+        "zywoo": {
+            "matched_name": "ZywOo",
+            "real_name": "Mathieu Herbaut",
+            "nationality": "France",
+            "social_links": {"twitter": "https://x.com/ZywOo"},
+        },
+        "faker": {
+            "matched_name": "Faker",
+            "real_name": "Lee Sang-hyeok",
+            "nationality": "South Korea",
+            "social_links": {"twitter": "https://x.com/Faker"},
+        },
+        "caps": {
+            "matched_name": "Caps",
+            "real_name": "Rasmus Winther",
+            "nationality": "Denmark",
+            "social_links": {"twitter": "https://x.com/Caps"},
+        },
+        "niko": {
+            "matched_name": "NiKo",
+            "real_name": "Nikola Kovac",
+            "nationality": "Bosnia and Herzegovina",
+            "social_links": {"twitter": "https://x.com/G2NiKo"},
+        },
     }
     _pacing_lock = threading.Lock()
     _global_next_request_after = 0.0
@@ -724,6 +761,27 @@ class LiquipediaService:
                     break
         return links
 
+    def _normalize_player_key(self, player_name: str) -> str:
+        return re.sub(r"[^a-z0-9]", "", str(player_name or "").casefold())
+
+    def _bootstrap_player_profile(self, player_name: str) -> Optional[Dict[str, Any]]:
+        key = self._normalize_player_key(player_name)
+        for alias, payload in self.PLAYER_BOOTSTRAP.items():
+            if self._normalize_player_key(alias) == key:
+                return {
+                    "matched_name": payload.get("matched_name") or player_name,
+                    "real_name": payload.get("real_name"),
+                    "age": payload.get("age"),
+                    "nationality": payload.get("nationality"),
+                    "current_team": payload.get("current_team"),
+                    "former_teams": payload.get("former_teams", []),
+                    "career_history": payload.get("career_history", []),
+                    "social_links": payload.get("social_links", {}),
+                    "raw_profile": {"bootstrap": True, **payload},
+                    "page": "bootstrap-fallback",
+                }
+        return None
+
     def get_player_profile(self, player_name: str) -> Dict[str, Any]:
         self.last_errors = []
         page_candidates = [player_name, player_name.replace(" ", "_")]
@@ -742,6 +800,10 @@ class LiquipediaService:
 
         if not wikitext:
             self._record_error("player_profile", f"No wikitext fetched for player={player_name}")
+            bootstrap = self._bootstrap_player_profile(player_name)
+            if bootstrap:
+                self._record_error("player_profile", f"Bootstrap fallback used for player={player_name}")
+                return bootstrap
             return {
                 "matched_name": player_name,
                 "real_name": None,

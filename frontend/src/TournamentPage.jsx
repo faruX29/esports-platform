@@ -148,6 +148,16 @@ function toFloatTime(value) {
   return Number.isFinite(ts) ? ts : 0
 }
 
+function makeLiquipediaTeamId(teamName = '') {
+  const normalized = String(teamName || '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+  return normalized ? `lp-team-${normalized}` : null
+}
+
 function parseTemplateSampleParams(sampleParams = {}) {
   const matchMap = new Map()
   const entries = Object.entries(sampleParams || {})
@@ -261,8 +271,8 @@ function buildLiquipediaBracketStages(tournament) {
 
     const aName = m.team_a_name || 'TBD'
     const bName = m.team_b_name || 'TBD'
-    const aId = `${m.id}-a-${aName}`
-    const bId = `${m.id}-b-${bName}`
+    const aId = makeLiquipediaTeamId(aName) || `${m.id}-a`
+    const bId = makeLiquipediaTeamId(bName) || `${m.id}-b`
     const winnerRaw = (m.winner_name || '').toLowerCase()
     const winnerId = winnerRaw && winnerRaw === aName.toLowerCase()
       ? aId

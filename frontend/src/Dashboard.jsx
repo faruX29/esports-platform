@@ -8,6 +8,7 @@ import { supabase }                         from './supabaseClient'
 import { useGame, gameMatchesFilter }       from './GameContext'
 import { isTurkishTeam }                   from './constants'
 import { useUser }                          from './context/UserContext'
+import BRANDING                             from './branding.config'
 
 
 /* ── Skeleton ─────────────────────────────────────────────────────────────── */
@@ -830,7 +831,7 @@ export default function Dashboard() {
             margin: '0 0 8px', fontSize: 26, fontWeight: 900, letterSpacing: '-1px',
             background: 'linear-gradient(135deg,#FF4655,#F0A500,#fff)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-          }}>EsportsHub</h1>
+          }}>{BRANDING.shortName}</h1>
           <p style={{ margin: '0 0 16px', fontSize: 11, color: '#444', lineHeight: 1.6 }}>
             Canlı sonuçlar · AI tahminleri · PandaScore verileri
           </p>

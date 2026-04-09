@@ -1,8 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from './AuthContext'
+import BRANDING from '../branding.config'
 
-const STORAGE_KEY = 'esportshub_user_follow_state_v1'
+const STORAGE_KEY = BRANDING.followStateStorageKey
 
 const UserContext = createContext(null)
 

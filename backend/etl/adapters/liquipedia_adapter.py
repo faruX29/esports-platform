@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import unicodedata
 from dataclasses import dataclass
@@ -219,6 +220,24 @@ class LiquipediaAdapter(BaseDataAdapter):
             lookup_name = real_name or nickname
 
             profile_payload = service.get_player_profile(lookup_name)
+            if nickname and real_name:
+                has_primary = bool(
+                    profile_payload.get("career_history")
+                    or profile_payload.get("social_links")
+                    or profile_payload.get("nationality")
+                    or profile_payload.get("age")
+                )
+                if not has_primary:
+                    nickname_payload = service.get_player_profile(nickname)
+                    has_nickname = bool(
+                        nickname_payload.get("career_history")
+                        or nickname_payload.get("social_links")
+                        or nickname_payload.get("nationality")
+                        or nickname_payload.get("age")
+                    )
+                    if has_nickname:
+                        profile_payload = nickname_payload
+
             career_rows = profile_payload.get("career_history", [])
 
             matched_history = self._best_match_rows(
@@ -324,29 +343,63 @@ class LiquipediaAdapter(BaseDataAdapter):
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
 
     def _fetch_players(self, limit: int) -> List[Dict[str, Any]]:
+        targets_raw = os.getenv("LIQUIPEDIA_PLAYER_TARGETS", "")
+        targets = [item.strip().lower() for item in targets_raw.split(",") if item.strip()]
+
         with Database.get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT p.id,
-                           p.nickname,
-                           p.real_name,
-                           p.extra_metadata,
-                           COALESCE(meta.game_slug, 'valorant') AS game_slug
-                    FROM players p
-                    LEFT JOIN LATERAL (
-                        SELECT g.slug AS game_slug
-                        FROM matches m
-                        JOIN games g ON g.id = m.game_id
-                        WHERE m.team_a_id = p.team_pandascore_id OR m.team_b_id = p.team_pandascore_id
-                        ORDER BY m.scheduled_at DESC NULLS LAST
-                        LIMIT 1
-                    ) meta ON TRUE
-                    ORDER BY p.id DESC
-                    LIMIT %s
-                    """,
-                    (limit,),
-                )
+                if targets:
+                    cur.execute(
+                        """
+                        SELECT p.id,
+                               p.nickname,
+                               p.real_name,
+                               p.extra_metadata,
+                               COALESCE(meta.game_slug, 'valorant') AS game_slug
+                        FROM players p
+                        LEFT JOIN LATERAL (
+                            SELECT g.slug AS game_slug
+                            FROM matches m
+                            JOIN games g ON g.id = m.game_id
+                            WHERE m.team_a_id = p.team_pandascore_id OR m.team_b_id = p.team_pandascore_id
+                            ORDER BY m.scheduled_at DESC NULLS LAST
+                            LIMIT 1
+                        ) meta ON TRUE
+                        WHERE LOWER(COALESCE(p.nickname, '')) = ANY(%s)
+                           OR LOWER(COALESCE(p.real_name, '')) = ANY(%s)
+                        ORDER BY
+                            CASE
+                                WHEN LOWER(COALESCE(p.nickname, '')) = ANY(%s) THEN 0
+                                WHEN LOWER(COALESCE(p.real_name, '')) = ANY(%s) THEN 1
+                                ELSE 2
+                            END,
+                            p.id DESC
+                        LIMIT %s
+                        """,
+                        (targets, targets, targets, targets, limit),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        SELECT p.id,
+                               p.nickname,
+                               p.real_name,
+                               p.extra_metadata,
+                               COALESCE(meta.game_slug, 'valorant') AS game_slug
+                        FROM players p
+                        LEFT JOIN LATERAL (
+                            SELECT g.slug AS game_slug
+                            FROM matches m
+                            JOIN games g ON g.id = m.game_id
+                            WHERE m.team_a_id = p.team_pandascore_id OR m.team_b_id = p.team_pandascore_id
+                            ORDER BY m.scheduled_at DESC NULLS LAST
+                            LIMIT 1
+                        ) meta ON TRUE
+                        ORDER BY p.id DESC
+                        LIMIT %s
+                        """,
+                        (limit,),
+                    )
                 columns = [desc[0] for desc in cur.description]
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
 

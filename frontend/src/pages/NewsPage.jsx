@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
-import { GAMES, useGame } from '../GameContext'
+import { useUser } from '../context/UserContext'
+import { GAMES } from '../GameContext'
 import { isTurkishTeam } from '../constants'
 import {
   NEWS_LIMIT,
@@ -10,8 +11,16 @@ import {
   buildFinishedStory,
   buildUpcomingStory,
 } from '../utils/newsStories'
+import { isStoryForYou, prioritizeStoriesForYou } from '../utils/newsPersonalization'
 
 const GAME_FILTERS = GAMES.filter(game => !game.soon && game.id !== 'all' && ['valorant', 'cs2', 'lol'].includes(game.id))
+const CATEGORY_TABS = [
+  { id: 'all', label: 'Hepsi' },
+  { id: 'valorant', label: 'Valorant' },
+  { id: 'lol', label: 'LoL' },
+  { id: 'cs2', label: 'CS2' },
+]
+const NEWS_PAGE_SIZE = 6
 
 function fmtDate(iso) {
   if (!iso) return 'N/A'
@@ -49,7 +58,66 @@ function NewsTrustLayer({ item, onReport }) {
   )
 }
 
-function NewsCard({ item, likes, liked, comments, onLike, onComment, canInteract, onOpenDetail, onReport }) {
+function buildScoutRows(item) {
+  const source = item?.source || {}
+  const rows = []
+
+  if (source.mapCount || source.mapTempo) {
+    rows.push({
+      label: 'Harita Profili',
+      value: `${source.mapCount || '?'} map · ${source.mapTempo || 'tempo bilinmiyor'}`,
+    })
+  }
+
+  if (source.impactTeam || source.impactScore != null) {
+    rows.push({
+      label: 'MVP Sinyali',
+      value: `${source.impactTeam || 'Takim'}${source.impactScore != null ? ` (${source.impactScore})` : ''}`,
+    })
+  }
+
+  if (source.favorite || source.predictionEdge != null) {
+    rows.push({
+      label: 'Model Ayraci',
+      value: `${source.favorite || 'Belirsiz'}${source.predictionEdge != null ? ` +${source.predictionEdge}` : ''}`,
+    })
+  }
+
+  if (source.upset) {
+    rows.push({ label: 'Durum', value: 'Surpriz sonucu sinifi' })
+  }
+
+  return rows.slice(0, 3)
+}
+
+function ScoutNoteCard({ item, compact = false }) {
+  const rows = buildScoutRows(item)
+  if (!rows.length) return null
+
+  return (
+    <div style={{
+      marginTop: compact ? 9 : 12,
+      border: '1px solid rgba(94,234,212,.22)',
+      background: 'linear-gradient(130deg, rgba(20,184,166,.12), rgba(16,16,16,.92))',
+      borderRadius: 11,
+      padding: compact ? '8px 9px' : '10px 11px',
+    }}>
+      <div style={{ fontSize: 10, color: '#93f5ea', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.9px', marginBottom: 6 }}>
+        Gozcu Notu
+      </div>
+      <div style={{ display: 'grid', gap: 4 }}>
+        {rows.map((row, idx) => (
+          <div key={`${row.label}-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: compact ? 11 : 12 }}>
+            <span style={{ color: '#9dd8d0' }}>{row.label}</span>
+            <span style={{ color: '#ddfffb', fontWeight: 700, textAlign: 'right' }}>{row.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function NewsCard({ item, likes, liked, comments, onLike, onComment, canInteract, onOpenDetail, onReport, isForYou, isMobile = false }) {
   const [commentInput, setCommentInput] = useState('')
   const [sending, setSending] = useState(false)
   const { visuals } = item
@@ -94,6 +162,11 @@ function NewsCard({ item, likes, liked, comments, onLike, onComment, canInteract
       <div style={{ position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {isForYou && (
+              <span style={{ fontSize: 10, color: '#ffe5ac', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.9px', padding: '4px 8px', borderRadius: 999, background: 'rgba(255,183,0,.16)', border: '1px solid rgba(255,183,0,.42)' }}>
+                For You
+              </span>
+            )}
             <span style={{ fontSize: 10, color: '#f4f4f4', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, padding: '4px 8px', borderRadius: 999, background: `${visuals.gameColor}22`, border: `1px solid ${visuals.gameColor}55` }}>
               {item.tag}
             </span>
@@ -107,8 +180,8 @@ function NewsCard({ item, likes, liked, comments, onLike, onComment, canInteract
           <span style={{ fontSize: 10, color: '#7f7f7f' }}>{fmtDate(item.publishedAt)}</span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 12, alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'auto 1fr auto', gap: 12, alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'flex-start', gap: 8 }}>
             {visuals.teamA.logo_url
               ? <img src={visuals.teamA.logo_url} alt={visuals.teamA.name || ''} style={{ width: 34, height: 34, objectFit: 'contain', borderRadius: 10, background: '#111', padding: 4, border: '1px solid #242424' }} />
               : <div style={{ width: 34, height: 34, borderRadius: 10, background: '#151515', border: '1px solid #242424' }} />}
@@ -122,7 +195,7 @@ function NewsCard({ item, likes, liked, comments, onLike, onComment, canInteract
             <h3 style={{ margin: 0, fontSize: 19, lineHeight: 1.3 }}>{item.title}</h3>
           </div>
 
-          {visuals.turkish && (
+          {!isMobile && visuals.turkish && (
             <div style={{ fontSize: 10, fontWeight: 800, color: '#ffd9df', padding: '5px 8px', borderRadius: 999, border: '1px solid rgba(200,16,46,.38)', background: 'rgba(200,16,46,.16)' }}>
               Turkish Pride
             </div>
@@ -132,6 +205,8 @@ function NewsCard({ item, likes, liked, comments, onLike, onComment, canInteract
         <div style={{ fontSize: 14, color: '#f0d3d8', marginBottom: 8, fontWeight: 700 }}>{item.heroScore}</div>
         <p style={{ margin: 0, color: '#c6c6c6', lineHeight: 1.6 }}>{item.summary}</p>
 
+        <ScoutNoteCard item={item} compact />
+
         <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <button
             disabled={!canInteract}
@@ -140,16 +215,18 @@ function NewsCard({ item, likes, liked, comments, onLike, onComment, canInteract
               onLike(item.id)
             }}
             style={{
-              border: `1px solid ${liked ? '#c61b33' : '#333'}`,
-              background: liked ? 'rgba(198,27,51,.16)' : '#151515',
-              color: liked ? '#ff6a7f' : '#b1b1b1',
+              border: `1px solid ${liked ? '#ffc857' : '#333'}`,
+              background: liked ? 'linear-gradient(140deg, rgba(255,200,87,.22), rgba(35,25,8,.95))' : '#151515',
+              color: liked ? '#ffe7b1' : '#b1b1b1',
               borderRadius: 8,
               padding: '6px 10px',
               cursor: canInteract ? 'pointer' : 'not-allowed',
               fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: '.3px',
             }}
           >
-            ♥ Begen ({likes})
+            {liked ? 'STARRED' : 'STAR'} ({likes})
           </button>
           <span style={{ fontSize: 12, color: '#888' }}>Yorum: {comments.length}</span>
           {!canInteract && <span style={{ fontSize: 11, color: '#6a6a6a' }}>Etkilesim icin giris yapin</span>}
@@ -167,14 +244,14 @@ function NewsCard({ item, likes, liked, comments, onLike, onComment, canInteract
         )}
 
         {canInteract && (
-          <form onSubmit={submitComment} style={{ marginTop: 10, display: 'flex', gap: 8 }} onClick={e => e.stopPropagation()}>
+          <form onSubmit={submitComment} style={{ marginTop: 10, display: 'flex', gap: 8, flexDirection: isMobile ? 'column' : 'row' }} onClick={e => e.stopPropagation()}>
             <input
               value={commentInput}
               onChange={e => setCommentInput(e.target.value)}
               placeholder='Yorum yaz...'
               style={{ flex: 1, background: '#131313', border: '1px solid #2a2a2a', borderRadius: 8, color: '#f5f5f5', padding: '8px 10px', fontSize: 12 }}
             />
-            <button disabled={sending || !commentInput.trim()} style={{ border: '1px solid #444', background: '#1b1b1b', color: '#ddd', borderRadius: 8, padding: '8px 10px', fontSize: 12, cursor: 'pointer' }}>
+            <button disabled={sending || !commentInput.trim()} style={{ border: '1px solid #444', background: '#1b1b1b', color: '#ddd', borderRadius: 8, padding: '8px 10px', fontSize: 12, cursor: 'pointer', width: isMobile ? '100%' : 'auto' }}>
               Gonder
             </button>
           </form>
@@ -189,16 +266,23 @@ function NewsCard({ item, likes, liked, comments, onLike, onComment, canInteract
 export default function NewsPage() {
   const navigate = useNavigate()
   const { user, profile } = useAuth()
-  const { activeGame, setActiveGame } = useGame()
-  const defaultGameId = GAME_FILTERS.find(game => game.id === activeGame)?.id || 'valorant'
-  const selectedGameId = GAME_FILTERS.find(game => game.id === activeGame)?.id || defaultGameId
+  const { followedTeamIds } = useUser()
+  const [activeCategory, setActiveCategory] = useState('all')
 
   const [loading, setLoading] = useState(true)
   const [stories, setStories] = useState([])
   const [likesByNews, setLikesByNews] = useState({})
   const [likedSet, setLikedSet] = useState(new Set())
   const [commentsByNews, setCommentsByNews] = useState({})
+  const [page, setPage] = useState(1)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 900)
   const commentsWarningShownRef = useRef(false)
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 900)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   const isMissingNewsCommentsTable = useCallback((err) => {
     if (!err) return false
@@ -212,12 +296,6 @@ export default function NewsPage() {
     commentsWarningShownRef.current = true
     console.warn('news_comments tablosu bulunamadi, yorum ozelligi fallback modunda calisiyor.', err?.message || err)
   }, [])
-
-  useEffect(() => {
-    if (!GAME_FILTERS.some(game => game.id === activeGame)) {
-      setActiveGame(defaultGameId)
-    }
-  }, [activeGame, defaultGameId, setActiveGame])
 
   const hydrateInteractions = useCallback(async newsIds => {
     if (!newsIds.length) return
@@ -317,30 +395,44 @@ export default function NewsPage() {
         ...upcomingMatches.map(match => buildUpcomingStory(match, isTurkishTeam)),
       ]
         .filter(story => story.visuals.gameId)
-        .sort((left, right) => right.priority - left.priority || new Date(right.publishedAt) - new Date(left.publishedAt))
         .slice(0, NEWS_LIMIT)
 
-      setStories(generated)
-      await hydrateInteractions(generated.map(item => item.id))
+      const prioritized = prioritizeStoriesForYou(generated, followedTeamIds)
+        .map(story => ({
+          ...story,
+          isForYou: isStoryForYou(story, followedTeamIds),
+        }))
+
+      setStories(prioritized)
+      await hydrateInteractions(prioritized.map(item => item.id))
     } catch (err) {
       console.error('NewsPage loadStories:', err.message || err)
       setStories([])
     } finally {
       setLoading(false)
     }
-  }, [hydrateInteractions])
+  }, [followedTeamIds, hydrateInteractions])
 
   useEffect(() => {
     loadStories()
   }, [loadStories])
 
   const filteredStories = useMemo(() => {
-    return stories.filter(story => story.visuals.gameId === selectedGameId)
-  }, [selectedGameId, stories])
+    const scoped = stories.filter(story => activeCategory === 'all' || story.visuals.gameId === activeCategory)
+    return prioritizeStoriesForYou(scoped, followedTeamIds).map(story => ({
+      ...story,
+      isForYou: isStoryForYou(story, followedTeamIds),
+    }))
+  }, [activeCategory, followedTeamIds, stories])
 
-  const heroIndex = filteredStories.findIndex(story => HERO_TIERS.has(story.visuals.tier))
-  const hero = heroIndex >= 0 ? filteredStories[heroIndex] : (filteredStories[0] || null)
+  useEffect(() => {
+    setPage(1)
+  }, [activeCategory, stories.length])
+
+  const hero = filteredStories.find(story => HERO_TIERS.has(story.visuals.tier)) || filteredStories[0] || null
   const agenda = filteredStories.filter(story => story.id !== hero?.id)
+  const totalPages = Math.max(1, Math.ceil(agenda.length / NEWS_PAGE_SIZE))
+  const pagedAgenda = agenda.slice((page - 1) * NEWS_PAGE_SIZE, page * NEWS_PAGE_SIZE)
   const canInteract = !!user?.id
 
   async function toggleLike(newsId) {
@@ -439,29 +531,31 @@ export default function NewsPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#090909', color: '#f2f2f2' }}>
-      <div style={{ maxWidth: 1180, margin: '0 auto', padding: '22px 16px 48px' }}>
+      <div style={{ maxWidth: 1180, margin: '0 auto', padding: isMobile ? '14px 10px 34px' : '22px 16px 48px' }}>
         <div style={{ borderRadius: 18, border: '1px solid #1f1f1f', overflow: 'hidden', marginBottom: 18, background: 'linear-gradient(180deg,#0b0b0b 0%,#111 100%)' }}>
           <div style={{ background: 'linear-gradient(90deg,#C8102E,#8c0e20 45%,#f4f4f4)', color: '#fff', fontSize: 11, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase', textAlign: 'center', padding: 8 }}>
             Esports News Desk
           </div>
           <div style={{ padding: 18, background: 'radial-gradient(circle at 78% 20%, rgba(198,27,51,.18), transparent 36%), radial-gradient(circle at 10% 12%, rgba(255,255,255,.05), transparent 24%), #111' }}>
-            <h1 style={{ margin: 0, fontSize: 34, lineHeight: 1.1 }}>Gunun E-Spor Bulteni</h1>
-            <p style={{ margin: '8px 0 16px', color: '#9b9b9b', fontSize: 14 }}>
+            <h1 style={{ margin: 0, fontSize: isMobile ? 26 : 34, lineHeight: 1.1 }}>Gunun E-Spor Bulteni</h1>
+            <p style={{ margin: '8px 0 16px', color: '#9b9b9b', fontSize: isMobile ? 13 : 14 }}>
               Tier oncelikli mansetler, skora dayali sonuc haberleri ve yaklasan haftanin maclari tek akista.
             </p>
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {GAME_FILTERS.map(game => {
-                const active = game.id === selectedGameId
+              {CATEGORY_TABS.map(tab => {
+                const active = tab.id === activeCategory
+                const game = GAME_FILTERS.find(item => item.id === tab.id)
+                const color = game?.color || '#8f8f8f'
                 return (
                   <button
-                    key={game.id}
-                    onClick={() => setActiveGame(game.id)}
+                    key={tab.id}
+                    onClick={() => setActiveCategory(tab.id)}
                     style={{
                       padding: '8px 14px',
                       borderRadius: 999,
-                      border: active ? `1px solid ${game.color}` : '1px solid #2a2a2a',
-                      background: active ? `${game.color}22` : '#121212',
+                      border: active ? `1px solid ${color}` : '1px solid #2a2a2a',
+                      background: active ? `${color}22` : '#121212',
                       color: active ? '#ffffff' : '#9e9e9e',
                       fontSize: 12,
                       fontWeight: 700,
@@ -469,7 +563,7 @@ export default function NewsPage() {
                       cursor: 'pointer',
                     }}
                   >
-                    {game.icon} {game.shortLabel || game.label}
+                    {tab.label}
                   </button>
                 )
               })}
@@ -481,12 +575,19 @@ export default function NewsPage() {
 
         {hero && (
           <section style={{ marginBottom: 18 }}>
-            <div style={{ marginBottom: 8, fontSize: 11, color: '#c61b33', textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 800 }}>Manset</div>
-            <article onClick={() => openStoryDetail(hero)} style={{ borderRadius: 18, padding: 20, border: '1px solid #2a2a2a', background: 'linear-gradient(145deg,#171717,#101010)', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
+            <div style={{ marginBottom: 8, fontSize: 11, color: '#c61b33', textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 800 }}>
+              {hero.isForYou ? 'Manset · For You' : 'Manset'}
+            </div>
+            <article onClick={() => openStoryDetail(hero)} style={{ borderRadius: 18, padding: isMobile ? 14 : 20, border: '1px solid #2a2a2a', background: 'linear-gradient(145deg,#171717,#101010)', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
               <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: hero.visuals.turkish ? 'radial-gradient(circle at 12% 18%, rgba(200,16,46,.22), transparent 34%)' : 'radial-gradient(circle at 90% 10%, rgba(255,255,255,.05), transparent 24%)' }} />
               <div style={{ position: 'relative', zIndex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    {hero.isForYou && (
+                      <span style={{ fontSize: 10, color: '#ffe5ac', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.9px', padding: '5px 9px', borderRadius: 999, background: 'rgba(255,183,0,.16)', border: '1px solid rgba(255,183,0,.42)' }}>
+                        For You
+                      </span>
+                    )}
                     <span style={{ fontSize: 10, color: '#ffd2d8', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.1, padding: '5px 9px', borderRadius: 999, background: 'rgba(200,16,46,.18)', border: '1px solid rgba(200,16,46,.38)' }}>
                       Manset
                     </span>
@@ -500,23 +601,25 @@ export default function NewsPage() {
                   <div style={{ fontSize: 11, color: '#a0a0a0' }}>{fmtDate(hero.publishedAt)}</div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 16, alignItems: 'center', marginBottom: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'auto 1fr', gap: 16, alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'flex-start', gap: 10 }}>
                     {hero.visuals.teamA.logo_url
-                      ? <img src={hero.visuals.teamA.logo_url} alt={hero.visuals.teamA.name || ''} style={{ width: 56, height: 56, objectFit: 'contain', borderRadius: 14, background: '#111', padding: 6, border: '1px solid #2c2c2c' }} />
-                      : <div style={{ width: 56, height: 56, borderRadius: 14, background: '#151515', border: '1px solid #2c2c2c' }} />}
+                      ? <img src={hero.visuals.teamA.logo_url} alt={hero.visuals.teamA.name || ''} style={{ width: isMobile ? 50 : 56, height: isMobile ? 50 : 56, objectFit: 'contain', borderRadius: 14, background: '#111', padding: 6, border: '1px solid #2c2c2c' }} />
+                      : <div style={{ width: isMobile ? 50 : 56, height: isMobile ? 50 : 56, borderRadius: 14, background: '#151515', border: '1px solid #2c2c2c' }} />}
                     {hero.visuals.teamB.logo_url
-                      ? <img src={hero.visuals.teamB.logo_url} alt={hero.visuals.teamB.name || ''} style={{ width: 56, height: 56, objectFit: 'contain', borderRadius: 14, background: '#111', padding: 6, border: '1px solid #2c2c2c' }} />
-                      : <div style={{ width: 56, height: 56, borderRadius: 14, background: '#151515', border: '1px solid #2c2c2c' }} />}
+                      ? <img src={hero.visuals.teamB.logo_url} alt={hero.visuals.teamB.name || ''} style={{ width: isMobile ? 50 : 56, height: isMobile ? 50 : 56, objectFit: 'contain', borderRadius: 14, background: '#111', padding: 6, border: '1px solid #2c2c2c' }} />
+                      : <div style={{ width: isMobile ? 50 : 56, height: isMobile ? 50 : 56, borderRadius: 14, background: '#151515', border: '1px solid #2c2c2c' }} />}
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ color: '#b3b3b3', fontSize: 12, marginBottom: 6 }}>{hero.visuals.tournamentName}</div>
-                    <h2 style={{ margin: '0 0 10px', fontSize: 32, lineHeight: 1.1 }}>{hero.title}</h2>
+                    <h2 style={{ margin: '0 0 10px', fontSize: isMobile ? 24 : 32, lineHeight: 1.1 }}>{hero.title}</h2>
                     <div style={{ color: '#f0d3d8', fontSize: 17, fontWeight: 700 }}>{hero.heroScore}</div>
                   </div>
                 </div>
 
                 <p style={{ margin: 0, color: '#d8d8d8', lineHeight: 1.7 }}>{hero.summary}</p>
+
+                <ScoutNoteCard item={hero} />
 
                 <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                   <button
@@ -525,9 +628,18 @@ export default function NewsPage() {
                       e.stopPropagation()
                       toggleLike(hero.id)
                     }}
-                    style={{ border: `1px solid ${likedSet.has(hero.id) ? '#c61b33' : '#383838'}`, background: likedSet.has(hero.id) ? 'rgba(198,27,51,.18)' : '#151515', color: likedSet.has(hero.id) ? '#ff6a7f' : '#c8c8c8', borderRadius: 9, padding: '7px 11px', cursor: canInteract ? 'pointer' : 'not-allowed' }}
+                    style={{
+                      border: `1px solid ${likedSet.has(hero.id) ? '#ffc857' : '#383838'}`,
+                      background: likedSet.has(hero.id) ? 'linear-gradient(140deg, rgba(255,200,87,.22), rgba(35,25,8,.95))' : '#151515',
+                      color: likedSet.has(hero.id) ? '#ffe7b1' : '#c8c8c8',
+                      borderRadius: 9,
+                      padding: '7px 11px',
+                      cursor: canInteract ? 'pointer' : 'not-allowed',
+                      fontWeight: 700,
+                      letterSpacing: '.3px',
+                    }}
                   >
-                    ♥ Begen ({likesByNews[hero.id] || 0})
+                    {likedSet.has(hero.id) ? 'STARRED' : 'STAR'} ({likesByNews[hero.id] || 0})
                   </button>
                   <span style={{ fontSize: 12, color: '#8b8b8b' }}>Yorum: {(commentsByNews[hero.id] || []).length}</span>
                 </div>
@@ -540,8 +652,8 @@ export default function NewsPage() {
 
         <section>
           <div style={{ marginBottom: 10, fontSize: 11, color: '#f4f4f4', textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 800 }}>Gundem</div>
-          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))' }}>
-            {agenda.map(item => (
+          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit,minmax(320px,1fr))' }}>
+            {pagedAgenda.map(item => (
               <NewsCard
                 key={item.id}
                 item={item}
@@ -553,9 +665,31 @@ export default function NewsPage() {
                 canInteract={canInteract}
                 onOpenDetail={openStoryDetail}
                 onReport={reportStoryIssue}
+                isForYou={item.isForYou}
+                isMobile={isMobile}
               />
             ))}
           </div>
+
+          {agenda.length > NEWS_PAGE_SIZE && (
+            <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                disabled={page === 1}
+                style={{ border: '1px solid #303030', background: page === 1 ? '#111' : '#181818', color: page === 1 ? '#666' : '#ddd', borderRadius: 8, padding: '6px 10px', cursor: page === 1 ? 'not-allowed' : 'pointer' }}
+              >
+                ‹ Onceki
+              </button>
+              <span style={{ fontSize: 12, color: '#9d9d9d' }}>Sayfa {page} / {totalPages}</span>
+              <button
+                onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={page >= totalPages}
+                style={{ border: '1px solid #303030', background: page >= totalPages ? '#111' : '#181818', color: page >= totalPages ? '#666' : '#ddd', borderRadius: 8, padding: '6px 10px', cursor: page >= totalPages ? 'not-allowed' : 'pointer' }}
+              >
+                Sonraki ›
+              </button>
+            </div>
+          )}
         </section>
 
         {!loading && filteredStories.length === 0 && (

@@ -63,6 +63,52 @@ export function buildStoryVisuals(match, isTurkishTeam) {
   }
 }
 
+function extractMapSignals(statsRows, aScore, bScore) {
+  const mapLengths = []
+  let mapCount = Math.max(Number(aScore || 0), Number(bScore || 0), 0)
+
+  for (const row of (statsRows || [])) {
+    const details = Array.isArray(row?.stats?.games_detail)
+      ? row.stats.games_detail
+      : Array.isArray(row?.stats?.maps)
+        ? row.stats.maps
+        : []
+
+    if (details.length > mapCount) mapCount = details.length
+
+    for (const detail of details) {
+      const seconds = Number(
+        detail?.duration_seconds
+        ?? detail?.duration
+        ?? detail?.round_time
+        ?? 0,
+      )
+      if (Number.isFinite(seconds) && seconds > 0) mapLengths.push(seconds)
+    }
+  }
+
+  const longestMapSeconds = mapLengths.length ? Math.max(...mapLengths) : null
+  const averageMapSeconds = mapLengths.length
+    ? Math.round(mapLengths.reduce((sum, current) => sum + current, 0) / mapLengths.length)
+    : null
+
+  let tempoLabel = 'dengeli tempo'
+  if (averageMapSeconds != null && averageMapSeconds <= 1500) tempoLabel = 'hizli tempo'
+  if (averageMapSeconds != null && averageMapSeconds >= 2200) tempoLabel = 'uzun round temposu'
+
+  return {
+    mapCount,
+    longestMapSeconds,
+    averageMapSeconds,
+    tempoLabel,
+  }
+}
+
+function formatMinutes(seconds) {
+  if (!seconds) return null
+  return `${Math.round(seconds / 60)} dk`
+}
+
 export function buildFinishedStory(match, statsByMatch, isTurkishTeam) {
   const aName = match.team_a?.name || 'Team A'
   const bName = match.team_b?.name || 'Team B'
@@ -78,9 +124,12 @@ export function buildFinishedStory(match, statsByMatch, isTurkishTeam) {
   const predA = typeof match.prediction_team_a === 'number' ? match.prediction_team_a : null
   const predB = typeof match.prediction_team_b === 'number' ? match.prediction_team_b : null
   const predictedWinner = predA != null && predB != null ? (predA >= predB ? aId : bId) : null
+  const favoredName = predictedWinner === aId ? aName : predictedWinner === bId ? bName : null
+  const predictionEdge = predA != null && predB != null ? Math.abs(predA - predB) : null
   const isUpset = predictedWinner != null && winner && predictedWinner !== winner
 
   const statsRows = statsByMatch.get(match.id) || []
+  const mapSignals = extractMapSignals(statsRows, aScore, bScore)
   const topRow = [...statsRows]
     .map(row => ({
       teamId: Number(row.team_id),
@@ -89,22 +138,30 @@ export function buildFinishedStory(match, statsByMatch, isTurkishTeam) {
     .sort((left, right) => right.score - left.score)[0]
 
   const impactTeam = topRow?.teamId === aId ? aName : topRow?.teamId === bId ? bName : null
+  const impactScore = topRow?.score ?? null
+  const mapMinutes = formatMinutes(mapSignals.averageMapSeconds)
+  const longestMap = formatMinutes(mapSignals.longestMapSeconds)
+  const scoreline = `${aScore}:${bScore}`
+
+  const mvpLine = impactTeam
+    ? `${impactTeam}${impactScore != null ? ` tarafinda ${impactScore} impact puaniyla MVP seviyesi performans verdi` : ' tarafinda MVP etkisi yaratti'}.`
+    : 'Macin belirleyici bolumlerinde bireysel performans farki sonucu dogrudan etkiledi.'
 
   let variant = 'close'
-  let title = `${winnerName}, ${loserName} karsisinda seriyi kapatti`
-  let summary = `${winnerName}, ${loserName} onunde ${aScore}:${bScore} ile kazandi ve serinin momentumunu son bolumde kendi lehine cevirdi.`
+  let title = `Mac Raporu: ${winnerName}, ${scoreline} ile seriyi tamamladi`
+  let summary = `${match.tournament?.name || 'Turnuva'} sahnesinde final skor ${scoreline}. Seri ${mapSignals.mapCount || 1} haritaya yayildi, tempo ${mapSignals.tempoLabel} olarak olculdu${mapMinutes ? ` ve ortalama harita suresi ${mapMinutes}` : ''}. ${mvpLine}`
 
   if (isUpset) {
     variant = 'upset'
-    title = `${winnerName}, ${match.tournament?.name || 'ana sahne'} macinda dengeleri bozdu`
-    summary = `${match.tournament?.name || 'Turnuva'} arenasinda ${winnerName}, beklenen tabloyu tersine cevirip ${loserName} onunde ${aScore}:${bScore} kazandi. Sonuc, ust bracket ve playoff hesaplarini dogrudan etkiliyor.`
+    title = `Surpriz Skor: ${winnerName}, ${match.tournament?.name || 'ana sahne'} dengesini degistirdi`
+    summary = `${match.tournament?.name || 'Turnuva'} arenasinda ${winnerName}, ${loserName} onunde ${scoreline} ile kazanarak model projeksiyonunu tersine cevirdi.${favoredName ? ` Tahminlerde onde yazilan taraf ${favoredName}` : ''}${predictionEdge != null ? ` ve tahmin farki ${predictionEdge} puandi` : ''}. ${mvpLine} Sonuc, playoff tablosunda yeni bir senaryo acti.`
   } else if (margin >= 2) {
     variant = 'stomp'
-    title = `${winnerName}, ${loserName} onunde net skorla one cikti`
-    summary = `${winnerName}, ${loserName} karsisinda seriyi ${aScore}:${bScore} ile bitirdi. Mac boyu oyunun temposunu ve objective kontrolunu elinde tutan taraf, gunun en temiz galibiyetlerinden birini yazdi.`
+    title = `Skor Haberi: ${winnerName}, ${scoreline} ile net ustunluk kurdu`
+    summary = `${winnerName}, ${loserName} karsisinda seriyi ${scoreline} bitirdi. ${mapSignals.mapCount || 1} haritalik sette tempo ${mapSignals.tempoLabel} seviyesinde ilerledi${longestMap ? `, en uzun harita ${longestMap}` : ''}. ${mvpLine} Bu tablo gunun en yuksek kontrol yuzdelerinden birini urettirdi.`
   } else if (impactTeam) {
-    title = `${winnerName} dar seride ${impactTeam} etkisiyle ayakta kaldi`
-    summary = `${aName} ile ${bName} arasindaki yakin seride kazanan ${winnerName} oldu. Skor tabelasi ${aScore}:${bScore} biterken istatistiklerde one cikan ${impactTeam}, macin kirilma anlarina damga vurdu.`
+    title = `Analiz: ${winnerName} dar seride MVP etkisiyle ayakta kaldi`
+    summary = `${aName} ile ${bName} arasindaki yakin seride kazanan ${winnerName} oldu ve skor ${scoreline} kapandi. ${impactTeam}${impactScore != null ? ` ${impactScore} impact puaniyla` : ''} kritik roundlarda oyunu cevirdi${mapMinutes ? `; ortalama harita suresi ${mapMinutes}` : ''}. Teknik denge son bolumde mikro kararlarla kirildi.`
   }
 
   return {
@@ -127,6 +184,12 @@ export function buildFinishedStory(match, statsByMatch, isTurkishTeam) {
       upset: isUpset,
       margin,
       statRows: statsRows,
+      impactTeam,
+      impactScore,
+      mapCount: mapSignals.mapCount,
+      mapTempo: mapSignals.tempoLabel,
+      averageMapSeconds: mapSignals.averageMapSeconds,
+      longestMapSeconds: mapSignals.longestMapSeconds,
     },
   }
 }
@@ -139,6 +202,21 @@ export function buildUpcomingStory(match, isTurkishTeam) {
   const hoursAway = Math.max(1, Math.round((startsAt - Date.now()) / (60 * 60 * 1000)))
   const tier = normalizeTier(match.tournament?.tier)
   const isHeroTier = HERO_TIERS.has(tier)
+  const predA = typeof match.prediction_team_a === 'number' ? match.prediction_team_a : null
+  const predB = typeof match.prediction_team_b === 'number' ? match.prediction_team_b : null
+  const predictionEdge = predA != null && predB != null ? Math.abs(predA - predB) : null
+  const favorite = predA != null && predB != null ? (predA >= predB ? aName : bName) : null
+  const favoriteModelScore = predA != null && predB != null
+    ? (predA >= predB ? predA : predB)
+    : null
+
+  let summary = `${aName} ile ${bName} ${hoursAway} saat sonra sunucuya cikiyor. Karsilasma oncesi ana hikaye skor tablosundaki pozisyon savasi ve veto duzeninin ilk haritaya etkisi. Analitik model, serinin kirilim noktasinin acilis haritasi olabilecegini isaret ediyor.`
+  if (isHeroTier) {
+    summary = `${aName} ile ${bName}, ${tournamentName} sahnesinde haftanin manset serisine cikiyor. Gozler form trendi, veto dengesi ve playoff bileti ihtimalleri uzerinde; bu seri turnuva ivmesini dogrudan etkileyebilir.`
+  }
+  if (favorite && predictionEdge != null) {
+    summary += ` Model, ${favorite} tarafini ${predictionEdge} puanlik farkla onde goruyor${favoriteModelScore != null ? ` (model skoru ${favoriteModelScore})` : ''}; MVP yarisi acisindan one cikan ekip ilk iki haritada psikolojik ustunlugu alabilir.`
+  }
 
   return {
     id: `match_${match.id}`,
@@ -150,15 +228,15 @@ export function buildUpcomingStory(match, isTurkishTeam) {
     title: isHeroTier
       ? `${tournamentName} vitrini: ${aName} vs ${bName}`
       : `${aName} ile ${bName} haftanin radarinda`,
-    summary: isHeroTier
-      ? `${aName} ile ${bName}, ${tournamentName} sahnesinde haftanin en kritik eslesmelerinden birine cikiyor. Seri yaklasirken gozler form durumu, veto dengesi ve playoff yarisi uzerinde olacak.`
-      : `${aName} ile ${bName} ${hoursAway} saat sonra sunucuya cikiyor. Eslesme, turnuva tablosunda sira savasi ve alt sira baskisi acisindan gunun belirleyici karsilasmalarindan biri olmaya aday.`,
+    summary,
     tag: storyTag('upcoming'),
     heroScore: `${aName} vs ${bName}`,
     visuals: buildStoryVisuals(match, isTurkishTeam),
     source: {
-      predictionA: typeof match.prediction_team_a === 'number' ? match.prediction_team_a : null,
-      predictionB: typeof match.prediction_team_b === 'number' ? match.prediction_team_b : null,
+      predictionA: predA,
+      predictionB: predB,
+      predictionEdge,
+      favorite,
       startInHours: hoursAway,
     },
   }

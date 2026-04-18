@@ -221,39 +221,16 @@ class LiquipediaAdapter(BaseDataAdapter):
 
             profile_payload = service.get_player_profile(lookup_name)
             if nickname and real_name:
-                has_primary = bool(
-                    profile_payload.get("career_history")
-                    or profile_payload.get("social_links")
-                    or profile_payload.get("nationality")
-                    or profile_payload.get("age")
-                )
-                if not has_primary:
-                    nickname_payload = service.get_player_profile(nickname)
-                    has_nickname = bool(
-                        nickname_payload.get("career_history")
-                        or nickname_payload.get("social_links")
-                        or nickname_payload.get("nationality")
-                        or nickname_payload.get("age")
-                    )
-                    if has_nickname:
-                        profile_payload = nickname_payload
-
-            career_rows = profile_payload.get("career_history", [])
+                nickname_payload = service.get_player_profile(nickname)
+                if self._profile_richness_score(nickname_payload) > self._profile_richness_score(profile_payload):
+                    profile_payload = nickname_payload
 
             matched_history = self._best_match_rows(
-                source_name=nickname or lookup_name,
-                rows=career_rows,
+                source_name=lookup_name,
+                rows=profile_payload.get("career_history") or [],
                 possible_name_keys=("Player",),
                 threshold=0.64,
             )
-
-            if not matched_history and real_name and nickname:
-                matched_history = self._best_match_rows(
-                    source_name=real_name,
-                    rows=career_rows,
-                    possible_name_keys=("Player",),
-                    threshold=0.64,
-                )
 
             social_links = profile_payload.get("social_links") or {}
             nationality = profile_payload.get("nationality")
@@ -301,18 +278,34 @@ class LiquipediaAdapter(BaseDataAdapter):
         }
 
     def _fetch_tournaments(self, limit: int) -> List[Dict[str, Any]]:
+        targets_raw = os.getenv("LIQUIPEDIA_TOURNAMENT_TARGETS", "")
+        targets = [item.strip().lower() for item in targets_raw.split(",") if item.strip()]
+
         with Database.get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT t.id, t.name, g.slug AS game_slug, t.extra_metadata
-                    FROM tournaments t
-                    LEFT JOIN games g ON g.id = t.game_id
-                    ORDER BY t.id DESC
-                    LIMIT %s
-                    """,
-                    (limit,),
-                )
+                if targets:
+                    cur.execute(
+                        """
+                        SELECT t.id, t.name, g.slug AS game_slug, t.extra_metadata
+                        FROM tournaments t
+                        LEFT JOIN games g ON g.id = t.game_id
+                        WHERE LOWER(COALESCE(t.name, '')) = ANY(%s)
+                        ORDER BY t.id DESC
+                        LIMIT %s
+                        """,
+                        (targets, limit),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        SELECT t.id, t.name, g.slug AS game_slug, t.extra_metadata
+                        FROM tournaments t
+                        LEFT JOIN games g ON g.id = t.game_id
+                        ORDER BY t.id DESC
+                        LIMIT %s
+                        """,
+                        (limit,),
+                    )
                 columns = [desc[0] for desc in cur.description]
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
 
@@ -493,3 +486,23 @@ class LiquipediaAdapter(BaseDataAdapter):
 
         accepted.sort(key=lambda item: item.score, reverse=True)
         return [item.row for item in accepted]
+
+    def _profile_richness_score(self, payload: Dict[str, Any]) -> int:
+        if not payload:
+            return 0
+
+        social_links = payload.get("social_links") or {}
+        career_history = payload.get("career_history") or []
+        former_teams = payload.get("former_teams") or []
+
+        score = 0
+        score += len(social_links) * 4
+        score += min(len(career_history), 5) * 2
+        score += min(len(former_teams), 5)
+        if payload.get("nationality"):
+            score += 2
+        if payload.get("age"):
+            score += 1
+        if payload.get("real_name"):
+            score += 1
+        return score

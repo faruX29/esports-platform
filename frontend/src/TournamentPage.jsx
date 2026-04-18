@@ -8,7 +8,7 @@
  * • Match List — Upcoming / Past sekmeleri
  * • Turkish Pride efekti
  */
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react'
 import { useParams, useNavigate }                     from 'react-router-dom'
 import { supabase }                                   from './supabaseClient'
 import { isTurkishTeam }                              from './constants'
@@ -21,6 +21,9 @@ const TIER_META = {
   B: { color: '#FF8C00', bg: 'rgba(255,140,0,.15)',   border: 'rgba(255,140,0,.4)',   label: 'B · Regional'   },
   C: { color: '#818cf8', bg: 'rgba(129,140,248,.15)', border: 'rgba(129,140,248,.4)', label: 'C · Qualifier'  },
 }
+
+const MVP_TOURNAMENT_RESCUE = true
+const TOURNAMENT_DEBUG = false
 
 function gameColor(name = '') {
   const n = name.toLowerCase()
@@ -120,16 +123,18 @@ function buildBracketStages(matches = []) {
     }
 
     const fallbackStage = bracketSide === 'lower' ? 'Lower Round 1' : 'Quarter-finals'
-    console.warn('[TournamentPage][Bracket][InferredStage]', {
-      matchId: m?.id,
-      round_info: m?.round_info ?? null,
-      name: m?.name ?? null,
-      bracket_type: m?.bracket_type ?? null,
-      stage_name: m?.stage_name ?? null,
-      reason: 'No stage keyword, using bracket-side default stage',
-      assignedSide: bracketSide,
-      assignedStage: fallbackStage,
-    })
+    if (TOURNAMENT_DEBUG) {
+      console.warn('[TournamentPage][Bracket][InferredStage]', {
+        matchId: m?.id,
+        round_info: m?.round_info ?? null,
+        name: m?.name ?? null,
+        bracket_type: m?.bracket_type ?? null,
+        stage_name: m?.stage_name ?? null,
+        reason: 'No stage keyword, using bracket-side default stage',
+        assignedSide: bracketSide,
+        assignedStage: fallbackStage,
+      })
+    }
 
     return {
       ...m,
@@ -455,12 +460,15 @@ function ST({ icon, label, right }) {
 
 // ─── Team Logo / Avatar ───────────────────────────────────────────────────────
 
-function TeamAv({ src, name, size = 36 }) {
+const TeamAv = memo(function TeamAv({ src, name, size = 36 }) {
   const [err, setErr] = useState(false)
+  useEffect(() => {
+    setErr(false)
+  }, [src])
   const initials = (name || '?').split(/[\s_]/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
   if (src && !err) {
     return (
-      <img src={src} alt={name} onError={() => setErr(true)}
+      <img src={src} alt={name} loading='lazy' onError={() => setErr(true)}
         style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0 }} />
     )
   }
@@ -472,7 +480,7 @@ function TeamAv({ src, name, size = 36 }) {
       fontSize: size * 0.32, fontWeight: 800, color: '#444',
     }}>{initials}</div>
   )
-}
+})
 
 // ─── Standings Table ─────────────────────────────────────────────────────────
 
@@ -614,8 +622,14 @@ const BRACKET_CARD_W   = 200
 const BRACKET_COL_GAP  = 76
 const BRACKET_TOP_PAD  = 8
 const CONNECTOR_MODE = 'orthogonal'
+const BRACKET_MIN_ZOOM = 0.65
+const BRACKET_MAX_ZOOM = 1.2
 
-function BracketMatchCard({ m, navigate, gc, highlightPath = false }) {
+function clampBracketZoom(value) {
+  return Math.min(BRACKET_MAX_ZOOM, Math.max(BRACKET_MIN_ZOOM, value))
+}
+
+const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, gc, highlightPath = false }) {
   const aId   = m.team_a?.id || m.team_a_id
   const bId   = m.team_b?.id || m.team_b_id
   const aWon  = m.status === 'finished' && (m.winner_id === aId)
@@ -741,9 +755,9 @@ function BracketMatchCard({ m, navigate, gc, highlightPath = false }) {
       ))}
     </div>
   )
-}
+})
 
-function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'upper' }) {
+function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'upper', zoom = 1 }) {
   const scrollRef = useRef(null)
   const dragRef = useRef({ isDown: false, moved: false, startX: 0, scrollLeft: 0 })
   const [isDragging, setIsDragging] = useState(false)
@@ -853,6 +867,7 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
   )
 
   const onMouseDown = (e) => {
+    if (e.button !== 0) return
     const el = scrollRef.current
     if (!el) return
     dragRef.current = {
@@ -891,10 +906,12 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
       </div>
       <div style={{
         overflowX: 'auto',
-        overflowY: 'hidden',
+        overflowY: 'auto',
+        maxWidth: '100%',
         paddingBottom: 12,
         cursor: isDragging ? 'grabbing' : 'grab',
         userSelect: isDragging ? 'none' : 'auto',
+        WebkitOverflowScrolling: 'touch',
       }}
       ref={scrollRef}
       onMouseDown={onMouseDown}
@@ -904,10 +921,17 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
       >
         <div style={{
           position: 'relative',
-          width: layout.width,
-          height: layout.height,
+          width: layout.width * zoom,
+          height: layout.height * zoom,
           minWidth: 'max-content',
         }}>
+          <div style={{
+            position: 'relative',
+            width: layout.width,
+            height: layout.height,
+            transform: `scale(${zoom})`,
+            transformOrigin: 'top left',
+          }}>
           {/* Connector layer */}
           <svg
             width={layout.width}
@@ -997,6 +1021,7 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
               </div>
             )
           })}
+          </div>
         </div>
       </div>
 
@@ -1021,7 +1046,7 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
 
 // ─── Match List Card ──────────────────────────────────────────────────────────
 
-function MatchListCard({ m, navigate, gc }) {
+const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
   const aId   = m.team_a?.id || m.team_a_id
   const bId   = m.team_b?.id || m.team_b_id
   const aWon  = m.status === 'finished' && m.winner_id === aId
@@ -1167,7 +1192,7 @@ function MatchListCard({ m, navigate, gc }) {
       </div>
     </div>
   )
-}
+})
 
 // ─── Ana Bileşen ──────────────────────────────────────────────────────────────
 
@@ -1181,6 +1206,7 @@ export default function TournamentPage() {
   const [error,       setError]       = useState(null)
   const [activeTab,   setActiveTab]   = useState('upcoming')
   const [viewOverride, setViewOverride] = useState('auto') // auto | list | bracket
+  const [bracketZoom, setBracketZoom] = useState(1)
 
   // ── Veri çekme ────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
@@ -1211,6 +1237,14 @@ export default function TournamentPage() {
 
       if (tourRes.error)  throw tourRes.error
       if (matchRes.error) throw matchRes.error
+
+      if (TOURNAMENT_DEBUG) {
+        console.log('[TournamentPage][Fetch]', {
+          tournamentId,
+          tournamentFound: Boolean(tourRes.data),
+          matchCount: (matchRes.data || []).length,
+        })
+      }
 
       setTournament(tourRes.data)
       setMatches(matchRes.data || [])
@@ -1250,12 +1284,15 @@ export default function TournamentPage() {
   const liquipediaBracketMatches = useMemo(() => buildLiquipediaBracketStages(tournament), [tournament])
   const hasLiquipediaBracket = liquipediaBracketMatches.length > 0
   const effectiveViewMode = useMemo(() => {
+    if (MVP_TOURNAMENT_RESCUE) return 'bracket'
     if (viewOverride === 'list') return 'list'
     if (viewOverride === 'bracket') return 'bracket'
     return (hasLiquipediaBracket || stageMode.bracketEnabled) ? 'bracket' : 'list'
   }, [viewOverride, stageMode, hasLiquipediaBracket])
 
   useEffect(() => {
+    if (!TOURNAMENT_DEBUG) return
+
     const title = stageMode.bracketEnabled
       ? 'TOURNAMENT VIEW MODE: BRACKET'
       : 'TOURNAMENT VIEW MODE: LIST'
@@ -1488,7 +1525,7 @@ export default function TournamentPage() {
       <div style={{ padding: '0 20px', animation: 'fadeUp .3s ease' }}>
 
         {/* ── DEV: Manual View Override ─────────────────────────── */}
-        <div style={{
+        {!MVP_TOURNAMENT_RESCUE && <div style={{
           marginBottom: 16,
           display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
           background: '#0d0d0d', border: '1px solid #202020', borderRadius: 12,
@@ -1518,10 +1555,10 @@ export default function TournamentPage() {
           <span style={{ marginLeft: 'auto', fontSize: 11, color: '#555' }}>
             Current: {effectiveViewMode === 'bracket' ? 'Bracket' : 'List'}
           </span>
-        </div>
+        </div>}
 
         {/* ── STANDINGS (round-robin) ─────────────────────────────── */}
-        {format !== 'elimination' && pastMatches.length > 0 && (
+        {!MVP_TOURNAMENT_RESCUE && format !== 'elimination' && pastMatches.length > 0 && (
           <div style={{ marginBottom: 36 }}>
             <ST icon="📊" label="Puan Durumu" />
             <StandingsTable matches={pastMatches} navigate={navigate} />
@@ -1533,15 +1570,37 @@ export default function TournamentPage() {
           <div style={{ marginBottom: 36 }}>
             <ST icon="🏆" label="Playoff Ağacı"
               right={
-                <span style={{ fontSize: 10, color: '#383838' }}>
-                  kaydırılabilir →
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 10, color: '#4d4d4d' }}>Zoom</span>
+                  <button
+                    onClick={() => setBracketZoom(prev => clampBracketZoom(prev - 0.1))}
+                    style={{ width: 24, height: 24, borderRadius: 7, border: '1px solid #2a2a2a', background: '#121212', color: '#a8a8a8', cursor: 'pointer' }}
+                    title="Zoom out"
+                  >
+                    -
+                  </button>
+                  <button
+                    onClick={() => setBracketZoom(1)}
+                    style={{ padding: '0 8px', height: 24, borderRadius: 7, border: '1px solid #2a2a2a', background: '#121212', color: '#a8a8a8', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}
+                    title="Reset zoom"
+                  >
+                    {Math.round(bracketZoom * 100)}%
+                  </button>
+                  <button
+                    onClick={() => setBracketZoom(prev => clampBracketZoom(prev + 0.1))}
+                    style={{ width: 24, height: 24, borderRadius: 7, border: '1px solid #2a2a2a', background: '#121212', color: '#a8a8a8', cursor: 'pointer' }}
+                    title="Zoom in"
+                  >
+                    +
+                  </button>
+                </div>
               }
             />
             {/* Bracket containers */}
             <div style={{
               background: '#0a0a0a', borderRadius: 16,
               border: '1px solid #1a1a1a', padding: '16px',
+              overflowX: 'auto',
             }}>
               {hasLiquipediaBracket ? (
                 <>
@@ -1567,6 +1626,7 @@ export default function TournamentPage() {
                     navigate={navigate}
                     gc={gc}
                     bracketSide="upper"
+                    zoom={bracketZoom}
                   />
                 </>
               ) : (
@@ -1584,6 +1644,7 @@ export default function TournamentPage() {
                       navigate={navigate}
                       gc={gc}
                       bracketSide="upper"
+                      zoom={bracketZoom}
                     />
                   </div>
 
@@ -1604,6 +1665,7 @@ export default function TournamentPage() {
                           navigate={navigate}
                           gc={gc}
                           bracketSide="lower"
+                          zoom={bracketZoom}
                         />
                       </div>
                     </>
@@ -1615,7 +1677,7 @@ export default function TournamentPage() {
         )}
 
         {/* ── NON-BRACKET STAGE LIST ───────────────────────────── */}
-        {effectiveViewMode === 'list' && matches.length > 0 && (
+        {!MVP_TOURNAMENT_RESCUE && effectiveViewMode === 'list' && matches.length > 0 && (
           <div style={{ marginBottom: 36 }}>
             <ST
               icon="📋"

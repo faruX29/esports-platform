@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { GAMES, useGame } from '../GameContext'
@@ -116,6 +116,18 @@ function fmt(value, digits = 2) {
   return Number.isFinite(value) ? value.toFixed(digits) : '0.00'
 }
 
+function normalizeSearchText(value) {
+  return String(value || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+function normalizeSearchToken(value) {
+  return normalizeSearchText(value).replace(/[%_,()]/g, '').trim()
+}
+
 function GameFilterTabs({ activeGame, setActiveGame }) {
   const games = GAMES.filter(game => !game.soon && game.id !== 'all')
 
@@ -199,7 +211,6 @@ export default function PlayersPage() {
   const { isPlayerFollowed, togglePlayerFollow } = useUser()
   const defaultGameId = GAMES.find(game => !game.soon && game.id !== 'all')?.id || 'valorant'
   const selectedGameId = activeGame && activeGame !== 'all' ? activeGame : defaultGameId
-  const isHeadshotRelevant = selectedGameId === 'valorant' || selectedGameId === 'cs2'
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -207,14 +218,12 @@ export default function PlayersPage() {
   const [metricsSource, setMetricsSource] = useState('player_match_stats')
 
   const [search, setSearch] = useState('')
-  const [roleFilter, setRoleFilter] = useState('all')
-  const [nationality, setNationality] = useState('all')
-  const [minKd, setMinKd] = useState(0.8)
-  const [minHs, setMinHs] = useState(10)
   const [sortKey, setSortKey] = useState('impact')
   const [compareMode, setCompareMode] = useState(false)
   const [compareAId, setCompareAId] = useState('')
   const [compareBId, setCompareBId] = useState('')
+  const searchCacheRef = useRef(new Map())
+  const normalizedSearch = useMemo(() => normalizeSearchToken(search), [search])
 
   useEffect(() => {
     if (!activeGame || activeGame === 'all') {
@@ -223,13 +232,9 @@ export default function PlayersPage() {
   }, [activeGame, setActiveGame, defaultGameId])
 
   useEffect(() => {
-    setRoleFilter('all')
     setCompareAId('')
     setCompareBId('')
-    if (!isHeadshotRelevant) {
-      setMinHs(0)
-    }
-  }, [selectedGameId, isHeadshotRelevant])
+  }, [selectedGameId])
 
   useEffect(() => {
     let cancelled = false
@@ -239,15 +244,19 @@ export default function PlayersPage() {
       setError('')
 
       try {
-        const [playersRes, teamsRes, playerStatsRes, teamStatsRes] = await Promise.all([
+        const [playersRes, teamsRes, gamesRes, playerStatsRes, teamStatsRes] = await Promise.all([
           supabase
             .from('players')
             .select('id,nickname,real_name,role,image_url,nationality,team_pandascore_id')
             .limit(1000),
           supabase
             .from('teams')
-            .select('id,name,logo_url')
+            .select('id,name,logo_url,game_id')
             .limit(800),
+          supabase
+            .from('games')
+            .select('id,name,slug')
+            .limit(40),
           supabase
             .from('player_match_stats')
             .select('*')
@@ -260,10 +269,16 @@ export default function PlayersPage() {
 
         if (playersRes.error) throw playersRes.error
         if (teamsRes.error) throw teamsRes.error
+        if (gamesRes.error) throw gamesRes.error
 
         if (cancelled) return
 
-        const teamsById = new Map((teamsRes.data || []).map(t => [String(t.id), t]))
+        const gamesById = new Map((gamesRes.data || []).map(game => [String(game.id), game]))
+        const teamsById = new Map((teamsRes.data || []).map(t => {
+          const gameMeta = t.game_id ? gamesById.get(String(t.game_id)) : null
+          const normalizedTeamGameId = normalizeGameId(gameMeta?.slug ?? gameMeta?.name)
+          return [String(t.id), { ...t, game: gameMeta || null, normalized_game_id: normalizedTeamGameId }]
+        }))
         const playersById = new Map((playersRes.data || []).map(player => [String(player.id), player]))
         const teamStatsByTeam = new Map()
         const playerStatsByGame = new Map()
@@ -368,6 +383,7 @@ export default function PlayersPage() {
           return {
             ...p,
             team,
+            teamGameId: team?.normalized_game_id || null,
             gameStats,
           }
         })
@@ -387,11 +403,156 @@ export default function PlayersPage() {
     return () => { cancelled = true }
   }, [])
 
+  useEffect(() => {
+    const q = normalizedSearch
+    if (q.length < 2) return undefined
+
+    const cached = searchCacheRef.current.get(q)
+    if (cached?.players?.length) {
+      setPlayers(prev => {
+        const mergedById = new Map(prev.map(player => [String(player.id), player]))
+        const teamMap = new Map((cached.teams || []).map(team => [String(team.id), team]))
+
+        for (const remote of cached.players) {
+          const key = String(remote.id)
+          const existing = mergedById.get(key)
+          const rawTeam = remote.team_pandascore_id ? teamMap.get(String(remote.team_pandascore_id)) || null : null
+          const team = rawTeam
+            ? {
+              ...rawTeam,
+              normalized_game_id: normalizeGameId(rawTeam?.game?.slug ?? rawTeam?.game?.name),
+            }
+            : null
+
+          if (existing) {
+            mergedById.set(key, {
+              ...remote,
+              ...existing,
+              gameStats: existing.gameStats || {},
+              team: existing.team || team,
+              teamGameId: existing.teamGameId || team?.normalized_game_id || null,
+            })
+            continue
+          }
+
+          mergedById.set(key, {
+            ...remote,
+            team,
+            teamGameId: team?.normalized_game_id || null,
+            gameStats: {},
+          })
+        }
+
+        return [...mergedById.values()]
+      })
+      return undefined
+    }
+
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      try {
+        const { data: prefixedPlayers, error: prefixedPlayersError } = await supabase
+          .from('players')
+          .select('id,nickname,real_name,role,image_url,nationality,team_pandascore_id')
+          .or(`nickname.ilike.${q}%,real_name.ilike.${q}%`)
+          .limit(60)
+
+        if (prefixedPlayersError || cancelled) return
+
+        let remotePlayers = prefixedPlayers || []
+
+        if (remotePlayers.length < 18) {
+          const { data: broadPlayers, error: broadPlayersError } = await supabase
+            .from('players')
+            .select('id,nickname,real_name,role,image_url,nationality,team_pandascore_id')
+            .or(`nickname.ilike.%${q}%,real_name.ilike.%${q}%`)
+            .limit(60)
+
+          if (!broadPlayersError && !cancelled && (broadPlayers || []).length) {
+            const merged = new Map()
+            for (const item of [...remotePlayers, ...broadPlayers]) merged.set(String(item.id), item)
+            remotePlayers = [...merged.values()]
+          }
+        }
+
+        if (cancelled || !(remotePlayers || []).length) return
+
+        const teamIds = [...new Set((remotePlayers || []).map(p => p.team_pandascore_id).filter(Boolean))]
+        const { data: remoteTeams } = teamIds.length
+          ? await supabase.from('teams').select('id,name,logo_url,game_id,game:games(id,name,slug)').in('id', teamIds)
+          : { data: [] }
+
+        if (cancelled) return
+
+        const teamMap = new Map((remoteTeams || []).map(team => [String(team.id), team]))
+        searchCacheRef.current.set(q, { players: remotePlayers, teams: remoteTeams || [] })
+
+        setPlayers(prev => {
+          const mergedById = new Map(prev.map(player => [String(player.id), player]))
+
+          for (const remote of (remotePlayers || [])) {
+            const key = String(remote.id)
+            const existing = mergedById.get(key)
+            const rawTeam = remote.team_pandascore_id ? teamMap.get(String(remote.team_pandascore_id)) || null : null
+            const normalizedTeam = rawTeam
+              ? {
+                ...rawTeam,
+                normalized_game_id: normalizeGameId(rawTeam?.game?.slug ?? rawTeam?.game?.name),
+              }
+              : null
+
+            if (existing) {
+              mergedById.set(key, {
+                ...remote,
+                ...existing,
+                gameStats: existing.gameStats || {},
+                team: existing.team || normalizedTeam,
+                teamGameId: existing.teamGameId || normalizedTeam?.normalized_game_id || null,
+              })
+              continue
+            }
+
+            mergedById.set(key, {
+              ...remote,
+              team: normalizedTeam,
+              teamGameId: normalizedTeam?.normalized_game_id || null,
+              gameStats: {},
+            })
+          }
+
+          return [...mergedById.values()]
+        })
+      } catch {
+        // Search assist is best-effort; keep current list if request fails.
+      }
+    }, 110)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [normalizedSearch])
+
   const gamePlayers = useMemo(() => {
     return players
       .map(player => {
+        const playerTeamGameId = player.teamGameId || player.team?.normalized_game_id || null
+        if (!playerTeamGameId || playerTeamGameId !== selectedGameId) return null
+
         const scoped = player.gameStats?.[selectedGameId]
-        if (!scoped || (scoped.sampleMatches || 0) <= 0) return null
+
+        if (!scoped) {
+          return {
+            ...player,
+            sampleMatches: 0,
+            kd: 0,
+            hsPct: 0,
+            winRate: 0,
+            impact: 0,
+            team: player.team || null,
+            role: normalizeRoleForGame(player.role, selectedGameId),
+          }
+        }
 
         return {
           ...player,
@@ -400,29 +561,17 @@ export default function PlayersPage() {
           role: scoped.role || normalizeRoleForGame(player.role, selectedGameId),
         }
       })
-      .filter(Boolean)
+        .filter(Boolean)
   }, [players, selectedGameId])
 
-  const roleOptions = useMemo(() => {
-    const set = new Set(gamePlayers.map(player => player.role).filter(Boolean))
-    return ['all', ...[...set].sort((a, b) => a.localeCompare(b, 'tr'))]
-  }, [gamePlayers])
-
-  const nationalityOptions = useMemo(() => {
-    const set = new Set(gamePlayers.map(player => player.nationality).filter(Boolean))
-    return ['all', ...[...set].sort((a, b) => a.localeCompare(b, 'tr'))]
-  }, [gamePlayers])
-
   const visiblePlayers = useMemo(() => {
-    const q = search.trim().toLowerCase()
+    const q = normalizedSearch
 
     const filtered = gamePlayers.filter(p => {
-      const matchesSearch = !q || (p.nickname || '').toLowerCase().includes(q) || (p.real_name || '').toLowerCase().includes(q)
-      const matchesRole = roleFilter === 'all' || p.role === roleFilter
-      const matchesNat = nationality === 'all' || p.nationality === nationality
-      const matchesKd = p.kd >= minKd
-      const matchesHs = !isHeadshotRelevant || p.hsPct >= minHs
-      return matchesSearch && matchesRole && matchesNat && matchesKd && matchesHs
+      if (!q) return true
+      const nickname = normalizeSearchText(p.nickname)
+      const realName = normalizeSearchText(p.real_name)
+      return nickname.includes(q) || realName.includes(q)
     })
 
     filtered.sort((a, b) => {
@@ -433,7 +582,7 @@ export default function PlayersPage() {
     })
 
     return filtered
-  }, [gamePlayers, search, roleFilter, nationality, minKd, minHs, sortKey, isHeadshotRelevant])
+  }, [gamePlayers, normalizedSearch, sortKey])
 
   useEffect(() => {
     if (!compareMode) return
@@ -512,63 +661,39 @@ export default function PlayersPage() {
           padding: 14,
           marginBottom: 14,
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))',
+          gridTemplateColumns: '1fr auto',
           gap: 10,
+          alignItems: 'center',
         }}>
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder='Oyuncu ara...'
-            style={{ height: 36, borderRadius: 10, border: '1px solid #333', background: '#131313', color: '#fff', padding: '0 12px', outline: 'none' }}
-          />
-
-          <select
-            value={roleFilter}
-            onChange={e => setRoleFilter(e.target.value)}
-            style={{ height: 36, borderRadius: 10, border: '1px solid #333', background: '#131313', color: '#fff', padding: '0 10px' }}
-          >
-            {roleOptions.map(role => (
-              <option key={role} value={role}>{role === 'all' ? 'Tum Roller' : getRoleBadge(role).label}</option>
-            ))}
-          </select>
-
-          <select
-            value={nationality}
-            onChange={e => setNationality(e.target.value)}
-            style={{ height: 36, borderRadius: 10, border: '1px solid #333', background: '#131313', color: '#fff', padding: '0 10px' }}
-          >
-            {nationalityOptions.map(item => (
-              <option key={item} value={item}>{item === 'all' ? 'Tum Ulkeler' : item}</option>
-            ))}
-          </select>
-
-          <select
-            value={sortKey}
-            onChange={e => setSortKey(e.target.value)}
-            style={{ height: 36, borderRadius: 10, border: '1px solid #333', background: '#131313', color: '#fff', padding: '0 10px' }}
-          >
-            <option value='impact'>Impact Score</option>
-            <option value='kd'>K/D</option>
-            <option value='hs'>Headshot %</option>
-            <option value='wr'>Win Rate</option>
-          </select>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <label style={{ fontSize: 11, color: '#a1a1a1' }}>Min K/D: {fmt(minKd, 2)}</label>
-            <input type='range' min='0.5' max='2.5' step='0.05' value={minKd} onChange={e => setMinKd(Number(e.target.value))} />
+          <div style={{ position: 'relative' }}>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder='Oyuncu ara (nick veya gerçek isim)...'
+              style={{ height: 38, width: '100%', borderRadius: 12, border: '1px solid #333', background: '#131313', color: '#fff', padding: '0 38px 0 12px', outline: 'none' }}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                style={{ position: 'absolute', right: 8, top: 7, width: 24, height: 24, borderRadius: 8, border: '1px solid #353535', background: '#1a1a1a', color: '#999', cursor: 'pointer', fontSize: 12 }}
+              >
+                ✕
+              </button>
+            )}
           </div>
 
-          {isHeadshotRelevant ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <label style={{ fontSize: 11, color: '#a1a1a1' }}>Min HS%: {Math.round(minHs)}%</label>
-              <input type='range' min='0' max='80' step='1' value={minHs} onChange={e => setMinHs(Number(e.target.value))} />
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, color: '#8f8f8f', fontSize: 11 }}>
-              <span>HS filtresi bu oyun icin kapali.</span>
-              <span>LoL scout listesi role ve K/D odakli calisir.</span>
-            </div>
-          )}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <select
+              value={sortKey}
+              onChange={e => setSortKey(e.target.value)}
+              style={{ height: 38, borderRadius: 12, border: '1px solid #333', background: '#131313', color: '#fff', padding: '0 10px' }}
+            >
+              <option value='impact'>Impact Score</option>
+              <option value='kd'>K/D</option>
+              <option value='hs'>Headshot %</option>
+              <option value='wr'>Win Rate</option>
+            </select>
+          </div>
         </div>
 
         <div style={{ fontSize: 12, color: '#8d8d8d', marginBottom: 8 }}>
@@ -606,7 +731,13 @@ export default function PlayersPage() {
             {loading && <div style={{ padding: 18, color: '#8f8f8f', fontSize: 13 }}>Oyuncular yukleniyor...</div>}
             {!loading && error && <div style={{ padding: 18, color: '#ff6a7f', fontSize: 13 }}>{error}</div>}
             {!loading && !error && visiblePlayers.length === 0 && (
-              <div style={{ padding: 18, color: '#8f8f8f', fontSize: 13 }}>Filtreye uygun oyuncu bulunamadi.</div>
+              <div style={{ padding: 26, textAlign: 'center' }}>
+                <div style={{ fontSize: 26, marginBottom: 8 }}>🔎</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#e2e2e2', marginBottom: 4 }}>Oyuncu Bulunamadı</div>
+                <div style={{ fontSize: 12, color: '#8f8f8f' }}>
+                  Arama kelimesini sadeleştirip tekrar deneyin ya da oyun filtresini değiştirin.
+                </div>
+              </div>
             )}
 
             {!loading && !error && visiblePlayers.map((player, idx) => {
@@ -679,7 +810,7 @@ export default function PlayersPage() {
         </div>
 
         <div style={{ marginTop: 10, fontSize: 11, color: '#7a7a7a' }}>
-          Not: Oyuncu listesi secili oyunda en az bir `player_match_stats` kaydi olan oyunculardan uretilir; tablo mevcut degilse gecici team fallback kullanilir.
+          Not: Oyuncular istatistikleri olmasa bile arama sonuclarinda listelenir. Faker/Caps gibi isimler dogrudan bulunabilir.
         </div>
       </div>
     </div>

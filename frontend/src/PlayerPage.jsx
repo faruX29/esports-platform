@@ -129,7 +129,7 @@ function PlayerHeroAvatar({ src, name, size = 120, isTR }) {
 }
 
 // ─── Maç satırı ──────────────────────────────────────────────────────────────
-function MatchRow({ match, teamId }) {
+function MatchRow({ match, teamId, isMobile = false }) {
   const navigate = useNavigate()
   const isA      = match.team_a_id === teamId
   const myTeam   = isA ? match.team_a : match.team_b
@@ -144,7 +144,7 @@ function MatchRow({ match, teamId }) {
       onClick={() => navigate(`/match/${match.id}`)}
       style={{
         display: 'grid',
-        gridTemplateColumns: '36px 1fr auto auto auto',
+        gridTemplateColumns: isMobile ? '32px 1fr auto' : '36px 1fr auto auto auto',
         gap: 10, alignItems: 'center',
         padding: '10px 14px', borderRadius: 10,
         background: '#0d0d0d', border: '1px solid #181818',
@@ -183,17 +183,21 @@ function MatchRow({ match, teamId }) {
       </div>
 
       {/* Game */}
-      <div style={{ fontSize: 10, color: '#444', whiteSpace: 'nowrap', textAlign: 'right' }}>
-        {match.game?.name === 'Counter-Strike 2' ? 'CS2'
-          : match.game?.name === 'League of Legends' ? 'LoL'
-          : match.game?.name?.includes?.('alorant') ? 'VAL'
-          : (match.game?.name ?? '?')}
-      </div>
+      {!isMobile && (
+        <div style={{ fontSize: 10, color: '#444', whiteSpace: 'nowrap', textAlign: 'right' }}>
+          {match.game?.name === 'Counter-Strike 2' ? 'CS2'
+            : match.game?.name === 'League of Legends' ? 'LoL'
+            : match.game?.name?.toLowerCase?.().includes('valorant') ? 'VAL'
+            : (match.game?.name ?? '?')}
+        </div>
+      )}
 
       {/* Date */}
-      <div style={{ fontSize: 10, color: '#383838', whiteSpace: 'nowrap', textAlign: 'right' }}>
-        {new Date(match.scheduled_at).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' })}
-      </div>
+      {!isMobile && (
+        <div style={{ fontSize: 10, color: '#383838', whiteSpace: 'nowrap', textAlign: 'right' }}>
+          {new Date(match.scheduled_at).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' })}
+        </div>
+      )}
     </div>
   )
 }
@@ -393,12 +397,267 @@ const NAT_FLAGS = {
 }
 
 const SOCIAL_ICON_MAP = {
+  x: { icon: '𝕏', label: 'X/Twitter', short: 'X' },
   twitter: { icon: '𝕏', label: 'X/Twitter' },
-  twitch: { icon: '🎮', label: 'Twitch' },
-  youtube: { icon: '▶', label: 'YouTube' },
-  instagram: { icon: '◎', label: 'Instagram' },
-  tiktok: { icon: '♪', label: 'TikTok' },
-  steam: { icon: 'S', label: 'Steam' },
+  twitch: { icon: '🎮', label: 'Twitch', short: 'TW' },
+  youtube: { icon: '▶', label: 'YouTube', short: 'YT' },
+  instagram: { icon: '◎', label: 'Instagram', short: 'IG' },
+  tiktok: { icon: '♪', label: 'TikTok', short: 'TT' },
+  steam: { icon: 'S', label: 'Steam', short: 'ST' },
+}
+
+function fmtCareerDate(value) {
+  if (!value) return null
+  const dt = new Date(value)
+  if (!Number.isNaN(dt.getTime())) {
+    return dt.toLocaleDateString('tr-TR', { month: 'short', year: 'numeric' })
+  }
+  const raw = String(value).trim()
+  return raw || null
+}
+
+function buildCareerTimelineEntries(careerHistoryRaw = [], formerTeams = []) {
+  const source = Array.isArray(careerHistoryRaw) && careerHistoryRaw.length > 0
+    ? careerHistoryRaw
+    : formerTeams.map(team => ({ team }))
+
+  const entries = source
+    .map((item, idx) => {
+      if (typeof item === 'string') {
+        const team = item.trim()
+        if (!team) return null
+        return {
+          key: `${team}-${idx}`,
+          team,
+          role: null,
+          start: null,
+          end: null,
+          note: null,
+          current: false,
+        }
+      }
+
+      if (!item || typeof item !== 'object') return null
+
+      const team = String(
+        item.team_name || item.team || item.org || item.organization || item.name || ''
+      ).trim()
+      if (!team) return null
+
+      const start = item.start || item.start_date || item.joined_at || item.from || null
+      const end = item.end || item.end_date || item.left_at || item.to || null
+      const current = Boolean(item.current || item.is_current || String(end || '').toLowerCase() === 'present')
+
+      return {
+        key: `${team}-${idx}`,
+        team,
+        role: item.role || item.position || null,
+        start,
+        end,
+        note: item.note || item.achievement || item.status || null,
+        current,
+      }
+    })
+    .filter(Boolean)
+
+  const rank = value => {
+    if (!value) return 0
+    const ts = new Date(value).getTime()
+    return Number.isFinite(ts) ? ts : 0
+  }
+
+  return entries
+    .sort((a, b) => rank(b.start || b.end) - rank(a.start || a.end))
+    .slice(0, 12)
+}
+
+function CareerTimeline({ entries }) {
+  if (!entries?.length) return null
+
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <SectionTitle icon="🧭" label="Career Timeline" />
+      <div style={{
+        position: 'relative',
+        paddingLeft: 18,
+        borderLeft: '2px solid rgba(200,16,46,.28)',
+        display: 'grid',
+        gap: 10,
+      }}>
+        {entries.map((item, idx) => {
+          const startLabel = fmtCareerDate(item.start)
+          const endLabel = item.current ? 'Simdi' : fmtCareerDate(item.end)
+          const dateLabel = startLabel || endLabel
+            ? `${startLabel || 'Bilinmiyor'} - ${endLabel || 'Bilinmiyor'}`
+            : 'Tarih bilgisi yok'
+
+          return (
+            <div
+              key={item.key || `${item.team}-${idx}`}
+              style={{
+                position: 'relative',
+                background: 'linear-gradient(135deg, rgba(200,16,46,.1), rgba(0,0,0,.45))',
+                border: '1px solid rgba(200,16,46,.24)',
+                borderRadius: 12,
+                padding: '10px 12px',
+              }}
+            >
+              <span style={{
+                position: 'absolute',
+                left: -24,
+                top: 16,
+                width: 10,
+                height: 10,
+                borderRadius: '50%',
+                background: item.current ? '#ff6b7a' : '#888',
+                boxShadow: item.current ? '0 0 12px rgba(255,107,122,.55)' : 'none',
+              }} />
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#f5f5f5' }}>{item.team}</div>
+                <div style={{ fontSize: 10, color: '#ffb7c0', letterSpacing: '.3px' }}>{dateLabel}</div>
+              </div>
+
+              {item.role && (
+                <div style={{ marginTop: 3, fontSize: 11, color: '#df9ea7' }}>
+                  Rol: {item.role}
+                </div>
+              )}
+
+              {item.note && (
+                <div style={{ marginTop: 4, fontSize: 11, color: '#bdbdbd' }}>
+                  {item.note}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function parseSignatureEntries(raw, fallbackType = 'Hero') {
+  if (!raw) return []
+
+  const toEntry = (item, nameHint = '') => {
+    if (item == null) return null
+
+    if (typeof item === 'string') {
+      const name = item.trim()
+      if (!name) return null
+      return { name, type: fallbackType, count: 0, icon: fallbackType === 'Weapon' ? '🔫' : '🧿', image: null }
+    }
+
+    if (typeof item === 'number') {
+      const hint = String(nameHint || '').trim()
+      if (!hint) return null
+      return { name: hint, type: fallbackType, count: Number.isFinite(item) ? item : 0, icon: fallbackType === 'Weapon' ? '🔫' : '🧿', image: null }
+    }
+
+    if (typeof item !== 'object') return null
+
+    const name = String(
+      item.name || item.hero || item.agent || item.character || item.weapon || item.label || item.title || nameHint || ''
+    ).trim()
+    if (!name) return null
+
+    const count = Number(item.count ?? item.matches ?? item.picks ?? item.played ?? item.usage ?? item.value ?? 0)
+    const explicitType = String(item.type || '').trim().toLowerCase()
+    const type = explicitType.includes('weapon') ? 'Weapon' : explicitType.includes('hero') || explicitType.includes('agent') ? 'Hero' : fallbackType
+
+    return {
+      name,
+      type,
+      count: Number.isFinite(count) ? count : 0,
+      icon: item.icon || item.emoji || (type === 'Weapon' ? '🔫' : '🧿'),
+      image: item.image_url || item.icon_url || item.image || null,
+    }
+  }
+
+  if (Array.isArray(raw)) {
+    return raw.map(item => toEntry(item)).filter(Boolean)
+  }
+
+  if (typeof raw === 'object') {
+    return Object.entries(raw)
+      .map(([key, value]) => toEntry(value, key))
+      .filter(Boolean)
+  }
+
+  return []
+}
+
+function collectPlayerSignatureElements(extraMetadata = {}) {
+  const liq = extraMetadata?.liquipedia || {}
+  const sources = [
+    { raw: extraMetadata?.top_heroes, type: 'Hero' },
+    { raw: extraMetadata?.heroes, type: 'Hero' },
+    { raw: extraMetadata?.main_agents, type: 'Hero' },
+    { raw: extraMetadata?.character_pool, type: 'Hero' },
+    { raw: extraMetadata?.hero_pool, type: 'Hero' },
+    { raw: extraMetadata?.top_weapons, type: 'Weapon' },
+    { raw: extraMetadata?.weapons, type: 'Weapon' },
+    { raw: extraMetadata?.signature_weapons, type: 'Weapon' },
+    { raw: liq?.top_heroes, type: 'Hero' },
+    { raw: liq?.heroes, type: 'Hero' },
+    { raw: liq?.main_agents, type: 'Hero' },
+    { raw: liq?.top_weapons, type: 'Weapon' },
+    { raw: liq?.weapons, type: 'Weapon' },
+  ]
+
+  const bucket = new Map()
+  for (const source of sources) {
+    const parsed = parseSignatureEntries(source.raw, source.type)
+    for (const item of parsed) {
+      const key = `${item.type}:${item.name.toLowerCase()}`
+      const existing = bucket.get(key)
+      if (!existing) {
+        bucket.set(key, item)
+        continue
+      }
+      bucket.set(key, {
+        ...existing,
+        count: Math.max(existing.count || 0, item.count || 0),
+        image: existing.image || item.image,
+        icon: existing.icon || item.icon,
+      })
+    }
+  }
+
+  return [...bucket.values()]
+    .sort((a, b) => {
+      const byCount = (b.count || 0) - (a.count || 0)
+      if (byCount !== 0) return byCount
+      return a.name.localeCompare(b.name, 'tr')
+    })
+    .slice(0, 3)
+}
+
+function PlayerSignatureElements({ items = [] }) {
+  if (!items.length) return null
+
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <SectionTitle icon="✨" label="Player Signature" />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 10 }}>
+        {items.map((item, idx) => (
+          <div key={`${item.type}_${item.name}_${idx}`} style={{ borderRadius: 12, border: '1px solid rgba(255,70,85,.22)', background: 'linear-gradient(130deg, rgba(255,70,85,.1), rgba(10,10,10,.92))', padding: '10px 11px', display: 'flex', alignItems: 'center', gap: 9 }}>
+            {item.image
+              ? <img src={item.image} alt={item.name} style={{ width: 30, height: 30, objectFit: 'contain', borderRadius: 8, background: '#101010', border: '1px solid #232323' }} />
+              : <div style={{ width: 30, height: 30, borderRadius: 8, background: '#151515', border: '1px solid #232323', display: 'grid', placeItems: 'center', fontSize: 16 }}>{item.icon || (item.type === 'Weapon' ? '🔫' : '🧿')}</div>}
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#f3f3f3', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+              <div style={{ marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 9, color: item.type === 'Weapon' ? '#ffd089' : '#9fe7ff', border: `1px solid ${item.type === 'Weapon' ? 'rgba(255,184,0,.35)' : 'rgba(90,200,255,.35)'}`, borderRadius: 999, padding: '1px 6px', background: item.type === 'Weapon' ? 'rgba(255,184,0,.12)' : 'rgba(90,200,255,.12)' }}>{item.type}</span>
+                {(item.count || 0) > 0 && <span style={{ fontSize: 10, color: '#b4b4b4' }}>x{Math.round(item.count)}</span>}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 // ─── Ana Bileşen ─────────────────────────────────────────────────────────────
@@ -406,6 +665,7 @@ export default function PlayerPage() {
   const { id }   = useParams()        // players.id (UUID)
   const navigate = useNavigate()
   const { togglePlayerFollow, isPlayerFollowed } = useUser()
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 900)
 
   const [player,    setPlayer]    = useState(null)
   const [team,      setTeam]      = useState(null)
@@ -414,6 +674,12 @@ export default function PlayerPage() {
   const [individualStats, setIndividualStats] = useState(null)
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState(null)
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 900)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   const fetchAll = useCallback(async () => {
     setLoading(true); setError(null)
@@ -524,10 +790,12 @@ export default function PlayerPage() {
   const liquipediaMeta = player?.extra_metadata?.liquipedia || {}
   const socials = Object.entries(liquipediaMeta.social_links || {}).filter(([_, href]) => typeof href === 'string' && href.trim())
   const formerTeams = Array.isArray(liquipediaMeta.former_teams) ? liquipediaMeta.former_teams.slice(0, 6) : []
+  const careerTimelineEntries = buildCareerTimelineEntries(liquipediaMeta.career_history, formerTeams)
+  const signatureElements = collectPlayerSignatureElements(player?.extra_metadata || {})
 
   // ── Render ────────────────────────────────────────────────────
   return (
-    <div style={{ maxWidth: 820, margin: '0 auto', padding: '0 0 80px', color: 'white' }}>
+    <div style={{ maxWidth: 820, margin: '0 auto', padding: isMobile ? '0 0 42px' : '0 0 80px', color: 'white' }}>
 
       <style>{`
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
@@ -540,7 +808,7 @@ export default function PlayerPage() {
         position: 'relative', overflow: 'hidden',
         background: 'linear-gradient(160deg,#0d0d0d 0%,#111 100%)',
         borderBottom: isTR ? '1px solid rgba(200,16,46,.4)' : '1px solid #1a1a1a',
-        padding: '36px 28px 28px',
+        padding: isMobile ? '20px 14px 16px' : '36px 28px 28px',
         marginBottom: 28,
       }}>
         {/* Turkish radial glow */}
@@ -552,7 +820,7 @@ export default function PlayerPage() {
         )}
 
         {/* Geri & Takip et */}
-        <div style={{ position: 'absolute', top: 16, left: 20, right: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ position: 'absolute', top: isMobile ? 10 : 16, left: isMobile ? 12 : 20, right: isMobile ? 12 : 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
           <button
             onClick={() => navigate(-1)}
             style={{ background: 'rgba(255,255,255,.06)', border: '1px solid #222', borderRadius: 8, color: '#888', padding: '6px 12px', fontSize: 12, cursor: 'pointer', transition: 'color .15s' }}
@@ -572,13 +840,13 @@ export default function PlayerPage() {
         </div>
 
         {/* Oyuncu kimliği */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginTop: 30, flexWrap: 'wrap' }}>
-          <PlayerHeroAvatar src={player.image_url} name={player.nickname} size={110} isTR={isTR} />
+        <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? 14 : 24, marginTop: isMobile ? 54 : 30, flexWrap: isMobile ? 'nowrap' : 'wrap', flexDirection: isMobile ? 'column' : 'row' }}>
+          <PlayerHeroAvatar src={player.image_url} name={player.nickname} size={isMobile ? 88 : 110} isTR={isTR} />
 
           <div style={{ flex: 1, minWidth: 0 }}>
             {/* Handle */}
             <h1 style={{
-              margin: '0 0 4px', fontSize: 32, fontWeight: 900, lineHeight: 1.1,
+              margin: '0 0 4px', fontSize: isMobile ? 28 : 32, fontWeight: 900, lineHeight: 1.1,
               background: isTR
                 ? 'linear-gradient(135deg,#fff 40%,#ff8a8a)'
                 : 'linear-gradient(135deg,#fff,#777)',
@@ -639,37 +907,47 @@ export default function PlayerPage() {
             )}
 
             {socials.length > 0 && (
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-                {socials.map(([network, href]) => {
-                  const meta = SOCIAL_ICON_MAP[network] || { icon: '●', label: network }
-                  return (
-                    <a
-                      key={network}
-                      href={href}
-                      target="_blank"
-                      rel="noreferrer"
-                      title={meta.label}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 6,
-                        textDecoration: 'none',
-                        borderRadius: 999, padding: '5px 10px',
-                        border: '1px solid rgba(200,16,46,.42)',
-                        background: 'radial-gradient(circle at 20% 20%, rgba(200,16,46,.44), rgba(0,0,0,.88))',
-                        color: '#fff', fontSize: 11, fontWeight: 700,
-                      }}
-                    >
-                      <span>{meta.icon}</span>
-                      <span>{meta.label}</span>
-                    </a>
-                  )
-                })}
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: 10, color: '#666', marginBottom: 6, letterSpacing: '.8px', textTransform: 'uppercase' }}>
+                  Social Links
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {socials.map(([network, href]) => {
+                    const meta = SOCIAL_ICON_MAP[network] || { icon: '●', label: network, short: String(network || '?').slice(0, 2).toUpperCase() }
+                    return (
+                      <a
+                        key={network}
+                        href={href}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={meta.label}
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: '50%',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          textDecoration: 'none',
+                          border: '1px solid rgba(200,16,46,.45)',
+                          background: 'radial-gradient(circle at 35% 25%, rgba(255,115,130,.42), rgba(0,0,0,.9))',
+                          color: '#fff',
+                          fontSize: 12,
+                          fontWeight: 800,
+                        }}
+                      >
+                        <span aria-hidden>{meta.icon || meta.short}</span>
+                      </a>
+                    )
+                  })}
+                </div>
               </div>
             )}
 
             {formerTeams.length > 0 && (
               <div style={{ marginTop: 10, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {formerTeams.map(teamName => (
-                  <span key={teamName} style={{ fontSize: 10, color: '#f0c2c8', border: '1px solid rgba(200,16,46,.3)', borderRadius: 8, padding: '3px 7px', background: 'rgba(200,16,46,.08)' }}>
+                {formerTeams.map((teamName, idx) => (
+                  <span key={`${teamName}_${idx}`} style={{ fontSize: 10, color: '#f0c2c8', border: '1px solid rgba(200,16,46,.3)', borderRadius: 8, padding: '3px 7px', background: 'rgba(200,16,46,.08)' }}>
                     {teamName}
                   </span>
                 ))}
@@ -680,7 +958,7 @@ export default function PlayerPage() {
 
         {/* Hızlı istatistikler */}
         {analytics && (
-          <div style={{ display: 'flex', gap: 10, marginTop: 22, flexWrap: 'wrap' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,minmax(0,1fr))' : 'repeat(4,minmax(0,1fr))', gap: 10, marginTop: 22 }}>
             <StatBox icon="⚔️" value={analytics.totalMatches}   label="Maç"        color="#fff"     />
             <StatBox icon="✅" value={analytics.wonMatches}     label="Galibiyet"  color="#4CAF50"  />
             <StatBox icon="❌" value={analytics.lostMatches}    label="Mağ."       color="#FF4655"  />
@@ -703,10 +981,14 @@ export default function PlayerPage() {
       </div>
 
       {/* ══ İÇERİK ════════════════════════════════════════════════ */}
-      <div style={{ padding: '0 20px' }}>
+      <div style={{ padding: isMobile ? '0 12px' : '0 20px' }}>
 
         {/* Scout Analytics */}
         <ScoutPanel analytics={analytics} individual={individualStats} />
+
+        <PlayerSignatureElements items={signatureElements} />
+
+        <CareerTimeline entries={careerTimelineEntries} />
 
         {/* Maç geçmişi */}
         {matches.length > 0 && (
@@ -716,6 +998,7 @@ export default function PlayerPage() {
               <MatchRow
                 key={m.id} match={m}
                 teamId={player.team_pandascore_id}
+                isMobile={isMobile}
               />
             ))}
           </div>

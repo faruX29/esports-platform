@@ -54,7 +54,7 @@ export function AuthProvider({ children }) {
 
 		const { data, error } = await supabase
 			.from('profiles')
-			.select('id, username, avatar_url, favorite_team_id')
+			.select('id, username, avatar_url, favorite_team_id, scout_score')
 			.eq('id', targetUser.id)
 			.maybeSingle()
 
@@ -65,6 +65,7 @@ export function AuthProvider({ children }) {
 				username: defaultUsername,
 				avatar_url: defaultAvatar,
 				favorite_team_id: null,
+				scout_score: 0,
 			}
 			setProfile(fallback)
 			setProfileLoading(false)
@@ -78,6 +79,7 @@ export function AuthProvider({ children }) {
 				username: defaultUsername,
 				avatar_url: defaultAvatar,
 				favorite_team_id: null,
+				scout_score: 0,
 			}
 			const { error: upsertError } = await supabase.from('profiles').upsert(payload, { onConflict: 'id' })
 			if (upsertError) {
@@ -94,6 +96,7 @@ export function AuthProvider({ children }) {
 			username: data.username || defaultUsername,
 			avatar_url: data.avatar_url || defaultAvatar,
 			favorite_team_id: data.favorite_team_id ?? null,
+			scout_score: Number(data.scout_score || 0),
 		}
 		setProfile(normalized)
 		setProfileLoading(false)
@@ -175,6 +178,7 @@ export function AuthProvider({ children }) {
 				username: finalUsername,
 				avatar_url: data.user.user_metadata?.avatar_url || null,
 				favorite_team_id: null,
+				scout_score: 0,
 			}, { onConflict: 'id' })
 			await refreshProfile(data.user)
 		}
@@ -204,6 +208,7 @@ export function AuthProvider({ children }) {
 			...(partial?.username !== undefined ? { username: partial.username || buildUsername(user) } : {}),
 			...(partial?.avatar_url !== undefined ? { avatar_url: partial.avatar_url || null } : {}),
 			...(partial?.favorite_team_id !== undefined ? { favorite_team_id: partial.favorite_team_id } : {}),
+			...(partial?.scout_score !== undefined ? { scout_score: Number(partial.scout_score || 0) } : {}),
 		}
 		const { error } = await supabase.from('profiles').upsert(payload, { onConflict: 'id' })
 		if (error) throw error
@@ -212,6 +217,7 @@ export function AuthProvider({ children }) {
 			username: payload.username ?? profile?.username ?? buildUsername(user),
 			avatar_url: payload.avatar_url ?? profile?.avatar_url ?? null,
 			favorite_team_id: payload.favorite_team_id ?? profile?.favorite_team_id ?? null,
+			scout_score: payload.scout_score ?? profile?.scout_score ?? 0,
 		}
 		setProfile(merged)
 		return merged

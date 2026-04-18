@@ -3,7 +3,7 @@
  * Hero + Skor | AI Win Probability | Live Scoreboard | Harita istatistikleri | H2H | Kadro | MVP Oylama
  * Follow state -> UserContext
  */
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useNavigate, Link }             from 'react-router-dom'
 import { supabase }                                 from './supabaseClient'
 import { isTurkishTeam }                           from './constants'
@@ -12,6 +12,8 @@ import { useUser }                                 from './context/UserContext'
 /* ─── Voter fingerprint ─────────────────────────────────────────────────────── */
 const VOTER_KEY = 'esports_voter_id'
 const VOTED_KEY = 'esports_mvp_voted'
+const COMMUNITY_VOTE_TABLE = 'match_community_votes'
+const LOCAL_COMMUNITY_VOTE_KEY = 'esports_match_community_votes_v1'
 function getVoterId() {
   let id = localStorage.getItem(VOTER_KEY)
   if (!id) { id = 'v_' + Math.random().toString(36).slice(2) + '_' + Date.now(); localStorage.setItem(VOTER_KEY, id) }
@@ -19,6 +21,63 @@ function getVoterId() {
 }
 function getVotedMap()  { try { return JSON.parse(localStorage.getItem(VOTED_KEY) || '{}') } catch { return {} } }
 function setVotedLocal(matchId, playerId) { const m = getVotedMap(); m[matchId] = playerId; localStorage.setItem(VOTED_KEY, JSON.stringify(m)) }
+
+function isMissingTableError(error, tableName) {
+  const code = String(error?.code || '').trim()
+  const msg = String(error?.message || '').toLowerCase()
+  const table = String(tableName || '').toLowerCase()
+  return code === '42P01' || msg.includes(table) || (msg.includes('relation') && msg.includes('does not exist'))
+}
+
+function readLocalCommunityVotes() {
+  try {
+    return JSON.parse(localStorage.getItem(LOCAL_COMMUNITY_VOTE_KEY) || '{}')
+  } catch {
+    return {}
+  }
+}
+
+function writeLocalCommunityVotes(payload) {
+  localStorage.setItem(LOCAL_COMMUNITY_VOTE_KEY, JSON.stringify(payload || {}))
+}
+
+function getLocalCommunityVoteState(matchId, voterId) {
+  const all = readLocalCommunityVotes()
+  const key = String(matchId || '')
+  const entry = all[key] || { votes: { teamA: 0, teamB: 0 }, byVoter: {} }
+  const myVote = entry.byVoter?.[voterId] || null
+
+  return {
+    votes: {
+      teamA: Number(entry?.votes?.teamA || 0),
+      teamB: Number(entry?.votes?.teamB || 0),
+    },
+    myVote,
+  }
+}
+
+function setLocalCommunityVote(matchId, voterId, side) {
+  const all = readLocalCommunityVotes()
+  const key = String(matchId || '')
+  if (!all[key]) all[key] = { votes: { teamA: 0, teamB: 0 }, byVoter: {} }
+
+  const entry = all[key]
+  const prev = entry.byVoter?.[voterId] || null
+  if (prev === side) {
+    writeLocalCommunityVotes(all)
+    return getLocalCommunityVoteState(matchId, voterId)
+  }
+
+  if (prev === 'teamA') entry.votes.teamA = Math.max(0, Number(entry.votes.teamA || 0) - 1)
+  if (prev === 'teamB') entry.votes.teamB = Math.max(0, Number(entry.votes.teamB || 0) - 1)
+
+  entry.byVoter[voterId] = side
+  if (side === 'teamA') entry.votes.teamA = Number(entry.votes.teamA || 0) + 1
+  if (side === 'teamB') entry.votes.teamB = Number(entry.votes.teamB || 0) + 1
+
+  writeLocalCommunityVotes(all)
+  return getLocalCommunityVoteState(matchId, voterId)
+}
 
 /* ─── Yardımcılar ───────────────────────────────────────────────────────────── */
 const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('tr-TR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : '—'
@@ -189,6 +248,278 @@ function buildLivePlayerBoard(matchRaw, rosters, teamAId, teamBId) {
   }
 }
 
+function pickScoutMvpCandidate(liveBoard, teamAName, teamBName) {
+  const pool = [
+    ...(liveBoard?.teamA || []).map(player => ({ ...player, teamName: teamAName })),
+    ...(liveBoard?.teamB || []).map(player => ({ ...player, teamName: teamBName })),
+  ]
+  if (!pool.length) return null
+
+  const score = player => Number(player.kills || 0) * 1.1 + Number(player.assists || 0) * 0.45 - Number(player.deaths || 0) * 0.35
+  return [...pool].sort((left, right) => score(right) - score(left))[0] || null
+}
+
+function asPct(value) {
+  const num = toNum(value)
+  if (num == null) return null
+  if (num <= 1) return Math.round(clamp(num * 100, 0, 100))
+  return Math.round(clamp(num, 0, 100))
+}
+
+function normalizeMapRowsFromExtraMetadata(extraMetadata) {
+  const raw = extraMetadata || {}
+  const buckets = [
+    raw?.map_stats,
+    raw?.mapStats,
+    raw?.maps,
+    raw?.statistics?.maps,
+    raw?.stats?.maps,
+    raw?.analysis?.maps,
+    raw?.scout?.maps,
+  ]
+
+  const rows = []
+  for (const bucket of buckets) {
+    if (Array.isArray(bucket)) {
+      rows.push(...bucket)
+      continue
+    }
+    if (bucket && typeof bucket === 'object') {
+      for (const [mapName, value] of Object.entries(bucket)) {
+        if (value && typeof value === 'object') {
+          rows.push({ map_name: mapName, ...value })
+        }
+      }
+    }
+  }
+
+  return rows
+}
+
+function normalizeMapInsight(entry) {
+  if (!entry || typeof entry !== 'object') return null
+  const map = String(entry.map_name || entry.map?.name || entry.map || entry.name || '').trim()
+  if (!map) return null
+
+  let teamAWinRate = asPct(
+    entry.team_a_win_rate ?? entry.teamAWinRate ?? entry.a_win_rate ??
+    entry.team_a?.win_rate ?? entry.team_a?.winRate
+  )
+  let teamBWinRate = asPct(
+    entry.team_b_win_rate ?? entry.teamBWinRate ?? entry.b_win_rate ??
+    entry.team_b?.win_rate ?? entry.team_b?.winRate
+  )
+
+  const teamAWins = toNum(entry.team_a_wins ?? entry.teamAWins)
+  const teamBWins = toNum(entry.team_b_wins ?? entry.teamBWins)
+  const total = toNum(entry.total ?? entry.games ?? entry.match_count ?? entry.sample_size)
+
+  if ((teamAWinRate == null || teamBWinRate == null) && total && total > 0 && teamAWins != null && teamBWins != null) {
+    teamAWinRate = Math.round(clamp((teamAWins / total) * 100, 0, 100))
+    teamBWinRate = Math.round(clamp((teamBWins / total) * 100, 0, 100))
+  }
+
+  if (teamAWinRate != null && teamBWinRate == null) teamBWinRate = 100 - teamAWinRate
+  if (teamBWinRate != null && teamAWinRate == null) teamAWinRate = 100 - teamBWinRate
+
+  if (teamAWinRate == null || teamBWinRate == null) return null
+
+  return {
+    map,
+    teamAWinRate,
+    teamBWinRate,
+    sample: Math.max(0, Math.round(total || 0)),
+  }
+}
+
+function buildStreak(matches, teamId) {
+  let type = null
+  let count = 0
+
+  for (const match of (matches || [])) {
+    let result = 'D'
+    if (match?.winner_id != null) {
+      result = idEq(match.winner_id, teamId) ? 'W' : 'L'
+    }
+
+    if (result === 'D') break
+    if (!type) {
+      type = result
+      count = 1
+      continue
+    }
+    if (result === type) {
+      count += 1
+    } else {
+      break
+    }
+  }
+
+  return { type, count }
+}
+
+function buildTacticalScoutReport({
+  extraMetadata,
+  mapStats,
+  h2hMatches,
+  teamAId,
+  teamBId,
+  teamAName,
+  teamBName,
+}) {
+  const mapRows = normalizeMapRowsFromExtraMetadata(extraMetadata)
+    .map(normalizeMapInsight)
+    .filter(Boolean)
+
+  const fallbackRows = (mapStats || []).map(row => ({
+    map: row.map,
+    teamAWinRate: row.teamAWinRate,
+    teamBWinRate: row.teamBWinRate,
+    sample: Math.round(toNum(row.total) || 0),
+  }))
+
+  const mapByName = new Map()
+  for (const row of [...fallbackRows, ...mapRows]) {
+    const key = String(row.map || '').toLowerCase()
+    if (!key) continue
+    const current = mapByName.get(key)
+    if (!current || row.sample >= current.sample) {
+      mapByName.set(key, row)
+    }
+  }
+
+  const normalizedMaps = [...mapByName.values()].sort((a, b) => b.sample - a.sample)
+  const bestA = normalizedMaps.length ? [...normalizedMaps].sort((a, b) => b.teamAWinRate - a.teamAWinRate)[0] : null
+  const worstA = normalizedMaps.length ? [...normalizedMaps].sort((a, b) => a.teamAWinRate - b.teamAWinRate)[0] : null
+  const bestB = normalizedMaps.length ? [...normalizedMaps].sort((a, b) => b.teamBWinRate - a.teamBWinRate)[0] : null
+  const worstB = normalizedMaps.length ? [...normalizedMaps].sort((a, b) => a.teamBWinRate - b.teamBWinRate)[0] : null
+
+  const recent = (h2hMatches || []).slice(0, 5)
+  let teamAWins = 0
+  let teamBWins = 0
+  let draws = 0
+
+  for (const match of recent) {
+    if (match?.winner_id == null) {
+      draws += 1
+      continue
+    }
+    if (idEq(match.winner_id, teamAId)) teamAWins += 1
+    if (idEq(match.winner_id, teamBId)) teamBWins += 1
+  }
+
+  const recentSample = recent.length
+  const teamAWinRate = recentSample > 0 ? Math.round((teamAWins / recentSample) * 100) : null
+  const teamBWinRate = recentSample > 0 ? Math.round((teamBWins / recentSample) * 100) : null
+  const teamALossRate = recentSample > 0 ? Math.round((teamBWins / recentSample) * 100) : null
+  const teamBLossRate = recentSample > 0 ? Math.round((teamAWins / recentSample) * 100) : null
+
+  const streakA = buildStreak(recent, teamAId)
+  const streakB = buildStreak(recent, teamBId)
+
+  const teamAStrengths = []
+  const teamAWeaknesses = []
+  const teamBStrengths = []
+  const teamBWeaknesses = []
+
+  if (bestA && bestA.teamAWinRate >= 55) {
+    teamAStrengths.push(`${bestA.map} haritasinda %${bestA.teamAWinRate} kazaniyor`)
+  }
+  if (bestB && bestB.teamBWinRate >= 55) {
+    teamBStrengths.push(`${bestB.map} haritasinda %${bestB.teamBWinRate} kazaniyor`)
+  }
+
+  if (worstA && worstA.teamAWinRate <= 45) {
+    teamAWeaknesses.push(`${worstA.map} haritasinda zayif (%${worstA.teamAWinRate})`)
+  }
+  if (worstB && worstB.teamBWinRate <= 45) {
+    teamBWeaknesses.push(`${worstB.map} haritasinda zayif (%${worstB.teamBWinRate})`)
+  }
+
+  if (teamAWinRate != null && teamAWinRate >= 55) {
+    teamAStrengths.push(`Son ${recentSample} mac formu guclu (%${teamAWinRate} galibiyet)`)
+  }
+  if (teamBWinRate != null && teamBWinRate >= 55) {
+    teamBStrengths.push(`Son ${recentSample} mac formu guclu (%${teamBWinRate} galibiyet)`)
+  }
+
+  if (teamALossRate != null && teamALossRate >= 45) {
+    teamAWeaknesses.push(`Son ${recentSample} mac kayip orani yuksek (%${teamALossRate})`)
+  }
+  if (teamBLossRate != null && teamBLossRate >= 45) {
+    teamBWeaknesses.push(`Son ${recentSample} mac kayip orani yuksek (%${teamBLossRate})`)
+  }
+
+  if (streakA.type === 'W' && streakA.count >= 2) {
+    teamAStrengths.push(`${streakA.count} maclik galibiyet serisi`)
+  }
+  if (streakA.type === 'L' && streakA.count >= 2) {
+    teamAWeaknesses.push(`${streakA.count} maclik maglubiyet serisi`)
+  }
+  if (streakB.type === 'W' && streakB.count >= 2) {
+    teamBStrengths.push(`${streakB.count} maclik galibiyet serisi`)
+  }
+  if (streakB.type === 'L' && streakB.count >= 2) {
+    teamBWeaknesses.push(`${streakB.count} maclik maglubiyet serisi`)
+  }
+
+  if (teamAStrengths.length === 0) teamAStrengths.push('Denge modu: belirgin ustunluk sinyali sinirli')
+  if (teamAWeaknesses.length === 0) teamAWeaknesses.push('Kritik zayiflik sinyali tespit edilmedi')
+  if (teamBStrengths.length === 0) teamBStrengths.push('Denge modu: belirgin ustunluk sinyali sinirli')
+  if (teamBWeaknesses.length === 0) teamBWeaknesses.push('Kritik zayiflik sinyali tespit edilmedi')
+
+  return {
+    mapsUsed: normalizedMaps.length,
+    formSample: recentSample,
+    teamA: { name: teamAName, strengths: teamAStrengths.slice(0, 3), weaknesses: teamAWeaknesses.slice(0, 3) },
+    teamB: { name: teamBName, strengths: teamBStrengths.slice(0, 3), weaknesses: teamBWeaknesses.slice(0, 3) },
+  }
+}
+
+function TacticalScoutReport({ report }) {
+  const teams = [report?.teamA, report?.teamB].filter(Boolean)
+  if (teams.length === 0) return null
+
+  return (
+    <div style={{ marginTop: 14, background: '#101010', borderRadius: 14, border: '1px solid #1d1d1d', padding: 14 }}>
+      <ST icon="🧠" label="Scout Analiz" />
+      <div style={{ marginBottom: 10, fontSize: 11, color: '#9da3af' }}>
+        Map kaynaklari: {report.mapsUsed} · Form ornegi: {report.formSample}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 10 }}>
+        {teams.map(team => (
+          <div key={team.name} style={{ borderRadius: 10, border: '1px solid #1f1f1f', background: '#0b0b0b', padding: '10px 11px' }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: '#f2f2f2', marginBottom: 8 }}>{team.name}</div>
+
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: '#86efac', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
+                Strengths
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {team.strengths.map((item, idx) => (
+                  <div key={`s_${idx}`} style={{ fontSize: 11, color: '#c8f5d4' }}>+ {item}</div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 800, color: '#fda4af', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
+                Weaknesses
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {team.weaknesses.map((item, idx) => (
+                  <div key={`w_${idx}`} style={{ fontSize: 11, color: '#ffd6db' }}>- {item}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /* ─── Skeleton ──────────────────────────────────────────────────────────────── */
 function Sk({ w = '100%', h = '16px', r = '8px' }) {
   return <div style={{ width: w, height: h, borderRadius: r, background: 'linear-gradient(90deg,#111 25%,#1a1a1a 50%,#111 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite', flexShrink: 0 }} />
@@ -201,6 +532,246 @@ function ST({ icon, label }) {
       <span style={{ fontSize: 14 }}>{icon}</span>
       <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1.5px', color: '#444', textTransform: 'uppercase' }}>{label}</span>
       <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,#1e1e1e,transparent)' }} />
+    </div>
+  )
+}
+
+function CommunityPredictionPool({ matchId, teamAName, teamBName, aiWin, isFinished }) {
+  const voterIdRef = useRef(getVoterId())
+  const [votes, setVotes] = useState({ teamA: 0, teamB: 0 })
+  const [myVote, setMyVote] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [fallbackLocal, setFallbackLocal] = useState(false)
+  const [voteError, setVoteError] = useState('')
+
+  const applyRemoteRows = useCallback((rows = []) => {
+    const aggregated = { teamA: 0, teamB: 0 }
+    let mine = null
+
+    for (const row of (rows || [])) {
+      const side = row?.team_side
+      if (side === 'teamA') aggregated.teamA += 1
+      if (side === 'teamB') aggregated.teamB += 1
+      if (String(row?.voter_id || '') === String(voterIdRef.current)) mine = side
+    }
+
+    setVotes(aggregated)
+    setMyVote(mine)
+  }, [])
+
+  const hydrateVotes = useCallback(async () => {
+    if (!matchId) return
+
+    setLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from(COMMUNITY_VOTE_TABLE)
+        .select('team_side,voter_id')
+        .eq('match_id', matchId)
+
+      if (error) {
+        if (isMissingTableError(error, COMMUNITY_VOTE_TABLE)) {
+          const local = getLocalCommunityVoteState(matchId, voterIdRef.current)
+          setFallbackLocal(true)
+          setVotes(local.votes)
+          setMyVote(local.myVote)
+          setVoteError('')
+          return
+        }
+        throw error
+      }
+
+      setFallbackLocal(false)
+      setVoteError('')
+      applyRemoteRows(data || [])
+    } catch (e) {
+      setVoteError('Community vote verisi alinamadi.')
+      const local = getLocalCommunityVoteState(matchId, voterIdRef.current)
+      setFallbackLocal(true)
+      setVotes(local.votes)
+      setMyVote(local.myVote)
+    } finally {
+      setLoading(false)
+    }
+  }, [applyRemoteRows, matchId])
+
+  useEffect(() => {
+    hydrateVotes()
+  }, [hydrateVotes])
+
+  useEffect(() => {
+    if (!matchId || fallbackLocal) return undefined
+
+    let active = true
+
+    const channel = supabase
+      .channel(`community_votes_${matchId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: COMMUNITY_VOTE_TABLE, filter: `match_id=eq.${matchId}` },
+        () => {
+          if (active) hydrateVotes()
+        },
+      )
+      .subscribe()
+
+    return () => {
+      active = false
+      supabase.removeChannel(channel)
+    }
+  }, [fallbackLocal, hydrateVotes, matchId])
+
+  const handleVote = async side => {
+    if (!matchId || isFinished || submitting) return
+    setSubmitting(true)
+    setVoteError('')
+
+    try {
+      if (fallbackLocal) {
+        const localState = setLocalCommunityVote(matchId, voterIdRef.current, side)
+        setVotes(localState.votes)
+        setMyVote(localState.myVote)
+        return
+      }
+
+      const payload = {
+        match_id: matchId,
+        voter_id: voterIdRef.current,
+        team_side: side,
+      }
+
+      let { error } = await supabase
+        .from(COMMUNITY_VOTE_TABLE)
+        .upsert(payload, { onConflict: 'match_id,voter_id' })
+
+      if (error && String(error.code || '') === '42P10') {
+        const removeRes = await supabase
+          .from(COMMUNITY_VOTE_TABLE)
+          .delete()
+          .eq('match_id', matchId)
+          .eq('voter_id', voterIdRef.current)
+
+        if (removeRes.error) throw removeRes.error
+
+        const insertRes = await supabase
+          .from(COMMUNITY_VOTE_TABLE)
+          .insert(payload)
+
+        error = insertRes.error
+      }
+
+      if (error) {
+        if (isMissingTableError(error, COMMUNITY_VOTE_TABLE)) {
+          const localState = setLocalCommunityVote(matchId, voterIdRef.current, side)
+          setFallbackLocal(true)
+          setVotes(localState.votes)
+          setMyVote(localState.myVote)
+          return
+        }
+        throw error
+      }
+
+      await hydrateVotes()
+    } catch (e) {
+      setVoteError('Oy kaydedilemedi. Lutfen tekrar dene.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const totalVotes = Number(votes.teamA || 0) + Number(votes.teamB || 0)
+  const communityTeamAPct = totalVotes > 0 ? Math.round((Number(votes.teamA || 0) / totalVotes) * 100) : 50
+  const communityTeamBPct = 100 - communityTeamAPct
+  const aiTeamAPct = Math.max(0, Math.min(100, Number(aiWin?.teamA || 0)))
+  const aiTeamBPct = 100 - aiTeamAPct
+  const communityFavorite = communityTeamAPct >= communityTeamBPct ? teamAName : teamBName
+  const aiFavorite = aiTeamAPct >= aiTeamBPct ? teamAName : teamBName
+  const sameDirection = communityFavorite === aiFavorite
+
+  return (
+    <div style={{ marginTop: 14, background: '#101010', borderRadius: 14, border: '1px solid #1d1d1d', padding: 14 }}>
+      <ST icon="🗳️" label="Senin Tahminin (Community Vote)" />
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 10 }}>
+        {[{ key: 'teamA', name: teamAName }, { key: 'teamB', name: teamBName }].map(team => {
+          const selected = myVote === team.key
+          return (
+            <button
+              key={team.key}
+              onClick={() => handleVote(team.key)}
+              disabled={isFinished || submitting || loading}
+              style={{
+                borderRadius: 10,
+                border: `1px solid ${selected ? 'rgba(124,58,237,.65)' : '#242424'}`,
+                background: selected ? 'linear-gradient(130deg, rgba(124,58,237,.2), rgba(17,17,17,.95))' : '#121212',
+                color: selected ? '#e8d9ff' : '#d1d1d1',
+                padding: '9px 10px',
+                cursor: isFinished ? 'default' : 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              <div style={{ fontSize: 12, fontWeight: 800 }}>{team.name}</div>
+              <div style={{ marginTop: 3, fontSize: 10, color: selected ? '#c8b4ff' : '#777' }}>
+                {selected ? 'Secimin bu takim' : 'Tahminini sec'}
+              </div>
+            </button>
+          )
+        })}
+      </div>
+
+      <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 800, color: '#8be9dd', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
+            Topluluk Fav.
+          </div>
+          <div style={{ height: 8, borderRadius: 999, overflow: 'hidden', background: '#0b0b0b', border: '1px solid #1f1f1f', display: 'flex' }}>
+            <div style={{ width: `${communityTeamAPct}%`, background: 'linear-gradient(90deg,#4ade80,#22c55e)' }} />
+            <div style={{ width: `${communityTeamBPct}%`, background: 'linear-gradient(90deg,#fb7185,#FF4655)' }} />
+          </div>
+          <div style={{ marginTop: 3, display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
+            <span style={{ color: '#86efac' }}>{teamAName} %{communityTeamAPct}</span>
+            <span style={{ color: '#fda4af' }}>%{communityTeamBPct} {teamBName}</span>
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 800, color: '#c8b4ff', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
+            AI Fav.
+          </div>
+          <div style={{ height: 8, borderRadius: 999, overflow: 'hidden', background: '#0b0b0b', border: '1px solid #1f1f1f', display: 'flex' }}>
+            <div style={{ width: `${aiTeamAPct}%`, background: 'linear-gradient(90deg,#4ade80,#22c55e)' }} />
+            <div style={{ width: `${aiTeamBPct}%`, background: 'linear-gradient(90deg,#fb7185,#FF4655)' }} />
+          </div>
+          <div style={{ marginTop: 3, display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
+            <span style={{ color: '#86efac' }}>{teamAName} %{aiTeamAPct}</span>
+            <span style={{ color: '#fda4af' }}>%{aiTeamBPct} {teamBName}</span>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 9, display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', fontSize: 10 }}>
+        <span style={{ color: '#9ba7b4' }}>Toplam oy: {totalVotes}</span>
+        <span style={{ color: sameDirection ? '#86efac' : '#ffd39a' }}>
+          {sameDirection ? `Topluluk ve AI ayni tarafta (${aiFavorite})` : `Topluluk: ${communityFavorite} · AI: ${aiFavorite}`}
+        </span>
+      </div>
+
+      {fallbackLocal && (
+        <div style={{ marginTop: 6, fontSize: 10, color: '#8e8e8e' }}>
+          Community tablosu ulasilamaz durumda. Local fallback aktif.
+        </div>
+      )}
+      {isFinished && (
+        <div style={{ marginTop: 6, fontSize: 10, color: '#8e8e8e' }}>
+          Mac tamamlandi. Yeni community oy kabul edilmiyor.
+        </div>
+      )}
+      {voteError && (
+        <div style={{ marginTop: 6, fontSize: 10, color: '#ff9aa5' }}>
+          {voteError}
+        </div>
+      )}
     </div>
   )
 }
@@ -299,15 +870,82 @@ function MapRow({ map, index, teamAId }) {
   )
 }
 
+function WinProbabilityBar({ teamAName, teamBName, teamAPct, teamBPct }) {
+  const normalizedA = clamp(Number(teamAPct) || 0, 0, 100)
+  const normalizedB = clamp(Number(teamBPct) || 0, 0, 100)
+  const total = normalizedA + normalizedB
+  const safeA = total > 0 ? Math.round((normalizedA / total) * 100) : 50
+  const safeB = 100 - safeA
+  const [animatedA, setAnimatedA] = useState(50)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setAnimatedA(safeA), 70)
+    return () => clearTimeout(timer)
+  }, [safeA])
+
+  return (
+    <div style={{ border: '1px solid rgba(94,234,212,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(20,184,166,.12), rgba(12,12,12,.9))', padding: '10px 11px' }}>
+      <div style={{ fontSize: 10, color: '#8be9dd', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 6 }}>
+        Win Probability
+      </div>
+
+      <div style={{ position: 'relative', height: 14, borderRadius: 999, overflow: 'hidden', background: '#0b0b0b', border: '1px solid #1d1d1d', marginBottom: 7 }}>
+        <div style={{ width: `${animatedA}%`, height: '100%', background: 'linear-gradient(90deg,#4ade80,#22c55e)', transition: 'width .7s cubic-bezier(.22,.61,.36,1)' }} />
+        <div style={{ position: 'absolute', top: -1, left: `${animatedA}%`, width: 2, height: 16, background: '#fff', boxShadow: '0 0 10px rgba(255,255,255,.6)', transform: 'translateX(-1px)', animation: 'winBoundaryPulse 1.4s ease-in-out infinite' }} />
+        <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
+          <div style={{ width: `${100 - animatedA}%`, marginLeft: 'auto', background: 'linear-gradient(90deg,#fb7185,#FF4655)', opacity: .88, transition: 'width .7s cubic-bezier(.22,.61,.36,1)' }} />
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 11, fontWeight: 800 }}>
+        <span style={{ color: '#86efac', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{teamAName} %{animatedA}</span>
+        <span style={{ color: '#fda4af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{teamBName} %{safeB}</span>
+      </div>
+    </div>
+  )
+}
+
+function getH2HBadge(match, refTeamAId) {
+  if (!match?.winner_id) {
+    return {
+      text: 'D',
+      color: '#c7c7c7',
+      bg: 'rgba(120,120,120,.2)',
+      border: 'rgba(120,120,120,.45)',
+      label: 'Berabere',
+    }
+  }
+
+  const isWin = idEq(match.winner_id, refTeamAId)
+  if (isWin) {
+    return {
+      text: 'W',
+      color: '#b3ffd4',
+      bg: 'rgba(76,175,80,.22)',
+      border: 'rgba(76,175,80,.55)',
+      label: 'Galibiyet',
+    }
+  }
+
+  return {
+    text: 'L',
+    color: '#ffd2d8',
+    bg: 'rgba(255,70,85,.22)',
+    border: 'rgba(255,70,85,.55)',
+    label: 'Maglubiyet',
+  }
+}
+
 /* ─── H2HRow ────────────────────────────────────────────────────────────────── */
 function H2HRow({ match, refTeamAId }) {
-  const isALeft = match.team_a_id === refTeamAId
+  const isALeft = idEq(match.team_a_id, refTeamAId)
   const aScore  = isALeft ? match.team_a_score : match.team_b_score
   const bScore  = isALeft ? match.team_b_score : match.team_a_score
-  const leftWon = match.winner_id === refTeamAId
+  const leftWon = idEq(match.winner_id, refTeamAId)
   const rightWon= match.winner_id !== null && !leftWon
+  const badge = getH2HBadge(match, refTeamAId)
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: '#0a0a0a', border: '1px solid #161616', fontSize: 11 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr auto', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: '#0a0a0a', border: '1px solid #161616', fontSize: 11 }}>
       <div style={{ textAlign: 'right', fontWeight: leftWon ? 700 : 400, color: leftWon ? '#4CAF50' : '#444', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {isALeft ? (match.team_a?.name || '?') : (match.team_b?.name || '?')}
       </div>
@@ -320,6 +958,24 @@ function H2HRow({ match, refTeamAId }) {
       <div style={{ fontWeight: rightWon ? 700 : 400, color: rightWon ? '#4CAF50' : '#444', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {isALeft ? (match.team_b?.name || '?') : (match.team_a?.name || '?')}
       </div>
+      <span
+        title={badge.label}
+        style={{
+          justifySelf: 'end',
+          minWidth: 22,
+          textAlign: 'center',
+          borderRadius: 999,
+          border: `1px solid ${badge.border}`,
+          background: badge.bg,
+          color: badge.color,
+          fontSize: 10,
+          fontWeight: 900,
+          padding: '2px 6px',
+          letterSpacing: '.6px',
+        }}
+      >
+        {badge.text}
+      </span>
     </div>
   )
 }
@@ -357,16 +1013,23 @@ function MVPVoting({ matchId, players, isFinished }) {
   useEffect(() => {
     if (!matchId) return undefined
 
+    let active = true
+
     const channel = supabase
       .channel(`mvp_votes_${matchId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'match_mvp_votes', filter: `match_id=eq.${matchId}` },
-        () => { fetchVotes() }
+        () => {
+          if (active) fetchVotes()
+        }
       )
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    return () => {
+      active = false
+      supabase.removeChannel(channel)
+    }
   }, [matchId, fetchVotes])
 
   async function castVote(player) {
@@ -526,7 +1189,7 @@ export default function MatchDetail() {
           .select('id,winner_id,status,team_a_id,team_b_id,team_a_score,team_b_score,scheduled_at,raw_data,team_a:teams!matches_team_a_id_fkey(id,name,logo_url),team_b:teams!matches_team_b_id_fkey(id,name,logo_url)')
           .eq('status','finished')
           .or(`and(team_a_id.eq.${aId},team_b_id.eq.${bId}),and(team_a_id.eq.${bId},team_b_id.eq.${aId})`)
-          .order('scheduled_at',{ascending:false}).limit(5000),
+          .order('scheduled_at',{ascending:false}).limit(8),
         supabase.from('match_stats')
           .select('team_id,stats')
           .in('team_id', [aId, bId])
@@ -534,7 +1197,7 @@ export default function MatchDetail() {
       ])
       const rosters = { teamA:plA.data||[], teamB:plB.data||[] }
       setPlayers(rosters)
-      const h = (h2hRes.data||[]).filter(x=>x.id!==parseInt(id))
+      const h = (h2hRes.data||[]).filter(x=>x.id!==parseInt(id, 10)).slice(0, 5)
       setH2h({ matches:h, teamAWins:h.filter(x=>idEq(x.winner_id, aId)).length, teamBWins:h.filter(x=>idEq(x.winner_id, bId)).length, draws:h.filter(x=>!x.winner_id).length, total:h.length, teamAId:aId, teamBId:bId })
       const games = m.raw_data?.games||[]
       setMaps(games.map(g=>({
@@ -595,6 +1258,30 @@ export default function MatchDetail() {
   const bWon  = isFin && !aWon && !!match.winner_id
   const favA  = isTeamFollowed(aId)
   const favB  = isTeamFollowed(bId)
+  const extraMetadata = match?.extra_metadata || match?.raw_data?.extra_metadata || null
+
+  const scoutMvp = useMemo(
+    () => pickScoutMvpCandidate(liveBoard, aName, bName),
+    [liveBoard, aName, bName],
+  )
+
+  const h2hRecentForm = useMemo(
+    () => (h2h.matches || []).slice(0, 5).map(matchItem => getH2HBadge(matchItem, h2h.teamAId)),
+    [h2h.matches, h2h.teamAId],
+  )
+
+  const tacticalScoutReport = useMemo(
+    () => buildTacticalScoutReport({
+      extraMetadata,
+      mapStats,
+      h2hMatches: h2h.matches,
+      teamAId: h2h.teamAId || aId,
+      teamBId: h2h.teamBId || bId,
+      teamAName: aName,
+      teamBName: bName,
+    }),
+    [extraMetadata, mapStats, h2h.matches, h2h.teamAId, h2h.teamBId, aId, bId, aName, bName],
+  )
 
   const twitchCh = (() => {
     const s = streams.find(s => (s.embed_url || s.raw_url || '').toLowerCase().includes('twitch.tv'))
@@ -743,7 +1430,7 @@ export default function MatchDetail() {
 
             {/* H2H */}
             <div style={{ background: '#111', borderRadius: 16, border: '1px solid #1a1a1a', padding: 18 }}>
-              <ST icon="⚔️" label="H2H Geçmiş" />
+              <ST icon="⚔️" label="Rekabet Geçmişi (H2H)" />
               {loadingDetails ? <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>{[1,2,3].map(i => <Sk key={i} h="36px" r="8px" />)}</div>
                 : h2h.total === 0 ? <div style={{ textAlign: 'center', padding: 18, color: '#282828', fontSize: 12 }}>İlk karşılaşmaları</div>
                 : (
@@ -761,8 +1448,33 @@ export default function MatchDetail() {
                       <span style={{ color: '#666' }}>Rekabet Skoru</span>
                       <span style={{ color: '#ddd', fontWeight: 800 }}>{aName} {h2h.teamAWins} - {h2h.teamBWins} {bName}</span>
                     </div>
+                    <div style={{ marginBottom: 10, background: '#0a0a0a', border: '1px solid #191919', borderRadius: 8, padding: '7px 9px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <span style={{ color: '#666', fontSize: 10 }}>Son 5 Form</span>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {h2hRecentForm.map((badge, idx) => (
+                          <span
+                            key={`${badge.text}_${idx}`}
+                            title={badge.label}
+                            style={{
+                              minWidth: 22,
+                              textAlign: 'center',
+                              borderRadius: 999,
+                              border: `1px solid ${badge.border}`,
+                              background: badge.bg,
+                              color: badge.color,
+                              fontSize: 10,
+                              fontWeight: 900,
+                              padding: '2px 6px',
+                              letterSpacing: '.6px',
+                            }}
+                          >
+                            {badge.text}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      {h2h.matches.slice(0, 12).map(m => (
+                      {h2h.matches.slice(0, 5).map(m => (
                         <div key={m.id} onClick={() => navigate(`/match/${m.id}`)} style={{ cursor: 'pointer' }}>
                           <H2HRow match={m} refTeamAId={h2h.teamAId} />
                         </div>
@@ -827,11 +1539,52 @@ export default function MatchDetail() {
             )}
           </div>
         </div>
+
+        <div style={{ marginTop: 18, background: '#101010', borderRadius: 14, border: '1px solid #1d1d1d', padding: 14 }}>
+          <ST icon="🧭" label="Gozcu Notu" />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 10 }}>
+            <div>
+              <WinProbabilityBar
+                teamAName={aName}
+                teamBName={bName}
+                teamAPct={pctA}
+                teamBPct={pctB}
+              />
+              <div style={{ marginTop: 5, fontSize: 11, color: '#9bc4bf' }}>Confidence: %{aiWin.confidence} (sample {aiWin.samples})</div>
+            </div>
+
+            <div style={{ border: '1px solid rgba(196,181,253,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(124,58,237,.12), rgba(12,12,12,.9))', padding: '10px 11px' }}>
+              <div style={{ fontSize: 10, color: '#c8b4ff', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5 }}>Map Profile</div>
+              <div style={{ fontSize: 12, color: '#efeaff' }}>{mapStats.length > 0 ? `${mapStats[0].map} en fazla oynanan harita` : 'Yeterli map tarihi yok'}</div>
+              <div style={{ marginTop: 4, fontSize: 11, color: '#b6acd6' }}>{mapStats.length > 0 ? `${mapStats[0].total} ornek uzerinden ${aName} ${mapStats[0].teamAWinRate}% - ${mapStats[0].teamBWinRate}% ${bName}` : 'Tahmin neutral modda'}</div>
+            </div>
+
+            <div style={{ border: '1px solid rgba(255,184,0,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(255,184,0,.12), rgba(12,12,12,.9))', padding: '10px 11px' }}>
+              <div style={{ fontSize: 10, color: '#ffd67d', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5 }}>MVP Projection</div>
+              <div style={{ fontSize: 12, color: '#fff0cb' }}>{scoutMvp ? `${scoutMvp.nickname} (${scoutMvp.teamName})` : 'Canli board verisi bekleniyor'}</div>
+              <div style={{ marginTop: 4, fontSize: 11, color: '#d2bf8f' }}>{scoutMvp ? `K/D/A: ${scoutMvp.kills || 0}/${scoutMvp.deaths || 0}/${scoutMvp.assists || 0}` : 'Model sadece takim seviyesinde calisiyor'}</div>
+            </div>
+          </div>
+        </div>
+
+        <CommunityPredictionPool
+          matchId={parseInt(id, 10)}
+          teamAName={aName}
+          teamBName={bName}
+          aiWin={aiWin}
+          isFinished={isFin}
+        />
+
+        <TacticalScoutReport report={tacticalScoutReport} />
       </div>
 
       <style>{`
         @keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:.4} }
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+        @keyframes winBoundaryPulse {
+          0%, 100% { opacity: .95; }
+          50% { opacity: .45; }
+        }
       `}</style>
     </div>
   )

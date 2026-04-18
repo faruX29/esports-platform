@@ -10,14 +10,15 @@ const UserContext = createContext(null)
 function readStoredState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return { teamIds: [], playerIds: [] }
+    if (!raw) return { teamIds: [], playerIds: [], gameIds: [] }
     const parsed = JSON.parse(raw)
     return {
       teamIds: Array.isArray(parsed.teamIds) ? parsed.teamIds : [],
       playerIds: Array.isArray(parsed.playerIds) ? parsed.playerIds : [],
+      gameIds: Array.isArray(parsed.gameIds) ? parsed.gameIds : [],
     }
   } catch {
-    return { teamIds: [], playerIds: [] }
+    return { teamIds: [], playerIds: [], gameIds: [] }
   }
 }
 
@@ -25,12 +26,13 @@ export function UserProvider({ children }) {
   const { user, profile, updateProfile } = useAuth()
   const [teamIds, setTeamIds] = useState(() => readStoredState().teamIds)
   const [playerIds, setPlayerIds] = useState(() => readStoredState().playerIds)
+  const [gameIds, setGameIds] = useState(() => readStoredState().gameIds)
   const [hydratedFromDb, setHydratedFromDb] = useState(false)
   const [syncing, setSyncing] = useState(false)
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ teamIds, playerIds }))
-  }, [teamIds, playerIds])
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ teamIds, playerIds, gameIds }))
+  }, [teamIds, playerIds, gameIds])
 
   // Girisli kullanicida follow datayi veritabanindan hydrate et.
   useEffect(() => {
@@ -65,9 +67,15 @@ export function UserProvider({ children }) {
         .map(x => x.target_id)
         .filter(Boolean)
 
+      const gameFromDb = (data || [])
+        .filter(x => x.target_type === 'game')
+        .map(x => String(x.target_id || '').trim())
+        .filter(Boolean)
+
       // Loginli kullanicida DB state source-of-truth olsun; eski local veriyi ez.
       setTeamIds(teamFromDb)
       setPlayerIds(playerFromDb)
+      setGameIds(gameFromDb)
       setHydratedFromDb(true)
     }
 
@@ -86,6 +94,7 @@ export function UserProvider({ children }) {
       const rows = [
         ...teamIds.map(id => ({ user_id: user.id, target_type: 'team', target_id: String(id) })),
         ...playerIds.map(id => ({ user_id: user.id, target_type: 'player', target_id: String(id) })),
+        ...gameIds.map(id => ({ user_id: user.id, target_type: 'game', target_id: String(id) })),
       ]
 
       const { error: delError } = await supabase.from('follows').delete().eq('user_id', user.id)
@@ -120,34 +129,7 @@ export function UserProvider({ children }) {
 
     persistFollows()
     return () => { cancelled = true }
-  }, [user?.id, hydratedFromDb, teamIds, playerIds, updateProfile, profile?.favorite_team_id, syncing])
-
-  // Galatasaray varsayilan takip: sadece hic takip yokken bir kez denenir.
-  useEffect(() => {
-    let cancelled = false
-
-    async function ensureDefaultFollow() {
-      if (!hydratedFromDb) return
-      if (teamIds.length > 0) return
-      try {
-        const { data } = await supabase
-          .from('teams')
-          .select('id, name')
-          .ilike('name', '%galatasaray%')
-          .limit(1)
-
-        if (!cancelled && data?.[0]?.id) {
-          const gsId = data[0].id
-          setTeamIds(prev => (prev.includes(gsId) ? prev : [...prev, gsId]))
-        }
-      } catch (e) {
-        console.warn('UserContext default follow error:', e?.message || e)
-      }
-    }
-
-    ensureDefaultFollow()
-    return () => { cancelled = true }
-  }, [teamIds.length])
+  }, [user?.id, hydratedFromDb, teamIds, playerIds, gameIds, updateProfile, profile?.favorite_team_id, syncing])
 
   function followTeam(teamId) {
     if (!teamId) return
@@ -191,9 +173,46 @@ export function UserProvider({ children }) {
     return playerIds.includes(playerId)
   }
 
+  function followGame(gameId) {
+    const normalized = String(gameId || '').trim()
+    if (!normalized) return
+    setGameIds(prev => (prev.includes(normalized) ? prev : [...prev, normalized]))
+  }
+
+  function unfollowGame(gameId) {
+    const normalized = String(gameId || '').trim()
+    if (!normalized) return
+    setGameIds(prev => prev.filter(id => id !== normalized))
+  }
+
+  function toggleGameFollow(gameId) {
+    const normalized = String(gameId || '').trim()
+    if (!normalized) return
+    setGameIds(prev => (prev.includes(normalized)
+      ? prev.filter(id => id !== normalized)
+      : [...prev, normalized]))
+  }
+
+  function isGameFollowed(gameId) {
+    const normalized = String(gameId || '').trim()
+    if (!normalized) return false
+    return gameIds.includes(normalized)
+  }
+
+  function setFollowedTeams(nextTeamIds = []) {
+    const normalized = [...new Set((nextTeamIds || []).map(id => Number(id)).filter(Number.isFinite))]
+    setTeamIds(normalized)
+  }
+
+  function setFollowedGames(nextGameIds = []) {
+    const normalized = [...new Set((nextGameIds || []).map(id => String(id || '').trim()).filter(Boolean))]
+    setGameIds(normalized)
+  }
+
   const value = useMemo(() => ({
     followedTeamIds: teamIds,
     followedPlayerIds: playerIds,
+    followedGames: gameIds,
     followTeam,
     unfollowTeam,
     toggleTeamFollow,
@@ -202,7 +221,13 @@ export function UserProvider({ children }) {
     unfollowPlayer,
     togglePlayerFollow,
     isPlayerFollowed,
-  }), [teamIds, playerIds])
+    followGame,
+    unfollowGame,
+    toggleGameFollow,
+    isGameFollowed,
+    setFollowedTeams,
+    setFollowedGames,
+  }), [teamIds, playerIds, gameIds])
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>
 }

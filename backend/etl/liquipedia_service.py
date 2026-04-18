@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import re
 import threading
 import time
@@ -115,6 +116,17 @@ class LiquipediaService:
         self._rate_lock = threading.Lock()
         self._last_request_monotonic = 0.0
         self.last_errors: List[str] = []
+        try:
+            jitter_min = float(os.getenv("LIQUIPEDIA_JITTER_MIN_SECONDS", "1.0"))
+            jitter_max = float(os.getenv("LIQUIPEDIA_JITTER_MAX_SECONDS", "2.0"))
+        except ValueError:
+            jitter_min, jitter_max = 1.0, 2.0
+
+        # Keep jitter in a sane range to avoid accidental crawl stalls.
+        jitter_min = max(0.6, min(jitter_min, 10.0))
+        jitter_max = max(0.6, min(jitter_max, 10.0))
+        self._request_jitter_min = min(jitter_min, jitter_max)
+        self._request_jitter_max = max(jitter_min, jitter_max)
         self._pacing_file = os.getenv(
             "LIQUIPEDIA_PACING_FILE",
             os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".liquipedia_pacing.json")),
@@ -158,7 +170,7 @@ class LiquipediaService:
         return max(0.0, cooldown_until - now)
 
     def _respect_rate_limit(self) -> None:
-        """Ensure a hard minimum interval of 1 second between requests."""
+        """Ensure shared cooldown + randomized jitter pacing between requests."""
         with self._rate_lock:
             with self._pacing_lock:
                 state = self._read_pacing_state()
@@ -174,7 +186,8 @@ class LiquipediaService:
                     time.sleep(wait_until - now)
 
                 request_at = time.time()
-                next_after = request_at + 1.0
+                jitter_seconds = random.uniform(self._request_jitter_min, self._request_jitter_max)
+                next_after = request_at + jitter_seconds
                 self._last_request_monotonic = next_after
                 self._global_next_request_after = next_after
 
@@ -780,6 +793,22 @@ class LiquipediaService:
                     "raw_profile": {"bootstrap": True, **payload},
                     "page": "bootstrap-fallback",
                 }
+
+        # Optional MVP mode: allow targeted runs to persist a minimal profile
+        # instead of dropping players entirely when remote wikitext is unreachable.
+        if os.getenv("LIQUIPEDIA_TARGETED_STUB_FALLBACK", "0") == "1" and str(player_name or "").strip():
+            return {
+                "matched_name": str(player_name).strip(),
+                "real_name": None,
+                "age": None,
+                "nationality": "Unknown",
+                "current_team": None,
+                "former_teams": [],
+                "career_history": [],
+                "social_links": {},
+                "raw_profile": {"bootstrap": True, "generic_stub": True},
+                "page": "stub-fallback",
+            }
         return None
 
     def get_player_profile(self, player_name: str) -> Dict[str, Any]:

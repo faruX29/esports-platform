@@ -3,26 +3,30 @@
  */
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { GameProvider, useGame, GAMES } from './GameContext'
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
+import toast, { Toaster } from 'react-hot-toast'
 import { UserProvider } from './context/UserContext'
 import { AuthProvider } from './context/AuthContext'
+import { supabase, buildMatchRealtimeNotification, subscribeToMatchesUpdates } from './supabaseClient'
 
-import Dashboard      from './Dashboard'
-import Matches        from './Matches'
-import MatchDetailPage from './MatchDetailPage'
-import RankingsPage   from './pages/RankingsPage'
-import TeamPage       from './TeamPage'
-import TournamentPage from './TournamentPage'
-import PlayersPage    from './pages/PlayersPage'
-import PlayerPage     from './PlayerPage'
-import SearchPage     from './SearchPage'
-import ProfileSettings from './ProfileSettings'
 import ProtectedRoute from './components/ProtectedRoute'
 import NavbarComponent from './components/Navbar'
-import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
-import NewsPage from './pages/NewsPage'
-import NewsDetailPage from './pages/NewsDetailPage'
+
+const Dashboard = lazy(() => import('./Dashboard'))
+const Matches = lazy(() => import('./Matches'))
+const MatchDetailPage = lazy(() => import('./MatchDetailPage'))
+const RankingsPage = lazy(() => import('./pages/RankingsPage'))
+const TeamPage = lazy(() => import('./TeamPage'))
+const TournamentPage = lazy(() => import('./TournamentPage'))
+const PlayersPage = lazy(() => import('./pages/PlayersPage'))
+const PlayerPage = lazy(() => import('./PlayerPage'))
+const SearchPage = lazy(() => import('./SearchPage'))
+const ProfileSettings = lazy(() => import('./ProfileSettings'))
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const RegisterPage = lazy(() => import('./pages/RegisterPage'))
+const NewsPage = lazy(() => import('./pages/NewsPage'))
+const NewsDetailPage = lazy(() => import('./pages/NewsDetailPage'))
+const TournamentsListPage = lazy(() => import('./pages/TournamentsListPage'))
 
 import './App.css'
 
@@ -30,6 +34,7 @@ import './App.css'
 const NAV_LINKS = [
   { to: '/',         label: '🏠 Home',     end: true  },
   { to: '/matches',  label: '📅 Matches',  end: false },
+  { to: '/tournaments', label: '🏟️ Turnuvalar', end: false },
   { to: '/rankings', label: '🏆 Rankings', end: false },
   { to: '/players',  label: '👤 Players',  end: false },
   { to: '/news',     label: '📰 News',     end: false },
@@ -89,7 +94,6 @@ function NavSearch() {
     }
     setLoading(true)
     try {
-      const { supabase } = await import('./supabaseClient')
       const [teamRes, playerRes] = await Promise.all([
         supabase
           .from('teams')
@@ -120,6 +124,12 @@ function NavSearch() {
     debounceRef.current = setTimeout(() => fetchQuickResults(val), 250)
   }
 
+  useEffect(() => {
+    return () => {
+      clearTimeout(debounceRef.current)
+    }
+  }, [])
+
   function handleSubmit(e) {
     e.preventDefault()
     if (!q.trim()) return
@@ -141,7 +151,7 @@ function NavSearch() {
           borderRadius: 10, padding: '5px 10px',
           transition: 'all .2s',
           boxShadow: focused ? '0 0 0 3px rgba(255,70,85,.1)' : 'none',
-          width: focused ? 260 : 180,
+          width: focused ? 'min(260px, 70vw)' : 180,
         }}>
           <span style={{ fontSize: 12, color: focused ? '#FF4655' : '#444',
             flexShrink: 0, transition: 'color .2s' }}>🔍</span>
@@ -360,28 +370,94 @@ function GameSelectorBar() {
   )
 }
 
+function RealtimeToastBridge() {
+  const shownRef = useRef(new Map())
+
+  useEffect(() => {
+    const unsubscribe = subscribeToMatchesUpdates(payload => {
+      const notification = buildMatchRealtimeNotification(payload)
+      if (!notification) return
+
+      const now = Date.now()
+      const previousAt = shownRef.current.get(notification.dedupeKey) || 0
+      if ((now - previousAt) < 9000) return
+
+      shownRef.current.set(notification.dedupeKey, now)
+      if (shownRef.current.size > 120) {
+        const expiry = now - (60 * 1000)
+        for (const [key, ts] of shownRef.current.entries()) {
+          if (ts < expiry) shownRef.current.delete(key)
+        }
+      }
+
+      const text = `${notification.title} ${notification.message}`
+      const options = {
+        duration: notification.variant === 'live' ? 2800 : 3600,
+      }
+
+      if (notification.variant === 'success') {
+        toast.success(text, options)
+      } else if (notification.variant === 'live') {
+        toast(text, { ...options, icon: '⚡' })
+      } else {
+        toast(text, { ...options, icon: '📡' })
+      }
+    })
+
+    return () => {
+      unsubscribe?.()
+    }
+  }, [])
+
+  return (
+    <Toaster
+      position='top-right'
+      gutter={10}
+      toastOptions={{
+        style: {
+          background: 'rgba(18,18,18,.94)',
+          color: '#f2f2f2',
+          border: '1px solid rgba(255,255,255,.12)',
+          boxShadow: '0 10px 26px rgba(0,0,0,.35)',
+          fontSize: 12,
+        },
+      }}
+    />
+  )
+}
+
 /* ─── AppShell ──────────────────────────────────────────────────────────────── */
 function AppShell() {
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0a', color: 'white' }}>
+      <RealtimeToastBridge />
       <NavbarComponent navLinks={NAV_LINKS} SearchComponent={NavSearch} />
       <GameSelectorBar />
-      <Routes>
-        <Route path="/"                         element={<Dashboard />}      />
-        <Route path="/matches"                  element={<Matches />}        />
-        <Route path="/match/:id"                element={<MatchDetailPage />} />
-        <Route path="/rankings"                 element={<RankingsPage />}   />
-        <Route path="/team/:teamId"             element={<TeamPage />}       />
-        <Route path="/tournament/:tournamentId" element={<TournamentPage />} />
-        <Route path="/players"                  element={<PlayersPage />}    />
-        <Route path="/player/:id"               element={<PlayerPage />}     />
-        <Route path="/search"                   element={<SearchPage />}     />
-        <Route path="/news"                     element={<NewsPage />}       />
-        <Route path="/news/:newsId"             element={<NewsDetailPage />} />
-        <Route path="/login"                    element={<LoginPage />}      />
-        <Route path="/register"                 element={<RegisterPage />}   />
-        <Route path="/settings"                 element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
-      </Routes>
+      <Suspense fallback={(
+        <div style={{ maxWidth: 1160, margin: '0 auto', padding: '18px 16px 26px' }}>
+          <div style={{ height: 12, width: 190, borderRadius: 999, background: '#181818', marginBottom: 14 }} />
+          <div style={{ height: 170, borderRadius: 14, background: 'linear-gradient(90deg,#0f0f0f 20%,#1a1a1a 50%,#0f0f0f 80%)', backgroundSize: '200% 100%', animation: 'appRouteLoad 1.3s ease-in-out infinite' }} />
+          <style>{`@keyframes appRouteLoad { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`}</style>
+        </div>
+      )}>
+        <Routes>
+          <Route path="/"                         element={<Dashboard />}      />
+          <Route path="/matches"                  element={<Matches />}        />
+          <Route path="/tournaments"              element={<TournamentsListPage />} />
+          <Route path="/match/:id"                element={<MatchDetailPage />} />
+          <Route path="/rankings"                 element={<RankingsPage />}   />
+          <Route path="/team/:teamId"             element={<TeamPage />}       />
+          <Route path="/tournament/:tournamentId" element={<TournamentPage />} />
+          <Route path="/players"                  element={<PlayersPage />}    />
+          <Route path="/player/:id"               element={<PlayerPage />}     />
+          <Route path="/search"                   element={<SearchPage />}     />
+          <Route path="/news"                     element={<NewsPage />}       />
+          <Route path="/news/:newsId"             element={<NewsDetailPage />} />
+          <Route path="/login"                    element={<LoginPage />}      />
+          <Route path="/register"                 element={<RegisterPage />}   />
+          <Route path="/settings"                 element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
+        </Routes>
+      </Suspense>
     </div>
   )
 }

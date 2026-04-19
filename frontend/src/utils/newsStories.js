@@ -1,3 +1,5 @@
+import { cleanDisplayName } from './nameCleaner'
+
 const GAME_META = {
   valorant: { id: 'valorant', label: 'VALORANT', shortLabel: 'VAL', color: '#FF4655', icon: '⚡' },
   cs2: { id: 'cs2', label: 'Counter-Strike 2', shortLabel: 'CS2', color: '#F0A500', icon: '🎯' },
@@ -17,8 +19,19 @@ export function normalizeGameId(raw) {
 }
 
 export function normalizeTier(raw) {
-  const value = String(raw || '').trim().toUpperCase().replace(/\s+/g, '')
-  return ['S', 'A', 'B', 'C'].includes(value) ? value : 'C'
+  const value = String(raw || '').trim().toLowerCase()
+  if (!value) return 'C'
+
+  const compact = value
+    .replace(/_/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/--+/g, '-')
+
+  const stripped = compact.replace(/tier/g, '').replace(/[^a-z]/g, '')
+  const first = stripped.charAt(0).toUpperCase()
+  if (['S', 'A', 'B', 'C'].includes(first)) return first
+
+  return 'C'
 }
 
 export function tierWeight(tier) {
@@ -46,8 +59,8 @@ export function buildStoryVisuals(match, isTurkishTeam) {
   const teamB = match.team_b || {}
   const gameId = normalizeGameId(match?.game?.slug ?? match?.game?.name ?? match?.game?.id)
   const game = getGameMeta(gameId)
-  const tournamentName = match.tournament?.name || 'Ana Sahne'
-  const tier = normalizeTier(match.tournament?.tier)
+  const tournamentName = cleanDisplayName(match.tournament?.name || 'Ana Sahne') || 'Ana Sahne'
+  const tier = normalizeTier(match?.tournament?.tier ?? match?.tier)
   const turkish = Boolean(isTurkishTeam?.(teamA.name) || isTurkishTeam?.(teamB.name))
 
   return {
@@ -167,6 +180,7 @@ export function buildFinishedStory(match, statsByMatch, isTurkishTeam) {
   return {
     id: `match_${match.id}`,
     matchId: match.id,
+    tournamentId: match?.tournament?.id ?? match?.tournament_id ?? null,
     status: 'finished',
     variant,
     publishedAt: match.scheduled_at || new Date().toISOString(),
@@ -221,6 +235,7 @@ export function buildUpcomingStory(match, isTurkishTeam) {
   return {
     id: `match_${match.id}`,
     matchId: match.id,
+    tournamentId: match?.tournament?.id ?? match?.tournament_id ?? null,
     status: 'upcoming',
     variant: 'upcoming',
     publishedAt: match.scheduled_at || new Date().toISOString(),

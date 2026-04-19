@@ -31,6 +31,19 @@ def main():
     )
 
     parser.add_argument(
+        '--upcoming-days',
+        type=int,
+        default=7,
+        help='Upcoming match sync date window in days (default: 7)'
+    )
+
+    parser.add_argument(
+        '--sync-matches',
+        action='store_true',
+        help='Backward-compatible no-op flag. Match sync is already default behavior.'
+    )
+
+    parser.add_argument(
         '--all-games',
         action='store_true',
         help='Sync all games (valorant, csgo, lol)'
@@ -165,6 +178,7 @@ def main():
                 limit=args.limit,
                 past=args.past,
                 page=args.page if args.past else 1,
+                upcoming_days=args.upcoming_days,
             )
 
             total_stats['fetched'] += stats.get('fetched', 0)

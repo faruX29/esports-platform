@@ -7,32 +7,73 @@ const STORAGE_KEY = BRANDING.followStateStorageKey
 
 const UserContext = createContext(null)
 
+function normalizeGameId(raw) {
+  const value = String(raw || '').trim().toLowerCase()
+  if (!value) return null
+  if (value === 'valorant') return 'valorant'
+  if (value === 'cs2' || value === 'csgo' || value.includes('counter') || value.includes('cs-go')) return 'cs2'
+  if (value === 'lol' || value.includes('league')) return 'lol'
+  return null
+}
+
+function uniqueCanonicalGames(gameList = []) {
+  return [...new Set((gameList || []).map(normalizeGameId).filter(Boolean))]
+}
+
+function sanitizeTeamGameMap(rawMap = {}) {
+  if (!rawMap || typeof rawMap !== 'object') return {}
+  const result = {}
+
+  for (const [teamIdRaw, gameIdRaw] of Object.entries(rawMap)) {
+    const teamId = String(teamIdRaw || '').trim()
+    const gameId = normalizeGameId(gameIdRaw)
+    if (!teamId || !gameId) continue
+    result[teamId] = gameId
+  }
+
+  return result
+}
+
+function collectMappedGames(teamIdList = [], teamGameMap = {}) {
+  return [...new Set((teamIdList || [])
+    .map(teamId => teamGameMap[String(teamId)])
+    .map(normalizeGameId)
+    .filter(Boolean))]
+}
+
+function parseTeamIds(list = []) {
+  return [...new Set((list || []).map(id => Number(id)).filter(Number.isFinite))]
+}
+
 function readStoredState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return { teamIds: [], playerIds: [], gameIds: [] }
+    if (!raw) return { teamIds: [], playerIds: [], gameIds: [], teamGameMap: {} }
     const parsed = JSON.parse(raw)
     return {
       teamIds: Array.isArray(parsed.teamIds) ? parsed.teamIds : [],
       playerIds: Array.isArray(parsed.playerIds) ? parsed.playerIds : [],
       gameIds: Array.isArray(parsed.gameIds) ? parsed.gameIds : [],
+      teamGameMap: sanitizeTeamGameMap(parsed.teamGameMap),
     }
   } catch {
-    return { teamIds: [], playerIds: [], gameIds: [] }
+    return { teamIds: [], playerIds: [], gameIds: [], teamGameMap: {} }
   }
 }
 
 export function UserProvider({ children }) {
+  const storedState = readStoredState()
   const { user, profile, updateProfile } = useAuth()
-  const [teamIds, setTeamIds] = useState(() => readStoredState().teamIds)
-  const [playerIds, setPlayerIds] = useState(() => readStoredState().playerIds)
-  const [gameIds, setGameIds] = useState(() => readStoredState().gameIds)
+  const [teamIds, setTeamIds] = useState(() => parseTeamIds(storedState.teamIds))
+  const [playerIds, setPlayerIds] = useState(() => Array.isArray(storedState.playerIds) ? storedState.playerIds : [])
+  const [gameIds, setGameIds] = useState(() => uniqueCanonicalGames(storedState.gameIds))
+  const [teamGameMap, setTeamGameMap] = useState(() => sanitizeTeamGameMap(storedState.teamGameMap))
   const [hydratedFromDb, setHydratedFromDb] = useState(false)
   const [syncing, setSyncing] = useState(false)
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ teamIds, playerIds, gameIds }))
-  }, [teamIds, playerIds, gameIds])
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ teamIds, playerIds, gameIds, teamGameMap }))
+  }, [teamIds, playerIds, gameIds, teamGameMap])
 
   // Girisli kullanicida follow datayi veritabanindan hydrate et.
   useEffect(() => {
@@ -69,13 +110,34 @@ export function UserProvider({ children }) {
 
       const gameFromDb = (data || [])
         .filter(x => x.target_type === 'game')
-        .map(x => String(x.target_id || '').trim())
+        .map(x => x.target_id)
         .filter(Boolean)
+
+      let mappedTeamGames = {}
+      if (teamFromDb.length) {
+        const { data: teamRows, error: teamRowsError } = await supabase
+          .from('teams')
+          .select('id,game_id,game:games(id,name,slug)')
+          .in('id', teamFromDb)
+
+        if (!teamRowsError) {
+          mappedTeamGames = sanitizeTeamGameMap(Object.fromEntries((teamRows || []).map(row => {
+            const gameId = normalizeGameId(row?.game?.slug ?? row?.game?.name ?? row?.game?.id ?? row?.game_id)
+            return [String(row.id), gameId]
+          })))
+        }
+      }
+
+      const mergedGames = [...new Set([
+        ...uniqueCanonicalGames(gameFromDb),
+        ...collectMappedGames(teamFromDb, mappedTeamGames),
+      ])]
 
       // Loginli kullanicida DB state source-of-truth olsun; eski local veriyi ez.
       setTeamIds(teamFromDb)
       setPlayerIds(playerFromDb)
-      setGameIds(gameFromDb)
+      setGameIds(mergedGames)
+      setTeamGameMap(mappedTeamGames)
       setHydratedFromDb(true)
     }
 
@@ -91,10 +153,16 @@ export function UserProvider({ children }) {
 
     async function persistFollows() {
       setSyncing(true)
+      const mappedGameIds = collectMappedGames(teamIds, teamGameMap)
+      const persistedGameIds = [...new Set([
+        ...uniqueCanonicalGames(gameIds),
+        ...mappedGameIds,
+      ])]
+
       const rows = [
         ...teamIds.map(id => ({ user_id: user.id, target_type: 'team', target_id: String(id) })),
         ...playerIds.map(id => ({ user_id: user.id, target_type: 'player', target_id: String(id) })),
-        ...gameIds.map(id => ({ user_id: user.id, target_type: 'game', target_id: String(id) })),
+        ...persistedGameIds.map(id => ({ user_id: user.id, target_type: 'game', target_id: String(id) })),
       ]
 
       const { error: delError } = await supabase.from('follows').delete().eq('user_id', user.id)
@@ -129,7 +197,7 @@ export function UserProvider({ children }) {
 
     persistFollows()
     return () => { cancelled = true }
-  }, [user?.id, hydratedFromDb, teamIds, playerIds, gameIds, updateProfile, profile?.favorite_team_id, syncing])
+  }, [user?.id, hydratedFromDb, teamIds, playerIds, gameIds, teamGameMap, updateProfile, profile?.favorite_team_id, syncing])
 
   function followTeam(teamId) {
     if (!teamId) return
@@ -174,19 +242,19 @@ export function UserProvider({ children }) {
   }
 
   function followGame(gameId) {
-    const normalized = String(gameId || '').trim()
+    const normalized = normalizeGameId(gameId)
     if (!normalized) return
     setGameIds(prev => (prev.includes(normalized) ? prev : [...prev, normalized]))
   }
 
   function unfollowGame(gameId) {
-    const normalized = String(gameId || '').trim()
+    const normalized = normalizeGameId(gameId)
     if (!normalized) return
     setGameIds(prev => prev.filter(id => id !== normalized))
   }
 
   function toggleGameFollow(gameId) {
-    const normalized = String(gameId || '').trim()
+    const normalized = normalizeGameId(gameId)
     if (!normalized) return
     setGameIds(prev => (prev.includes(normalized)
       ? prev.filter(id => id !== normalized)
@@ -194,19 +262,44 @@ export function UserProvider({ children }) {
   }
 
   function isGameFollowed(gameId) {
-    const normalized = String(gameId || '').trim()
+    const normalized = normalizeGameId(gameId)
     if (!normalized) return false
     return gameIds.includes(normalized)
   }
 
-  function setFollowedTeams(nextTeamIds = []) {
-    const normalized = [...new Set((nextTeamIds || []).map(id => Number(id)).filter(Number.isFinite))]
-    setTeamIds(normalized)
+  function setFollowedTeams(nextTeamIds = [], options = {}) {
+    const normalizedTeamIds = parseTeamIds(nextTeamIds)
+    const providedMap = sanitizeTeamGameMap(options?.teamGameMap)
+    const mergedMap = { ...teamGameMap, ...providedMap }
+    const inferredGames = collectMappedGames(normalizedTeamIds, mergedMap)
+
+    setTeamIds(normalizedTeamIds)
+    if (Object.keys(providedMap).length > 0) {
+      setTeamGameMap(mergedMap)
+    }
+
+    if (inferredGames.length > 0) {
+      setGameIds(prev => [...new Set([
+        ...uniqueCanonicalGames(prev),
+        ...inferredGames,
+      ])])
+    }
   }
 
-  function setFollowedGames(nextGameIds = []) {
-    const normalized = [...new Set((nextGameIds || []).map(id => String(id || '').trim()).filter(Boolean))]
-    setGameIds(normalized)
+  function setFollowedGames(nextGameIds = [], options = {}) {
+    const normalizedTeamIds = parseTeamIds(options?.teamIds || teamIds)
+    const providedMap = sanitizeTeamGameMap(options?.teamGameMap)
+    const mergedMap = { ...teamGameMap, ...providedMap }
+    const inferredGames = collectMappedGames(normalizedTeamIds, mergedMap)
+    const normalizedGames = [...new Set([
+      ...uniqueCanonicalGames(nextGameIds),
+      ...inferredGames,
+    ])]
+
+    if (Object.keys(providedMap).length > 0) {
+      setTeamGameMap(mergedMap)
+    }
+    setGameIds(normalizedGames)
   }
 
   const value = useMemo(() => ({

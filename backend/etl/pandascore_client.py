@@ -3,6 +3,7 @@ PandaScore API client for fetching esports match data
 """
 import requests
 import os
+from datetime import datetime, timedelta, timezone
 
 
 class PandaScoreClient:
@@ -15,37 +16,58 @@ class PandaScoreClient:
         if not self.api_token:
             raise ValueError("PANDASCORE_TOKEN not found in environment variables")
     
-    def get_upcoming_matches(self, game_slug, limit=50):
+    def get_upcoming_matches(self, game_slug, limit=50, days_ahead=7):
         """
         Fetch upcoming matches from PandaScore API
         
         Args:
             game_slug: Game identifier (valorant, csgo, lol)
             limit: Maximum number of matches to fetch
+            days_ahead: Date window for upcoming matches (default: 7 days)
         
         Returns:
             list: List of match data
         """
         url = f"{self.base_url}/{game_slug}/matches/upcoming"
+
+        now_utc = datetime.now(timezone.utc).replace(microsecond=0)
+        until_utc = now_utc + timedelta(days=max(1, int(days_ahead or 7)))
+        now_iso = now_utc.isoformat().replace('+00:00', 'Z')
+        until_iso = until_utc.isoformat().replace('+00:00', 'Z')
         
         params = {
             'token': self.api_token,
             'per_page': limit,
-            'sort': 'begin_at'
+            'sort': 'begin_at',
+            'range[begin_at]': f'{now_iso},{until_iso}',
         }
         
         try:
-            print(f"📥 Fetching from PandaScore API: {game_slug}")
+            print(f"📥 Fetching from PandaScore API: {game_slug} (next {days_ahead} days)")
             response = requests.get(url, params=params, timeout=30)
             response.raise_for_status()
-            
+
             matches = response.json()
-            print(f"✅ Fetched {len(matches)} matches")
+            print(f"✅ Fetched {len(matches)} matches in date window")
             return matches
             
         except requests.exceptions.RequestException as e:
-            print(f"❌ API request failed: {e}")
-            return []
+            print(f"⚠️  Windowed upcoming request failed: {e}")
+            fallback_params = {
+                'token': self.api_token,
+                'per_page': limit,
+                'sort': 'begin_at',
+            }
+            try:
+                print("↩️ Retrying upcoming fetch without range filter...")
+                response = requests.get(url, params=fallback_params, timeout=30)
+                response.raise_for_status()
+                matches = response.json()
+                print(f"✅ Fetched {len(matches)} matches (fallback)")
+                return matches
+            except requests.exceptions.RequestException as fallback_error:
+                print(f"❌ API request failed: {fallback_error}")
+                return []
     
     def get_past_matches(self, game_slug, limit=50, page=1):
         """

@@ -26,7 +26,7 @@ export const GAMES = [
     icon:       '🎯',
     color:      '#F0A500',
     soon:       false,
-    patterns:   ['counter-strike', 'cs-go', 'cs2'],
+    patterns:   ['counter-strike', 'counter strike', 'counter-strike global offensive', 'cs-go', 'csgo', 'cs2'],
   },
   {
     id:         'lol',

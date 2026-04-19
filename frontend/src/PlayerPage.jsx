@@ -7,7 +7,7 @@
  *  • Son maç tablosu
  *  • Takım linki
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate }           from 'react-router-dom'
 import { supabase }                         from './supabaseClient'
 import { getRoleBadge }                     from './roleHelper'
@@ -77,6 +77,162 @@ function ProgressBar({ pct, color = '#FF4655', label, value }) {
           background: `linear-gradient(90deg,${color}88,${color})`,
           borderRadius: 3, transition: 'width .6s cubic-bezier(.34,1.56,.64,1)',
         }} />
+      </div>
+    </div>
+  )
+}
+
+function buildProfessionalStats(individual, analytics) {
+  if (!individual || !Number.isFinite(individual.sampleMatches) || individual.sampleMatches <= 0) return null
+
+  const matches = Math.max(1, individual.sampleMatches)
+  const kda = (individual.totalKills + individual.totalAssists) / Math.max(1, individual.totalDeaths)
+  const winRate = Number.isFinite(individual.winRate)
+    ? individual.winRate
+    : (Number.isFinite(analytics?.overallWinRate) ? analytics.overallWinRate : 0)
+
+  return {
+    sampleMatches: individual.sampleMatches,
+    kda,
+    kd: individual.kd,
+    winRate,
+    hsPct: individual.hsPct,
+    avgKills: individual.totalKills / matches,
+    avgAssists: individual.totalAssists / matches,
+    avgDeaths: individual.totalDeaths / matches,
+    impact: individual.impact,
+  }
+}
+
+function toNum(value) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function collectDeepPlayerRows(extraMetadata = {}) {
+  const candidateBuckets = [
+    extraMetadata?.player_metrics,
+    extraMetadata?.pandascore_player_summaries,
+    extraMetadata?.scout?.player_metrics,
+    extraMetadata?.pandascore?.player_metrics,
+    extraMetadata?.riot?.player_metrics,
+    extraMetadata?.steam?.player_metrics,
+    extraMetadata?.performance?.player_metrics,
+    extraMetadata?.performance?.matches,
+    extraMetadata?.stats?.matches,
+  ]
+
+  const normalized = []
+  for (const bucket of candidateBuckets) {
+    if (!Array.isArray(bucket)) continue
+
+    for (const row of bucket) {
+      if (!row || typeof row !== 'object') continue
+
+      const kills = toNum(row?.kills ?? row?.total_kills ?? row?.frags)
+      const deaths = toNum(row?.deaths ?? row?.total_deaths)
+      const assists = toNum(row?.assists ?? row?.total_assists)
+      const headshots = toNum(row?.headshots ?? row?.headshot_kills ?? row?.hs_kills)
+      const hsPct = toNum(row?.hs_pct ?? row?.hs_percentage ?? row?.headshot_percentage)
+      const winRate = toNum(row?.win_rate ?? row?.wr)
+
+      if (kills == null && deaths == null && assists == null && headshots == null && hsPct == null && winRate == null) {
+        continue
+      }
+
+      normalized.push({
+        kills: kills ?? 0,
+        deaths: deaths ?? 0,
+        assists: assists ?? 0,
+        headshots: headshots ?? 0,
+        hs_percentage: hsPct ?? undefined,
+        win: winRate != null ? (winRate >= 50 ? 1 : 0) : undefined,
+      })
+    }
+  }
+
+  return normalized
+}
+
+function ProMetricCard({ label, value, sub, accent = '#ff6a7f' }) {
+  return (
+    <div style={{
+      borderRadius: 12,
+      border: `1px solid ${accent}44`,
+      background: 'linear-gradient(160deg, rgba(255,255,255,.03), rgba(255,255,255,.01))',
+      padding: '11px 12px',
+    }}>
+      <div style={{ fontSize: 10, color: '#8e8e8e', letterSpacing: '.8px', textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ marginTop: 5, fontSize: 22, fontWeight: 900, color: accent, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+      {sub ? <div style={{ marginTop: 4, fontSize: 11, color: '#b9b9b9' }}>{sub}</div> : null}
+    </div>
+  )
+}
+
+function ProfessionalStatsPanel({ stats, isMobile = false }) {
+  if (!stats) return null
+
+  const hsColor = stats.hsPct >= 50 ? '#4CAF50' : stats.hsPct >= 35 ? '#FFB800' : '#FF6A7F'
+  const wrColor = stats.winRate >= 60 ? '#4CAF50' : stats.winRate >= 48 ? '#FFB800' : '#FF4655'
+  const kdaColor = stats.kda >= 1.4 ? '#4CAF50' : stats.kda >= 1.05 ? '#ff9f2f' : '#FF4655'
+  const impactColor = stats.impact >= 70 ? '#4CAF50' : stats.impact >= 50 ? '#818cf8' : '#FF4655'
+
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <SectionTitle icon="🧠" label="Professional Stats Panel" />
+
+      <div style={{
+        borderRadius: 14,
+        border: '1px solid rgba(255,70,85,.28)',
+        background: 'linear-gradient(155deg, rgba(255,70,85,.12), rgba(0,0,0,.78))',
+        padding: isMobile ? '12px 11px' : '14px 14px',
+      }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,minmax(0,1fr))' : 'repeat(4,minmax(0,1fr))', gap: 10, marginBottom: 12 }}>
+          <ProMetricCard label="KDA" value={stats.kda.toFixed(2)} sub={`K/D ${stats.kd.toFixed(2)}`} accent={kdaColor} />
+          <ProMetricCard label="Win Rate" value={`${Math.round(stats.winRate)}%`} sub={`${stats.sampleMatches} sample match`} accent={wrColor} />
+          <ProMetricCard label="Headshot" value={`${Math.round(stats.hsPct)}%`} sub="Precision" accent={hsColor} />
+          <ProMetricCard label="Impact" value={Math.round(stats.impact)} sub="Scout Score" accent={impactColor} />
+        </div>
+
+        <div style={{
+          borderRadius: 12,
+          border: '1px solid #242424',
+          background: 'rgba(0,0,0,.32)',
+          padding: '10px 10px 8px',
+        }}>
+          <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 10 }}>Round-by-round efficiency proxy</div>
+          <ProgressBar pct={Math.min(100, stats.kda * 42)} color={kdaColor} label="KDA Pressure" value={stats.kda.toFixed(2)} />
+          <ProgressBar pct={stats.winRate} color={wrColor} label="Win Rate" value={`${Math.round(stats.winRate)}%`} />
+          <ProgressBar pct={stats.hsPct} color={hsColor} label="Headshot %" value={`${Math.round(stats.hsPct)}%`} />
+          <ProgressBar pct={Math.min(100, stats.avgKills * 10)} color="#9ad8ff" label="Avg Kills / Match" value={stats.avgKills.toFixed(1)} />
+          <ProgressBar pct={Math.min(100, stats.avgAssists * 12)} color="#cab0ff" label="Avg Assists / Match" value={stats.avgAssists.toFixed(1)} />
+          <ProgressBar pct={Math.max(0, 100 - Math.min(100, stats.avgDeaths * 10))} color="#f1f1f1" label="Death Control" value={stats.avgDeaths.toFixed(1)} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ScoutComingSoonCard() {
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <SectionTitle icon="🛰️" label="Scout Engine" />
+      <div style={{
+        borderRadius: 14,
+        border: '1px dashed rgba(255,184,0,.5)',
+        background: 'linear-gradient(145deg, rgba(255,184,0,.08), rgba(0,0,0,.62))',
+        padding: '14px 16px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+          <span style={{ fontSize: 20 }}>⏳</span>
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#ffd78f', letterSpacing: '.3px' }}>Detailed Scout Metrics</div>
+        </div>
+        <div style={{ fontSize: 12, color: '#e5d1aa' }}>
+          Hesaplaniyor... Detayli veriler Scout Engine tarafindan isleniyor.
+        </div>
+        <div style={{ marginTop: 6, fontSize: 11, color: '#9f9f9f' }}>
+          KDA, Win Rate, Headshot ve match-detail sinyalleri birlestirilerek bu panel otomatik doldurulacak.
+        </div>
       </div>
     </div>
   )
@@ -675,6 +831,11 @@ export default function PlayerPage() {
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState(null)
 
+  const professionalStats = useMemo(
+    () => buildProfessionalStats(individualStats, analytics),
+    [individualStats, analytics]
+  )
+
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= 900)
     window.addEventListener('resize', onResize)
@@ -740,10 +901,22 @@ export default function PlayerPage() {
         if (summary.sampleMatches > 0) {
           setIndividualStats(summary)
         } else {
-          setIndividualStats(null)
+          const deepRows = collectDeepPlayerRows(p?.extra_metadata || {})
+          if (deepRows.length > 0) {
+            const deepSummary = summarizePlayerMatchStats(deepRows)
+            setIndividualStats(deepSummary.sampleMatches > 0 ? deepSummary : null)
+          } else {
+            setIndividualStats(null)
+          }
         }
       } else {
-        setIndividualStats(null)
+        const deepRows = collectDeepPlayerRows(p?.extra_metadata || {})
+        if (deepRows.length > 0) {
+          const deepSummary = summarizePlayerMatchStats(deepRows)
+          setIndividualStats(deepSummary.sampleMatches > 0 ? deepSummary : null)
+        } else {
+          setIndividualStats(null)
+        }
       }
     } catch (e) {
       setError(e.message)
@@ -982,6 +1155,12 @@ export default function PlayerPage() {
 
       {/* ══ İÇERİK ════════════════════════════════════════════════ */}
       <div style={{ padding: isMobile ? '0 12px' : '0 20px' }}>
+
+        {professionalStats ? (
+          <ProfessionalStatsPanel stats={professionalStats} isMobile={isMobile} />
+        ) : (
+          <ScoutComingSoonCard />
+        )}
 
         {/* Scout Analytics */}
         <ScoutPanel analytics={analytics} individual={individualStats} />

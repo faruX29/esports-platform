@@ -5,6 +5,7 @@ import { GAMES, useGame } from '../GameContext'
 import { getRoleBadge } from '../roleHelper'
 import { useUser } from '../context/UserContext'
 import { summarizePlayerMatchStats, metricBars, pickRowTimestamp } from '../utils/playerMetrics'
+import InitialsImage from '../components/InitialsImage'
 
 function toNum(v) {
   const n = Number(v)
@@ -173,9 +174,16 @@ function CompareCard({ player, onClear }) {
     <div style={{ border: '1px solid #2b2b2b', borderRadius: 12, padding: 12, background: '#101010' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-          {player.image_url
-            ? <img src={player.image_url} alt={player.nickname || ''} style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', border: '1px solid #303030' }} />
-            : <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#212121' }} />}
+          <InitialsImage
+            src={player.image_url}
+            alt={player.nickname || ''}
+            name={player.nickname}
+            width={34}
+            height={34}
+            borderRadius='50%'
+            objectFit='cover'
+            style={{ border: '1px solid #303030' }}
+          />
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 800, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.nickname || 'Unknown'}</div>
             <div style={{ color: '#8a8a8a', fontSize: 11 }}>{player.team?.name || 'Free Agent'}</div>
@@ -760,9 +768,16 @@ export default function PlayersPage() {
                   onClick={() => navigate(`/player/${player.id}`)}
                   style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, cursor: 'pointer' }}
                 >
-                  {player.image_url
-                    ? <img src={player.image_url} alt={player.nickname || ''} style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', border: '1px solid #363636' }} />
-                    : <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#212121' }} />}
+                  <InitialsImage
+                    src={player.image_url}
+                    alt={player.nickname || ''}
+                    name={player.nickname}
+                    width={34}
+                    height={34}
+                    borderRadius='50%'
+                    objectFit='cover'
+                    style={{ border: '1px solid #363636' }}
+                  />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.nickname || 'Unknown'}</div>
                     <div style={{ display: 'inline-flex', alignItems: 'center', marginTop: 3, padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700, background: roleBadge.bg, color: roleBadge.color, border: `1px solid ${roleBadge.border}` }}>
@@ -775,9 +790,15 @@ export default function PlayersPage() {
                   onClick={() => player.team?.id && navigate(`/team/${player.team.id}`)}
                   style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: player.team?.id ? 'pointer' : 'default', minWidth: 0 }}
                 >
-                  {player.team?.logo_url
-                    ? <img src={player.team.logo_url} alt={player.team?.name || ''} style={{ width: 24, height: 24, objectFit: 'contain' }} />
-                    : <div style={{ width: 24, height: 24, borderRadius: 6, background: '#1f1f1f' }} />}
+                  <InitialsImage
+                    src={player.team?.logo_url}
+                    alt={player.team?.name || ''}
+                    name={player.team?.name}
+                    width={24}
+                    height={24}
+                    borderRadius={6}
+                    objectFit='contain'
+                  />
                   <span style={{ fontSize: 12, color: '#cbcbcb', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.team?.name || 'Free Agent'}</span>
                 </div>
 

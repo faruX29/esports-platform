@@ -7,7 +7,15 @@ import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
 import toast, { Toaster } from 'react-hot-toast'
 import { UserProvider } from './context/UserContext'
 import { AuthProvider } from './context/AuthContext'
-import { supabase, buildMatchRealtimeNotification, subscribeToMatchesUpdates } from './supabaseClient'
+import { useAuth } from './context/AuthContext'
+import {
+  supabase,
+  buildMatchRealtimeNotification,
+  buildManualTestNotification,
+  subscribeToMatchesUpdates,
+  requestBrowserNotificationPermission,
+  triggerBrowserMatchNotification,
+} from './supabaseClient'
 
 import ProtectedRoute from './components/ProtectedRoute'
 import NavbarComponent from './components/Navbar'
@@ -371,9 +379,33 @@ function GameSelectorBar() {
 }
 
 function RealtimeToastBridge() {
+  const { user, profile } = useAuth()
   const shownRef = useRef(new Map())
 
+  const canManualTest = !!(
+    import.meta.env.DEV
+    || String(profile?.username || '').toLowerCase() === 'admin'
+    || String(user?.email || '').toLowerCase().includes('admin')
+  )
+
+  const handleManualNotificationTest = useCallback((kind = 'start') => {
+    const notification = buildManualTestNotification(kind)
+    if (!notification) return
+
+    const text = `${notification.title} ${notification.message}`
+    if (notification.variant === 'success') {
+      toast.success(text, { duration: 3600 })
+    } else if (notification.variant === 'live') {
+      toast(text, { duration: 3000, icon: '⚡' })
+    } else {
+      toast(text, { duration: 3200, icon: '📡' })
+    }
+    triggerBrowserMatchNotification(notification)
+  }, [])
+
   useEffect(() => {
+    requestBrowserNotificationPermission({ allowPrompt: true })
+
     const unsubscribe = subscribeToMatchesUpdates(payload => {
       const notification = buildMatchRealtimeNotification(payload)
       if (!notification) return
@@ -402,6 +434,8 @@ function RealtimeToastBridge() {
       } else {
         toast(text, { ...options, icon: '📡' })
       }
+
+      triggerBrowserMatchNotification(notification)
     })
 
     return () => {
@@ -410,19 +444,65 @@ function RealtimeToastBridge() {
   }, [])
 
   return (
-    <Toaster
-      position='top-right'
-      gutter={10}
-      toastOptions={{
-        style: {
-          background: 'rgba(18,18,18,.94)',
-          color: '#f2f2f2',
-          border: '1px solid rgba(255,255,255,.12)',
-          boxShadow: '0 10px 26px rgba(0,0,0,.35)',
-          fontSize: 12,
-        },
-      }}
-    />
+    <>
+      {canManualTest && (
+        <div style={{
+          position: 'fixed',
+          right: 16,
+          bottom: 16,
+          zIndex: 10001,
+          display: 'flex',
+          gap: 8,
+        }}>
+          <button
+            type='button'
+            onClick={() => handleManualNotificationTest('start')}
+            style={{
+              background: 'rgba(22,22,22,.95)',
+              color: '#ffd66f',
+              border: '1px solid rgba(255,214,111,.35)',
+              borderRadius: 999,
+              padding: '7px 12px',
+              fontSize: 11,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Test Notification
+          </button>
+          <button
+            type='button'
+            onClick={() => handleManualNotificationTest('finish')}
+            style={{
+              background: 'rgba(22,22,22,.95)',
+              color: '#8ff3b4',
+              border: '1px solid rgba(143,243,180,.35)',
+              borderRadius: 999,
+              padding: '7px 10px',
+              fontSize: 11,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Test Finish
+          </button>
+        </div>
+      )}
+
+      <Toaster
+        position='top-right'
+        gutter={10}
+        toastOptions={{
+          style: {
+            background: 'rgba(18,18,18,.94)',
+            color: '#f2f2f2',
+            border: '1px solid rgba(255,255,255,.12)',
+            boxShadow: '0 10px 26px rgba(0,0,0,.35)',
+            fontSize: 12,
+          },
+        }}
+      />
+    </>
   )
 }
 

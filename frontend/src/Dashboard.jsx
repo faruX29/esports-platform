@@ -13,6 +13,7 @@ import { buildFinishedStory, buildUpcomingStory } from './utils/newsStories'
 import { isStoryForYou, prioritizeStoriesForYou } from './utils/newsPersonalization'
 import { calculatePredictionAccuracy, getMatchImpactLabel } from './utils/accuracyTracker'
 import { memo }                             from 'react'
+import InitialsImage                        from './components/InitialsImage'
 
 const MVP_HIDE_DREAM_TEAM = true
 const MVP_HIDE_PREDICTIONS = true
@@ -24,6 +25,16 @@ const DASHBOARD_ACCURACY_REFRESH_MIN_INTERVAL_MS = 45 * 1000
 const DASHBOARD_GLOBAL_ERROR_TEXT = 'Sunucuyla bağlantı kesildi, tekrar deneniyor...'
 const POPULAR_TEAM_SEARCH_TERMS = ['galatasaray', 'eternal fire', 'fut', 'bbl', 'fenerbahce', 'sangal', 'g2', 'fnatic', 'navi']
 const PREFERENCE_GAMES = GAMES.filter(game => ['valorant', 'cs2', 'lol'].includes(game.id))
+const UPCOMING_WINDOW_DAYS = 7
+
+function normalizePreferenceGameId(raw) {
+  const value = String(raw || '').trim().toLowerCase()
+  if (!value) return null
+  if (value === 'valorant') return 'valorant'
+  if (value === 'cs2' || value === 'csgo' || value.includes('counter') || value.includes('cs-go')) return 'cs2'
+  if (value === 'lol' || value.includes('league')) return 'lol'
+  return null
+}
 
 
 /* ── Skeleton ─────────────────────────────────────────────────────────────── */
@@ -42,12 +53,32 @@ function fmtTime(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
 }
+
+function normalizeMatchStatus(status) {
+  const normalized = String(status || '').trim().toLowerCase()
+  if (normalized === 'upcoming') return 'not_started'
+  return normalized
+}
+
+function isUpcomingStatus(status) {
+  const normalized = normalizeMatchStatus(status)
+  return normalized === 'not_started'
+}
+
+function matchesDashboardGame(matchRow, activeGameId) {
+  const gameName = String(matchRow?.game?.name || '')
+  const gameSlug = String(matchRow?.game?.slug || '')
+  const combined = `${gameName} ${gameSlug}`.trim()
+  return gameMatchesFilter(combined, activeGameId)
+}
+
 function getStatusBadge(status) {
+  const normalized = normalizeMatchStatus(status)
   return {
     not_started: { text: 'Upcoming', color: '#FFB800', bg: 'rgba(255,184,0,.12)' },
     running:     { text: 'LIVE',     color: '#FF4655', bg: 'rgba(255,70,85,.18)' },
     finished:    { text: 'Bitti',    color: '#4CAF50', bg: 'rgba(76,175,80,.12)' },
-  }[status] || { text: status, color: '#555', bg: 'transparent' }
+  }[normalized] || { text: normalized || 'unknown', color: '#555', bg: 'transparent' }
 }
 
 function normalizeTierKey(value) {
@@ -109,7 +140,7 @@ function patchMatchCollection(rows = [], incoming = {}) {
     if (match.id !== incoming.id) return match
     return {
       ...match,
-      status: incoming.status ?? match.status,
+      status: normalizeMatchStatus(incoming.status ?? match.status),
       scheduled_at: incoming.scheduled_at ?? match.scheduled_at,
       winner_id: incoming.winner_id ?? match.winner_id,
       team_a_score: incoming.team_a_score ?? match.team_a_score,
@@ -169,14 +200,24 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
 }) {
   const [selectedGames, setSelectedGames] = useState(gameIds || [])
   const [selectedTeams, setSelectedTeams] = useState(teamIds || [])
+  const [teamSearch, setTeamSearch] = useState('')
 
   useEffect(() => {
     if (!open) return
     setSelectedGames(gameIds || [])
     setSelectedTeams(teamIds || [])
+    setTeamSearch('')
   }, [open, gameIds, teamIds])
 
   if (!open) return null
+
+  const normalizedQuery = String(teamSearch || '').trim().toLocaleLowerCase('tr')
+  const filteredTeams = (popularTeams || []).filter(team => {
+    if (!normalizedQuery) return true
+    const teamName = String(team?.name || '').toLocaleLowerCase('tr')
+    const gameName = String(team?.game?.name || team?.game?.slug || '').toLocaleLowerCase('tr')
+    return teamName.includes(normalizedQuery) || gameName.includes(normalizedQuery)
+  })
 
   const toggleGame = gameId => {
     setSelectedGames(prev => prev.includes(gameId)
@@ -247,9 +288,28 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
           </div>
 
           <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 8 }}>Populer Takimlar</div>
+          <div style={{ marginBottom: 10 }}>
+            <input
+              value={teamSearch}
+              onChange={event => setTeamSearch(event.target.value)}
+              placeholder='Takim ara...'
+              style={{
+                width: '100%',
+                borderRadius: 9,
+                border: '1px solid #2a2a2a',
+                background: '#121212',
+                color: '#f1f1f1',
+                fontSize: 12,
+                padding: '8px 10px',
+                outline: 'none',
+              }}
+            />
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 8 }}>
-            {(popularTeams || []).map(team => {
+            {filteredTeams.map(team => {
               const active = selectedTeams.includes(team.id)
+              const teamGameId = normalizePreferenceGameId(team?.game?.slug ?? team?.game?.name ?? team?.game_id)
+              const gameMeta = PREFERENCE_GAMES.find(game => game.id === teamGameId)
               return (
                 <button
                   key={team.id}
@@ -263,21 +323,37 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
                     color: active ? '#ffd9de' : '#cdcdcd',
                     padding: '8px 10px',
                     display: 'flex',
-                    alignItems: 'center',
+                    alignItems: 'flex-start',
                     gap: 8,
                     cursor: 'pointer',
                   }}
                 >
-                  {team.logo_url
-                    ? <img src={team.logo_url} alt={team.name} style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0 }} />
-                    : <span style={{ width: 22, textAlign: 'center', fontSize: 11, color: '#8f8f8f', flexShrink: 0 }}>TM</span>}
-                  <span style={{ fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.name}</span>
+                  <InitialsImage
+                    src={team.logo_url}
+                    alt={team.name || ''}
+                    name={team.name}
+                    width={22}
+                    height={22}
+                    borderRadius={6}
+                    objectFit='contain'
+                  />
+                  <span style={{ minWidth: 0, display: 'grid', gap: 2 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.name}</span>
+                    <span style={{ fontSize: 10, color: active ? '#ffb2bc' : '#8e8e8e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {(gameMeta?.icon || '🎮')} {gameMeta?.label || team?.game?.name || 'Unknown Game'}
+                    </span>
+                  </span>
                 </button>
               )
             })}
             {!loading && (!popularTeams || popularTeams.length === 0) && (
               <div style={{ gridColumn: '1 / -1', fontSize: 12, color: '#777', border: '1px dashed #262626', borderRadius: 10, padding: '12px 10px', textAlign: 'center' }}>
                 Takim onerileri yuklenemedi. Daha sonra tekrar deneyebilirsin.
+              </div>
+            )}
+            {!loading && Boolean(popularTeams?.length) && filteredTeams.length === 0 && (
+              <div style={{ gridColumn: '1 / -1', fontSize: 12, color: '#777', border: '1px dashed #262626', borderRadius: 10, padding: '12px 10px', textAlign: 'center' }}>
+                Arama sonucunda takim bulunamadi.
               </div>
             )}
             {loading && (
@@ -305,7 +381,21 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
             Daha Sonra
           </button>
           <button
-            onClick={() => onSave({ gameIds: selectedGames, teamIds: selectedTeams })}
+            onClick={() => {
+              const teamGameMap = {}
+              for (const team of (popularTeams || [])) {
+                if (!selectedTeams.includes(team.id)) continue
+                const gameId = normalizePreferenceGameId(team?.game?.slug ?? team?.game?.name ?? team?.game_id)
+                if (gameId) teamGameMap[String(team.id)] = gameId
+              }
+
+              const mergedGameIds = [...new Set([
+                ...(selectedGames || []),
+                ...Object.values(teamGameMap),
+              ])]
+
+              onSave({ gameIds: mergedGameIds, teamIds: selectedTeams, teamGameMap })
+            }}
             style={{
               borderRadius: 10,
               border: '1px solid rgba(255,70,85,.72)',
@@ -568,10 +658,10 @@ const FavoritesBar = memo(function FavoritesBar({ onMatchClick, showAllTournamen
     supabase.from('matches').select(`
       id, status, scheduled_at, team_a_id, team_b_id, winner_id,
       team_a_score, team_b_score,
-      ai_prediction, prediction_team_a, prediction_team_b, prediction_confidence,
+      prediction_team_a, prediction_team_b, prediction_confidence,
       team_a:teams!matches_team_a_id_fkey(id,name,logo_url),
       team_b:teams!matches_team_b_id_fkey(id,name,logo_url),
-      tournament:tournaments(id,name,tier), game:games(id,name)
+      tournament:tournaments(id,name,tier), game:games(id,name,slug)
     `).or(orFilter)
       .order('scheduled_at', { ascending: true })
       .limit(20)
@@ -692,10 +782,15 @@ const FavoritesBar = memo(function FavoritesBar({ onMatchClick, showAllTournamen
                     marginBottom: ri === 0 ? 4 : 0,
                     opacity: isFin && row.lost ? 0.4 : 1,
                   }}>
-                    {row.team?.logo_url
-                      ? <img src={row.team.logo_url} alt="" style={{ width: 20, height: 20, objectFit: 'contain', flexShrink: 0 }} />
-                      : <div style={{ width: 20, height: 20, background: '#1e1e1e', borderRadius: 4, flexShrink: 0 }} />
-                    }
+                    <InitialsImage
+                      src={row.team?.logo_url}
+                      alt={row.team?.name || ''}
+                      name={row.team?.name}
+                      width={20}
+                      height={20}
+                      borderRadius={4}
+                      objectFit='contain'
+                    />
                     <span style={{
                       fontSize: 11, fontWeight: row.won ? 700 : 500,
                       color: row.won ? '#4CAF50' : row.fav ? '#FFD700' : '#ccc',
@@ -908,10 +1003,16 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
       }}>
         {/* Team A */}
         <div style={{ textAlign: 'center', opacity: isFin && bWon ? 0.45 : 1 }}>
-          {m.team_a?.logo_url
-            ? <img src={m.team_a.logo_url} alt="" style={{ width: 36, height: 36, objectFit: 'contain', display: 'block', margin: '0 auto 4px' }} />
-            : <div style={{ width: 36, height: 36, background: '#1a1a1a', borderRadius: 8, margin: '0 auto 4px' }} />
-          }
+          <InitialsImage
+            src={m.team_a?.logo_url}
+            alt={m.team_a?.name || ''}
+            name={m.team_a?.name}
+            width={36}
+            height={36}
+            borderRadius={8}
+            objectFit='contain'
+            style={{ margin: '0 auto 4px' }}
+          />
           <div style={{
             fontSize: 10, fontWeight: 700, lineHeight: 1.2,
             color: aWon ? '#4CAF50' : favA ? '#FFD700' : '#ccc',
@@ -958,10 +1059,16 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
 
         {/* Team B */}
         <div style={{ textAlign: 'center', opacity: isFin && aWon ? 0.45 : 1 }}>
-          {m.team_b?.logo_url
-            ? <img src={m.team_b.logo_url} alt="" style={{ width: 36, height: 36, objectFit: 'contain', display: 'block', margin: '0 auto 4px' }} />
-            : <div style={{ width: 36, height: 36, background: '#1a1a1a', borderRadius: 8, margin: '0 auto 4px' }} />
-          }
+          <InitialsImage
+            src={m.team_b?.logo_url}
+            alt={m.team_b?.name || ''}
+            name={m.team_b?.name}
+            width={36}
+            height={36}
+            borderRadius={8}
+            objectFit='contain'
+            style={{ margin: '0 auto 4px' }}
+          />
           <div style={{
             fontSize: 10, fontWeight: 700, lineHeight: 1.2,
             color: bWon ? '#4CAF50' : favB ? '#FFD700' : '#ccc',
@@ -1040,16 +1147,28 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick }) {
 
       {/* Teams */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, overflow: 'hidden' }}>
-        {m.team_a?.logo_url && (
-          <img src={m.team_a.logo_url} alt="" style={{ width: 18, height: 18, objectFit: 'contain', flexShrink: 0 }} />
-        )}
+        <InitialsImage
+          src={m.team_a?.logo_url}
+          alt={m.team_a?.name || ''}
+          name={m.team_a?.name}
+          width={18}
+          height={18}
+          borderRadius={4}
+          objectFit='contain'
+        />
         <span style={{ fontSize: 12, fontWeight: 600, color: turkA ? '#ff6b7a' : '#bbb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
           {m.team_a?.name || '?'}{turkA && ' 🇹🇷'}
         </span>
         <span style={{ fontSize: 9, color: '#2a2a2a', flexShrink: 0 }}>vs</span>
-        {m.team_b?.logo_url && (
-          <img src={m.team_b.logo_url} alt="" style={{ width: 18, height: 18, objectFit: 'contain', flexShrink: 0 }} />
-        )}
+        <InitialsImage
+          src={m.team_b?.logo_url}
+          alt={m.team_b?.name || ''}
+          name={m.team_b?.name}
+          width={18}
+          height={18}
+          borderRadius={4}
+          objectFit='contain'
+        />
         <span style={{ fontSize: 12, fontWeight: 600, color: turkB ? '#ff6b7a' : '#bbb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
           {m.team_b?.name || '?'}{turkB && ' 🇹🇷'}
         </span>
@@ -1146,7 +1265,7 @@ export default function Dashboard() {
 
         let { data, error } = await supabase
           .from('teams')
-          .select('id,name,logo_url,game:games(name,slug)')
+          .select('id,name,logo_url,game_id,game:games(id,name,slug)')
           .or(searchFilter)
           .limit(18)
 
@@ -1155,7 +1274,7 @@ export default function Dashboard() {
         if (!data || data.length === 0) {
           const fallbackRes = await supabase
             .from('teams')
-            .select('id,name,logo_url,game:games(name,slug)')
+            .select('id,name,logo_url,game_id,game:games(id,name,slug)')
             .order('name', { ascending: true })
             .limit(12)
 
@@ -1195,9 +1314,9 @@ export default function Dashboard() {
     setShowPreferenceWizard(false)
   }, [markPreferenceWizardSeen])
 
-  const handlePreferenceWizardSave = useCallback(({ gameIds, teamIds }) => {
-    setFollowedGames(gameIds || [])
-    setFollowedTeams(teamIds || [])
+  const handlePreferenceWizardSave = useCallback(({ gameIds, teamIds, teamGameMap }) => {
+    setFollowedTeams(teamIds || [], { teamGameMap })
+    setFollowedGames(gameIds || [], { teamIds, teamGameMap })
     markPreferenceWizardSeen()
     setShowPreferenceWizard(false)
   }, [setFollowedGames, setFollowedTeams, markPreferenceWizardSeen])
@@ -1206,15 +1325,17 @@ export default function Dashboard() {
     setLoading(true)
     try {
       const nowIso = new Date().toISOString()
+      const upcomingFloorIso = new Date(Date.now() - (6 * 60 * 60 * 1000)).toISOString()
+      const upcomingCeilIso = new Date(Date.now() + (UPCOMING_WINDOW_DAYS * 24 * 60 * 60 * 1000)).toISOString()
 
       const selectStr = `
         id, status, scheduled_at,
         team_a_id, team_b_id, winner_id, team_a_score, team_b_score,
-        ai_prediction, prediction_team_a, prediction_team_b, prediction_confidence,
+        prediction_team_a, prediction_team_b, prediction_confidence,
         team_a:teams!matches_team_a_id_fkey(id,name,logo_url),
         team_b:teams!matches_team_b_id_fkey(id,name,logo_url),
         tournament:tournaments(id,name,tier),
-        game:games(id,name)
+        game:games(id,name,slug)
       `
       const [liveRes, upcomingRes] = await Promise.all([
         supabase.from('matches').select(selectStr)
@@ -1222,8 +1343,9 @@ export default function Dashboard() {
           .order('scheduled_at', { ascending: true })
           .limit(18),
         supabase.from('matches').select(selectStr)
-          .eq('status', 'not_started')
-          .gt('scheduled_at', nowIso)
+          .in('status', ['not_started', 'upcoming'])
+          .gte('scheduled_at', upcomingFloorIso)
+          .lte('scheduled_at', upcomingCeilIso)
           .order('scheduled_at', { ascending: true })
           .limit(30),
       ])
@@ -1231,8 +1353,8 @@ export default function Dashboard() {
       if (liveRes.error) throw liveRes.error
       if (upcomingRes.error) throw upcomingRes.error
 
-      const baseLive = (liveRes.data || []).filter(m => gameMatchesFilter(m.game?.name || '', activeGame))
-      const baseUpcoming = (upcomingRes.data || []).filter(m => gameMatchesFilter(m.game?.name || '', activeGame))
+      const baseLive = (liveRes.data || []).filter(m => matchesDashboardGame(m, activeGame))
+      const baseUpcoming = (upcomingRes.data || []).filter(m => matchesDashboardGame(m, activeGame))
       const live = filterMatchesByTournamentTier(baseLive, showAllTournamentTiers)
       const upcoming = filterMatchesByTournamentTier(baseUpcoming, showAllTournamentTiers)
 
@@ -1265,32 +1387,16 @@ export default function Dashboard() {
     async function fetchFinishedAccuracyRows() {
       setAccuracyLoading(true)
       try {
-        let selectColumns = 'id,status,winner_id,team_a_id,team_b_id,ai_prediction,prediction_team_a,prediction_team_b,prediction_confidence'
-        let retriedWithoutAiPrediction = false
+        const selectColumns = 'id,status,winner_id,team_a_id,team_b_id,prediction_team_a,prediction_team_b,prediction_confidence'
 
-        const runQuery = async () => {
-          return supabase
-            .from('matches')
-            .select(selectColumns)
-            .eq('status', 'finished')
-            .not('winner_id', 'is', null)
-            .order('scheduled_at', { ascending: false })
-            .order('id', { ascending: false })
-            .limit(30)
-        }
-
-        let { data, error } = await runQuery()
-
-        if (error) {
-          const message = String(error.message || '').toLowerCase()
-          if (!retriedWithoutAiPrediction && message.includes('ai_prediction')) {
-            retriedWithoutAiPrediction = true
-            selectColumns = 'id,status,winner_id,team_a_id,team_b_id,prediction_team_a,prediction_team_b,prediction_confidence'
-            const fallbackResult = await runQuery()
-            data = fallbackResult.data
-            error = fallbackResult.error
-          }
-        }
+        const { data, error } = await supabase
+          .from('matches')
+          .select(selectColumns)
+          .eq('status', 'finished')
+          .not('winner_id', 'is', null)
+          .order('scheduled_at', { ascending: false })
+          .order('id', { ascending: false })
+          .limit(30)
 
         if (error) throw error
         if (!cancelled) {
@@ -1359,11 +1465,14 @@ export default function Dashboard() {
 
       if (!scoreChanged) return
 
-      setLiveMatches(prev => patchMatchCollection(prev, nextRow).filter(match => match.status === 'running'))
-      setUpcomingMatches(prev => patchMatchCollection(prev, nextRow).filter(match => match.status === 'not_started'))
+      setLiveMatches(prev => patchMatchCollection(prev, nextRow).filter(match => normalizeMatchStatus(match.status) === 'running'))
+      setUpcomingMatches(prev => patchMatchCollection(prev, nextRow).filter(match => isUpcomingStatus(match.status)))
       setMyFeedMatches(prev => {
-        const patched = patchMatchCollection(prev, nextRow).filter(match => match.status === 'running' || match.status === 'not_started')
-        setLiveFavCount(patched.filter(match => match.status === 'running').length)
+        const patched = patchMatchCollection(prev, nextRow).filter(match => {
+          const status = normalizeMatchStatus(match.status)
+          return status === 'running' || isUpcomingStatus(status)
+        })
+        setLiveFavCount(patched.filter(match => normalizeMatchStatus(match.status) === 'running').length)
         return patched
       })
     })
@@ -1408,8 +1517,9 @@ export default function Dashboard() {
           .join(',')
 
         const now = new Date()
+        const recentUpcomingFloor = new Date(now.getTime() - (6 * 60 * 60 * 1000))
         const soon = new Date(now)
-        soon.setDate(now.getDate() + 5)
+        soon.setDate(now.getDate() + UPCOMING_WINDOW_DAYS)
 
         const { data } = await supabase
           .from('matches')
@@ -1417,20 +1527,20 @@ export default function Dashboard() {
             id, status, scheduled_at,
             team_a_id, team_b_id, winner_id,
             team_a_score, team_b_score,
-            ai_prediction, prediction_team_a, prediction_team_b, prediction_confidence,
+            prediction_team_a, prediction_team_b, prediction_confidence,
             team_a:teams!matches_team_a_id_fkey(id,name,logo_url),
             team_b:teams!matches_team_b_id_fkey(id,name,logo_url),
             tournament:tournaments(id,name,tier),
-            game:games(id,name)
+            game:games(id,name,slug)
           `)
           .or(orFilter)
-          .in('status', ['not_started', 'running'])
-          .gte('scheduled_at', now.toISOString())
+          .in('status', ['not_started', 'upcoming', 'running'])
+          .gte('scheduled_at', recentUpcomingFloor.toISOString())
           .lte('scheduled_at', soon.toISOString())
           .order('scheduled_at', { ascending: true })
           .limit(40)
 
-        const baseFiltered = (data || []).filter(m => gameMatchesFilter(m.game?.name || '', activeGame))
+        const baseFiltered = (data || []).filter(m => matchesDashboardGame(m, activeGame))
         const filtered = filterMatchesByTournamentTier(baseFiltered, showAllTournamentTiers)
 
         if (!cancelled) {
@@ -1569,6 +1679,8 @@ export default function Dashboard() {
       setTickerLoading(true)
       try {
         const nowIso = new Date().toISOString()
+        const upcomingFloorIso = new Date(Date.now() - (6 * 60 * 60 * 1000)).toISOString()
+        const upcomingCeilIso = new Date(Date.now() + (UPCOMING_WINDOW_DAYS * 24 * 60 * 60 * 1000)).toISOString()
         const selectStr = `
           id, status, scheduled_at, winner_id,
           team_a_id, team_b_id, team_a_score, team_b_score,
@@ -1595,8 +1707,9 @@ export default function Dashboard() {
           supabase
             .from('matches')
             .select(selectStr)
-            .eq('status', 'not_started')
-            .gt('scheduled_at', nowIso)
+            .in('status', ['not_started', 'upcoming'])
+            .gte('scheduled_at', upcomingFloorIso)
+            .lte('scheduled_at', upcomingCeilIso)
             .order('scheduled_at', { ascending: true })
             .limit(8),
         ])
@@ -1606,15 +1719,15 @@ export default function Dashboard() {
         if (upcomingRes.error) throw upcomingRes.error
 
         const running = filterMatchesByTournamentTier(
-          (runningRes.data || []).filter(m => gameMatchesFilter(m.game?.name || m.game?.slug || '', activeGame)),
+          (runningRes.data || []).filter(m => matchesDashboardGame(m, activeGame)),
           showAllTournamentTiers
         )
         const finished = filterMatchesByTournamentTier(
-          (finishedRes.data || []).filter(m => gameMatchesFilter(m.game?.name || m.game?.slug || '', activeGame)),
+          (finishedRes.data || []).filter(m => matchesDashboardGame(m, activeGame)),
           showAllTournamentTiers
         )
         const upcoming = filterMatchesByTournamentTier(
-          (upcomingRes.data || []).filter(m => gameMatchesFilter(m.game?.name || m.game?.slug || '', activeGame)),
+          (upcomingRes.data || []).filter(m => matchesDashboardGame(m, activeGame)),
           showAllTournamentTiers
         )
 
@@ -2188,13 +2301,28 @@ export default function Dashboard() {
             <div key={p.id} onClick={() => navigate(`/player/${p.id}`)} style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1fr .9fr .9fr .9fr', gap: 8, alignItems: 'center', padding: '11px 14px', borderBottom: '1px solid #191919', cursor: 'pointer', background: idx === 0 ? 'linear-gradient(90deg, rgba(200,16,46,.22), transparent 62%)' : 'transparent' }}>
               <div style={{ fontWeight: 800, color: '#f4f4f4' }}>#{idx + 1}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                {p.image_url
-                  ? <img src={p.image_url} alt={p.nickname || ''} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: '1px solid #333' }} />
-                  : <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#222' }} />}
+                <InitialsImage
+                  src={p.image_url}
+                  alt={p.nickname || ''}
+                  name={p.nickname}
+                  width={28}
+                  height={28}
+                  borderRadius='50%'
+                  objectFit='cover'
+                  style={{ border: '1px solid #333' }}
+                />
                 <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nickname || 'Unknown'}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                {p.team?.logo_url ? <img src={p.team.logo_url} alt={p.team?.name || ''} style={{ width: 20, height: 20, objectFit: 'contain' }} /> : <div style={{ width: 20, height: 20, borderRadius: 6, background: '#222' }} />}
+                <InitialsImage
+                  src={p.team?.logo_url}
+                  alt={p.team?.name || ''}
+                  name={p.team?.name}
+                  width={20}
+                  height={20}
+                  borderRadius={6}
+                  objectFit='contain'
+                />
                 <span style={{ fontSize: 11, color: '#bbb', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.team?.name || 'Free Agent'}</span>
               </div>
               <div style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{p.sampleMatches}</div>

@@ -14,6 +14,7 @@ import uuid
 import json
 import time
 import requests
+import re
 
 from database import Database
 from etl.pandascore_client import PandaScoreClient
@@ -24,6 +25,20 @@ from etl.pandascore_client import PandaScoreClient
 def _player_uuid(pandascore_id: int) -> str:
     """PandaScore integer ID'den deterministik UUID üretir."""
     return str(uuid.uuid5(uuid.NAMESPACE_URL, f"ps-player-{pandascore_id}"))
+
+
+def _to_float(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _normalize_nickname(name):
+    raw = str(name or '').strip().lower()
+    if not raw:
+        return ''
+    return re.sub(r'[^a-z0-9]+', '', raw)
 
 
 # ── Ana Ligler ─────────────────────────────────────────────────────────────────
@@ -101,6 +116,32 @@ class PlayerStatsSyncer:
                     CREATE UNIQUE INDEX IF NOT EXISTS uq_match_stats_match_team
                     ON public.match_stats(match_id, team_id)
                     WHERE match_id IS NOT NULL AND team_id IS NOT NULL
+                """)
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS public.player_match_stats (
+                        id            bigserial PRIMARY KEY,
+                        player_id     uuid NOT NULL,
+                        match_id      bigint NOT NULL,
+                        team_id       bigint,
+                        kills         numeric,
+                        deaths        numeric,
+                        assists       numeric,
+                        headshots     numeric,
+                        hs_percentage numeric,
+                        is_win        boolean,
+                        stats         jsonb DEFAULT '{}'::jsonb,
+                        played_at     timestamptz,
+                        created_at    timestamptz DEFAULT now(),
+                        updated_at    timestamptz DEFAULT now()
+                    )
+                """)
+                cur.execute("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS uq_player_match_stats_player_match
+                    ON public.player_match_stats(player_id, match_id)
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_player_match_stats_player_id
+                    ON public.player_match_stats(player_id)
                 """)
         print("✅ Şema hazır")
 
@@ -229,11 +270,41 @@ class PlayerStatsSyncer:
             DO NOTHING
         """
 
+        INSERT_PLAYER_STATS_SQL = """
+            INSERT INTO player_match_stats (
+                player_id,
+                match_id,
+                team_id,
+                kills,
+                deaths,
+                assists,
+                headshots,
+                hs_percentage,
+                is_win,
+                stats,
+                played_at,
+                updated_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
+            ON CONFLICT (player_id, match_id)
+            DO UPDATE SET
+                team_id       = EXCLUDED.team_id,
+                kills         = EXCLUDED.kills,
+                deaths        = EXCLUDED.deaths,
+                assists       = EXCLUDED.assists,
+                headshots     = EXCLUDED.headshots,
+                hs_percentage = EXCLUDED.hs_percentage,
+                is_win        = EXCLUDED.is_win,
+                stats         = EXCLUDED.stats,
+                played_at     = COALESCE(EXCLUDED.played_at, player_match_stats.played_at),
+                updated_at    = now()
+        """
+
         with Database.get_connection() as conn:
             with conn.cursor() as cur:
                 # 1) İşlenecek maçları çek
                 cur.execute("""
-                    SELECT m.id, m.team_a_id, m.team_b_id, m.raw_data
+                                        SELECT m.id, m.team_a_id, m.team_b_id, m.winner_id, m.scheduled_at, m.raw_data
                     FROM matches m
                     WHERE m.status = 'finished'
                       AND m.raw_data IS NOT NULL
@@ -254,9 +325,21 @@ class PlayerStatsSyncer:
                 processed = 0
                 skipped   = 0
                 batch     = []   # (match_id, team_id, stats_json)
+                player_batch = []
+
+                cur.execute("SELECT id, pandascore_id, nickname FROM players")
+                player_rows = cur.fetchall()
+                players_by_psid = {}
+                players_by_name = {}
+                for p_id, pandascore_id, nickname in player_rows:
+                    if pandascore_id is not None:
+                        players_by_psid[int(pandascore_id)] = p_id
+                    normalized_name = _normalize_nickname(nickname)
+                    if normalized_name and normalized_name not in players_by_name:
+                        players_by_name[normalized_name] = p_id
 
                 # 2) Python'da parse et, batch biriktir
-                for match_id, team_a_id, team_b_id, raw_data in matches:
+                for match_id, team_a_id, team_b_id, winner_id, scheduled_at, raw_data in matches:
                     try:
                         results = raw_data.get('results', [])
                         games   = raw_data.get('games',   [])
@@ -293,13 +376,75 @@ class PlayerStatsSyncer:
                                 })
                             ))
 
+                        player_rows_for_match = self._extract_player_stat_rows(raw_data)
+                        for stat_row in player_rows_for_match:
+                            player_uuid = None
+                            player_psid = stat_row.get('player_id')
+                            if player_psid is not None:
+                                try:
+                                    player_uuid = players_by_psid.get(int(player_psid))
+                                except (TypeError, ValueError):
+                                    player_uuid = None
+
+                            if not player_uuid:
+                                normalized_name = _normalize_nickname(stat_row.get('player_name'))
+                                if normalized_name:
+                                    player_uuid = players_by_name.get(normalized_name)
+
+                            if not player_uuid:
+                                continue
+
+                            kills = _to_float(stat_row.get('kills'))
+                            deaths = _to_float(stat_row.get('deaths'))
+                            assists = _to_float(stat_row.get('assists'))
+                            headshots = _to_float(stat_row.get('headshots'))
+                            hs_pct = _to_float(stat_row.get('hs_pct') or stat_row.get('hs_percentage'))
+
+                            if hs_pct is None and kills and headshots is not None and kills > 0:
+                                hs_pct = (headshots / kills) * 100
+
+                            row_team_id = stat_row.get('team_id')
+                            if row_team_id is not None:
+                                try:
+                                    row_team_id = int(row_team_id)
+                                except (TypeError, ValueError):
+                                    row_team_id = None
+
+                            is_win = None
+                            if winner_id is not None and row_team_id is not None:
+                                is_win = int(winner_id) == int(row_team_id)
+
+                            payload_stats = {
+                                'source': stat_row.get('source') or 'raw_data',
+                                'kda': _to_float(stat_row.get('kda')),
+                                'win_rate': _to_float(stat_row.get('win_rate')),
+                                'samples': stat_row.get('samples'),
+                            }
+
+                            player_batch.append((
+                                player_uuid,
+                                match_id,
+                                row_team_id,
+                                kills,
+                                deaths,
+                                assists,
+                                headshots,
+                                hs_pct,
+                                is_win,
+                                json.dumps(payload_stats),
+                                scheduled_at,
+                            ))
+
                         processed += 1
 
                         # 3) batch_size dolunca flush et
                         if len(batch) >= batch_size:
                             cur.executemany(INSERT_SQL, batch)
+                            if player_batch:
+                                cur.executemany(INSERT_PLAYER_STATS_SQL, player_batch)
                             conn.commit()
                             batch.clear()
+                            player_batch.clear()
 
                     except Exception as e:
                         print(f"  ⚠️  match {match_id}: {e}")
@@ -308,10 +453,66 @@ class PlayerStatsSyncer:
                 # 4) Kalan satırları yaz
                 if batch:
                     cur.executemany(INSERT_SQL, batch)
+                if player_batch:
+                    cur.executemany(INSERT_PLAYER_STATS_SQL, player_batch)
+                if batch or player_batch:
                     conn.commit()
 
         print(f"\n📊 Sonuç: {processed} maç işlendi | {skipped} atlandı")
         return processed
+
+    def _extract_player_stat_rows(self, raw_data):
+        """Raw match payload içindeki player-level metrik satırlarını normalize eder."""
+        source_enrichment = raw_data.get('source_enrichment') if isinstance(raw_data, dict) else {}
+        rows = []
+
+        if isinstance(source_enrichment, dict):
+            for source_name, source_payload in source_enrichment.items():
+                if not isinstance(source_payload, dict):
+                    continue
+
+                history = source_payload.get('match_history')
+                if isinstance(history, list):
+                    rows.extend(self._normalize_player_rows(history, source_name))
+
+                detail = source_payload.get('match_detail')
+                if isinstance(detail, dict):
+                    detail_rows = detail.get('player_metrics')
+                    if isinstance(detail_rows, list):
+                        rows.extend(self._normalize_player_rows(detail_rows, source_name))
+
+                direct_rows = source_payload.get('player_metrics')
+                if isinstance(direct_rows, list):
+                    rows.extend(self._normalize_player_rows(direct_rows, source_name))
+
+        pandascore_rows = raw_data.get('pandascore_player_summaries') if isinstance(raw_data, dict) else None
+        if isinstance(pandascore_rows, list):
+            rows.extend(self._normalize_player_rows(pandascore_rows, 'pandascore'))
+
+        return rows
+
+    def _normalize_player_rows(self, items, source):
+        normalized = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+
+            player_obj = item.get('player') if isinstance(item.get('player'), dict) else {}
+            normalized.append({
+                'player_id': item.get('player_id') or item.get('id') or item.get('pandascore_id') or player_obj.get('id'),
+                'player_name': item.get('player_name') or item.get('name') or item.get('nickname') or player_obj.get('name') or player_obj.get('nickname'),
+                'team_id': item.get('team_id') or (item.get('team') or {}).get('id') if isinstance(item.get('team'), dict) else item.get('team_id'),
+                'kills': item.get('kills') or item.get('total_kills') or item.get('frags'),
+                'deaths': item.get('deaths') or item.get('total_deaths'),
+                'assists': item.get('assists') or item.get('total_assists'),
+                'headshots': item.get('headshots') or item.get('headshot_kills') or item.get('hs_kills'),
+                'kda': item.get('kda'),
+                'hs_pct': item.get('hs_pct') or item.get('hs_percentage') or item.get('headshot_percentage'),
+                'win_rate': item.get('win_rate') or item.get('wr'),
+                'samples': item.get('samples'),
+                'source': source,
+            })
+        return normalized
 
     # ── Aktif Kadro Sync ───────────────────────────────────────────────────────
 

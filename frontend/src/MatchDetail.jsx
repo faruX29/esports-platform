@@ -99,6 +99,24 @@ function gameShort(n = '') {
   return n.slice(0, 4).toUpperCase() || '?'
 }
 
+function normalizeGameAlias(value = '') {
+  const s = String(value || '').toLowerCase()
+  if (!s) return ''
+  if (s.includes('counter') || s.includes('cs2') || s.includes('csgo') || s.includes('cs-go')) return 'cs2'
+  if (s.includes('valorant')) return 'valorant'
+  if (s.includes('league') || s === 'lol') return 'lol'
+  return s
+}
+
+function getGameSlugCandidates(value = '') {
+  const normalized = normalizeGameAlias(value)
+  if (!normalized) return []
+  if (normalized === 'cs2') return ['cs2', 'csgo', 'cs-go', 'counter-strike-global-offensive']
+  if (normalized === 'lol') return ['lol', 'league-of-legends']
+  if (normalized === 'valorant') return ['valorant']
+  return [normalized]
+}
+
 const toNum = v => {
   const n = Number(v)
   return Number.isFinite(n) ? n : null
@@ -1182,14 +1200,34 @@ export default function MatchDetail() {
     const aId = m.team_a_id||m.team_a?.id
     const bId = m.team_b_id||m.team_b?.id
     try {
+      const slugCandidates = getGameSlugCandidates(m.game?.slug || m.game?.name || '')
+      let aliasGameIds = [m.game_id, m.game?.id].map(Number).filter(Number.isFinite)
+
+      if (slugCandidates.length > 0) {
+        const { data: gameRows } = await supabase
+          .from('games')
+          .select('id,slug')
+          .in('slug', slugCandidates)
+
+        const ids = (gameRows || []).map(row => Number(row.id)).filter(Number.isFinite)
+        aliasGameIds = Array.from(new Set([...aliasGameIds, ...ids]))
+      }
+
+      let h2hQuery = supabase.from('matches')
+        .select('id,game_id,winner_id,status,team_a_id,team_b_id,team_a_score,team_b_score,scheduled_at,raw_data,team_a:teams!matches_team_a_id_fkey(id,name,logo_url),team_b:teams!matches_team_b_id_fkey(id,name,logo_url)')
+        .eq('status','finished')
+        .or(`and(team_a_id.eq.${aId},team_b_id.eq.${bId}),and(team_a_id.eq.${bId},team_b_id.eq.${aId})`)
+        .order('scheduled_at',{ascending:false})
+        .limit(8)
+
+      if (aliasGameIds.length > 0) {
+        h2hQuery = h2hQuery.in('game_id', aliasGameIds)
+      }
+
       const [plA, plB, h2hRes, statsRes] = await Promise.all([
         supabase.from('players').select('id,nickname,real_name,role,image_url').eq('team_pandascore_id', aId).order('role'),
         supabase.from('players').select('id,nickname,real_name,role,image_url').eq('team_pandascore_id', bId).order('role'),
-        supabase.from('matches')
-          .select('id,winner_id,status,team_a_id,team_b_id,team_a_score,team_b_score,scheduled_at,raw_data,team_a:teams!matches_team_a_id_fkey(id,name,logo_url),team_b:teams!matches_team_b_id_fkey(id,name,logo_url)')
-          .eq('status','finished')
-          .or(`and(team_a_id.eq.${aId},team_b_id.eq.${bId}),and(team_a_id.eq.${bId},team_b_id.eq.${aId})`)
-          .order('scheduled_at',{ascending:false}).limit(8),
+        h2hQuery,
         supabase.from('match_stats')
           .select('team_id,stats')
           .in('team_id', [aId, bId])

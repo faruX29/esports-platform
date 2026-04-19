@@ -10,8 +10,12 @@ import {
   HERO_TIERS,
   buildFinishedStory,
   buildUpcomingStory,
+  normalizeGameId,
+  normalizeTier,
 } from '../utils/newsStories'
 import { isStoryForYou, prioritizeStoriesForYou } from '../utils/newsPersonalization'
+import InitialsImage from '../components/InitialsImage'
+import { cleanDisplayName } from '../utils/nameCleaner'
 
 const GAME_FILTERS = GAMES.filter(game => !game.soon && game.id !== 'all' && ['valorant', 'cs2', 'lol'].includes(game.id))
 const CATEGORY_TABS = [
@@ -21,6 +25,39 @@ const CATEGORY_TABS = [
   { id: 'cs2', label: 'CS2' },
 ]
 const NEWS_PAGE_SIZE = 6
+const COMMENT_CONTENT_COLUMN = 'content'
+
+function normalizeStoryGameId(raw) {
+  const normalized = normalizeGameId(raw)
+  if (normalized) return normalized
+  return String(raw || '').trim().toLowerCase() || null
+}
+
+function normalizeTournamentId(raw) {
+  const parsed = Number(raw)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function applyRealtimeTournamentToStory(story, tournamentById) {
+  const tournamentId = normalizeTournamentId(story?.tournamentId)
+  if (tournamentId == null) return story
+
+  const tournament = tournamentById.get(tournamentId)
+  if (!tournament) return story
+
+  return {
+    ...story,
+    visuals: {
+      ...story.visuals,
+      tier: normalizeTier(tournament.tier ?? story?.visuals?.tier),
+      tournamentName: cleanDisplayName(tournament.name || story?.visuals?.tournamentName || 'Ana Sahne') || 'Ana Sahne',
+    },
+  }
+}
+
+function getCommentContent(comment) {
+  return comment?.content ?? comment?.comment_text ?? ''
+}
 
 function fmtDate(iso) {
   if (!iso) return 'N/A'
@@ -182,12 +219,26 @@ function NewsCard({ item, likes, liked, comments, onLike, onComment, canInteract
 
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'auto 1fr auto', gap: 12, alignItems: 'center', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'flex-start', gap: 8 }}>
-            {visuals.teamA.logo_url
-              ? <img src={visuals.teamA.logo_url} alt={visuals.teamA.name || ''} style={{ width: 34, height: 34, objectFit: 'contain', borderRadius: 10, background: '#111', padding: 4, border: '1px solid #242424' }} />
-              : <div style={{ width: 34, height: 34, borderRadius: 10, background: '#151515', border: '1px solid #242424' }} />}
-            {visuals.teamB.logo_url
-              ? <img src={visuals.teamB.logo_url} alt={visuals.teamB.name || ''} style={{ width: 34, height: 34, objectFit: 'contain', borderRadius: 10, background: '#111', padding: 4, border: '1px solid #242424' }} />
-              : <div style={{ width: 34, height: 34, borderRadius: 10, background: '#151515', border: '1px solid #242424' }} />}
+            <InitialsImage
+              src={visuals.teamA.logo_url}
+              alt={visuals.teamA.name || ''}
+              name={visuals.teamA.name}
+              width={34}
+              height={34}
+              borderRadius={10}
+              objectFit='contain'
+              style={{ background: '#111', padding: 4, border: '1px solid #242424' }}
+            />
+            <InitialsImage
+              src={visuals.teamB.logo_url}
+              alt={visuals.teamB.name || ''}
+              name={visuals.teamB.name}
+              width={34}
+              height={34}
+              borderRadius={10}
+              objectFit='contain'
+              style={{ background: '#111', padding: 4, border: '1px solid #242424' }}
+            />
           </div>
 
           <div style={{ minWidth: 0 }}>
@@ -237,7 +288,7 @@ function NewsCard({ item, likes, liked, comments, onLike, onComment, canInteract
             {comments.slice(0, 3).map(comment => (
               <div key={comment.id} style={{ fontSize: 12, color: '#c7c7c7', background: '#121212', borderRadius: 8, padding: '7px 9px', border: '1px solid #1f1f1f' }}>
                 <div style={{ fontSize: 10, color: '#777', marginBottom: 3 }}>{comment.author}</div>
-                {comment.comment_text}
+                {getCommentContent(comment)}
               </div>
             ))}
           </div>
@@ -302,7 +353,7 @@ export default function NewsPage() {
 
     const [{ data: likesRows }, commentsRes] = await Promise.all([
       supabase.from('news_likes').select('id,news_id,user_id').in('news_id', newsIds),
-      supabase.from('news_comments').select('id,news_id,user_id,comment_text,created_at').in('news_id', newsIds).order('created_at', { ascending: false }),
+      supabase.from('news_comments').select('id,news_id,user_id,content,created_at').in('news_id', newsIds).order('created_at', { ascending: false }),
     ])
 
     let commentsRows = commentsRes?.data || []
@@ -325,8 +376,11 @@ export default function NewsPage() {
     const commentMap = {}
     for (const row of (commentsRows || [])) {
       if (!commentMap[row.news_id]) commentMap[row.news_id] = []
+      const content = getCommentContent(row)
       commentMap[row.news_id].push({
         ...row,
+        content,
+        comment_text: content,
         author: row.user_id === user?.id ? (profile?.username || 'Sen') : `User ${String(row.user_id || '').slice(0, 6)}`,
       })
     }
@@ -341,6 +395,7 @@ export default function NewsPage() {
     try {
       const now = new Date()
       const since = new Date(now.getTime() - (24 * 60 * 60 * 1000))
+      const upcomingFrom = new Date(now.getTime() - (6 * 60 * 60 * 1000))
       const upcomingUntil = new Date(now.getTime() + (72 * 60 * 60 * 1000))
 
       const commonSelect = `
@@ -364,8 +419,8 @@ export default function NewsPage() {
         supabase
           .from('matches')
           .select(commonSelect)
-          .eq('status', 'not_started')
-          .gte('scheduled_at', now.toISOString())
+          .in('status', ['not_started', 'upcoming'])
+          .gte('scheduled_at', upcomingFrom.toISOString())
           .lte('scheduled_at', upcomingUntil.toISOString())
           .order('scheduled_at', { ascending: true })
           .limit(10),
@@ -376,6 +431,25 @@ export default function NewsPage() {
 
       const finishedMatches = finishedRes.data || []
       const upcomingMatches = upcomingRes.data || []
+
+      const tournamentIds = [...new Set([
+        ...finishedMatches.map(match => normalizeTournamentId(match?.tournament?.id ?? match?.tournament_id)).filter(id => id != null),
+        ...upcomingMatches.map(match => normalizeTournamentId(match?.tournament?.id ?? match?.tournament_id)).filter(id => id != null),
+      ])]
+
+      let tournamentById = new Map()
+      if (tournamentIds.length > 0) {
+        const { data: tournamentRows, error: tournamentError } = await supabase
+          .from('tournaments')
+          .select('id,name,tier')
+          .in('id', tournamentIds)
+
+        if (tournamentError) {
+          console.warn('NewsPage realtime tier fetch:', tournamentError.message || tournamentError)
+        } else {
+          tournamentById = new Map((tournamentRows || []).map(row => [normalizeTournamentId(row.id), row]))
+        }
+      }
 
       const matchIds = finishedMatches.map(match => match.id)
       const { data: statsRows, error: statsError } = matchIds.length
@@ -395,6 +469,14 @@ export default function NewsPage() {
         ...upcomingMatches.map(match => buildUpcomingStory(match, isTurkishTeam)),
       ]
         .filter(story => story.visuals.gameId)
+        .map(story => applyRealtimeTournamentToStory(story, tournamentById))
+        .map(story => ({
+          ...story,
+          visuals: {
+            ...story.visuals,
+            gameId: normalizeStoryGameId(story?.visuals?.gameId),
+          },
+        }))
         .slice(0, NEWS_LIMIT)
 
       const prioritized = prioritizeStoriesForYou(generated, followedTeamIds)
@@ -418,7 +500,10 @@ export default function NewsPage() {
   }, [loadStories])
 
   const filteredStories = useMemo(() => {
-    const scoped = stories.filter(story => activeCategory === 'all' || story.visuals.gameId === activeCategory)
+    const scoped = stories.filter(story => {
+      if (activeCategory === 'all') return true
+      return normalizeStoryGameId(story?.visuals?.gameId) === normalizeStoryGameId(activeCategory)
+    })
     return prioritizeStoriesForYou(scoped, followedTeamIds).map(story => ({
       ...story,
       isForYou: isStoryForYou(story, followedTeamIds),
@@ -464,8 +549,8 @@ export default function NewsPage() {
     try {
       const { data, error } = await supabase
         .from('news_comments')
-        .insert({ news_id: newsId, user_id: user.id, comment_text: text })
-        .select('id,news_id,user_id,comment_text,created_at')
+        .insert({ news_id: newsId, user_id: user.id, [COMMENT_CONTENT_COLUMN]: text })
+        .select('id,news_id,user_id,content,created_at')
         .single()
 
       if (error) {
@@ -477,11 +562,14 @@ export default function NewsPage() {
       }
 
       if (data) {
+        const content = getCommentContent(data) || text
         setCommentsByNews(prev => ({
           ...prev,
           [newsId]: [
             {
               ...data,
+              content,
+              comment_text: content,
               author: profile?.username || 'Sen',
             },
             ...(prev[newsId] || []),
@@ -603,12 +691,26 @@ export default function NewsPage() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'auto 1fr', gap: 16, alignItems: 'center', marginBottom: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'flex-start', gap: 10 }}>
-                    {hero.visuals.teamA.logo_url
-                      ? <img src={hero.visuals.teamA.logo_url} alt={hero.visuals.teamA.name || ''} style={{ width: isMobile ? 50 : 56, height: isMobile ? 50 : 56, objectFit: 'contain', borderRadius: 14, background: '#111', padding: 6, border: '1px solid #2c2c2c' }} />
-                      : <div style={{ width: isMobile ? 50 : 56, height: isMobile ? 50 : 56, borderRadius: 14, background: '#151515', border: '1px solid #2c2c2c' }} />}
-                    {hero.visuals.teamB.logo_url
-                      ? <img src={hero.visuals.teamB.logo_url} alt={hero.visuals.teamB.name || ''} style={{ width: isMobile ? 50 : 56, height: isMobile ? 50 : 56, objectFit: 'contain', borderRadius: 14, background: '#111', padding: 6, border: '1px solid #2c2c2c' }} />
-                      : <div style={{ width: isMobile ? 50 : 56, height: isMobile ? 50 : 56, borderRadius: 14, background: '#151515', border: '1px solid #2c2c2c' }} />}
+                    <InitialsImage
+                      src={hero.visuals.teamA.logo_url}
+                      alt={hero.visuals.teamA.name || ''}
+                      name={hero.visuals.teamA.name}
+                      width={isMobile ? 50 : 56}
+                      height={isMobile ? 50 : 56}
+                      borderRadius={14}
+                      objectFit='contain'
+                      style={{ background: '#111', padding: 6, border: '1px solid #2c2c2c' }}
+                    />
+                    <InitialsImage
+                      src={hero.visuals.teamB.logo_url}
+                      alt={hero.visuals.teamB.name || ''}
+                      name={hero.visuals.teamB.name}
+                      width={isMobile ? 50 : 56}
+                      height={isMobile ? 50 : 56}
+                      borderRadius={14}
+                      objectFit='contain'
+                      style={{ background: '#111', padding: 6, border: '1px solid #2c2c2c' }}
+                    />
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ color: '#b3b3b3', fontSize: 12, marginBottom: 6 }}>{hero.visuals.tournamentName}</div>

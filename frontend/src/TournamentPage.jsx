@@ -12,14 +12,15 @@ import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react'
 import { useParams, useNavigate }                     from 'react-router-dom'
 import { supabase }                                   from './supabaseClient'
 import { isTurkishTeam }                              from './constants'
+import { cleanDisplayName }                           from './utils/nameCleaner'
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 
 const TIER_META = {
-  S: { color: '#FFD700', bg: 'rgba(255,215,0,.15)',   border: 'rgba(255,215,0,.4)',   label: 'S · Premier'    },
-  A: { color: '#FF4655', bg: 'rgba(255,70,85,.15)',   border: 'rgba(255,70,85,.4)',   label: 'A · Major'      },
-  B: { color: '#FF8C00', bg: 'rgba(255,140,0,.15)',   border: 'rgba(255,140,0,.4)',   label: 'B · Regional'   },
-  C: { color: '#818cf8', bg: 'rgba(129,140,248,.15)', border: 'rgba(129,140,248,.4)', label: 'C · Qualifier'  },
+  S: { color: '#FFD700', bg: 'rgba(255,215,0,.15)',   border: 'rgba(255,215,0,.4)',   label: 'S-Tier · Premier'     },
+  A: { color: '#FF4655', bg: 'rgba(255,70,85,.15)',   border: 'rgba(255,70,85,.4)',   label: 'A-Tier · Major'       },
+  B: { color: '#FF8C00', bg: 'rgba(255,140,0,.15)',   border: 'rgba(255,140,0,.4)',   label: 'B-Tier · Regional'    },
+  C: { color: '#818cf8', bg: 'rgba(129,140,248,.15)', border: 'rgba(129,140,248,.4)', label: 'C-Tier · Challenger'  },
 }
 
 const MVP_TOURNAMENT_RESCUE = true
@@ -44,22 +45,85 @@ function gameIcon(name = '') {
 
 function normalizeTierKey(value) {
   if (!value) return null
-  const normalized = String(value).toUpperCase().replace(/\s+/g, '').replace('_TIER', '')
-  if (['S', 'A', 'B', 'C'].includes(normalized)) return normalized
-  return null
+
+  const normalized = String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/_/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/--+/g, '-')
+
+  const token = normalized
+    .replace(/tier/g, '')
+    .replace(/[^a-z]/g, '')
+
+  switch (token.charAt(0)) {
+    case 's': return 'S'
+    case 'a': return 'A'
+    case 'b': return 'B'
+    case 'c': return 'C'
+    default: return null
+  }
 }
 
 function getTierMeta(rawTier) {
   const key = normalizeTierKey(rawTier)
   if (key && TIER_META[key]) return { ...TIER_META[key], key }
   if (!rawTier) return null
+  const fallbackKey = String(rawTier || '').trim().toUpperCase()
   return {
-    key: rawTier,
+    key: fallbackKey,
     color: '#aaa',
     bg: 'rgba(255,255,255,.08)',
     border: 'rgba(170,170,170,.35)',
-    label: `Tier ${rawTier}`,
+    label: `${fallbackKey}-Tier`,
   }
+}
+
+function cleanName(value, fallback = '') {
+  const cleaned = cleanDisplayName(value)
+  if (cleaned) return cleaned
+  return String(fallback || value || '').trim()
+}
+
+function toInteger(value) {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return null
+  const int = Math.trunc(parsed)
+  return Number.isFinite(int) ? int : null
+}
+
+function getStructuredRound(match) {
+  return toInteger(match?.round ?? match?.round_number ?? match?.bracket_round)
+}
+
+function getStructuredPosition(match) {
+  const pos = toInteger(match?.position ?? match?.bracket_position ?? match?.slot)
+  if (pos == null || pos < 1) return null
+  return pos
+}
+
+function getStructuredNextMatchId(match) {
+  const raw = match?.next_match_id ?? match?.next_match?.id ?? null
+  if (raw == null) return null
+  return String(raw)
+}
+
+function stageFromStructuredRound(roundNo, bracketSide = 'upper') {
+  if (!Number.isFinite(roundNo)) return null
+
+  if (bracketSide === 'lower') {
+    if (roundNo <= 1) return 'Lower Round 1'
+    if (roundNo === 2) return 'Lower Round 2'
+    if (roundNo === 3) return 'Lower Round 3'
+    if (roundNo === 4) return 'Lower Round 4'
+    if (roundNo === 5) return 'Lower Semi-final'
+    return 'Lower Final'
+  }
+
+  if (roundNo <= 1) return 'Quarter-finals'
+  if (roundNo === 2) return 'Semi-finals'
+  return 'Grand final'
 }
 
 function getMatchTimestamp(match) {
@@ -111,15 +175,47 @@ function buildBracketStages(matches = []) {
 
   const resolved = sortedByTime.map(m => {
     const bracketSide = inferBracketSide(m)
+    const structuredRound = getStructuredRound(m)
+    const structuredPosition = getStructuredPosition(m)
+    const structuredNextMatchId = getStructuredNextMatchId(m)
+
+    const stageFromStructuredRound = stageFromStructuredRound(structuredRound, bracketSide)
+    if (stageFromStructuredRound) {
+      return {
+        ...m,
+        __stage: stageFromStructuredRound,
+        __stageSource: 'round',
+        __bracketSide: bracketSide,
+        __roundNo: structuredRound,
+        __positionNo: structuredPosition,
+        __nextMatchId: structuredNextMatchId,
+      }
+    }
 
     const stageFromRound = inferBracketStageFromText(m?.round_info, bracketSide)
     if (stageFromRound) {
-      return { ...m, __stage: stageFromRound, __stageSource: 'round_info', __bracketSide: bracketSide }
+      return {
+        ...m,
+        __stage: stageFromRound,
+        __stageSource: 'round_info',
+        __bracketSide: bracketSide,
+        __roundNo: structuredRound,
+        __positionNo: structuredPosition,
+        __nextMatchId: structuredNextMatchId,
+      }
     }
 
     const stageFromName = inferBracketStageFromText(m?.name, bracketSide)
     if (stageFromName) {
-      return { ...m, __stage: stageFromName, __stageSource: 'name', __bracketSide: bracketSide }
+      return {
+        ...m,
+        __stage: stageFromName,
+        __stageSource: 'name',
+        __bracketSide: bracketSide,
+        __roundNo: structuredRound,
+        __positionNo: structuredPosition,
+        __nextMatchId: structuredNextMatchId,
+      }
     }
 
     const fallbackStage = bracketSide === 'lower' ? 'Lower Round 1' : 'Quarter-finals'
@@ -141,6 +237,9 @@ function buildBracketStages(matches = []) {
       __stage: fallbackStage,
       __stageSource: 'side-default',
       __bracketSide: bracketSide,
+      __roundNo: structuredRound,
+      __positionNo: structuredPosition,
+      __nextMatchId: structuredNextMatchId,
     }
   })
 
@@ -313,8 +412,13 @@ function detectFormat(matches) {
   const rounds = [...new Set(matches.map(m => m.round_info || m.name).filter(Boolean))]
   if (rounds.some(r => /final|semi|quarter|bracket/i.test(r))) return 'elimination'
   if (rounds.some(r => /group|round|week/i.test(r)))           return 'roundrobin'
-  // bracket_position varsa elimination
-  if (matches.some(m => m.bracket_position != null))           return 'elimination'
+  // Structured bracket alanları varsa elimination.
+  if (matches.some(m =>
+    m.bracket_position != null ||
+    m.next_match_id != null ||
+    m.round != null ||
+    m.position != null
+  )) return 'elimination'
   // fallback: maç sayısı az + tekrar eden takım çiftleri az → elimination
   return rounds.length > 0 ? 'roundrobin' : 'elimination'
 }
@@ -618,12 +722,35 @@ const ROUND_LABELS = {
 const BRACKET_CARD_H   = 88   // px — BracketMatchCard yüksekliği
 const BRACKET_CARD_GAP = 10   // px — kartlar arası gap
 const BRACKET_HEADER_H = 44   // px — round header yüksekliği
-const BRACKET_CARD_W   = 200
-const BRACKET_COL_GAP  = 76
+const BRACKET_CARD_W   = 214
+const BRACKET_COL_GAP  = 94
 const BRACKET_TOP_PAD  = 8
 const CONNECTOR_MODE = 'orthogonal'
 const BRACKET_MIN_ZOOM = 0.65
 const BRACKET_MAX_ZOOM = 1.2
+
+function buildConnectorPath(from, to) {
+  if (!from || !to) return ''
+
+  const dx = Math.max(12, to.x - from.x)
+  const midX = from.x + (dx * 0.5)
+  const dy = to.y - from.y
+  const direction = dy >= 0 ? 1 : -1
+  const bend = Math.max(10, Math.min(20, Math.abs(dy) * 0.28))
+
+  if (Math.abs(dy) <= 2) {
+    return `M ${from.x} ${from.y} C ${from.x + 24} ${from.y}, ${to.x - 24} ${to.y}, ${to.x} ${to.y}`
+  }
+
+  return [
+    `M ${from.x} ${from.y}`,
+    `H ${midX - bend}`,
+    `Q ${midX} ${from.y} ${midX} ${from.y + (bend * direction)}`,
+    `V ${to.y - (bend * direction)}`,
+    `Q ${midX} ${to.y} ${midX + bend} ${to.y}`,
+    `H ${to.x}`,
+  ].join(' ')
+}
 
 function clampBracketZoom(value) {
   return Math.min(BRACKET_MAX_ZOOM, Math.max(BRACKET_MIN_ZOOM, value))
@@ -642,6 +769,11 @@ const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, gc, highl
   const isTRB = isTurkishTeam(bName)
   const [hov, setHov] = useState(false)
   const canNavigate = m?.__clickable !== false && Boolean(m?.team_a && m?.id)
+  const structuredBits = [
+    Number.isFinite(m?.__roundNo) ? `R${m.__roundNo}` : null,
+    Number.isFinite(m?.__positionNo) ? `P${m.__positionNo}` : null,
+    m?.__nextMatchId ? `Next ${m.__nextMatchId}` : null,
+  ].filter(Boolean)
 
   return (
     <div
@@ -655,20 +787,33 @@ const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, gc, highl
           ? '1.5px solid rgba(255,70,85,.6)'
           : highlightPath
           ? '1.5px solid rgba(255,70,85,.55)'
-          : hov ? `1.5px solid ${gc}88` : '1.5px solid #1e1e1e',
+          : hov ? `1.5px solid ${gc}88` : '1.5px solid #242424',
         boxShadow: m.status === 'running'
           ? '0 0 14px rgba(255,70,85,.2)'
           : highlightPath
           ? '0 0 16px rgba(255,70,85,.18)'
           : hov ? `0 4px 16px ${gc}20` : 'none',
         cursor: canNavigate ? 'pointer' : 'default',
-        background: '#0d0d0d',
+        background: 'linear-gradient(162deg, #111 0%, #0b0b0b 100%)',
         transition: 'all .18s',
-        width: 200,
+        width: BRACKET_CARD_W,
         height: BRACKET_CARD_H,
         display: 'flex', flexDirection: 'column',
       }}
     >
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 2,
+        background: m.status === 'running'
+          ? 'linear-gradient(90deg, rgba(255,70,85,.85), rgba(255,120,140,.35))'
+          : highlightPath
+          ? 'linear-gradient(90deg, rgba(255,70,85,.6), rgba(255,170,185,.2))'
+          : 'linear-gradient(90deg, rgba(255,255,255,.16), rgba(255,255,255,0))',
+      }} />
+
       {/* LIVE pulse */}
       {m.status === 'running' && (
         <div style={{
@@ -697,6 +842,25 @@ const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, gc, highl
           padding: '2px 6px',
         }}>
           Winner Path
+        </div>
+      )}
+
+      {structuredBits.length > 0 && (
+        <div style={{
+          position: 'absolute',
+          bottom: 4,
+          left: 8,
+          zIndex: 3,
+          fontSize: 8,
+          fontWeight: 700,
+          letterSpacing: '.35px',
+          color: '#8d8d8d',
+          background: 'rgba(0,0,0,.34)',
+          border: '1px solid rgba(120,120,120,.25)',
+          borderRadius: 6,
+          padding: '1px 5px',
+        }}>
+          {structuredBits.join(' · ')}
         </div>
       )}
 
@@ -782,6 +946,10 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
 
     for (const key of Object.keys(main)) {
       main[key] = main[key].sort((a, b) => {
+        const posA = Number.isFinite(a?.__positionNo) ? a.__positionNo : Number.MAX_SAFE_INTEGER
+        const posB = Number.isFinite(b?.__positionNo) ? b.__positionNo : Number.MAX_SAFE_INTEGER
+        if (posA !== posB) return posA - posB
+
         const ta = getMatchTimestamp(a) ? new Date(getMatchTimestamp(a)).getTime() : 0
         const tb = getMatchTimestamp(b) ? new Date(getMatchTimestamp(b)).getTime() : 0
         return ta - tb
@@ -817,6 +985,13 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
     })
 
     const edges = []
+    const cardsById = new Map()
+    for (const col of columns) {
+      for (const card of col.cards) {
+        cardsById.set(String(card.m?.id), { ...card, colIdx: col.colIdx })
+      }
+    }
+
     for (let c = 0; c < columns.length - 1; c++) {
       const leftCards = columns[c].cards
       const rightCards = columns[c + 1].cards
@@ -824,29 +999,40 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
       leftCards.forEach((srcCard, srcIdx) => {
         const src = srcCard.m
         const winnerId = src?.winner_id || null
+        const structuredNextMatchId = src?.__nextMatchId ? String(src.__nextMatchId) : null
 
-        let targetIndex = -1
-        if (winnerId) {
-          targetIndex = rightCards.findIndex(rc => {
-            const t = rc.m
+        let dstCard = null
+        if (structuredNextMatchId) {
+          const linked = cardsById.get(structuredNextMatchId)
+          if (linked && linked.colIdx > c) {
+            dstCard = linked
+          }
+        }
+
+        if (!dstCard && winnerId && rightCards.length > 0) {
+          dstCard = rightCards.find(card => {
+            const t = card.m
             const ta = t?.team_a?.id || t?.team_a_id
             const tb = t?.team_b?.id || t?.team_b_id
             return winnerId === ta || winnerId === tb
-          })
+          }) || null
         }
 
-        // Winner eşleşmesi yoksa bracket akışını bozmamak için index-pair fallback.
-        if (targetIndex === -1 && rightCards.length > 0) {
-          targetIndex = Math.min(Math.floor(srcIdx / 2), rightCards.length - 1)
+        if (!dstCard && rightCards.length > 0) {
+          const fallbackBase = Number.isFinite(src?.__positionNo)
+            ? Math.floor((src.__positionNo - 1) / 2)
+            : Math.floor(srcIdx / 2)
+          const fallbackIndex = Math.min(Math.max(0, fallbackBase), rightCards.length - 1)
+          dstCard = rightCards[fallbackIndex]
         }
 
-        if (targetIndex < 0) return
-        const dstCard = rightCards[targetIndex]
+        if (!dstCard) return
+
         edges.push({
-          key: `${c}-${srcCard.idx}-${targetIndex}`,
+          key: `${c}-${srcCard.idx}-${dstCard.idx}`,
           from: { x: srcCard.x + BRACKET_CARD_W, y: srcCard.centerY },
           to: { x: dstCard.x, y: dstCard.centerY },
-          highlight: Boolean(winnerId),
+          highlight: Boolean(winnerId || structuredNextMatchId),
           sourceId: src?.id,
           targetId: dstCard.m?.id,
         })
@@ -899,6 +1085,9 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
     </div>
   )
 
+  const connectorGradientId = bracketSide === 'lower' ? 'bracketFlowLower' : 'bracketFlowUpper'
+  const connectorGlowId = bracketSide === 'lower' ? 'bracketGlowLower' : 'bracketGlowUpper'
+
   return (
     <div>
       <div style={{ fontSize: 10, color: '#4a4a4a', marginBottom: 8, textAlign: 'right' }}>
@@ -939,39 +1128,59 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
             style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'visible' }}
           >
             <defs>
-              <filter id="winnerGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <filter id={connectorGlowId} x="-50%" y="-50%" width="200%" height="200%">
                 <feGaussianBlur stdDeviation="2.6" result="blur" />
                 <feMerge>
                   <feMergeNode in="blur" />
                   <feMergeNode in="SourceGraphic" />
                 </feMerge>
               </filter>
+              <linearGradient id={connectorGradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="rgba(255,70,85,.45)" />
+                <stop offset="40%" stopColor="rgba(255,92,124,.72)" />
+                <stop offset="100%" stopColor="rgba(255,158,178,.88)" />
+              </linearGradient>
             </defs>
 
             {layout.edges.map(edge => {
               const { from, to, highlight, key } = edge
-              const midX = from.x + ((to.x - from.x) / 2)
               const d = CONNECTOR_MODE === 'orthogonal'
-                ? `M ${from.x} ${from.y} H ${midX} V ${to.y} H ${to.x}`
-                : `M ${from.x} ${from.y} C ${from.x + 20} ${from.y}, ${to.x - 20} ${to.y}, ${to.x} ${to.y}`
+                ? buildConnectorPath(from, to)
+                : `M ${from.x} ${from.y} C ${from.x + 26} ${from.y}, ${to.x - 26} ${to.y}, ${to.x} ${to.y}`
 
               return (
                 <g key={key}>
                   <path
                     d={d}
                     fill="none"
-                    stroke={highlight ? 'rgba(255,70,85,.2)' : 'rgba(42,42,42,.55)'}
-                    strokeWidth={highlight ? 3 : 2}
+                    stroke={highlight ? 'rgba(255,70,85,.16)' : 'rgba(36,36,36,.72)'}
+                    strokeWidth={highlight ? 6 : 4}
                     strokeLinecap="round"
                   />
                   <path
                     d={d}
                     fill="none"
-                    stroke={highlight ? '#FF4655' : '#4a4a4a'}
-                    strokeWidth={highlight ? 1.4 : 1}
+                    stroke={highlight ? `url(#${connectorGradientId})` : 'rgba(94,94,94,.78)'}
+                    strokeWidth={highlight ? 2.1 : 1.25}
                     strokeLinecap="round"
-                    strokeDasharray={highlight ? undefined : '4 4'}
-                    filter={highlight ? 'url(#winnerGlow)' : undefined}
+                    strokeDasharray={highlight ? undefined : '5 6'}
+                    filter={highlight ? `url(#${connectorGlowId})` : undefined}
+                  />
+                  <circle
+                    cx={from.x}
+                    cy={from.y}
+                    r={highlight ? 3.6 : 2.7}
+                    fill={highlight ? 'rgba(255,120,150,.95)' : 'rgba(106,106,106,.78)'}
+                    stroke='rgba(11,11,11,.9)'
+                    strokeWidth={1.2}
+                  />
+                  <circle
+                    cx={to.x}
+                    cy={to.y}
+                    r={highlight ? 3.8 : 3}
+                    fill={highlight ? 'rgba(255,142,170,.94)' : 'rgba(118,118,118,.8)'}
+                    stroke='rgba(11,11,11,.9)'
+                    strokeWidth={1.2}
                   />
                 </g>
               )
@@ -995,8 +1204,9 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                   padding: '5px 12px', borderRadius: 20, marginBottom: 10,
-                  background: `${meta.color}15`,
-                  border: `1px solid ${meta.color}33`,
+                  background: `linear-gradient(135deg, ${meta.color}1f, rgba(9,9,9,.9))`,
+                  border: `1px solid ${meta.color}45`,
+                  boxShadow: `0 5px 18px ${meta.color}22`,
                   height: BRACKET_HEADER_H - 10,
                 }}>
                   <span style={{ fontSize: 12 }}>{meta.icon}</span>
@@ -1246,8 +1456,24 @@ export default function TournamentPage() {
         })
       }
 
-      setTournament(tourRes.data)
-      setMatches(matchRes.data || [])
+      const normalizedTournament = {
+        ...tourRes.data,
+        name: cleanName(tourRes.data?.name, 'Tournament'),
+      }
+
+      const normalizedMatches = (matchRes.data || []).map(row => ({
+        ...row,
+        round_info: cleanName(row?.round_info, row?.round_info || ''),
+        tournament: row?.tournament
+          ? {
+              ...row.tournament,
+              name: cleanName(row.tournament?.name, row.tournament?.name || ''),
+            }
+          : row?.tournament,
+      }))
+
+      setTournament(normalizedTournament)
+      setMatches(normalizedMatches)
     } catch (e) {
       console.error('TournamentPage fetch error:', e)
       setError(e.message)
@@ -1329,6 +1555,7 @@ export default function TournamentPage() {
   const gc    = gameColor(gName)
   const gi    = gameIcon(gName)
   const tier  = getTierMeta(tournament?.tier)
+  const tournamentDisplayName = cleanName(tournament?.name, 'Tournament')
   const isTR  = isTurkishTeam(tournament?.name ?? '') || tournament?.region === 'TR'
   const liquipediaMeta = tournament?.extra_metadata?.liquipedia || null
   const liquipediaLocation = liquipediaMeta?.location || null
@@ -1493,7 +1720,7 @@ export default function TournamentPage() {
           <h1 style={{
             margin: '0 0 10px', fontSize: 28, fontWeight: 900, lineHeight: 1.15,
             color: '#f0f0f0',
-          }}>{tournament.name}</h1>
+          }}>{tournamentDisplayName}</h1>
 
           {/* Meta row */}
           <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginBottom: 14,

@@ -4,6 +4,7 @@ Sync match data to Supabase database
 from database import Database
 from etl.pandascore_client import PandaScoreClient
 from etl.data_cleaner       import DataCleaner
+from etl.adapters import MultiSourceDataAggregator, RiotAdapter, SteamAdapter
 import psycopg
 import json
 from datetime import timezone, datetime
@@ -15,8 +16,12 @@ class MatchSyncer:
     def __init__(self):
         self.client  = PandaScoreClient()
         self.cleaner = DataCleaner()
+        self.aggregator = MultiSourceDataAggregator([
+            RiotAdapter(),
+            SteamAdapter(),
+        ])
 
-    def sync_game_matches(self, game_slug, limit=50, past=False, page=1):
+    def sync_game_matches(self, game_slug, limit=50, past=False, page=1, upcoming_days=7):
         """
         Sync matches for a specific game
         
@@ -35,11 +40,17 @@ class MatchSyncer:
         if past:
             raw_matches = self.client.get_past_matches(game_slug, limit, page)
         else:
-            raw_matches = self.client.get_upcoming_matches(game_slug, limit)
+            raw_matches = self.client.get_upcoming_matches(game_slug, limit, days_ahead=upcoming_days)
         
         if not raw_matches:
             print("❌ No matches fetched from API")
             return {'fetched': 0, 'cleaned': 0, 'synced': 0}
+
+        # Enrich PandaScore raw rows with optional Riot/Steam foundations.
+        try:
+            raw_matches = self.aggregator.enrich_matches(raw_matches, game_slug=game_slug)
+        except Exception as agg_err:
+            print(f"⚠️  Multi-source enrichment skipped due to error: {agg_err}")
         
         # Clean data
         print("🧹 Cleaning data...")

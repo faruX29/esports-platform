@@ -6,6 +6,7 @@ import { isTurkishTeam } from '../constants'
 import {
   buildFinishedStory,
   buildUpcomingStory,
+  normalizeTier,
   storyExplainability,
 } from '../utils/newsStories'
 import {
@@ -14,6 +15,8 @@ import {
   getScoutVoteDelta,
   normalizeScoutScore,
 } from '../utils/scoutRank'
+import InitialsImage from '../components/InitialsImage'
+import { cleanDisplayName } from '../utils/nameCleaner'
 
 function isMissingTableError(error, tableName) {
   const code = error?.code || ''
@@ -432,11 +435,45 @@ export default function NewsDetailPage() {
           ? buildFinishedStory(match, byMatch, isTurkishTeam)
           : buildUpcomingStory(match, isTurkishTeam)
 
+        const tournamentId = Number(match?.tournament?.id ?? match?.tournament_id)
+        let realtimeTournament = null
+        if (Number.isFinite(tournamentId)) {
+          const { data: tournamentRow, error: tournamentErr } = await supabase
+            .from('tournaments')
+            .select('id,name,tier')
+            .eq('id', tournamentId)
+            .maybeSingle()
+
+          if (!tournamentErr && tournamentRow) {
+            realtimeTournament = tournamentRow
+          }
+        }
+
+        const storyWithRealtimeTier = {
+          ...generated,
+          visuals: {
+            ...generated.visuals,
+            tier: normalizeTier(realtimeTournament?.tier ?? generated?.visuals?.tier),
+            tournamentName: cleanDisplayName(realtimeTournament?.name || generated?.visuals?.tournamentName || 'Ana Sahne') || 'Ana Sahne',
+          },
+        }
+
+        const matchWithRealtimeTournament = realtimeTournament
+          ? {
+              ...match,
+              tournament: {
+                ...(match?.tournament || {}),
+                ...realtimeTournament,
+                name: cleanDisplayName(realtimeTournament?.name || match?.tournament?.name || '') || match?.tournament?.name,
+              },
+            }
+          : match
+
         if (!cancelled) {
-          setMatchData(match)
+          setMatchData(matchWithRealtimeTournament)
           setStatsRows(statRows || [])
-          setStory(generated)
-          await loadForum(generated.id)
+          setStory(storyWithRealtimeTier)
+          await loadForum(storyWithRealtimeTier.id)
         }
       } catch (err) {
         if (!cancelled) {
@@ -677,12 +714,26 @@ export default function NewsDetailPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 14, alignItems: 'center', marginBottom: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {story.visuals.teamA.logo_url
-                ? <img src={story.visuals.teamA.logo_url} alt={story.visuals.teamA.name || ''} style={{ width: 52, height: 52, objectFit: 'contain', borderRadius: 12, background: '#111', padding: 5, border: '1px solid #2a2a2a' }} />
-                : <div style={{ width: 52, height: 52, borderRadius: 12, background: '#171717', border: '1px solid #2a2a2a' }} />}
-              {story.visuals.teamB.logo_url
-                ? <img src={story.visuals.teamB.logo_url} alt={story.visuals.teamB.name || ''} style={{ width: 52, height: 52, objectFit: 'contain', borderRadius: 12, background: '#111', padding: 5, border: '1px solid #2a2a2a' }} />
-                : <div style={{ width: 52, height: 52, borderRadius: 12, background: '#171717', border: '1px solid #2a2a2a' }} />}
+              <InitialsImage
+                src={story.visuals.teamA.logo_url}
+                alt={story.visuals.teamA.name || ''}
+                name={story.visuals.teamA.name}
+                width={52}
+                height={52}
+                borderRadius={12}
+                objectFit='contain'
+                style={{ background: '#111', padding: 5, border: '1px solid #2a2a2a' }}
+              />
+              <InitialsImage
+                src={story.visuals.teamB.logo_url}
+                alt={story.visuals.teamB.name || ''}
+                name={story.visuals.teamB.name}
+                width={52}
+                height={52}
+                borderRadius={12}
+                objectFit='contain'
+                style={{ background: '#111', padding: 5, border: '1px solid #2a2a2a' }}
+              />
             </div>
             <div>
               <div style={{ fontSize: 12, color: '#9d9d9d', marginBottom: 5 }}>{story.visuals.tournamentName}</div>

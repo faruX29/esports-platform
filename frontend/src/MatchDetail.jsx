@@ -1260,42 +1260,11 @@ export default function MatchDetail() {
     return () => clearInterval(timer)
   }, [match?.status, fetchMatch])
 
-  /* ── Loading / error ── */
-  if (loadingMatch) return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 20px', color: '#fff' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <Sk h="200px" r="20px" />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}><Sk h="300px" r="18px" /><Sk h="300px" r="18px" /></div>
-      </div>
-      <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
-    </div>
-  )
-  if (error || !match) return (
-    <div style={{ textAlign: 'center', padding: '80px 20px', color: '#fff' }}>
-      <div style={{ fontSize: 48, marginBottom: 16 }}>❌</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: '#666', marginBottom: 24 }}>Maç bulunamadı — {error}</div>
-      <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', background: '#FF4655', border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>← Geri</button>
-    </div>
-  )
-
-  /* ── Türevler ── */
-  const aId   = match.team_a_id || match.team_a?.id
-  const bId   = match.team_b_id || match.team_b?.id
-  const aName = match.team_a?.name || '?'
-  const bName = match.team_b?.name || '?'
-  const aLogo = match.team_a?.logo_url
-  const bLogo = match.team_b?.logo_url
-  const gName = match.game?.name || ''
-  const gc    = gameColor(gName)
-  const isLive= match.status === 'running'
-  const isFin = match.status === 'finished'
-  const hasTR = isTurkishTeam(aName) || isTurkishTeam(bName)
-  const pctA  = aiWin.teamA
-  const pctB  = aiWin.teamB
-  const aWon  = isFin && (match.winner_id === aId || match.winner_id === parseInt(aId))
-  const bWon  = isFin && !aWon && !!match.winner_id
-  const favA  = isTeamFollowed(aId)
-  const favB  = isTeamFollowed(bId)
+  /* ── Hook-safe derivations — must stay before any early return ── */
+  const aId   = match?.team_a_id || match?.team_a?.id
+  const bId   = match?.team_b_id || match?.team_b?.id
+  const aName = match?.team_a?.name || '?'
+  const bName = match?.team_b?.name || '?'
   const extraMetadata = match?.extra_metadata || match?.raw_data?.extra_metadata || null
 
   const scoutMvp = useMemo(
@@ -1320,6 +1289,39 @@ export default function MatchDetail() {
     }),
     [extraMetadata, mapStats, h2h.matches, h2h.teamAId, h2h.teamBId, aId, bId, aName, bName],
   )
+
+  /* ── Loading / error ── */
+  if (loadingMatch) return (
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 20px', color: '#fff' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <Sk h="200px" r="20px" />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}><Sk h="300px" r="18px" /><Sk h="300px" r="18px" /></div>
+      </div>
+      <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
+    </div>
+  )
+  if (error || !match) return (
+    <div style={{ textAlign: 'center', padding: '80px 20px', color: '#fff' }}>
+      <div style={{ fontSize: 48, marginBottom: 16 }}>❌</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: '#666', marginBottom: 24 }}>Maç bulunamadı — {error}</div>
+      <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', background: '#FF4655', border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>← Geri</button>
+    </div>
+  )
+
+  /* ── Türevler (match guaranteed non-null below) ── */
+  const aLogo = match.team_a?.logo_url
+  const bLogo = match.team_b?.logo_url
+  const gName = match.game?.name || ''
+  const gc    = gameColor(gName)
+  const isLive= match.status === 'running'
+  const isFin = match.status === 'finished'
+  const hasTR = isTurkishTeam(aName) || isTurkishTeam(bName)
+  const pctA  = aiWin.teamA
+  const pctB  = aiWin.teamB
+  const aWon  = isFin && (match.winner_id === aId || match.winner_id === parseInt(aId))
+  const bWon  = isFin && !aWon && !!match.winner_id
+  const favA  = isTeamFollowed(aId)
+  const favB  = isTeamFollowed(bId)
 
   const twitchCh = (() => {
     const s = streams.find(s => (s.embed_url || s.raw_url || '').toLowerCase().includes('twitch.tv'))

@@ -125,6 +125,12 @@ def main():
     )
 
     parser.add_argument(
+        '--roster-flush',
+        action='store_true',
+        help='Roster Integrity Flush: kadroda olmayan oyuncuların team_id\'sini NULL yap',
+    )
+
+    parser.add_argument(
         '--liquipedia-enrich',
         action='store_true',
         help='Liquipedia MediaWiki API ile Data Enrichment çalıştır',
@@ -159,6 +165,7 @@ def main():
         args.players,
         args.missing_rosters,
         args.league_sync,
+        args.roster_flush,
         args.fix_stale,
         args.past,
         args.all_games,
@@ -266,6 +273,19 @@ def main():
         print(f"✅ {result['players_upserted']} oyuncu | "
               f"{result['teams_found']} takım bulundu | "
               f"{result['leagues_scanned']} lig tarandı | "
+              f"{result['errors']} hata")
+        print("=" * 60)
+
+    # ── --roster-flush: Kadro bütünlüğü temizliği ────────────────────────────
+    if args.roster_flush:
+        print("\n" + "=" * 60)
+        print(f"🧹 ROSTER INTEGRITY FLUSH (son {args.roster_days} gün)")
+        print("=" * 60)
+        ps = PlayerStatsSyncer()
+        result = ps.flush_all_stale_rosters(days=args.roster_days)
+        print(f"✅ {result['players_flushed']} oyuncu serbest bırakıldı | "
+              f"{result['players_upserted']} upsert | "
+              f"{result['teams_checked']} takım | "
               f"{result['errors']} hata")
         print("=" * 60)
 

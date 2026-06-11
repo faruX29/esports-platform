@@ -20,38 +20,71 @@ concurrency:
   cancel-in-progress: false  # Eski işi iptal etme, bekle
 
 jobs:
-  sync-data:
+  match-sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 10  # Max 10 dakika
-    
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: backend
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
+      - name: Validate backend path
+        run: |
+          test -d .
+          test -f run.py
+          test -f requirements.txt
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+
       - name: Install dependencies
-        run: |
-          cd backend
-          pip install -r requirements.txt --break-system-packages
-      
+        run: pip install -r requirements.txt --break-system-packages
+
       - name: Sync matches + predict + extract stats
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
+        run: python run.py --all-games --limit 50 --predict --stats
+
+      - name: Notify on failure
+        if: failure()
+        run: echo "❌ Match sync failed! Check logs."
+
+  roster-sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate backend path
         run: |
-          cd backend
-          python run.py --all-games --limit 50 --predict --stats
+          test -d .
+          test -f run.py
+          test -f requirements.txt
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt --break-system-packages
 
       - name: Sync active player rosters (incremental, son 90 gün)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
         run: |
-          cd backend
           # Manuel tetiklemede force=true ise tüm kadroları yenile
           FORCE_FLAG=""
           if [ "${{ github.event.inputs.force_rosters }}" = "true" ]; then
@@ -61,4 +94,4 @@ jobs:
 
       - name: Notify on failure
         if: failure()
-        run: echo "❌ Sync failed! Check logs."
+        run: echo "❌ Roster sync failed! Check logs."

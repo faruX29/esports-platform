@@ -179,11 +179,11 @@ function buildBracketStages(matches = []) {
     const structuredPosition = getStructuredPosition(m)
     const structuredNextMatchId = getStructuredNextMatchId(m)
 
-    const stageFromStructuredRound = stageFromStructuredRound(structuredRound, bracketSide)
-    if (stageFromStructuredRound) {
+    const computedStageFromRound = stageFromStructuredRound(structuredRound, bracketSide)
+    if (computedStageFromRound) {
       return {
         ...m,
-        __stage: stageFromStructuredRound,
+        __stage: computedStageFromRound,
         __stageSource: 'round',
         __bracketSide: bracketSide,
         __roundNo: structuredRound,
@@ -569,7 +569,7 @@ const TeamAv = memo(function TeamAv({ src, name, size = 36 }) {
   useEffect(() => {
     setErr(false)
   }, [src])
-  const initials = (name || '?').split(/[\s_]/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  const initials = (name || '?').split(/[\s_]/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase()
   if (src && !err) {
     return (
       <img src={src} alt={name} loading='lazy' onError={() => setErr(true)}

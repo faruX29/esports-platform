@@ -3,6 +3,7 @@ PandaScore API client for fetching esports match data
 """
 import requests
 import os
+import time
 from datetime import datetime, timedelta, timezone
 
 
@@ -15,6 +16,45 @@ class PandaScoreClient:
         
         if not self.api_token:
             raise ValueError("PANDASCORE_TOKEN not found in environment variables")
+
+    @staticmethod
+    def _retry_delay_seconds(response, attempt, base_delay=2.0, max_delay=60.0):
+        retry_after = response.headers.get('Retry-After') if response is not None else None
+        if retry_after:
+            try:
+                return max(1.0, float(retry_after))
+            except (TypeError, ValueError):
+                pass
+
+        delay = base_delay * (2 ** max(0, attempt - 1))
+        return min(max_delay, delay)
+
+    def _request_json_with_backoff(self, url, params, label, max_attempts=5, base_delay=2.0):
+        last_response = None
+
+        for attempt in range(1, max_attempts + 1):
+            response = requests.get(url, params=params, timeout=30)
+            last_response = response
+
+            if response.status_code == 429:
+                wait_seconds = self._retry_delay_seconds(response, attempt, base_delay=base_delay)
+                print(
+                    f"⚠️  {label} rate limited (attempt {attempt}/{max_attempts}); "
+                    f"waiting {wait_seconds:.1f}s before retry..."
+                )
+                time.sleep(wait_seconds)
+                continue
+
+            response.raise_for_status()
+            payload = response.json()
+            print(f"✅ {label} fetched {len(payload)} matches")
+            return payload
+
+        if last_response is not None and last_response.status_code == 429:
+            print(f"❌ {label} rate limited after {max_attempts} attempts")
+            return None
+
+        return None
     
     def get_upcoming_matches(self, game_slug, limit=50, days_ahead=7):
         """
@@ -44,15 +84,19 @@ class PandaScoreClient:
         
         try:
             print(f"📥 Fetching from PandaScore API: {game_slug} (next {days_ahead} days)")
-            response = requests.get(url, params=params, timeout=30)
-            response.raise_for_status()
-
-            matches = response.json()
-            print(f"✅ Fetched {len(matches)} matches in date window")
-            return matches
+            matches = self._request_json_with_backoff(
+                url,
+                params,
+                f"PandaScore upcoming matches for {game_slug} (windowed)",
+            )
+            if matches is not None:
+                print(f"✅ Fetched {len(matches)} matches in date window")
+                return matches
             
         except requests.exceptions.RequestException as e:
             print(f"⚠️  Windowed upcoming request failed: {e}")
+
+        if params.get('range[begin_at]'):
             fallback_params = {
                 'token': self.api_token,
                 'per_page': limit,
@@ -60,14 +104,17 @@ class PandaScoreClient:
             }
             try:
                 print("↩️ Retrying upcoming fetch without range filter...")
-                response = requests.get(url, params=fallback_params, timeout=30)
-                response.raise_for_status()
-                matches = response.json()
-                print(f"✅ Fetched {len(matches)} matches (fallback)")
-                return matches
+                matches = self._request_json_with_backoff(
+                    url,
+                    fallback_params,
+                    f"PandaScore upcoming matches for {game_slug} (fallback)",
+                )
+                if matches is not None:
+                    print(f"✅ Fetched {len(matches)} matches (fallback)")
+                    return matches
             except requests.exceptions.RequestException as fallback_error:
                 print(f"❌ API request failed: {fallback_error}")
-                return []
+        return []
     
     def get_past_matches(self, game_slug, limit=50, page=1):
         """
@@ -93,13 +140,15 @@ class PandaScoreClient:
         
         try:
             print(f"📥 Fetching past matches (page {page})")
-            response = requests.get(url, params=params, timeout=30)
-            response.raise_for_status()
-            
-            matches = response.json()
-            print(f"✅ Fetched {len(matches)} past matches from page {page}")
-            return matches
+            matches = self._request_json_with_backoff(
+                url,
+                params,
+                f"PandaScore past matches page {page}",
+            )
+            if matches is not None:
+                print(f"✅ Fetched {len(matches)} past matches from page {page}")
+                return matches
             
         except requests.exceptions.RequestException as e:
             print(f"❌ API request failed: {e}")
-            return []
+        return []

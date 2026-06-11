@@ -570,20 +570,23 @@ class PlayerStatsSyncer:
 
         teams_processed = 0
         players_upserted = 0
+        players_flushed = 0
         teams_skipped = 0
         errors = 0
 
         with Database.get_connection() as conn:
             for idx, (team_id, team_name) in enumerate(teams, 1):
-                count = self._fetch_and_upsert_team_players(team_id, team_name, conn)
+                result = self._fetch_and_upsert_team_players(team_id, team_name, conn)
 
-                if count is None:
+                if result is None:
                     errors += 1
-                elif count > 0:
-                    players_upserted += count
+                elif result['upserted'] > 0:
+                    players_upserted += result['upserted']
+                    players_flushed  += result['flushed']
                     teams_processed  += 1
+                    flush_note = f", {result['flushed']} serbest" if result['flushed'] > 0 else ""
                     print(f"  [{idx}/{len(teams)}] ✅ {team_name}: "
-                      f"{count} oyuncu")
+                          f"{result['upserted']} oyuncu{flush_note}")
 
                 # Rate-limit koruması: her batch_size takımda bir kısa bekleme
                 if idx % batch_size == 0:
@@ -595,11 +598,13 @@ class PlayerStatsSyncer:
         print(f"\n📊 Kadro sync sonucu:")
         print(f"   Takım işlendi  : {teams_processed}")
         print(f"   Oyuncu upsert  : {players_upserted}")
+        print(f"   Serbest bırak  : {players_flushed}")
         print(f"   Atlanan takım  : {teams_skipped}")
         print(f"   Hata           : {errors}")
         return {
             'teams_processed': teams_processed,
             'players_upserted': players_upserted,
+            'players_flushed': players_flushed,
             'teams_skipped': teams_skipped,
             'errors': errors,
         }
@@ -660,7 +665,9 @@ class PlayerStatsSyncer:
             # ── Başarılı yanıt ──────────────────────────────────────────────
             api_players = resp.json().get('players', [])
             if not api_players:
-                return 0   # Boş kadro (bant dışı takım vb.)
+                return {'upserted': 0, 'flushed': 0}   # Boş kadro (bant dışı takım vb.)
+
+            api_ps_ids = [p['id'] for p in api_players]
 
             with conn.cursor() as cur:
                 for p in api_players:
@@ -689,8 +696,26 @@ class PlayerStatsSyncer:
                         p['id'],
                         team_id,
                     ))
+
+                # ── Roster Flush ──────────────────────────────────────────────
+                # Bu takımda kayıtlı ama güncel API kadrosunda olmayan oyuncuların
+                # team_pandascore_id'sini NULL'a çek (serbest oyuncu).
+                # psycopg3'te list → bigint[] array olarak geçirilir; != ALL(...) kullanılır.
+                cur.execute("""
+                    UPDATE players
+                    SET team_pandascore_id = NULL
+                    WHERE team_pandascore_id = %s
+                      AND pandascore_id IS NOT NULL
+                      AND pandascore_id != ALL(%s::bigint[])
+                """, (team_id, api_ps_ids))
+                flushed = cur.rowcount
+
             conn.commit()
-            return len(api_players)
+
+            if flushed > 0:
+                print(f"    🔄 {team_name}: {flushed} eski oyuncu serbest bırakıldı (kadro dışı)")
+
+            return {'upserted': len(api_players), 'flushed': flushed}
 
         # Tüm denemeler başarısız
         print(f"    ❌ {team_name}: {max_retries} denemede başarılı olunamadı")
@@ -736,14 +761,14 @@ class PlayerStatsSyncer:
 
         with Database.get_connection() as conn:
             for idx, (team_id, team_name) in enumerate(teams, 1):
-                count = self._fetch_and_upsert_team_players(team_id, team_name, conn)
+                result = self._fetch_and_upsert_team_players(team_id, team_name, conn)
 
-                if count is None:
+                if result is None:
                     errors += 1
-                elif count > 0:
-                    upserted  += count
+                elif result['upserted'] > 0:
+                    upserted  += result['upserted']
                     processed += 1
-                    print(f"  [{idx}/{len(teams)}] ✅ {team_name}: {count} oyuncu")
+                    print(f"  [{idx}/{len(teams)}] ✅ {team_name}: {result['upserted']} oyuncu")
                 else:
                     print(f"  [{idx}/{len(teams)}] ➖ {team_name}: boş kadro")
 
@@ -864,13 +889,14 @@ class PlayerStatsSyncer:
         print(f"\n👤 {len(all_teams)} takım için kadro çekiliyor...")
         with Database.get_connection() as conn:
             for idx, (team_id, team_name) in enumerate(all_teams.items(), 1):
-                count = self._fetch_and_upsert_team_players(team_id, team_name, conn)
+                result = self._fetch_and_upsert_team_players(team_id, team_name, conn)
 
-                if count is None:
+                if result is None:
                     errors += 1
-                elif count > 0:
-                    players_upserted += count
-                    print(f"  [{idx}/{len(all_teams)}] ✅ {team_name}: {count} oyuncu")
+                elif result['upserted'] > 0:
+                    players_upserted += result['upserted']
+                    flush_note = f", {result['flushed']} serbest" if result['flushed'] > 0 else ""
+                    print(f"  [{idx}/{len(all_teams)}] ✅ {team_name}: {result['upserted']} oyuncu{flush_note}")
                 else:
                     print(f"  [{idx}/{len(all_teams)}] ➖ {team_name}: boş kadro")
 
@@ -886,5 +912,81 @@ class PlayerStatsSyncer:
             'leagues_scanned':  leagues_scanned,
             'teams_found':      teams_found,
             'players_upserted': players_upserted,
+            'errors':           errors,
+        }
+
+    # ── 3) Roster Integrity Flush ──────────────────────────────────────────────
+
+    def flush_all_stale_rosters(self, days=90):
+        """
+        Son `days` gün içinde maçı olan tüm takımlar için PandaScore'dan güncel
+        kadroyu çeker ve artık kadroya dahil olmayan oyuncuların
+        team_pandascore_id'sini NULL'a çeker (Serbest Oyuncu).
+
+        Transfer olan oyuncular için garantili temizlik:
+          - Team A'dan Team B'ye geçen oyuncu: Team B fetch edilince B'ye atanır,
+            Team A fetch edilince A kaydı NULL'a çekilir.
+          - Emekli / Free agent: herhangi bir team fetch edilmeden önce
+            bu metod onların team_id'sini NULL'a çeker.
+
+        Kullanım:
+            python run.py --roster-flush
+            python run.py --roster-flush --roster-days 30
+
+        Returns:
+            dict: teams_checked, players_upserted, players_flushed, errors
+        """
+        self.ensure_schema()
+
+        with Database.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT DISTINCT t.id, t.name
+                    FROM teams t
+                    JOIN matches m ON m.team_a_id = t.id OR m.team_b_id = t.id
+                    WHERE m.scheduled_at >= NOW() - INTERVAL '%s days'
+                    ORDER BY t.id
+                """, (days,))
+                teams = cur.fetchall()
+
+        if not teams:
+            print("✅ Aktif takım bulunamadı.")
+            return {'teams_checked': 0, 'players_upserted': 0,
+                    'players_flushed': 0, 'errors': 0}
+
+        print(f"🧹 Roster Integrity Flush: {len(teams)} aktif takım kontrol ediliyor "
+              f"(son {days} gün)...")
+
+        teams_checked    = 0
+        players_upserted = 0
+        players_flushed  = 0
+        errors           = 0
+
+        with Database.get_connection() as conn:
+            for idx, (team_id, team_name) in enumerate(teams, 1):
+                result = self._fetch_and_upsert_team_players(team_id, team_name, conn)
+
+                if result is None:
+                    errors += 1
+                else:
+                    teams_checked    += 1
+                    players_upserted += result['upserted']
+                    players_flushed  += result['flushed']
+                    if result['flushed'] > 0:
+                        print(f"  [{idx}/{len(teams)}] 🔄 {team_name}: "
+                              f"{result['upserted']} aktif, {result['flushed']} serbest bırakıldı")
+
+                delay = 0.15 if (idx % 50 != 0) else 2.0
+                time.sleep(delay)
+
+        print(f"\n📊 Roster Flush sonucu:")
+        print(f"   Takım kontrol  : {teams_checked}")
+        print(f"   Oyuncu upsert  : {players_upserted}")
+        print(f"   Serbest bırak  : {players_flushed}")
+        print(f"   Hata           : {errors}")
+        return {
+            'teams_checked':    teams_checked,
+            'players_upserted': players_upserted,
+            'players_flushed':  players_flushed,
             'errors':           errors,
         }

@@ -4,6 +4,9 @@ Uses weighted probability to predict match outcomes
 """
 from database import Database
 import psycopg
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class MatchPredictor:
@@ -235,10 +238,10 @@ class MatchPredictor:
                         result = self.predict_match(match_id)
                         if result:
                             predictions.append(result)
-                            print(f"✅ Predicted match {match_id}: Team A {result['team_a_prob']:.1%} vs Team B {result['team_b_prob']:.1%}")
+                            logger.info(f"✅ Predicted match {match_id}: Team A {result['team_a_prob']:.1%} vs Team B {result['team_b_prob']:.1%}")
                             conn.commit()
                     except Exception as e:
-                        print(f"⚠️  Error predicting match {match_id}: {e}")
+                        logger.warning(f"⚠️  Error predicting match {match_id}: {e}")
                         continue
 
         return predictions
@@ -275,10 +278,10 @@ class MatchPredictor:
                         result = self.predict_match(match_id)
                         if result:
                             predictions.append(result)
-                            print(f"✅ Predicted match {match_id}: Team A {result['team_a_prob']:.1%} vs Team B {result['team_b_prob']:.1%}")
+                            logger.info(f"✅ Predicted match {match_id}: Team A {result['team_a_prob']:.1%} vs Team B {result['team_b_prob']:.1%}")
                             conn.commit()
                     except Exception as e:
-                        print(f"⚠️  Error predicting match {match_id}: {e}")
+                        logger.warning(f"⚠️  Error predicting match {match_id}: {e}")
                         continue
         
         return predictions

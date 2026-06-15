@@ -13,6 +13,9 @@ from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import requests
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -212,7 +215,7 @@ class LiquipediaService:
                     wait_seconds = 60.0
                 wait_seconds = self._mark_shared_cooldown(wait_seconds, reason="429 Too Many Requests")
                 bounded_wait = min(wait_seconds, 5.0)
-                print(
+                logger.info(
                     f"⏸️ Liquipedia cooldown scheduled ({wait_seconds:.0f}s persisted), "
                     f"retrying in {bounded_wait:.0f}s due to HTTP 429"
                 )
@@ -295,7 +298,7 @@ class LiquipediaService:
                 continue
 
         if last_error:
-            print(f"⚠️ Liquipedia candidate queries failed for {self.game_slug}: {last_error}")
+            logger.warning(f"⚠️ Liquipedia candidate queries failed for {self.game_slug}: {last_error}")
         return []
 
     def _query_parse_wikitext(self, page_title: str) -> str:

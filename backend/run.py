@@ -3,14 +3,20 @@ Main entry point for Esports Data Platform ETL
 Usage: python run.py [options]
 """
 import argparse
+import logging
 from datetime import datetime
+from utils.logger import setup_logging
 from etl.sync_matches import MatchSyncer
 from etl.predict import MatchPredictor
 from etl.sync_players import PlayerStatsSyncer
 from etl.adapters import LiquipediaAdapter
 
+logger = logging.getLogger(__name__)
+
+
 def main():
     """Main entry point with command-line arguments"""
+    setup_logging()
     parser = argparse.ArgumentParser(
         description='Sync esports data from PandaScore to Supabase'
     )
@@ -151,10 +157,10 @@ def main():
 
     args = parser.parse_args()
 
-    print("=" * 60)
-    print("🚀 ESPORTS DATA PLATFORM - ETL")
-    print(f"⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("🚀 ESPORTS DATA PLATFORM - ETL")
+    logger.info(f"⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.info("=" * 60)
 
     syncer = MatchSyncer()
     total_stats = {'fetched': 0, 'cleaned': 0, 'synced': 0}
@@ -192,21 +198,21 @@ def main():
             total_stats['cleaned'] += stats.get('cleaned', 0)
             total_stats['synced'] += stats.get('synced', 0)
 
-        print("\n" + "=" * 60)
-        print("📊 TOTAL SYNC RESULTS")
-        print(f"   Games synced: {len(games)}")
-        print(f"   Fetched: {total_stats['fetched']} matches")
-        print(f"   Cleaned: {total_stats['cleaned']} matches")
-        print(f"   Synced:  {total_stats['synced']} matches")
-        print("=" * 60)
+        logger.info("\n" + "=" * 60)
+        logger.info("📊 TOTAL SYNC RESULTS")
+        logger.info(f"   Games synced: {len(games)}")
+        logger.info(f"   Fetched: {total_stats['fetched']} matches")
+        logger.info(f"   Cleaned: {total_stats['cleaned']} matches")
+        logger.info(f"   Synced:  {total_stats['synced']} matches")
+        logger.info("=" * 60)
     else:
-        print("\nℹ️ Skipping PandaScore match sync (Liquipedia-only run).")
+        logger.info("\nℹ️ Skipping PandaScore match sync (Liquipedia-only run).")
 
     # AI Predictions
     if args.predict:
-        print("\n" + "=" * 60)
-        print("🧠 AI MATCH PREDICTIONS")
-        print("=" * 60)
+        logger.info("\n" + "=" * 60)
+        logger.info("🧠 AI MATCH PREDICTIONS")
+        logger.info("=" * 60)
 
         predictor = MatchPredictor()
 
@@ -216,99 +222,99 @@ def main():
         else:
             predictions = predictor.predict_upcoming_matches(limit=150)
 
-        print(f"\n✅ Generated {len(predictions)} predictions")
-        print("=" * 60)
+        logger.info(f"\n✅ Generated {len(predictions)} predictions")
+        logger.info("=" * 60)
 
     # Match Stats (raw_data → match_stats tablosu, API çağrısı yok)
     if args.stats:
-        print("\n" + "=" * 60)
-        print("📊 MATCH STATS SYNC")
-        print("=" * 60)
+        logger.info("\n" + "=" * 60)
+        logger.info("📊 MATCH STATS SYNC")
+        logger.info("=" * 60)
         ps = PlayerStatsSyncer()
         ps.ensure_schema()
         # limit'i 200 → 2000 yap: daha fazla geçmiş maç işle
         stats_limit = max(args.limit * len(games) * 10, 2000)
         count = ps.sync_match_stats(limit=stats_limit)
-        print(f"✅ {count} maç işlendi")
-        print("=" * 60)
+        logger.info(f"✅ {count} maç işlendi")
+        logger.info("=" * 60)
 
     # Player Rosters ── eski davranış: sadece DB'deki yeni takımlar
     if args.players:
-        print("\n" + "=" * 60)
-        print(f"👤 ACTIVE ROSTER SYNC (son {args.roster_days} gün, "
+        logger.info("\n" + "=" * 60)
+        logger.info(f"👤 ACTIVE ROSTER SYNC (son {args.roster_days} gün, "
               f"force={args.roster_force})")
-        print("=" * 60)
+        logger.info("=" * 60)
         ps = PlayerStatsSyncer()
         result = ps.sync_all_active_rosters(
             days=args.roster_days,
             force=args.roster_force,
         )
-        print(f"✅ {result['players_upserted']} oyuncu | "
+        logger.info(f"✅ {result['players_upserted']} oyuncu | "
               f"{result['teams_processed']} takım")
-        print("=" * 60)
+        logger.info("=" * 60)
 
     # ── --missing-rosters: DB'deki tüm eksik kadrolar ─────────────────────────
     if args.missing_rosters:
-        print("\n" + "=" * 60)
-        print("🔍 MISSING ROSTER SYNC (teams tablosundaki tüm eksikler)")
-        print("=" * 60)
+        logger.info("\n" + "=" * 60)
+        logger.info("🔍 MISSING ROSTER SYNC (teams tablosundaki tüm eksikler)")
+        logger.info("=" * 60)
         ps = PlayerStatsSyncer()
         result = ps.sync_missing_rosters()
-        print(f"✅ {result['players_upserted']} oyuncu | "
+        logger.info(f"✅ {result['players_upserted']} oyuncu | "
               f"{result['teams_processed']} takım işlendi | "
               f"{result['errors']} hata")
-        print("=" * 60)
+        logger.info("=" * 60)
 
     # ── --league-sync: lig bazlı tam tarama ───────────────────────────────────
     if args.league_sync:
-        print("\n" + "=" * 60)
+        logger.info("\n" + "=" * 60)
         games_label = ', '.join(args.league_games or ['valorant', 'csgo', 'lol'])
-        print(f"🏆 LEAGUE ROSTER SYNC ({games_label}, force={args.roster_force})")
-        print("=" * 60)
+        logger.info(f"🏆 LEAGUE ROSTER SYNC ({games_label}, force={args.roster_force})")
+        logger.info("=" * 60)
         ps = PlayerStatsSyncer()
         result = ps.sync_league_rosters(
             game_slugs=args.league_games,
             force=args.roster_force,
         )
-        print(f"✅ {result['players_upserted']} oyuncu | "
+        logger.info(f"✅ {result['players_upserted']} oyuncu | "
               f"{result['teams_found']} takım bulundu | "
               f"{result['leagues_scanned']} lig tarandı | "
               f"{result['errors']} hata")
-        print("=" * 60)
+        logger.info("=" * 60)
 
     # ── --roster-flush: Kadro bütünlüğü temizliği ────────────────────────────
     if args.roster_flush:
-        print("\n" + "=" * 60)
-        print(f"🧹 ROSTER INTEGRITY FLUSH (son {args.roster_days} gün)")
-        print("=" * 60)
+        logger.info("\n" + "=" * 60)
+        logger.info(f"🧹 ROSTER INTEGRITY FLUSH (son {args.roster_days} gün)")
+        logger.info("=" * 60)
         ps = PlayerStatsSyncer()
         result = ps.flush_all_stale_rosters(days=args.roster_days)
-        print(f"✅ {result['players_flushed']} oyuncu serbest bırakıldı | "
+        logger.info(f"✅ {result['players_flushed']} oyuncu serbest bırakıldı | "
               f"{result['players_upserted']} upsert | "
               f"{result['teams_checked']} takım | "
               f"{result['errors']} hata")
-        print("=" * 60)
+        logger.info("=" * 60)
 
     if args.fix_stale:
-        print("\n🕒 Stale match cleanup...")
+        logger.info("\n🕒 Stale match cleanup...")
         syncer.mark_stale_matches_finished(hours_ago=args.stale_hours)
 
     if args.liquipedia_enrich:
-        print("\n" + "=" * 60)
-        print("🌐 LIQUIPEDIA DATA ENRICHMENT")
-        print("=" * 60)
+        logger.info("\n" + "=" * 60)
+        logger.info("🌐 LIQUIPEDIA DATA ENRICHMENT")
+        logger.info("=" * 60)
         adapter = LiquipediaAdapter()
         result = adapter.run(
             limit=args.liquipedia_limit,
             sections=tuple(args.liquipedia_sections),
         )
         for section, stats in result.items():
-            print(
+            logger.info(
                 f"  - {section}: processed={stats.get('processed', 0)} | "
                 f"updated={stats.get('updated', 0)} | skipped={stats.get('skipped', 0)} | "
                 f"diagnostics={stats.get('diagnostic_count', 0)}"
             )
-        print("=" * 60)
+        logger.info("=" * 60)
 
 if __name__ == "__main__":
     main()

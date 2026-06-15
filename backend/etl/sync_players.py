@@ -15,8 +15,11 @@ import json
 import time
 import requests
 import re
+import logging
 
 from database import Database
+
+logger = logging.getLogger(__name__)
 from etl.pandascore_client import PandaScoreClient
 
 
@@ -143,7 +146,7 @@ class PlayerStatsSyncer:
                     CREATE INDEX IF NOT EXISTS idx_player_match_stats_player_id
                     ON public.player_match_stats(player_id)
                 """)
-        print("✅ Şema hazır")
+        logger.info("✅ Şema hazır")
 
     # ── Oyuncular ──────────────────────────────────────────────────────────────
 
@@ -174,10 +177,10 @@ class PlayerStatsSyncer:
                 teams = cur.fetchall()
 
         if not teams:
-            print("✅ Tüm takımların oyuncuları zaten yüklü.")
+            logger.info("✅ Tüm takımların oyuncuları zaten yüklü.")
             return 0
 
-        print(f"👤 {len(teams)} takım için oyuncu verisi çekiliyor...")
+        logger.info(f"👤 {len(teams)} takım için oyuncu verisi çekiliyor...")
         total_players = 0
         empty_teams   = 0
 
@@ -194,7 +197,7 @@ class PlayerStatsSyncer:
                     empty_teams += 1
                     continue
                 if resp.status_code != 200:
-                    print(f"  ⚠️  {team_name}: API {resp.status_code}")
+                    logger.warning(f"  ⚠️  {team_name}: API {resp.status_code}")
                     continue
 
                 api_players = resp.json().get('players', [])
@@ -233,14 +236,14 @@ class PlayerStatsSyncer:
                     conn.commit()
 
                 total_players += len(api_players)
-                print(f"  ✅ {team_name}: {len(api_players)} oyuncu")
+                logger.info(f"  ✅ {team_name}: {len(api_players)} oyuncu")
                 time.sleep(0.1)   # Rate-limit koruması
 
             except Exception as e:
-                print(f"  ⚠️  {team_name}: {e}")
+                logger.warning(f"  ⚠️  {team_name}: {e}")
                 continue
 
-        print(f"\n📊 Sonuç: {total_players} oyuncu eklendi/güncellendi"
+        logger.info(f"\n📊 Sonuç: {total_players} oyuncu eklendi/güncellendi"
               f" | {empty_teams} boş takım atlandı")
         return total_players
 
@@ -318,10 +321,10 @@ class PlayerStatsSyncer:
                 matches = cur.fetchall()
 
                 if not matches:
-                    print("✅ Tüm maç istatistikleri zaten yüklü.")
+                    logger.info("✅ Tüm maç istatistikleri zaten yüklü.")
                     return 0
 
-                print(f"📊 {len(matches)} maç için istatistik işleniyor...")
+                logger.info(f"📊 {len(matches)} maç için istatistik işleniyor...")
                 processed = 0
                 skipped   = 0
                 batch     = []   # (match_id, team_id, stats_json)
@@ -447,7 +450,7 @@ class PlayerStatsSyncer:
                             player_batch.clear()
 
                     except Exception as e:
-                        print(f"  ⚠️  match {match_id}: {e}")
+                        logger.warning(f"  ⚠️  match {match_id}: {e}")
                         continue
 
                 # 4) Kalan satırları yaz
@@ -458,7 +461,7 @@ class PlayerStatsSyncer:
                 if batch or player_batch:
                     conn.commit()
 
-        print(f"\n📊 Sonuç: {processed} maç işlendi | {skipped} atlandı")
+        logger.info(f"\n📊 Sonuç: {processed} maç işlendi | {skipped} atlandı")
         return processed
 
     def _extract_player_stat_rows(self, raw_data):
@@ -561,11 +564,11 @@ class PlayerStatsSyncer:
                 teams = cur.fetchall()
 
         if not teams:
-            print("✅ Tüm aktif takım kadroları zaten yüklü.")
+            logger.info("✅ Tüm aktif takım kadroları zaten yüklü.")
             return {'teams_processed': 0, 'players_upserted': 0,
                     'teams_skipped': 0, 'errors': 0}
 
-        print(f"👤 {len(teams)} aktif takım için kadro çekiliyor "
+        logger.info(f"👤 {len(teams)} aktif takım için kadro çekiliyor "
               f"(son {days} gün, force={force})...")
 
         teams_processed = 0
@@ -585,22 +588,22 @@ class PlayerStatsSyncer:
                     players_flushed  += result['flushed']
                     teams_processed  += 1
                     flush_note = f", {result['flushed']} serbest" if result['flushed'] > 0 else ""
-                    print(f"  [{idx}/{len(teams)}] ✅ {team_name}: "
+                    logger.info(f"  [{idx}/{len(teams)}] ✅ {team_name}: "
                           f"{result['upserted']} oyuncu{flush_note}")
 
                 # Rate-limit koruması: her batch_size takımda bir kısa bekleme
                 if idx % batch_size == 0:
-                    print(f"  ⏸  {batch_size} takım işlendi, 2s bekleniyor...")
+                    logger.info(f"  ⏸  {batch_size} takım işlendi, 2s bekleniyor...")
                     time.sleep(2)
                 else:
                     time.sleep(0.15)
 
-        print(f"\n📊 Kadro sync sonucu:")
-        print(f"   Takım işlendi  : {teams_processed}")
-        print(f"   Oyuncu upsert  : {players_upserted}")
-        print(f"   Serbest bırak  : {players_flushed}")
-        print(f"   Atlanan takım  : {teams_skipped}")
-        print(f"   Hata           : {errors}")
+        logger.info(f"\n📊 Kadro sync sonucu:")
+        logger.info(f"   Takım işlendi  : {teams_processed}")
+        logger.info(f"   Oyuncu upsert  : {players_upserted}")
+        logger.info(f"   Serbest bırak  : {players_flushed}")
+        logger.info(f"   Atlanan takım  : {teams_skipped}")
+        logger.info(f"   Hata           : {errors}")
         return {
             'teams_processed': teams_processed,
             'players_upserted': players_upserted,
@@ -638,7 +641,7 @@ class PlayerStatsSyncer:
                     timeout=20,
                 )
             except requests.exceptions.RequestException as exc:
-                print(f"    ⚠️  {team_name} (attempt {attempt+1}): {exc}")
+                logger.warning(f"    ⚠️  {team_name} (attempt {attempt+1}): {exc}")
                 time.sleep(5 * (attempt + 1))
                 continue
 
@@ -647,19 +650,19 @@ class PlayerStatsSyncer:
 
             if resp.status_code == 429:
                 wait = 10 * (2 ** attempt)   # 10s → 20s → 40s
-                print(f"    ⏳ Rate-limit — {wait}s bekleniyor "
+                logger.info(f"    ⏳ Rate-limit — {wait}s bekleniyor "
                       f"(attempt {attempt+1}/{max_retries})...")
                 time.sleep(wait)
                 continue           # Tekrar dene
 
             if resp.status_code == 503:        # PandaScore bazen geçici kapanır
                 wait = 15 * (attempt + 1)
-                print(f"    ⚠️  503 Service Unavailable — {wait}s bekleniyor...")
+                logger.warning(f"    ⚠️  503 Service Unavailable — {wait}s bekleniyor...")
                 time.sleep(wait)
                 continue
 
             if resp.status_code != 200:
-                print(f"    ⚠️  {team_name}: API {resp.status_code}")
+                logger.warning(f"    ⚠️  {team_name}: API {resp.status_code}")
                 return None
 
             # ── Başarılı yanıt ──────────────────────────────────────────────
@@ -713,12 +716,12 @@ class PlayerStatsSyncer:
             conn.commit()
 
             if flushed > 0:
-                print(f"    🔄 {team_name}: {flushed} eski oyuncu serbest bırakıldı (kadro dışı)")
+                logger.info(f"    🔄 {team_name}: {flushed} eski oyuncu serbest bırakıldı (kadro dışı)")
 
             return {'upserted': len(api_players), 'flushed': flushed}
 
         # Tüm denemeler başarısız
-        print(f"    ❌ {team_name}: {max_retries} denemede başarılı olunamadı")
+        logger.error(f"    ❌ {team_name}: {max_retries} denemede başarılı olunamadı")
         return None
 
     # ── 1) Eksik Kadroları Tara (teams → players JOIN) ─────────────────────────
@@ -750,11 +753,11 @@ class PlayerStatsSyncer:
                 teams = cur.fetchall()
 
         if not teams:
-            print("✅ Tüm takımların kadroları mevcut.")
+            logger.info("✅ Tüm takımların kadroları mevcut.")
             return {'teams_found': 0, 'teams_processed': 0,
                     'players_upserted': 0, 'errors': 0}
 
-        print(f"🔍 Eksik kadro bulunan {len(teams)} takım işlenecek...")
+        logger.info(f"🔍 Eksik kadro bulunan {len(teams)} takım işlenecek...")
         processed = 0
         upserted  = 0
         errors    = 0
@@ -768,18 +771,18 @@ class PlayerStatsSyncer:
                 elif result['upserted'] > 0:
                     upserted  += result['upserted']
                     processed += 1
-                    print(f"  [{idx}/{len(teams)}] ✅ {team_name}: {result['upserted']} oyuncu")
+                    logger.info(f"  [{idx}/{len(teams)}] ✅ {team_name}: {result['upserted']} oyuncu")
                 else:
-                    print(f"  [{idx}/{len(teams)}] ➖ {team_name}: boş kadro")
+                    logger.info(f"  [{idx}/{len(teams)}] ➖ {team_name}: boş kadro")
 
                 # Batch arası kısa bekleme (rate-limit koruması)
                 delay = 0.2 if (idx % batch_size != 0) else 2.0
                 time.sleep(delay)
 
-        print(f"\n📊 Eksik kadro sync:")
-        print(f"   İşlenen takım  : {processed}")
-        print(f"   Upsert oyuncu  : {upserted}")
-        print(f"   Hata           : {errors}")
+        logger.info(f"\n📊 Eksik kadro sync:")
+        logger.info(f"   İşlenen takım  : {processed}")
+        logger.info(f"   Upsert oyuncu  : {upserted}")
+        logger.info(f"   Hata           : {errors}")
         return {
             'teams_found':     len(teams),
             'teams_processed': processed,
@@ -817,7 +820,7 @@ class PlayerStatsSyncer:
 
         for slug in game_slugs:
             league_ids = MAJOR_LEAGUES.get(slug, [])
-            print(f"\n🎮 {slug.upper()} — {len(league_ids)} lig taranıyor...")
+            logger.info(f"\n🎮 {slug.upper()} — {len(league_ids)} lig taranıyor...")
 
             for lid in league_ids:
                 page = 1
@@ -834,17 +837,17 @@ class PlayerStatsSyncer:
                             timeout=20,
                         )
                     except requests.exceptions.RequestException as exc:
-                        print(f"  ⚠️  lig {lid} p{page}: {exc}")
+                        logger.warning(f"  ⚠️  lig {lid} p{page}: {exc}")
                         break
 
                     if resp.status_code == 404:
                         break   # Bu lig artık yok
                     if resp.status_code == 429:
-                        print("  ⏳ Rate-limit — 15s bekleniyor...")
+                        logger.info("  ⏳ Rate-limit — 15s bekleniyor...")
                         time.sleep(15)
                         continue
                     if resp.status_code != 200:
-                        print(f"  ⚠️  lig {lid}: API {resp.status_code}")
+                        logger.warning(f"  ⚠️  lig {lid}: API {resp.status_code}")
                         break
 
                     data = resp.json()
@@ -863,7 +866,7 @@ class PlayerStatsSyncer:
                     time.sleep(0.3)
 
         teams_found = len(all_teams)
-        print(f"\n✅ {leagues_scanned} lig tarandı → {teams_found} benzersiz takım bulundu")
+        logger.info(f"\n✅ {leagues_scanned} lig tarandı → {teams_found} benzersiz takım bulundu")
 
         if not all_teams:
             return {
@@ -883,10 +886,10 @@ class PlayerStatsSyncer:
                     loaded = {row[0] for row in cur.fetchall()}
             before = len(all_teams)
             all_teams = {k: v for k, v in all_teams.items() if k not in loaded}
-            print(f"⏭  {before - len(all_teams)} takım atlandı (zaten yüklü), "
+            logger.info(f"⏭  {before - len(all_teams)} takım atlandı (zaten yüklü), "
                   f"{len(all_teams)} takım işlenecek")
 
-        print(f"\n👤 {len(all_teams)} takım için kadro çekiliyor...")
+        logger.info(f"\n👤 {len(all_teams)} takım için kadro çekiliyor...")
         with Database.get_connection() as conn:
             for idx, (team_id, team_name) in enumerate(all_teams.items(), 1):
                 result = self._fetch_and_upsert_team_players(team_id, team_name, conn)
@@ -896,18 +899,18 @@ class PlayerStatsSyncer:
                 elif result['upserted'] > 0:
                     players_upserted += result['upserted']
                     flush_note = f", {result['flushed']} serbest" if result['flushed'] > 0 else ""
-                    print(f"  [{idx}/{len(all_teams)}] ✅ {team_name}: {result['upserted']} oyuncu{flush_note}")
+                    logger.info(f"  [{idx}/{len(all_teams)}] ✅ {team_name}: {result['upserted']} oyuncu{flush_note}")
                 else:
-                    print(f"  [{idx}/{len(all_teams)}] ➖ {team_name}: boş kadro")
+                    logger.info(f"  [{idx}/{len(all_teams)}] ➖ {team_name}: boş kadro")
 
                 delay = 0.25 if (idx % 50 != 0) else 3.0
                 time.sleep(delay)
 
-        print(f"\n📊 Lig bazlı kadro sync:")
-        print(f"   Lig tarandı    : {leagues_scanned}")
-        print(f"   Takım bulundu  : {teams_found}")
-        print(f"   Oyuncu upsert  : {players_upserted}")
-        print(f"   Hata           : {errors}")
+        logger.info(f"\n📊 Lig bazlı kadro sync:")
+        logger.info(f"   Lig tarandı    : {leagues_scanned}")
+        logger.info(f"   Takım bulundu  : {teams_found}")
+        logger.info(f"   Oyuncu upsert  : {players_upserted}")
+        logger.info(f"   Hata           : {errors}")
         return {
             'leagues_scanned':  leagues_scanned,
             'teams_found':      teams_found,
@@ -950,11 +953,11 @@ class PlayerStatsSyncer:
                 teams = cur.fetchall()
 
         if not teams:
-            print("✅ Aktif takım bulunamadı.")
+            logger.info("✅ Aktif takım bulunamadı.")
             return {'teams_checked': 0, 'players_upserted': 0,
                     'players_flushed': 0, 'errors': 0}
 
-        print(f"🧹 Roster Integrity Flush: {len(teams)} aktif takım kontrol ediliyor "
+        logger.info(f"🧹 Roster Integrity Flush: {len(teams)} aktif takım kontrol ediliyor "
               f"(son {days} gün)...")
 
         teams_checked    = 0
@@ -973,17 +976,17 @@ class PlayerStatsSyncer:
                     players_upserted += result['upserted']
                     players_flushed  += result['flushed']
                     if result['flushed'] > 0:
-                        print(f"  [{idx}/{len(teams)}] 🔄 {team_name}: "
+                        logger.info(f"  [{idx}/{len(teams)}] 🔄 {team_name}: "
                               f"{result['upserted']} aktif, {result['flushed']} serbest bırakıldı")
 
                 delay = 0.15 if (idx % 50 != 0) else 2.0
                 time.sleep(delay)
 
-        print(f"\n📊 Roster Flush sonucu:")
-        print(f"   Takım kontrol  : {teams_checked}")
-        print(f"   Oyuncu upsert  : {players_upserted}")
-        print(f"   Serbest bırak  : {players_flushed}")
-        print(f"   Hata           : {errors}")
+        logger.info(f"\n📊 Roster Flush sonucu:")
+        logger.info(f"   Takım kontrol  : {teams_checked}")
+        logger.info(f"   Oyuncu upsert  : {players_upserted}")
+        logger.info(f"   Serbest bırak  : {players_flushed}")
+        logger.info(f"   Hata           : {errors}")
         return {
             'teams_checked':    teams_checked,
             'players_upserted': players_upserted,

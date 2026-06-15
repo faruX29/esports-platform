@@ -1,6 +1,9 @@
 """Data cleaning and normalization utilities for PandaScore match rows."""
 
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class DataCleaner:
@@ -407,7 +410,7 @@ class DataCleaner:
                 skipped_count += 1
 
         if skipped_count > 0:
-            print(f"⚠️  Skipped {skipped_count} invalid matches (missing teams or schedule)")
+            logger.warning(f"⚠️  Skipped {skipped_count} invalid matches (missing teams or schedule)")
 
-        print(f"✅ Cleaned {len(cleaned_matches)} valid matches")
+        logger.info(f"✅ Cleaned {len(cleaned_matches)} valid matches")
         return cleaned_matches

@@ -13,6 +13,9 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 from database import Database
 from etl.adapters.base_adapter import BaseDataAdapter
 from etl.liquipedia_service import LiquipediaService
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -145,9 +148,9 @@ class LiquipediaAdapter(BaseDataAdapter):
             updated += 1
 
         if diagnostics:
-            print("⚠️ Liquipedia tournament diagnostics:")
+            logger.warning("⚠️ Liquipedia tournament diagnostics:")
             for line in diagnostics[:12]:
-                print(f"  {line}")
+                logger.info(f"  {line}")
 
         return {
             "processed": len(rows),
@@ -196,9 +199,9 @@ class LiquipediaAdapter(BaseDataAdapter):
             updated += 1
 
         if diagnostics:
-            print("⚠️ Liquipedia team diagnostics:")
+            logger.warning("⚠️ Liquipedia team diagnostics:")
             for line in diagnostics[:12]:
-                print(f"  {line}")
+                logger.info(f"  {line}")
 
         return {
             "processed": len(rows),
@@ -266,9 +269,9 @@ class LiquipediaAdapter(BaseDataAdapter):
             updated += 1
 
         if diagnostics:
-            print("⚠️ Liquipedia player diagnostics:")
+            logger.warning("⚠️ Liquipedia player diagnostics:")
             for line in diagnostics[:12]:
-                print(f"  {line}")
+                logger.info(f"  {line}")
 
         return {
             "processed": len(rows),

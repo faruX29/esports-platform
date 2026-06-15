@@ -2,8 +2,11 @@
 Database connection manager using psycopg3
 """
 import psycopg
+import logging
 from contextlib import contextmanager
 from config import Config
+
+logger = logging.getLogger(__name__)
 
 class Database:
     """PostgreSQL database connection manager"""
@@ -46,7 +49,7 @@ class Database:
                     result = cur.fetchone()
                     return result[0] == 1
         except Exception as e:
-            print(f"❌ Database connection failed: {e}")
+            logger.error(f"❌ Database connection failed: {e}")
             return False
     
     @staticmethod
@@ -62,12 +65,11 @@ class Database:
                 return result[0] if result else None
 
 if __name__ == "__main__":
-    # Test connection
+    from utils.logger import setup_logging
+    setup_logging()
     if Database.test_connection():
-        print("✅ Database connection successful!")
-        
-        # Test game lookup
+        logger.info("✅ Database connection successful!")
         game_id = Database.get_game_id('valorant')
-        print(f"✅ Valorant game_id: {game_id}")
+        logger.info(f"✅ Valorant game_id: {game_id}")
     else:
-        print("❌ Database connection failed!")
+        logger.error("❌ Database connection failed!")

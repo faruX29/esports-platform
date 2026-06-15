@@ -8,6 +8,9 @@ from etl.adapters import MultiSourceDataAggregator, RiotAdapter, SteamAdapter
 import psycopg
 import json
 from datetime import timezone, datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class MatchSyncer:
@@ -33,38 +36,38 @@ class MatchSyncer:
         Returns:
             dict: Sync statistics
         """
-        print(f"\n🎮 Syncing {game_slug.upper()} {'past' if past else 'upcoming'} matches...")
+        logger.info(f"\n🎮 Syncing {game_slug.upper()} {'past' if past else 'upcoming'} matches...")
         
         # Fetch matches from API
-        print("📥 Fetching from PandaScore API...")
+        logger.info("📥 Fetching from PandaScore API...")
         if past:
             raw_matches = self.client.get_past_matches(game_slug, limit, page)
         else:
             raw_matches = self.client.get_upcoming_matches(game_slug, limit, days_ahead=upcoming_days)
         
         if not raw_matches:
-            print("❌ No matches fetched from API")
+            logger.error("❌ No matches fetched from API")
             return {'fetched': 0, 'cleaned': 0, 'synced': 0}
 
         # Enrich PandaScore raw rows with optional Riot/Steam foundations.
         try:
             raw_matches = self.aggregator.enrich_matches(raw_matches, game_slug=game_slug)
         except Exception as agg_err:
-            print(f"⚠️  Multi-source enrichment skipped due to error: {agg_err}")
+            logger.warning(f"⚠️  Multi-source enrichment skipped due to error: {agg_err}")
         
         # Clean data
-        print("🧹 Cleaning data...")
+        logger.info("🧹 Cleaning data...")
         cleaned_matches = self.cleaner.clean_matches(raw_matches)
         
         if not cleaned_matches:
-            print("❌ No valid matches after cleaning")
+            logger.error("❌ No valid matches after cleaning")
             return {'fetched': len(raw_matches), 'cleaned': 0, 'synced': 0}
         
         # Sync to database
-        print("💾 Syncing to database...")
+        logger.info("💾 Syncing to database...")
         synced_count = self._upsert_matches(cleaned_matches)
         
-        print(f"✅ Synced {synced_count} matches to database")
+        logger.info(f"✅ Synced {synced_count} matches to database")
         
         return {
             'fetched': len(raw_matches),
@@ -138,7 +141,7 @@ class MatchSyncer:
                                     )
                             except ValueError:
                                 scheduled_dt = None
-                                print(f"⚠️  Bad scheduled_at for match {match['id']}: {raw_scheduled}")
+                                logger.warning(f"⚠️  Bad scheduled_at for match {match['id']}: {raw_scheduled}")
                         else:
                             scheduled_dt = None
 
@@ -196,7 +199,7 @@ class MatchSyncer:
                         synced_count += 1
 
                     except Exception as e:
-                        print(f"⚠️  Error syncing match {match.get('id')}: {e}")
+                        logger.warning(f"⚠️  Error syncing match {match.get('id')}: {e}")
                         # Sadece hatalı satırı geri al, başarılı satırları koru.
                         try:
                             cur.execute(f'ROLLBACK TO SAVEPOINT "{savepoint_name}"')
@@ -307,7 +310,7 @@ class MatchSyncer:
                     updated = len(rows)
                     conn.commit()
             if updated:
-                print(f"🕒 Marked {updated} stale 'running' matches → 'finished'")
+                logger.info(f"🕒 Marked {updated} stale 'running' matches → 'finished'")
         except psycopg.Error as e:
-            print(f"⚠️  mark_stale_matches_finished error: {e}")
+            logger.warning(f"⚠️  mark_stale_matches_finished error: {e}")
         return updated

@@ -289,19 +289,19 @@ class MatchSyncer:
         Bir sonraki full sync bu maçları doğru winner ile güncelleyecek.
         """
         updated = 0
-        cutoff  = f"NOW() - INTERVAL '{hours_ago} hours'"
         try:
             with Database.get_connection() as conn:
                 with conn.cursor() as cur:
                     cur.execute(
-                        f"""
+                        """
                         UPDATE matches
                         SET    status     = 'finished',
                                updated_at = CURRENT_TIMESTAMP
                         WHERE  status     = 'running'
-                          AND  scheduled_at < {cutoff}
+                          AND  scheduled_at < NOW() - (%s * INTERVAL '1 hour')
                         RETURNING id
                         """,
+                        (hours_ago,),
                     )
                     rows    = cur.fetchall()
                     updated = len(rows)

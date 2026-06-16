@@ -366,6 +366,13 @@ class DataCleaner:
                 source_enrichment["pandascore"]["player_metrics"] = player_summaries
             raw_payload["source_enrichment"] = source_enrichment
 
+        # PandaScore stores bracket stage in the match "name" field, not a dedicated key.
+        # e.g. "Upper bracket final: PRV vs VIT" → round_info = "Upper bracket final"
+        _ri = match.get("round_info") or ""
+        if not _ri:
+            _raw_name = match.get("name") or ""
+            _ri = _raw_name.split(":")[0].strip() if _raw_name else ""
+
         cleaned = {
             "id": match["id"],
             "scheduled_at": match.get("scheduled_at") or match.get("begin_at"),
@@ -390,7 +397,7 @@ class DataCleaner:
             "tournament_region": league.get("region") or tournament.get("region"),
             "serie_id": match.get("serie_id") or serie.get("id"),
             "winner_id": match.get("winner_id"),
-            "round_info": match.get("round_info") or None,
+            "round_info": _ri or None,
             "player_summaries": player_summaries,
             "raw_data": raw_payload,
         }

@@ -1544,9 +1544,13 @@ export default function TournamentPage() {
 
       const normalizedMatches = (matchRes.data || []).map(row => ({
         ...row,
-        // Fallback to raw_data.round_info until SQL migration backfills the column
+        // Fallback chain: DB column → raw_data.round_info → match name before ":"
+        // PandaScore stores bracket stage in name: "Upper bracket final: PRV vs VIT"
         round_info: cleanName(
-          row?.round_info || row?.raw_data?.round_info || null,
+          row?.round_info
+          || row?.raw_data?.round_info
+          || (row?.name ? row.name.split(':')[0]?.trim() : null)
+          || null,
           row?.round_info || '',
         ),
         tournament: row?.tournament

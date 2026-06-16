@@ -5,13 +5,16 @@
 ALTER TABLE public.matches
   ADD COLUMN IF NOT EXISTS round_info text;
 
--- 2. Backfill from stored raw_data JSONB for all existing matches
---    PandaScore stores the round label as top-level "round_info" key.
+-- 2. Backfill from the match "name" field in raw_data.
+--    PandaScore does NOT expose a dedicated round_info key; instead it embeds the
+--    bracket stage label in the match name before the colon:
+--    e.g. "Upper bracket final: PRV vs VIT" → round_info = "Upper bracket final"
+--         "Mid bracket quarterfinal 2: VIT vs GX" → "Mid bracket quarterfinal 2"
 UPDATE public.matches
-SET    round_info = TRIM(raw_data->>'round_info')
+SET    round_info = TRIM(SPLIT_PART(raw_data->>'name', ':', 1))
 WHERE  round_info IS NULL
-  AND  raw_data->>'round_info' IS NOT NULL
-  AND  TRIM(raw_data->>'round_info') <> '';
+  AND  raw_data->>'name' IS NOT NULL
+  AND  TRIM(SPLIT_PART(raw_data->>'name', ':', 1)) <> '';
 
 -- 3. Index: accelerates tournament bracket queries filtered by round
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_matches_tournament_round_info

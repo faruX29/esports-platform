@@ -136,6 +136,15 @@ function inferBracketStageFromText(text = '', bracketSide = 'upper') {
 
   if (/(3rd|third|bronze|decider|placement)/.test(s)) return 'Third Place Decider'
 
+  // Numbered upper bracket rounds ("Upper Bracket Round 2", "UB R1", "Winner Round 3")
+  if (bracketSide !== 'lower') {
+    const ubRound = s.match(/(?:(?:upper[\s_-]*)?(?:bracket|winner|ub)[\s_-]*)(?:round|r)[\s_-]*(\d+)/)
+    if (ubRound?.[1]) return `Upper Round ${ubRound[1]}`
+  }
+
+  // Round of 16 — must come before QF to avoid overlap
+  if (/(round[\s_-]*of[\s_-]*16|ro16|round[\s_-]*16|\br16\b|1\/8\s*final|1\/8)/.test(s)) return 'Round of 16'
+
   if (bracketSide === 'lower') {
     const roundNum = s.match(/(?:lower|lb|loser)[\s_-]*(?:round|r)?[\s_-]*(\d+)/)
     if (roundNum?.[1]) return `Lower Round ${roundNum[1]}`
@@ -145,10 +154,11 @@ function inferBracketStageFromText(text = '', bracketSide = 'upper') {
   }
 
   if (/(semi[\s_-]*final|semifinal|\bsf\b|round[\s_-]*of[\s_-]*4|round[\s_-]*4|ro4|1\/2)/.test(s)) return 'Semi-finals'
-  if (/(quarter[\s_-]*final|quarterfinal|\bqf\b|round[\s_-]*of[\s_-]*8|round[\s_-]*8|ro8|round[\s_-]*of[\s_-]*16|ro16|round[\s_-]*16|\br16\b|1\/8\s*final|1\/8|1\/4)/.test(s)) return 'Quarter-finals'
+  // QF: ro16/r16 removed (handled above)
+  if (/(quarter[\s_-]*final|quarterfinal|\bqf\b|round[\s_-]*of[\s_-]*8|round[\s_-]*8|ro8|1\/4)/.test(s)) return 'Quarter-finals'
   if (/(grand[\s_-]*final|\bgf\b)/.test(s)) return 'Grand final'
 
-  // "Upper Final" çoğunlukla GF öncesi eşleşme olduğundan Semi-final kolonunda tutulur.
+  // "Upper Final" is typically the match before GF → Semi-final column
   if (/(upper[\s_-]*final|\bfinal\b|finals?)/.test(s)) return 'Semi-finals'
 
   return null
@@ -166,8 +176,57 @@ function inferBracketSide(match) {
   return 'upper'
 }
 
+// Matches whose round_info clearly indicates a group/swiss/league stage (not a bracket).
+const GROUP_STAGE_ROUND_RE = /^group[\s_]?[a-z0-9]|\bswiss[\s_]*(?:round|stage)?(?:\s*\d)|\bgame[\s_]*week\s*\d|\bweek\s*\d+\s*$/i
+
+// Within each resolved bracket stage, deduplicate by:
+//   1. same matchup (team pair) — rematches keep only the latest
+//   2. same team in the stage column — keeps only the latest match per team (safety net)
+// Sorted desc so the first match we see per pair/team is the most recent.
+function deduplicateStageDuplicates(resolved) {
+  const byStage = new Map()
+  for (const m of resolved) {
+    if (!byStage.has(m.__stage)) byStage.set(m.__stage, [])
+    byStage.get(m.__stage).push(m)
+  }
+
+  const kept = []
+  for (const [, stageMatches] of byStage) {
+    const sortedDesc = [...stageMatches].sort((a, b) => {
+      const ta = getMatchTimestamp(a) ? new Date(getMatchTimestamp(a)).getTime() : 0
+      const tb = getMatchTimestamp(b) ? new Date(getMatchTimestamp(b)).getTime() : 0
+      return tb - ta
+    })
+
+    const seenPairs = new Set()
+    const seenTeams = new Set()
+    for (const m of sortedDesc) {
+      const aId = String(m.team_a?.id || m.team_a_id || '').trim()
+      const bId = String(m.team_b?.id || m.team_b_id || '').trim()
+      if (aId && bId) {
+        // Skip duplicate matchup (same two teams already in this stage column)
+        const pairKey = [aId, bId].sort().join('|')
+        if (seenPairs.has(pairKey)) continue
+        seenPairs.add(pairKey)
+        // Skip if either team is already represented in this stage column
+        if (seenTeams.has(aId) || seenTeams.has(bId)) continue
+        seenTeams.add(aId)
+        seenTeams.add(bId)
+      }
+      kept.push(m)
+    }
+  }
+  return kept
+}
+
 function buildBracketStages(matches = []) {
-  const sortedByTime = [...matches].sort((a, b) => {
+  // Strip group/swiss/league-stage matches so they don't bleed into bracket columns.
+  const bracketCandidates = (matches || []).filter(m => {
+    const ri = String(m.round_info || '').trim()
+    return ri ? !GROUP_STAGE_ROUND_RE.test(ri) : true
+  })
+
+  const sortedByTime = [...bracketCandidates].sort((a, b) => {
     const ta = getMatchTimestamp(a) ? new Date(getMatchTimestamp(a)).getTime() : 0
     const tb = getMatchTimestamp(b) ? new Date(getMatchTimestamp(b)).getTime() : 0
     return ta - tb
@@ -243,7 +302,7 @@ function buildBracketStages(matches = []) {
     }
   })
 
-  return resolved
+  return deduplicateStageDuplicates(resolved)
 }
 
 function toFloatTime(value) {
@@ -705,18 +764,27 @@ function StandingsTable({ matches, navigate }) {
 
 // ─── Bracket ─────────────────────────────────────────────────────────────────
 
-const UPPER_ROUND_ORDER = ['Quarter-finals', 'Semi-finals', 'Grand final']
+const UPPER_ROUND_ORDER = [
+  'Round of 16',
+  'Upper Round 1', 'Upper Round 2', 'Upper Round 3', 'Upper Round 4',
+  'Quarter-finals', 'Semi-finals', 'Grand final',
+]
 const LOWER_ROUND_ORDER = ['Lower Round 1', 'Lower Round 2', 'Lower Round 3', 'Lower Round 4', 'Lower Semi-final', 'Lower Final']
 const ROUND_LABELS = {
-  'Quarter-finals': { icon: '⚔️', color: '#818cf8', short: 'QF' },
-  'Semi-finals':    { icon: '🔥', color: '#FF8C00', short: 'SF' },
-  'Grand final':    { icon: '👑', color: '#FFD700', short: 'GF' },
+  'Round of 16':    { icon: '⚔️', color: '#64748b', short: 'R16'   },
+  'Upper Round 1':  { icon: '⚔️', color: '#6b7280', short: 'UBR1'  },
+  'Upper Round 2':  { icon: '⚔️', color: '#6b7280', short: 'UBR2'  },
+  'Upper Round 3':  { icon: '⚔️', color: '#6b7280', short: 'UBR3'  },
+  'Upper Round 4':  { icon: '⚔️', color: '#6b7280', short: 'UBR4'  },
+  'Quarter-finals': { icon: '⚔️', color: '#818cf8', short: 'QF'    },
+  'Semi-finals':    { icon: '🔥', color: '#FF8C00', short: 'SF'    },
+  'Grand final':    { icon: '👑', color: '#FFD700', short: 'GF'    },
   'Lower Round 1':  { icon: '🛣️', color: '#94a3b8', short: 'LB R1' },
   'Lower Round 2':  { icon: '🛣️', color: '#94a3b8', short: 'LB R2' },
   'Lower Round 3':  { icon: '🛣️', color: '#94a3b8', short: 'LB R3' },
   'Lower Round 4':  { icon: '🛣️', color: '#94a3b8', short: 'LB R4' },
   'Lower Semi-final': { icon: '⚔️', color: '#60a5fa', short: 'LB SF' },
-  'Lower Final':      { icon: '🏁', color: '#38bdf8', short: 'LB F' },
+  'Lower Final':      { icon: '🏁', color: '#38bdf8', short: 'LB F'  },
 }
 
 const BRACKET_CARD_H   = 88   // px — BracketMatchCard yüksekliği

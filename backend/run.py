@@ -137,6 +137,18 @@ def main():
     )
 
     parser.add_argument(
+        '--accuracy-check',
+        action='store_true',
+        help='AI tahmin başarı oranını hesapla (prediction_team_a vs winner_id)',
+    )
+    parser.add_argument(
+        '--accuracy-days',
+        type=int,
+        default=30,
+        help='--accuracy-check için kaç günlük geçmişe bakılsın (0 = tüm zamanlar, varsayılan: 30)',
+    )
+
+    parser.add_argument(
         '--liquipedia-enrich',
         action='store_true',
         help='Liquipedia MediaWiki API ile Data Enrichment çalıştır',
@@ -175,6 +187,7 @@ def main():
         args.fix_stale,
         args.past,
         args.all_games,
+        args.accuracy_check,
     ])
     should_sync_matches = not args.liquipedia_enrich or has_non_enrichment_work
 
@@ -298,6 +311,17 @@ def main():
     if args.fix_stale:
         logger.info("\n🕒 Stale match cleanup...")
         syncer.mark_stale_matches_finished(hours_ago=args.stale_hours)
+
+    if args.accuracy_check:
+        logger.info("\n" + "=" * 60)
+        logger.info("🎯 AI PREDICTION ACCURACY CHECK")
+        logger.info("=" * 60)
+        predictor = MatchPredictor()
+        result = predictor.calculate_prediction_accuracy(days=args.accuracy_days)
+        logger.info(
+            f"📊 Accuracy sonucu: {result['correct']}/{result['total']} "
+            f"doğru → %{result['accuracy_pct']}"
+        )
 
     if args.liquipedia_enrich:
         logger.info("\n" + "=" * 60)

@@ -246,6 +246,100 @@ class MatchPredictor:
 
         return predictions
 
+    def calculate_prediction_accuracy(self, days: int = 30) -> dict:
+        """
+        Kaydedilmiş tahminlerin gerçek sonuçlarla karşılaştırılması.
+
+        Kriter: prediction_team_a > prediction_team_b → Team A favori.
+        Doğru tahmin: favori olan taraf winner_id eşleşiyorsa.
+
+        Args:
+            days: Kaç günlük geçmişe bakılsın (0 veya None = tüm zamanlar)
+
+        Returns:
+            dict: total, correct, accuracy_pct
+        """
+        logger.info("\n" + "=" * 60)
+        logger.info("🎯 AI TAHMİN BAŞARI ORANI HESAPLANIYOR")
+        if days and days > 0:
+            logger.info(f"   Dönem: Son {days} gün")
+        else:
+            logger.info("   Dönem: Tüm zamanlar")
+        logger.info("=" * 60)
+
+        with Database.get_connection() as conn:
+            with conn.cursor() as cur:
+                if days and days > 0:
+                    cur.execute(
+                        """
+                        SELECT
+                            COUNT(*) AS total,
+                            SUM(CASE
+                                WHEN (prediction_team_a > prediction_team_b
+                                      AND winner_id = team_a_id)
+                                  OR (prediction_team_b > prediction_team_a
+                                      AND winner_id = team_b_id)
+                                THEN 1 ELSE 0
+                            END) AS correct
+                        FROM matches
+                        WHERE status               = 'finished'
+                          AND winner_id            IS NOT NULL
+                          AND prediction_team_a    IS NOT NULL
+                          AND scheduled_at         > NOW() - (%s * INTERVAL '1 day')
+                        """,
+                        (days,),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        SELECT
+                            COUNT(*) AS total,
+                            SUM(CASE
+                                WHEN (prediction_team_a > prediction_team_b
+                                      AND winner_id = team_a_id)
+                                  OR (prediction_team_b > prediction_team_a
+                                      AND winner_id = team_b_id)
+                                THEN 1 ELSE 0
+                            END) AS correct
+                        FROM matches
+                        WHERE status            = 'finished'
+                          AND winner_id         IS NOT NULL
+                          AND prediction_team_a IS NOT NULL
+                        """
+                    )
+
+                row = cur.fetchone()
+                total   = int(row[0]) if row and row[0] is not None else 0
+                correct = int(row[1]) if row and row[1] is not None else 0
+
+        accuracy_pct = (correct / total * 100) if total > 0 else 0.0
+        wrong = total - correct
+
+        logger.info(f"   Toplam tahmin  : {total}")
+        logger.info(f"   Doğru tahmin   : {correct}")
+        logger.info(f"   Yanlış tahmin  : {wrong}")
+        logger.info(f"   Başarı Oranı   : {accuracy_pct:.1f}%")
+        logger.info("=" * 60)
+
+        if total == 0:
+            logger.warning(
+                "⚠️  Değerlendirilebilir tahmin bulunamadı. "
+                "Önce 'python run.py --past --predict' çalıştır."
+            )
+        elif accuracy_pct >= 70:
+            logger.info(f"✅ Model performansı İYİ ({accuracy_pct:.1f}% ≥ 70%)")
+        elif accuracy_pct >= 55:
+            logger.info(f"🟡 Model performansı ORTA ({accuracy_pct:.1f}%)")
+        else:
+            logger.warning(f"⚠️  Model performansı DÜŞÜK ({accuracy_pct:.1f}% < 55%)")
+
+        return {
+            'total':        total,
+            'correct':      correct,
+            'wrong':        wrong,
+            'accuracy_pct': round(accuracy_pct, 2),
+        }
+
     def predict_finished_matches(self, limit=150):
         """
         Predict finished matches for accuracy testing

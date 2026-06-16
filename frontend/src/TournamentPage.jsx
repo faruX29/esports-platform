@@ -824,25 +824,12 @@ const BRACKET_MAX_ZOOM = 1.2
 
 function buildConnectorPath(from, to) {
   if (!from || !to) return ''
-
-  const dx = Math.max(12, to.x - from.x)
-  const midX = from.x + (dx * 0.5)
-  const dy = to.y - from.y
-  const direction = dy >= 0 ? 1 : -1
-  const bend = Math.max(10, Math.min(20, Math.abs(dy) * 0.28))
-
-  if (Math.abs(dy) <= 2) {
-    return `M ${from.x} ${from.y} C ${from.x + 24} ${from.y}, ${to.x - 24} ${to.y}, ${to.x} ${to.y}`
+  const midX = Math.round(from.x + (to.x - from.x) * 0.5)
+  if (Math.abs(to.y - from.y) <= 1) {
+    return `M ${from.x} ${from.y} H ${to.x}`
   }
-
-  return [
-    `M ${from.x} ${from.y}`,
-    `H ${midX - bend}`,
-    `Q ${midX} ${from.y} ${midX} ${from.y + (bend * direction)}`,
-    `V ${to.y - (bend * direction)}`,
-    `Q ${midX} ${to.y} ${midX + bend} ${to.y}`,
-    `H ${to.x}`,
-  ].join(' ')
+  // 90° step path: horizontal → vertical → horizontal
+  return `M ${from.x} ${from.y} H ${midX} V ${to.y} H ${to.x}`
 }
 
 function clampBracketZoom(value) {
@@ -925,16 +912,16 @@ const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, gc, highl
         </div>
       )}
 
-      {highlightPath && (
+      {highlightPath && m.status !== 'running' && (
         <div style={{
-          position: 'absolute', top: 7, left: 8,
-          zIndex: 3, fontSize: 8, fontWeight: 800,
-          letterSpacing: '.6px', textTransform: 'uppercase',
-          color: '#FF9AA5', background: 'rgba(255,70,85,.14)',
-          border: '1px solid rgba(255,70,85,.35)', borderRadius: 8,
-          padding: '2px 6px',
+          position: 'absolute', bottom: 4, right: 8,
+          zIndex: 3, fontSize: 7, fontWeight: 800,
+          letterSpacing: '.5px', textTransform: 'uppercase',
+          color: '#FF9AA5', background: 'rgba(255,70,85,.13)',
+          border: '1px solid rgba(255,70,85,.32)', borderRadius: 6,
+          padding: '1px 5px', pointerEvents: 'none',
         }}>
-          Winner Path
+          ★ Path
         </div>
       )}
 
@@ -1055,27 +1042,54 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
   const roundKeys = prepared.roundOrder.filter(k => prepared.main[k]?.length > 0)
 
   const layout = useMemo(() => {
-    const columns = roundKeys.map((rk, colIdx) => {
+    const STEP = BRACKET_CARD_H + BRACKET_CARD_GAP
+
+    // Build columns with proper midpoint-based Y positioning so each card
+    // sits centred between the pair of source cards it draws from.
+    const columns = []
+    for (let colIdx = 0; colIdx < roundKeys.length; colIdx++) {
+      const rk = roundKeys[colIdx]
       const colMatches = prepared.main[rk]
       const x = colIdx * (BRACKET_CARD_W + BRACKET_COL_GAP)
-      const yOffset = colIdx > 0 ? colIdx * (BRACKET_CARD_H + BRACKET_CARD_GAP) : 0
 
       const cards = colMatches.map((m, idx) => {
-        const y = BRACKET_TOP_PAD + BRACKET_HEADER_H + yOffset + idx * (BRACKET_CARD_H + BRACKET_CARD_GAP)
-        const winnerId = m?.winner_id || null
+        let y
+        if (colIdx === 0) {
+          // First column: pack tightly from top
+          y = BRACKET_TOP_PAD + BRACKET_HEADER_H + idx * STEP
+        } else {
+          const prevCards = columns[colIdx - 1].cards
+          const prevCount = prevCards.length
+          const curCount = colMatches.length
+
+          if (prevCount === 0) {
+            y = BRACKET_TOP_PAD + BRACKET_HEADER_H + idx * STEP
+          } else if (curCount === 1) {
+            // Single card: centre between all prev cards
+            const top = prevCards[0].centerY
+            const bot = prevCards[prevCount - 1].centerY
+            y = (top + bot) / 2 - BRACKET_CARD_H / 2
+          } else {
+            // Card i maps to the midpoint of its source pair in the prev column
+            const ratio = prevCount / curCount
+            const fromIdx = Math.min(Math.floor(idx * ratio), prevCount - 1)
+            const toIdx   = Math.min(Math.ceil((idx + 1) * ratio) - 1, prevCount - 1)
+            const topCenter = prevCards[fromIdx].centerY
+            const botCenter = prevCards[toIdx].centerY
+            y = (topCenter + botCenter) / 2 - BRACKET_CARD_H / 2
+          }
+        }
 
         return {
-          m,
-          idx,
-          x,
-          y,
-          centerY: y + BRACKET_CARD_H / 2,
-          winnerId,
+          m, idx, x,
+          y: Math.round(y),
+          centerY: Math.round(y + BRACKET_CARD_H / 2),
+          winnerId: m?.winner_id || null,
         }
       })
 
-      return { rk, colIdx, x, yOffset, cards }
-    })
+      columns.push({ rk, colIdx, x, yOffset: 0, cards })
+    }
 
     const edges = []
     const cardsById = new Map()
@@ -1089,42 +1103,43 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
       const leftCards = columns[c].cards
       const rightCards = columns[c + 1].cards
 
-      leftCards.forEach((srcCard, srcIdx) => {
+      leftCards.forEach((srcCard) => {
         const src = srcCard.m
         const winnerId = src?.winner_id || null
         const structuredNextMatchId = src?.__nextMatchId ? String(src.__nextMatchId) : null
 
         let dstCard = null
+
+        // 1. Explicit Liquipedia next-match link
         if (structuredNextMatchId) {
           const linked = cardsById.get(structuredNextMatchId)
-          if (linked && linked.colIdx > c) {
-            dstCard = linked
-          }
+          if (linked && linked.colIdx > c) dstCard = linked
         }
 
+        // 2. Winner appears in a right-column match
         if (!dstCard && winnerId && rightCards.length > 0) {
           dstCard = rightCards.find(card => {
             const t = card.m
-            const ta = t?.team_a?.id || t?.team_a_id
-            const tb = t?.team_b?.id || t?.team_b_id
-            return winnerId === ta || winnerId === tb
-          }) || null
+            return winnerId === (t?.team_a?.id || t?.team_a_id)
+                || winnerId === (t?.team_b?.id || t?.team_b_id)
+          }) ?? null
         }
 
+        // 3. Fallback: nearest right card by vertical distance (avoids wrong index math)
         if (!dstCard && rightCards.length > 0) {
-          const fallbackBase = Number.isFinite(src?.__positionNo)
-            ? Math.floor((src.__positionNo - 1) / 2)
-            : Math.floor(srcIdx / 2)
-          const fallbackIndex = Math.min(Math.max(0, fallbackBase), rightCards.length - 1)
-          dstCard = rightCards[fallbackIndex]
+          dstCard = rightCards.reduce((best, card) => {
+            const distBest = Math.abs((best?.centerY ?? Infinity) - srcCard.centerY)
+            const distCand = Math.abs(card.centerY - srcCard.centerY)
+            return distCand < distBest ? card : best
+          }, null)
         }
 
         if (!dstCard) return
 
         edges.push({
-          key: `${c}-${srcCard.idx}-${dstCard.idx}`,
+          key: `edge-${src?.id ?? c}-${dstCard.m?.id ?? dstCard.idx}`,
           from: { x: srcCard.x + BRACKET_CARD_W, y: srcCard.centerY },
-          to: { x: dstCard.x, y: dstCard.centerY },
+          to:   { x: dstCard.x,                  y: dstCard.centerY },
           highlight: Boolean(winnerId || structuredNextMatchId),
           sourceId: src?.id,
           targetId: dstCard.m?.id,
@@ -1132,8 +1147,10 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
       })
     }
 
-    const width = Math.max(BRACKET_CARD_W, columns.length * BRACKET_CARD_W + Math.max(0, columns.length - 1) * BRACKET_COL_GAP)
-    const maxCardBottom = columns.flatMap(col => col.cards.map(card => card.y + BRACKET_CARD_H))
+    const width = Math.max(BRACKET_CARD_W,
+      columns.length * BRACKET_CARD_W + Math.max(0, columns.length - 1) * BRACKET_COL_GAP)
+    const maxCardBottom = columns
+      .flatMap(col => col.cards.map(card => card.y + BRACKET_CARD_H))
       .reduce((acc, v) => Math.max(acc, v), BRACKET_TOP_PAD + BRACKET_HEADER_H)
     const height = maxCardBottom + BRACKET_TOP_PAD
 
@@ -1285,18 +1302,14 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
             const meta = ROUND_LABELS[col.rk] || { icon: '🎮', color: gc, short: col.rk }
 
             return (
-              <div
-                key={col.rk}
-                style={{
-                  position: 'absolute',
-                  left: col.x,
-                  top: BRACKET_TOP_PAD,
-                  width: BRACKET_CARD_W,
-                }}
-              >
+              <div key={col.rk} style={{ position: 'absolute', left: col.x, top: 0, width: BRACKET_CARD_W }}>
+                {/* Round header — pinned at its own top */}
                 <div style={{
+                  position: 'absolute',
+                  top: BRACKET_TOP_PAD,
+                  left: 0, right: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                  padding: '5px 12px', borderRadius: 20, marginBottom: 10,
+                  padding: '5px 12px', borderRadius: 20,
                   background: `linear-gradient(135deg, ${meta.color}1f, rgba(9,9,9,.9))`,
                   border: `1px solid ${meta.color}45`,
                   boxShadow: `0 5px 18px ${meta.color}22`,
@@ -1310,17 +1323,17 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
                   <span style={{ fontSize: 9, color: '#444' }}>({col.cards.length})</span>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: BRACKET_CARD_GAP, marginTop: col.yOffset }}>
-                  {col.cards.map(card => (
+                {/* Cards — each absolutely placed at its computed Y */}
+                {col.cards.map(card => (
+                  <div key={card.m.id} style={{ position: 'absolute', top: card.y, left: 0 }}>
                     <BracketMatchCard
-                      key={card.m.id}
                       m={card.m}
                       navigate={navigate}
                       gc={gc}
                       highlightPath={highlightedSourceIds.has(card.m.id)}
                     />
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
             )
           })}

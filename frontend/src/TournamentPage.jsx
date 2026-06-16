@@ -115,9 +115,7 @@ function stageFromStructuredRound(roundNo, bracketSide = 'upper') {
   if (bracketSide === 'lower') {
     if (roundNo <= 1) return 'Lower Round 1'
     if (roundNo === 2) return 'Lower Round 2'
-    if (roundNo === 3) return 'Lower Round 3'
-    if (roundNo === 4) return 'Lower Round 4'
-    if (roundNo === 5) return 'Lower Semifinals'
+    if (roundNo === 3) return 'Lower Semifinals'
     return 'Lower Finals'
   }
 
@@ -150,7 +148,15 @@ function inferBracketStageFromText(text = '', bracketSide = 'upper') {
   if (bracketStageM) {
     const stage = bracketStageM[1].trim()
     const rn = stage.match(/(?:round|r)[\s_-]*(\d+)/)
-    if (rn?.[1]) return isLower ? `Lower Round ${rn[1]}` : `Upper Round ${rn[1]}`
+    if (rn?.[1]) {
+      if (isLower) {
+        const n = parseInt(rn[1], 10)
+        if (n >= 4) return 'Lower Finals'
+        if (n === 3) return 'Lower Semifinals'
+        return `Lower Round ${n}`
+      }
+      return `Upper Round ${rn[1]}`
+    }
     if (/(round[\s_-]*of[\s_-]*16|ro16|\br16\b|1\/8)/.test(stage)) return 'Round of 16'
     if (/(quarter[\s_-]*final|quarterfinal|\bqf\b|1\/4)/.test(stage)) {
       return isLower ? 'Lower Round 2' : 'Quarter-finals'
@@ -169,7 +175,12 @@ function inferBracketStageFromText(text = '', bracketSide = 'upper') {
 
   if (isLower) {
     const roundNum = s.match(/(?:lower|lb|losers?)[\s_-]*(?:round|r)?[\s_-]*(\d+)/)
-    if (roundNum?.[1]) return `Lower Round ${roundNum[1]}`
+    if (roundNum?.[1]) {
+      const n = parseInt(roundNum[1], 10)
+      if (n >= 4) return 'Lower Finals'
+      if (n === 3) return 'Lower Semifinals'
+      return `Lower Round ${n}`
+    }
     if (/(lower[\s_-]*semi|losers?[\s_-]*semi|lb[\s_-]*semi|semi[\s_-]*final|semifinal|\bsf\b)/.test(s)) return 'Lower Semifinals'
     if (/(lower[\s_-]*finals?|losers?[\s_-]*finals?|lb[\s_-]*finals?|\blf\b|\bfinals?\b)/.test(s)) return 'Lower Finals'
     return 'Lower Round 1'
@@ -791,8 +802,7 @@ const UPPER_ROUND_ORDER = [
   'Quarter-finals', 'Semi-finals', 'Upper Finals', 'Grand final',
 ]
 const LOWER_ROUND_ORDER = [
-  'Lower Round 1', 'Lower Round 2', 'Lower Round 3', 'Lower Round 4',
-  'Lower Semifinals', 'Lower Finals',
+  'Lower Round 1', 'Lower Round 2', 'Lower Semifinals', 'Lower Finals',
 ]
 const ROUND_LABELS = {
   'Round of 16':     { icon: '⚔️', color: '#64748b', short: 'R16'    },
@@ -804,10 +814,8 @@ const ROUND_LABELS = {
   'Semi-finals':     { icon: '🔥', color: '#FF8C00', short: 'SF'     },
   'Upper Finals':    { icon: '🏆', color: '#f59e0b', short: 'UBF'    },
   'Grand final':     { icon: '👑', color: '#FFD700', short: 'GF'     },
-  'Lower Round 1':   { icon: '🛣️', color: '#94a3b8', short: 'LB R1'  },
-  'Lower Round 2':   { icon: '🛣️', color: '#94a3b8', short: 'LB R2'  },
-  'Lower Round 3':   { icon: '🛣️', color: '#94a3b8', short: 'LB R3'  },
-  'Lower Round 4':   { icon: '🛣️', color: '#94a3b8', short: 'LB R4'  },
+  'Lower Round 1':    { icon: '🛣️', color: '#94a3b8', short: 'LB R1'  },
+  'Lower Round 2':    { icon: '🛣️', color: '#94a3b8', short: 'LB R2'  },
   'Lower Semifinals': { icon: '⚔️', color: '#60a5fa', short: 'LB SF'  },
   'Lower Finals':     { icon: '🏁', color: '#38bdf8', short: 'LB F'   },
 }
@@ -822,8 +830,6 @@ const STAGE_EXPECTED_COUNTS = {
   'Grand final':      1,
   'Lower Round 1':    2,
   'Lower Round 2':    2,
-  'Lower Round 3':    2,
-  'Lower Round 4':    1,
   'Lower Semifinals': 1,
   'Lower Finals':     1,
 }

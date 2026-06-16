@@ -123,6 +123,7 @@ function stageFromStructuredRound(roundNo, bracketSide = 'upper') {
 
   if (roundNo <= 1) return 'Quarter-finals'
   if (roundNo === 2) return 'Semi-finals'
+  if (roundNo === 3) return 'Upper Finals'
   return 'Grand final'
 }
 
@@ -136,38 +137,49 @@ function inferBracketStageFromText(text = '', bracketSide = 'upper') {
 
   if (/(3rd|third|bronze|decider|placement)/.test(s)) return 'Third Place Decider'
 
-  // Numbered upper bracket rounds ("Upper Bracket Round 2", "UB R1", "Winner Round 3")
-  if (bracketSide !== 'lower') {
-    const ubRound = s.match(/(?:(?:upper[\s_-]*)?(?:bracket|winner|ub)[\s_-]*)(?:round|r)[\s_-]*(\d+)/)
-    if (ubRound?.[1]) return `Upper Round ${ubRound[1]}`
+  // Grand final must be matched before the bracket-keyword block to avoid conflict
+  if (/(grand[\s_-]*final|\bgf\b)/.test(s)) return 'Grand final'
+
+  const isLower = /(lower|lb|loser)/.test(s) || bracketSide === 'lower'
+
+  // ── PandaScore "[side] bracket [stage]" format ──────────────────────────
+  // e.g. "upper bracket final" → 'Upper Finals'
+  //      "lower bracket quarterfinal" → 'Lower Round 2'  (PandaScore convention)
+  //      "lower bracket round 1" → 'Lower Round 1'
+  const bracketStageM = s.match(/\bbracket[\s_-]+(.+)/)
+  if (bracketStageM) {
+    const stage = bracketStageM[1].trim()
+    const rn = stage.match(/(?:round|r)[\s_-]*(\d+)/)
+    if (rn?.[1]) return isLower ? `Lower Round ${rn[1]}` : `Upper Round ${rn[1]}`
+    if (/(round[\s_-]*of[\s_-]*16|ro16|\br16\b|1\/8)/.test(stage)) return 'Round of 16'
+    if (/(quarter[\s_-]*final|quarterfinal|\bqf\b|1\/4)/.test(stage)) {
+      return isLower ? 'Lower Round 2' : 'Quarter-finals'
+    }
+    if (/(semi[\s_-]*final|semifinal|\bsf\b|1\/2)/.test(stage)) {
+      return isLower ? 'Lower Semifinals' : 'Semi-finals'
+    }
+    if (/\bfinals?/.test(stage)) {
+      return isLower ? 'Lower Finals' : 'Upper Finals'
+    }
   }
 
+  // ── Non-bracket-keyword patterns ────────────────────────────────────────
   // Round of 16 — must come before QF to avoid overlap
   if (/(round[\s_-]*of[\s_-]*16|ro16|round[\s_-]*16|\br16\b|1\/8\s*final|1\/8)/.test(s)) return 'Round of 16'
 
-  if (bracketSide === 'lower') {
-    // "Losers Round 2", "Lower Round 2", "LB R1" → numbered round
+  if (isLower) {
     const roundNum = s.match(/(?:lower|lb|losers?)[\s_-]*(?:round|r)?[\s_-]*(\d+)/)
     if (roundNum?.[1]) return `Lower Round ${roundNum[1]}`
-
-    // "Lower Semi", "Lower Semi-Final", "Losers Semi", "LB SF"
     if (/(lower[\s_-]*semi|losers?[\s_-]*semi|lb[\s_-]*semi|semi[\s_-]*final|semifinal|\bsf\b)/.test(s)) return 'Lower Semifinals'
-
-    // "Lower Final", "Losers Final", "Losers Finals", "LB Final", "LB F"
     if (/(lower[\s_-]*finals?|losers?[\s_-]*finals?|lb[\s_-]*finals?|\blf\b|\bfinals?\b)/.test(s)) return 'Lower Finals'
-
     return 'Lower Round 1'
   }
 
+  const ubRound = s.match(/(?:(?:upper[\s_-]*)?(?:bracket|winner|ub)[\s_-]*)(?:round|r)[\s_-]*(\d+)/)
+  if (ubRound?.[1]) return `Upper Round ${ubRound[1]}`
   if (/(semi[\s_-]*final|semifinal|\bsf\b|round[\s_-]*of[\s_-]*4|round[\s_-]*4|ro4|1\/2)/.test(s)) return 'Semi-finals'
-  // QF: ro16/r16 removed (handled above)
   if (/(quarter[\s_-]*final|quarterfinal|\bqf\b|round[\s_-]*of[\s_-]*8|round[\s_-]*8|ro8|1\/4)/.test(s)) return 'Quarter-finals'
-  if (/(grand[\s_-]*final|\bgf\b)/.test(s)) return 'Grand final'
-
-  // "Upper Final", "Winners Final", "Winners Finals", "UB Final" → Upper Finals (DE bracket)
   if (/(upper[\s_-]*finals?|winners?[\s_-]*finals?|\bub[\s_-]*finals?\b|\bwf\b)/.test(s)) return 'Upper Finals'
-
-  // Generic final/finals → treat as Semi-finals fallback (single-elim or ambiguous)
   if (/\bfinals?\b/.test(s)) return 'Semi-finals'
 
   return null

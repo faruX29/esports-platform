@@ -331,7 +331,18 @@ class DataCleaner:
         team_a_score = None
         team_b_score = None
         results = match.get("results") or []
-        if len(results) >= 2:
+        # PandaScore results[] entries carry team_id — match by ID, not position,
+        # because results[0] is not guaranteed to align with opponents[0].
+        team_a_id_val = team_a.get("id")
+        team_b_id_val = team_b.get("id")
+        for r in results:
+            rid = r.get("team_id")
+            if rid is not None and rid == team_a_id_val:
+                team_a_score = r.get("score")
+            elif rid is not None and rid == team_b_id_val:
+                team_b_score = r.get("score")
+        # Positional fallback only when team_id matching produced nothing
+        if team_a_score is None and team_b_score is None and len(results) >= 2:
             team_a_score = results[0].get("score")
             team_b_score = results[1].get("score")
 

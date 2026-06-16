@@ -1019,9 +1019,13 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
         if (!thirdPlace) thirdPlace = m
         continue
       }
-      if (main[m.__stage]) {
-        main[m.__stage].push(m)
-      }
+      // If __stage is not in this bracket's round order (e.g. lower bracket match
+      // assigned an upper-bracket stage name), fall back to the bracket's default
+      // first stage so it still renders rather than silently disappearing.
+      const stage = (main[m.__stage] !== undefined)
+        ? m.__stage
+        : (bracketSide === 'lower' ? 'Lower Round 1' : 'Quarter-finals')
+      if (main[stage]) main[stage].push(m)
     }
 
     for (const key of Object.keys(main)) {
@@ -1044,12 +1048,53 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
   const layout = useMemo(() => {
     const STEP = BRACKET_CARD_H + BRACKET_CARD_GAP
 
+    // Sort column matches so that matches whose teams came from earlier
+    // (higher-indexed / top-of-column) previous-round cards appear first.
+    // This eliminates SVG connector crossings without any DOM measurement.
+    function topoSort(colMatches, prevCards) {
+      if (!prevCards?.length || colMatches.length <= 1) return colMatches
+
+      // Build: winner_id → prevCard index (strongest signal)
+      // Build: any team id → minimum prevCard index (fallback for TBD/future)
+      const winnerToIdx = new Map()
+      const teamToIdx   = new Map()
+      for (let i = 0; i < prevCards.length; i++) {
+        const pm = prevCards[i].m
+        const wId = pm?.winner_id ? String(pm.winner_id) : null
+        if (wId) winnerToIdx.set(wId, i)
+        const aId = String(pm?.team_a?.id || pm?.team_a_id || '')
+        const bId = String(pm?.team_b?.id || pm?.team_b_id || '')
+        if (aId) teamToIdx.set(aId, Math.min(teamToIdx.get(aId) ?? Infinity, i))
+        if (bId) teamToIdx.set(bId, Math.min(teamToIdx.get(bId) ?? Infinity, i))
+      }
+
+      const minSrcIdx = (m) => {
+        const aId = String(m?.team_a?.id || m?.team_a_id || '')
+        const bId = String(m?.team_b?.id || m?.team_b_id || '')
+        const aW = winnerToIdx.get(aId) ?? Number.MAX_SAFE_INTEGER
+        const bW = winnerToIdx.get(bId) ?? Number.MAX_SAFE_INTEGER
+        if (aW < Number.MAX_SAFE_INTEGER || bW < Number.MAX_SAFE_INTEGER) {
+          return Math.min(aW, bW)
+        }
+        return Math.min(
+          teamToIdx.get(aId) ?? Number.MAX_SAFE_INTEGER,
+          teamToIdx.get(bId) ?? Number.MAX_SAFE_INTEGER,
+        )
+      }
+
+      return [...colMatches].sort((a, b) => minSrcIdx(a) - minSrcIdx(b))
+    }
+
     // Build columns with proper midpoint-based Y positioning so each card
     // sits centred between the pair of source cards it draws from.
     const columns = []
     for (let colIdx = 0; colIdx < roundKeys.length; colIdx++) {
       const rk = roundKeys[colIdx]
-      const colMatches = prepared.main[rk]
+      const prevCards = colIdx > 0 ? columns[colIdx - 1].cards : null
+      // Topologically sort so matches connecting to higher prev-cards come first
+      const colMatches = colIdx === 0
+        ? prepared.main[rk]
+        : topoSort(prepared.main[rk], prevCards)
       const x = colIdx * (BRACKET_CARD_W + BRACKET_COL_GAP)
 
       const cards = colMatches.map((m, idx) => {
@@ -1058,7 +1103,6 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
           // First column: pack tightly from top
           y = BRACKET_TOP_PAD + BRACKET_HEADER_H + idx * STEP
         } else {
-          const prevCards = columns[colIdx - 1].cards
           const prevCount = prevCards.length
           const curCount = colMatches.length
 
@@ -1567,24 +1611,42 @@ export default function TournamentPage() {
         name: cleanName(tourRes.data?.name, 'Tournament'),
       }
 
-      const normalizedMatches = (matchRes.data || []).map(row => ({
-        ...row,
-        // Fallback chain: DB column → raw_data.round_info → match name before ":"
-        // PandaScore stores bracket stage in name: "Upper bracket final: PRV vs VIT"
-        round_info: cleanName(
-          row?.round_info
-          || row?.raw_data?.round_info
-          || (row?.name ? row.name.split(':')[0]?.trim() : null)
-          || null,
-          row?.round_info || '',
-        ),
-        tournament: row?.tournament
-          ? {
-              ...row.tournament,
-              name: cleanName(row.tournament?.name, row.tournament?.name || ''),
-            }
-          : row?.tournament,
-      }))
+      const normalizedMatches = (matchRes.data || []).map(row => {
+        // Detect and fix score inversion: PandaScore results[] is not guaranteed
+        // to be ordered the same as opponents[], so winner may show the lower score.
+        // When winner's score < loser's score, swap to display correctly.
+        let aScore = row?.team_a_score ?? null
+        let bScore = row?.team_b_score ?? null
+        const wId = row?.winner_id
+        if (wId != null && aScore != null && bScore != null && aScore !== bScore) {
+          const aWon = wId === row?.team_a_id
+          const bWon = wId === row?.team_b_id
+          if ((aWon && aScore < bScore) || (bWon && bScore < aScore)) {
+            ;[aScore, bScore] = [bScore, aScore]
+          }
+        }
+
+        return {
+          ...row,
+          team_a_score: aScore,
+          team_b_score: bScore,
+          // Fallback chain: DB column → raw_data.round_info → match name before ":"
+          // PandaScore stores bracket stage in name: "Upper bracket final: PRV vs VIT"
+          round_info: cleanName(
+            row?.round_info
+            || row?.raw_data?.round_info
+            || (row?.name ? row.name.split(':')[0]?.trim() : null)
+            || null,
+            row?.round_info || '',
+          ),
+          tournament: row?.tournament
+            ? {
+                ...row.tournament,
+                name: cleanName(row.tournament?.name, row.tournament?.name || ''),
+              }
+            : row?.tournament,
+        }
+      })
 
       setTournament(normalizedTournament)
       setMatches(normalizedMatches)

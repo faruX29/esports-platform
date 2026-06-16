@@ -160,13 +160,14 @@ class MatchSyncer:
                                 winner_id,
                                 team_a_score,
                                 team_b_score,
+                                round_info,
                                 raw_data,
                                 updated_at
                             )
                             VALUES (
                                 %s, %s, %s, %s, %s,
                                 %s, %s, %s, %s, %s,
-                                %s, %s,
+                                %s, %s, %s,
                                 CURRENT_TIMESTAMP
                             )
                             ON CONFLICT (id) DO UPDATE SET
@@ -177,6 +178,8 @@ class MatchSyncer:
                                 scheduled_at  = EXCLUDED.scheduled_at,
                                 tournament_id = COALESCE(EXCLUDED.tournament_id,
                                                          matches.tournament_id),
+                                round_info    = COALESCE(EXCLUDED.round_info,
+                                                         matches.round_info),
                                 raw_data      = EXCLUDED.raw_data,
                                 updated_at    = CURRENT_TIMESTAMP
                             """,
@@ -192,6 +195,7 @@ class MatchSyncer:
                                 match.get('winner_id'),
                                 match.get('team_a_score'),
                                 match.get('team_b_score'),
+                                match.get('round_info'),
                                 json.dumps(match['raw_data']),
                             ),
                         )

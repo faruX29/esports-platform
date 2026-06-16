@@ -23,7 +23,7 @@ const TIER_META = {
   C: { color: '#818cf8', bg: 'rgba(129,140,248,.15)', border: 'rgba(129,140,248,.4)', label: 'C-Tier · Challenger'  },
 }
 
-const MVP_TOURNAMENT_RESCUE = true
+const MVP_TOURNAMENT_RESCUE = false
 const TOURNAMENT_DEBUG = false
 
 function gameColor(name = '') {
@@ -1463,7 +1463,11 @@ export default function TournamentPage() {
 
       const normalizedMatches = (matchRes.data || []).map(row => ({
         ...row,
-        round_info: cleanName(row?.round_info, row?.round_info || ''),
+        // Fallback to raw_data.round_info until SQL migration backfills the column
+        round_info: cleanName(
+          row?.round_info || row?.raw_data?.round_info || null,
+          row?.round_info || '',
+        ),
         tournament: row?.tournament
           ? {
               ...row.tournament,
@@ -1509,12 +1513,22 @@ export default function TournamentPage() {
   const stageMode = useMemo(() => detectStageMode(tournament, matches, format), [tournament, matches, format])
   const liquipediaBracketMatches = useMemo(() => buildLiquipediaBracketStages(tournament), [tournament])
   const hasLiquipediaBracket = liquipediaBracketMatches.length > 0
+
+  // Guard: if <15% of matches carry any bracket signal, fall back to list view instead of
+  // piling all cards into the 'Quarter-finals' column (happens when round_info is all NULL).
+  const hasSufficientBracketData = useMemo(() => {
+    if (!matches.length) return false
+    const signalCount = matches.filter(m => m.round_info || m.bracket_type || m.stage_name).length
+    return signalCount / matches.length > 0.15
+  }, [matches])
+
   const effectiveViewMode = useMemo(() => {
-    if (MVP_TOURNAMENT_RESCUE) return 'bracket'
     if (viewOverride === 'list') return 'list'
     if (viewOverride === 'bracket') return 'bracket'
-    return (hasLiquipediaBracket || stageMode.bracketEnabled) ? 'bracket' : 'list'
-  }, [viewOverride, stageMode, hasLiquipediaBracket])
+    if (hasLiquipediaBracket) return 'bracket'
+    if (stageMode.bracketEnabled && hasSufficientBracketData) return 'bracket'
+    return 'list'
+  }, [viewOverride, stageMode, hasLiquipediaBracket, hasSufficientBracketData])
 
   useEffect(() => {
     if (!TOURNAMENT_DEBUG) return

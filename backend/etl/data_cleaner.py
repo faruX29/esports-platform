@@ -390,6 +390,7 @@ class DataCleaner:
             "tournament_region": league.get("region") or tournament.get("region"),
             "serie_id": match.get("serie_id") or serie.get("id"),
             "winner_id": match.get("winner_id"),
+            "round_info": match.get("round_info") or None,
             "player_summaries": player_summaries,
             "raw_data": raw_payload,
         }

@@ -117,8 +117,8 @@ function stageFromStructuredRound(roundNo, bracketSide = 'upper') {
     if (roundNo === 2) return 'Lower Round 2'
     if (roundNo === 3) return 'Lower Round 3'
     if (roundNo === 4) return 'Lower Round 4'
-    if (roundNo === 5) return 'Lower Semi-final'
-    return 'Lower Final'
+    if (roundNo === 5) return 'Lower Semifinals'
+    return 'Lower Finals'
   }
 
   if (roundNo <= 1) return 'Quarter-finals'
@@ -146,10 +146,16 @@ function inferBracketStageFromText(text = '', bracketSide = 'upper') {
   if (/(round[\s_-]*of[\s_-]*16|ro16|round[\s_-]*16|\br16\b|1\/8\s*final|1\/8)/.test(s)) return 'Round of 16'
 
   if (bracketSide === 'lower') {
-    const roundNum = s.match(/(?:lower|lb|loser)[\s_-]*(?:round|r)?[\s_-]*(\d+)/)
+    // "Losers Round 2", "Lower Round 2", "LB R1" → numbered round
+    const roundNum = s.match(/(?:lower|lb|losers?)[\s_-]*(?:round|r)?[\s_-]*(\d+)/)
     if (roundNum?.[1]) return `Lower Round ${roundNum[1]}`
-    if (/(lower[\s_-]*semi|lb[\s_-]*semi|semi[\s_-]*final|semifinal|\bsf\b)/.test(s)) return 'Lower Semi-final'
-    if (/(lower[\s_-]*final|lb[\s_-]*final|\blf\b|\bfinal\b)/.test(s)) return 'Lower Final'
+
+    // "Lower Semi", "Lower Semi-Final", "Losers Semi", "LB SF"
+    if (/(lower[\s_-]*semi|losers?[\s_-]*semi|lb[\s_-]*semi|semi[\s_-]*final|semifinal|\bsf\b)/.test(s)) return 'Lower Semifinals'
+
+    // "Lower Final", "Losers Final", "Losers Finals", "LB Final", "LB F"
+    if (/(lower[\s_-]*finals?|losers?[\s_-]*finals?|lb[\s_-]*finals?|\blf\b|\bfinals?\b)/.test(s)) return 'Lower Finals'
+
     return 'Lower Round 1'
   }
 
@@ -158,8 +164,11 @@ function inferBracketStageFromText(text = '', bracketSide = 'upper') {
   if (/(quarter[\s_-]*final|quarterfinal|\bqf\b|round[\s_-]*of[\s_-]*8|round[\s_-]*8|ro8|1\/4)/.test(s)) return 'Quarter-finals'
   if (/(grand[\s_-]*final|\bgf\b)/.test(s)) return 'Grand final'
 
-  // "Upper Final" is typically the match before GF → Semi-final column
-  if (/(upper[\s_-]*final|\bfinal\b|finals?)/.test(s)) return 'Semi-finals'
+  // "Upper Final", "Winners Final", "Winners Finals", "UB Final" → Upper Finals (DE bracket)
+  if (/(upper[\s_-]*finals?|winners?[\s_-]*finals?|\bub[\s_-]*finals?\b|\bwf\b)/.test(s)) return 'Upper Finals'
+
+  // Generic final/finals → treat as Semi-finals fallback (single-elim or ambiguous)
+  if (/\bfinals?\b/.test(s)) return 'Semi-finals'
 
   return null
 }
@@ -767,24 +776,28 @@ function StandingsTable({ matches, navigate }) {
 const UPPER_ROUND_ORDER = [
   'Round of 16',
   'Upper Round 1', 'Upper Round 2', 'Upper Round 3', 'Upper Round 4',
-  'Quarter-finals', 'Semi-finals', 'Grand final',
+  'Quarter-finals', 'Semi-finals', 'Upper Finals', 'Grand final',
 ]
-const LOWER_ROUND_ORDER = ['Lower Round 1', 'Lower Round 2', 'Lower Round 3', 'Lower Round 4', 'Lower Semi-final', 'Lower Final']
+const LOWER_ROUND_ORDER = [
+  'Lower Round 1', 'Lower Round 2', 'Lower Round 3', 'Lower Round 4',
+  'Lower Semifinals', 'Lower Finals',
+]
 const ROUND_LABELS = {
-  'Round of 16':    { icon: '⚔️', color: '#64748b', short: 'R16'   },
-  'Upper Round 1':  { icon: '⚔️', color: '#6b7280', short: 'UBR1'  },
-  'Upper Round 2':  { icon: '⚔️', color: '#6b7280', short: 'UBR2'  },
-  'Upper Round 3':  { icon: '⚔️', color: '#6b7280', short: 'UBR3'  },
-  'Upper Round 4':  { icon: '⚔️', color: '#6b7280', short: 'UBR4'  },
-  'Quarter-finals': { icon: '⚔️', color: '#818cf8', short: 'QF'    },
-  'Semi-finals':    { icon: '🔥', color: '#FF8C00', short: 'SF'    },
-  'Grand final':    { icon: '👑', color: '#FFD700', short: 'GF'    },
-  'Lower Round 1':  { icon: '🛣️', color: '#94a3b8', short: 'LB R1' },
-  'Lower Round 2':  { icon: '🛣️', color: '#94a3b8', short: 'LB R2' },
-  'Lower Round 3':  { icon: '🛣️', color: '#94a3b8', short: 'LB R3' },
-  'Lower Round 4':  { icon: '🛣️', color: '#94a3b8', short: 'LB R4' },
-  'Lower Semi-final': { icon: '⚔️', color: '#60a5fa', short: 'LB SF' },
-  'Lower Final':      { icon: '🏁', color: '#38bdf8', short: 'LB F'  },
+  'Round of 16':     { icon: '⚔️', color: '#64748b', short: 'R16'    },
+  'Upper Round 1':   { icon: '⚔️', color: '#6b7280', short: 'UBR1'   },
+  'Upper Round 2':   { icon: '⚔️', color: '#6b7280', short: 'UBR2'   },
+  'Upper Round 3':   { icon: '⚔️', color: '#6b7280', short: 'UBR3'   },
+  'Upper Round 4':   { icon: '⚔️', color: '#6b7280', short: 'UBR4'   },
+  'Quarter-finals':  { icon: '⚔️', color: '#818cf8', short: 'QF'     },
+  'Semi-finals':     { icon: '🔥', color: '#FF8C00', short: 'SF'     },
+  'Upper Finals':    { icon: '🏆', color: '#f59e0b', short: 'UBF'    },
+  'Grand final':     { icon: '👑', color: '#FFD700', short: 'GF'     },
+  'Lower Round 1':   { icon: '🛣️', color: '#94a3b8', short: 'LB R1'  },
+  'Lower Round 2':   { icon: '🛣️', color: '#94a3b8', short: 'LB R2'  },
+  'Lower Round 3':   { icon: '🛣️', color: '#94a3b8', short: 'LB R3'  },
+  'Lower Round 4':   { icon: '🛣️', color: '#94a3b8', short: 'LB R4'  },
+  'Lower Semifinals': { icon: '⚔️', color: '#60a5fa', short: 'LB SF'  },
+  'Lower Finals':     { icon: '🏁', color: '#38bdf8', short: 'LB F'   },
 }
 
 const BRACKET_CARD_H   = 88   // px — BracketMatchCard yüksekliği

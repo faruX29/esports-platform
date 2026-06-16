@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import { getFavorites, addFavorite, removeFavorite, isFavorite } from './favoritesHelper'
@@ -44,6 +44,10 @@ function UpcomingMatches() {
 
   // Favorites state
   const [favorites, setFavorites] = useState([])
+
+  // Unmount guard — prevents setState on unmounted component
+  const isMounted = useRef(true)
+  useEffect(() => () => { isMounted.current = false }, [])
 
   useEffect(() => {
     setFavorites(getFavorites())
@@ -124,33 +128,30 @@ function UpcomingMatches() {
       // ── İkinci güvenlik katmanı: JS tarafında da filtrele ──────────
       const clean = (data || []).filter(m => m.status !== 'finished')
 
+      if (!isMounted.current) return
       setMatches(clean)
       setFilteredMatches(clean)
       setLastUpdate(new Date())
     } catch (error) {
       console.error('Error fetching matches:', error)
-      setError(error.message)
+      if (isMounted.current) setError(error.message)
     } finally {
-      setLoading(false)
+      if (isMounted.current) setLoading(false)
     }
   }
 
   const fetchAccuracy = async () => {
-  console.log('🧠 Fetching accuracy...')
-  try {
-    const { data, error } = await supabase
-      .from('ai_accuracy_stats')
-      .select('*')
-      .single();
-
-      console.log('📊 Accuracy data:', data, 'Error:', error);
-    
-    if (error) throw error;
-    setAccuracy(data);
-  } catch (error) {
-    console.error('Error fetching accuracy:', error);
+    try {
+      const { data, error } = await supabase
+        .from('ai_accuracy_stats')
+        .select('*')
+        .single()
+      if (error) throw error
+      if (isMounted.current) setAccuracy(data)
+    } catch (error) {
+      console.error('Error fetching accuracy:', error)
+    }
   }
-};
 
   async function fetchRecentResults() {
     try {
@@ -168,7 +169,7 @@ function UpcomingMatches() {
         .limit(10)
 
       if (error) throw error
-      setRecentResults(data || [])
+      if (isMounted.current) setRecentResults(data || [])
     } catch (error) {
       console.error('Error fetching recent results:', error)
     }
@@ -187,7 +188,7 @@ function UpcomingMatches() {
         `)
         .eq('status', 'running')
         .order('scheduled_at', { ascending: true })
-      setLiveMatches(data || [])
+      if (isMounted.current) setLiveMatches(data || [])
     } catch (error) {
       console.error('Error fetching live matches:', error)
     }
@@ -753,7 +754,7 @@ function UpcomingMatches() {
                         { name: match.team_a_name, logo: match.team_a_logo, fav: favA },
                         { name: match.team_b_name, logo: match.team_b_logo, fav: favB },
                       ].map((t, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div key={t.name ?? i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           {t.logo
                             ? <img src={t.logo} alt={t.name} style={{ width: '26px', height: '26px', objectFit: 'contain', flexShrink: 0 }} />
                             : <div style={{ width: '26px', height: '26px', background: '#1e1e1e', borderRadius: '6px', flexShrink: 0 }} />
@@ -1382,7 +1383,7 @@ function UpcomingMatches() {
                       <div style={{ fontSize: '12px', color: '#555', textAlign: 'center' }}>No roster data</div>
                     ) : (
                       modalPlayers.teamA.map((p, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', backgroundColor: '#0d0d0d', borderRadius: '6px', padding: '6px 8px' }}>
+                        <div key={p.nickname ?? i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', backgroundColor: '#0d0d0d', borderRadius: '6px', padding: '6px 8px' }}>
                           {p.image_url ? (
                             <img src={p.image_url} alt={p.nickname} style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }} />
                           ) : (
@@ -1406,7 +1407,7 @@ function UpcomingMatches() {
                       <div style={{ fontSize: '12px', color: '#555', textAlign: 'center' }}>No roster data</div>
                     ) : (
                       modalPlayers.teamB.map((p, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', backgroundColor: '#0d0d0d', borderRadius: '6px', padding: '6px 8px' }}>
+                        <div key={p.nickname ?? i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', backgroundColor: '#0d0d0d', borderRadius: '6px', padding: '6px 8px' }}>
                           {p.image_url ? (
                             <img src={p.image_url} alt={p.nickname} style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }} />
                           ) : (

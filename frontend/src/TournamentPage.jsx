@@ -812,6 +812,22 @@ const ROUND_LABELS = {
   'Lower Finals':     { icon: '🏁', color: '#38bdf8', short: 'LB F'   },
 }
 
+// Expected match count per stage for virtual TBD injection.
+// Stages absent from this map (e.g. Upper Round 1-4) are left as-is.
+const STAGE_EXPECTED_COUNTS = {
+  'Round of 16':      8,
+  'Quarter-finals':   4,
+  'Semi-finals':      2,
+  'Upper Finals':     1,
+  'Grand final':      1,
+  'Lower Round 1':    2,
+  'Lower Round 2':    2,
+  'Lower Round 3':    2,
+  'Lower Round 4':    1,
+  'Lower Semifinals': 1,
+  'Lower Finals':     1,
+}
+
 const BRACKET_CARD_H   = 88   // px — BracketMatchCard yüksekliği
 const BRACKET_CARD_GAP = 10   // px — kartlar arası gap
 const BRACKET_HEADER_H = 44   // px — round header yüksekliği
@@ -837,6 +853,7 @@ function clampBracketZoom(value) {
 }
 
 const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, gc, highlightPath = false }) {
+  const isVirtual = m?.is_virtual === true
   const aId   = m.team_a?.id || m.team_a_id
   const bId   = m.team_b?.id || m.team_b_id
   const aWon  = m.status === 'finished' && (m.winner_id === aId)
@@ -845,10 +862,10 @@ const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, gc, highl
   const bName = m.team_b?.name || 'TBD'
   const aLogo = m.team_a?.logo_url
   const bLogo = m.team_b?.logo_url
-  const isTRA = isTurkishTeam(aName)
-  const isTRB = isTurkishTeam(bName)
+  const isTRA = !isVirtual && isTurkishTeam(aName)
+  const isTRB = !isVirtual && isTurkishTeam(bName)
   const [hov, setHov] = useState(false)
-  const canNavigate = m?.__clickable !== false && Boolean(m?.team_a && m?.id)
+  const canNavigate = !isVirtual && m?.__clickable !== false && Boolean(m?.team_a && m?.id)
   const structuredBits = [
     Number.isFinite(m?.__roundNo) ? `R${m.__roundNo}` : null,
     Number.isFinite(m?.__positionNo) ? `P${m.__positionNo}` : null,
@@ -874,11 +891,14 @@ const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, gc, highl
           ? '0 0 16px rgba(255,70,85,.18)'
           : hov ? `0 4px 16px ${gc}20` : 'none',
         cursor: canNavigate ? 'pointer' : 'default',
-        background: 'linear-gradient(162deg, #111 0%, #0b0b0b 100%)',
+        background: isVirtual
+          ? 'linear-gradient(162deg, #0d0d0d 0%, #090909 100%)'
+          : 'linear-gradient(162deg, #111 0%, #0b0b0b 100%)',
         transition: 'all .18s',
         width: BRACKET_CARD_W,
         height: BRACKET_CARD_H,
         display: 'flex', flexDirection: 'column',
+        opacity: isVirtual ? 0.48 : 1,
       }}
     >
       <div style={{
@@ -962,12 +982,18 @@ const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, gc, highl
         >
           {/* Logo */}
           <div style={{ width: 20, height: 20, flexShrink: 0 }}>
-            {side.logo
-              ? <img src={side.logo} alt={side.name}
-                  style={{ width: 20, height: 20, objectFit: 'contain' }} />
-              : <div style={{ width: 20, height: 20, borderRadius: 4,
-                  background: '#1e1e1e', display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', fontSize: 9, color: '#444' }}>?</div>
+            {side.name === 'TBD'
+              ? <div style={{ width: 20, height: 20, borderRadius: 4,
+                  border: '1px dashed #222', background: '#0d0d0d',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 8, color: '#1e1e1e', fontWeight: 700 }}>?</span>
+                </div>
+              : side.logo
+                ? <img src={side.logo} alt={side.name}
+                    style={{ width: 20, height: 20, objectFit: 'contain' }} />
+                : <div style={{ width: 20, height: 20, borderRadius: 4,
+                    background: '#1e1e1e', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', fontSize: 9, color: '#444' }}>?</div>
             }
           </div>
 
@@ -1040,6 +1066,37 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
       })
     }
 
+    // ── Virtual TBD injection ────────────────────────────────────────────────
+    // If there are any real matches in this bracket, pad every stage from the
+    // first active stage to the final with virtual TBD cards so the bracket
+    // tree is always visually complete (VLR.gg / Liquipedia style).
+    const firstRealIdx = roundOrder.findIndex(k => main[k]?.some(m => !m.is_virtual))
+    if (firstRealIdx >= 0) {
+      for (let i = firstRealIdx; i < roundOrder.length; i++) {
+        const stage = roundOrder[i]
+        const expected = STAGE_EXPECTED_COUNTS[stage] ?? 0
+        if (expected === 0) continue
+        const realCount = (main[stage] || []).filter(m => !m.is_virtual).length
+        const currentCount = (main[stage] || []).length
+        const needed = Math.max(0, expected - currentCount)
+        for (let j = 0; j < needed; j++) {
+          main[stage].push({
+            id: `virtual-tbd-${stage.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${realCount + j}`,
+            team_a: { name: 'TBD', id: null, logo_url: null },
+            team_b: { name: 'TBD', id: null, logo_url: null },
+            team_a_id: null, team_b_id: null,
+            team_a_score: null, team_b_score: null,
+            winner_id: null, status: 'not_started',
+            round_info: stage, scheduled_at: null,
+            __stage: stage, __bracketSide: bracketSide,
+            __stageSource: 'virtual',
+            __roundNo: null, __positionNo: null, __nextMatchId: null,
+            is_virtual: true, __clickable: false,
+          })
+        }
+      }
+    }
+
     return { main, thirdPlace, roundOrder }
   }, [matches, resolvedMatches, bracketSide])
 
@@ -1055,11 +1112,13 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
       if (!prevCards?.length || colMatches.length <= 1) return colMatches
 
       // Build: winner_id → prevCard index (strongest signal)
-      // Build: any team id → minimum prevCard index (fallback for TBD/future)
+      // Build: any real team id → minimum prevCard index (fallback for future matches)
+      // Virtual prev-cards carry no winner/team signal — skip them.
       const winnerToIdx = new Map()
       const teamToIdx   = new Map()
       for (let i = 0; i < prevCards.length; i++) {
         const pm = prevCards[i].m
+        if (pm?.is_virtual) continue
         const wId = pm?.winner_id ? String(pm.winner_id) : null
         if (wId) winnerToIdx.set(wId, i)
         const aId = String(pm?.team_a?.id || pm?.team_a_id || '')
@@ -1069,17 +1128,18 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
       }
 
       const minSrcIdx = (m) => {
+        // Virtual current-cards have no source — sort them after all real cards.
+        if (m?.is_virtual) return Number.MAX_SAFE_INTEGER
         const aId = String(m?.team_a?.id || m?.team_a_id || '')
         const bId = String(m?.team_b?.id || m?.team_b_id || '')
-        const aW = winnerToIdx.get(aId) ?? Number.MAX_SAFE_INTEGER
-        const bW = winnerToIdx.get(bId) ?? Number.MAX_SAFE_INTEGER
+        const aW = aId ? (winnerToIdx.get(aId) ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER
+        const bW = bId ? (winnerToIdx.get(bId) ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER
         if (aW < Number.MAX_SAFE_INTEGER || bW < Number.MAX_SAFE_INTEGER) {
           return Math.min(aW, bW)
         }
-        return Math.min(
-          teamToIdx.get(aId) ?? Number.MAX_SAFE_INTEGER,
-          teamToIdx.get(bId) ?? Number.MAX_SAFE_INTEGER,
-        )
+        const aT = aId ? (teamToIdx.get(aId) ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER
+        const bT = bId ? (teamToIdx.get(bId) ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER
+        return Math.min(aT, bT)
       }
 
       return [...colMatches].sort((a, b) => minSrcIdx(a) - minSrcIdx(b))

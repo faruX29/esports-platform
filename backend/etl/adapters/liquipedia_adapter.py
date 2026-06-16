@@ -8,6 +8,7 @@ import re
 import unicodedata
 from dataclasses import dataclass
 from difflib import SequenceMatcher
+from functools import lru_cache
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from database import Database
@@ -22,6 +23,28 @@ logger = logging.getLogger(__name__)
 class MatchCandidate:
     score: float
     row: Dict[str, Any]
+
+
+# ── LRU-bounded API call wrappers ─────────────────────────────────────────────
+# Module-level so the cache is shared across all LiquipediaAdapter instances
+# within the same process. maxsize=256 caps RAM; unbounded dict was a leak risk.
+
+@lru_cache(maxsize=256)
+def _lru_tournament_meta(game_slug: str, tournament_name: str) -> str:
+    """Cached tournament metadata (JSON string — lists/dicts aren't hashable)."""
+    return json.dumps(LiquipediaService(game_slug=game_slug).get_tournament_metadata(tournament_name))
+
+
+@lru_cache(maxsize=256)
+def _lru_tournament_brackets(game_slug: str, tournament_name: str) -> str:
+    """Cached bracket rows (JSON string)."""
+    return json.dumps(LiquipediaService(game_slug=game_slug).get_tournament_brackets(tournament_name))
+
+
+@lru_cache(maxsize=256)
+def _lru_team_transfers(game_slug: str, team_name: str) -> str:
+    """Cached transfer rows (JSON string). Eliminates N+1 for repeated team names."""
+    return json.dumps(LiquipediaService(game_slug=game_slug).get_team_transfers(team_name))
 
 
 class LiquipediaAdapter(BaseDataAdapter):
@@ -73,22 +96,15 @@ class LiquipediaAdapter(BaseDataAdapter):
         updated = 0
         skipped = 0
         diagnostics: List[str] = []
-        cache: Dict[Tuple[str, str], Tuple[Dict[str, Any], List[Dict[str, Any]], List[str]]] = {}
 
         for row in rows:
             game_slug = row.get("game_slug") or "valorant"
             tournament_name = row.get("name") or ""
 
-            cache_key = (game_slug, tournament_name)
             try:
-                if cache_key in cache:
-                    metadata, bracket_rows, last_errors = cache[cache_key]
-                else:
-                    service = LiquipediaService(game_slug=game_slug)
-                    metadata = service.get_tournament_metadata(tournament_name)
-                    bracket_rows = service.get_tournament_brackets(tournament_name)
-                    last_errors = list(service.last_errors)
-                    cache[cache_key] = (metadata, bracket_rows, last_errors)
+                metadata     = json.loads(_lru_tournament_meta(game_slug, tournament_name))
+                bracket_rows = json.loads(_lru_tournament_brackets(game_slug, tournament_name))
+                last_errors: List[str] = []
             except Exception as err:
                 fallback_payload = {
                     "game_slug": game_slug,
@@ -166,9 +182,14 @@ class LiquipediaAdapter(BaseDataAdapter):
         diagnostics: List[str] = []
 
         for row in rows:
-            service = LiquipediaService(game_slug=row.get("game_slug") or "valorant")
+            game_slug = row.get("game_slug") or "valorant"
             team_name = row.get("name") or ""
-            transfer_rows = service.get_team_transfers(team_name)
+            try:
+                transfer_rows = json.loads(_lru_team_transfers(game_slug, team_name))
+            except Exception as err:
+                skipped += 1
+                diagnostics.append(f"Team skipped id={row.get('id')} name={team_name} | API error: {err}")
+                continue
 
             matched_transfers = self._best_match_rows(
                 source_name=team_name,
@@ -180,8 +201,6 @@ class LiquipediaAdapter(BaseDataAdapter):
             if not matched_transfers:
                 skipped += 1
                 diagnostics.append(f"Team skipped id={row.get('id')} name={team_name} | no matched transfer rows")
-                if service.last_errors:
-                    diagnostics.extend([f"  -> {item}" for item in service.last_errors[:2]])
                 continue
 
             payload = {

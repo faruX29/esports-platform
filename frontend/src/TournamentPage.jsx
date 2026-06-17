@@ -801,6 +801,12 @@ const UPPER_ROUND_ORDER = [
   'Upper Round 1', 'Upper Round 2', 'Upper Round 3', 'Upper Round 4',
   'Quarter-finals', 'Semi-finals', 'Upper Finals', 'Grand final',
 ]
+// Single-elimination bracket order — no 'Upper Finals' column
+const SE_UPPER_ROUND_ORDER = [
+  'Round of 16',
+  'Upper Round 1', 'Upper Round 2', 'Upper Round 3', 'Upper Round 4',
+  'Quarter-finals', 'Semi-finals', 'Grand final',
+]
 const LOWER_ROUND_ORDER = [
   'Lower Round 1', 'Lower Round 2', 'Lower Semifinals', 'Lower Finals',
 ]
@@ -1033,7 +1039,7 @@ const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, gc, highl
   )
 })
 
-function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'upper', zoom = 1 }) {
+function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'upper', zoom = 1, isDoubleElim = false }) {
   const scrollRef = useRef(null)
   const dragRef = useRef({ isDown: false, moved: false, startX: 0, scrollLeft: 0 })
   const [isDragging, setIsDragging] = useState(false)
@@ -1042,7 +1048,9 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
     const source = (resolvedMatches || buildBracketStages(matches))
       .filter(m => m.__bracketSide === bracketSide)
 
-    const roundOrder = bracketSide === 'lower' ? LOWER_ROUND_ORDER : UPPER_ROUND_ORDER
+    const roundOrder = bracketSide === 'lower'
+      ? LOWER_ROUND_ORDER
+      : (isDoubleElim ? UPPER_ROUND_ORDER : SE_UPPER_ROUND_ORDER)
     const main = Object.fromEntries(roundOrder.map(k => [k, []]))
     let thirdPlace = null
 
@@ -1104,7 +1112,7 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
     }
 
     return { main, thirdPlace, roundOrder }
-  }, [matches, resolvedMatches, bracketSide])
+  }, [matches, resolvedMatches, bracketSide, isDoubleElim])
 
   const roundKeys = prepared.roundOrder.filter(k => prepared.main[k]?.length > 0)
 
@@ -1801,6 +1809,15 @@ export default function TournamentPage() {
     () => resolvedBracketMatches.filter(m => m.__bracketSide === 'lower'),
     [resolvedBracketMatches]
   )
+  // Detect double-elimination format by looking for explicit lower/upper bracket
+  // round_info strings. SE tournaments won't have these, preventing ghost columns.
+  const isDoubleElim = useMemo(
+    () => matches.some(m => {
+      const ri = (m.round_info ?? '').toLowerCase()
+      return ri.includes('lower') || ri.includes('upper')
+    }),
+    [matches]
+  )
 
   // ── Stil değerleri ───────────────────────────────────────────
   const gName = tournament?.game?.name ?? ''
@@ -2115,7 +2132,7 @@ export default function TournamentPage() {
                       fontSize: 11, fontWeight: 800, color: '#ff6b7a',
                       letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: 8,
                     }}>
-                      Upper Bracket
+                      {isDoubleElim ? 'Upper Bracket' : 'Bracket'}
                     </div>
                     <BracketView
                       matches={matches}
@@ -2124,10 +2141,11 @@ export default function TournamentPage() {
                       gc={gc}
                       bracketSide="upper"
                       zoom={bracketZoom}
+                      isDoubleElim={isDoubleElim}
                     />
                   </div>
 
-                  {lowerBracketMatches.length > 0 && (
+                  {isDoubleElim && lowerBracketMatches.length > 0 && (
                     <>
                       <div style={{ height: 1, background: 'linear-gradient(90deg,transparent,#202020,transparent)', margin: '12px 0 14px' }} />
 

@@ -97,6 +97,12 @@ function fmtDate(iso) {
   })
 }
 
+function fmtPct(val) {
+  const n = Number(val)
+  if (!Number.isFinite(n)) return '-'
+  return `%${(n * 100).toFixed(1)}`
+}
+
 function parseMatchId(newsId) {
   if (!newsId) return null
   if (newsId.startsWith('match_')) {
@@ -156,6 +162,66 @@ function ScoutRankBadge({ score }) {
   )
 }
 
+function AIProbabilityBar({ story }) {
+  const predA = Number(story.source?.predictionA)
+  const predB = Number(story.source?.predictionB)
+  if (!Number.isFinite(predA) || !Number.isFinite(predB) || predA + predB <= 0) return null
+
+  const total = predA + predB
+  const pctA = (predA / total) * 100
+  const pctB = (predB / total) * 100
+  const teamA = story.visuals?.teamA || {}
+  const teamB = story.visuals?.teamB || {}
+  const aFavored = predA >= predB
+
+  return (
+    <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid #1a2a3a', background: 'linear-gradient(145deg,#0a1520,#0f0f0f)', padding: 16 }}>
+      <div style={{ fontSize: 11, color: '#7dd3fc', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800, marginBottom: 14 }}>
+        AI Güç Dengesi
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flex: '1 1 0' }}>
+          <InitialsImage
+            src={teamA.logo_url} alt={teamA.name || ''} name={teamA.name}
+            width={26} height={26} borderRadius={7} objectFit='contain'
+            style={{ background: '#111', padding: 3, border: '1px solid #2a2a2a', flexShrink: 0 }}
+          />
+          <span style={{ fontSize: 13, fontWeight: 700, color: aFavored ? '#f0f0f0' : '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {teamA.name}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <span style={{ fontSize: 15, fontWeight: 800, color: aFavored ? '#86efac' : '#9ca3af' }}>{pctA.toFixed(1)}%</span>
+          <span style={{ fontSize: 11, color: '#333' }}>:</span>
+          <span style={{ fontSize: 15, fontWeight: 800, color: !aFavored ? '#86efac' : '#9ca3af' }}>{pctB.toFixed(1)}%</span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flex: '1 1 0', justifyContent: 'flex-end' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: !aFavored ? '#f0f0f0' : '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {teamB.name}
+          </span>
+          <InitialsImage
+            src={teamB.logo_url} alt={teamB.name || ''} name={teamB.name}
+            width={26} height={26} borderRadius={7} objectFit='contain'
+            style={{ background: '#111', padding: 3, border: '1px solid #2a2a2a', flexShrink: 0 }}
+          />
+        </div>
+      </div>
+
+      <div style={{ height: 10, borderRadius: 999, overflow: 'hidden', display: 'flex', background: '#141414' }}>
+        <div style={{ width: `${pctA}%`, background: aFavored ? 'linear-gradient(90deg,#C8102E,#ff4d6d)' : 'linear-gradient(90deg,#333,#444)', transition: 'width 0.4s ease' }} />
+        <div style={{ flex: 1, background: !aFavored ? 'linear-gradient(270deg,#1d4ed8,#60a5fa)' : 'linear-gradient(270deg,#222,#333)', transition: 'flex 0.4s ease' }} />
+      </div>
+
+      <div style={{ marginTop: 6, fontSize: 11, color: '#444', textAlign: 'center' }}>
+        Model öngörüsü — favori tarafın rengi vurgulanır
+      </div>
+    </section>
+  )
+}
+
 function TrustLayer({ story, onReport }) {
   return (
     <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed #2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
@@ -193,6 +259,7 @@ export default function NewsDetailPage() {
   const [votesFallback, setVotesFallback] = useState(false)
   const [votePulse, setVotePulse] = useState({ commentId: null, direction: 0, token: 0 })
   const canInteract = !!user?.id
+  const [techMetricsOpen, setTechMetricsOpen] = useState(false)
 
   const rankedComments = useMemo(() => {
     const list = [...comments]
@@ -737,18 +804,31 @@ export default function NewsDetailPage() {
             </div>
             <div>
               <div style={{ fontSize: 12, color: '#9d9d9d', marginBottom: 5 }}>{story.visuals.tournamentName}</div>
-              <h1 style={{ margin: '0 0 8px', fontSize: 34, lineHeight: 1.12 }}>{story.title}</h1>
+              <h1 style={{ margin: '0 0 8px', fontSize: 38, fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.3px', textAlign: 'left' }}>{story.title}</h1>
               <div style={{ fontSize: 18, fontWeight: 800, color: '#f0d3d8' }}>{story.heroScore}</div>
             </div>
           </div>
 
-          <p style={{ margin: 0, color: '#d5d5d5', lineHeight: 1.7 }}>{story.summary}</p>
+          <p style={{ margin: 0, color: '#9fa3af', lineHeight: 1.85, textAlign: 'left', fontSize: 15 }}>{story.summary}</p>
+
+          {story.content && story.content !== story.summary && (
+            <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid #1e1e1e' }}>
+              {story.content.split('\n\n').filter(para => para.trim()).map((para, idx) => (
+                <p key={idx} style={{ margin: idx === 0 ? 0 : '14px 0 0', color: '#9fa3af', lineHeight: 1.85, textAlign: 'left', fontSize: 15 }}>
+                  {para.trim()}
+                </p>
+              ))}
+            </div>
+          )}
+
           <TrustLayer story={story} onReport={reportStoryIssue} />
         </section>
 
+        <AIProbabilityBar story={story} />
+
         <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid #1f1f1f', background: '#0f0f0f', padding: 16 }}>
           <div style={{ fontSize: 11, color: '#ffb3bd', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800, marginBottom: 10 }}>
-            Explainability
+            Maç Analizi
           </div>
           <div style={{ display: 'grid', gap: 8 }}>
             {explain.explanations.map((line, idx) => (
@@ -759,50 +839,71 @@ export default function NewsDetailPage() {
           </div>
         </section>
 
-        <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid #1f1f1f', background: '#0f0f0f', padding: 16 }}>
-          <div style={{ fontSize: 11, color: '#f4f4f4', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800, marginBottom: 10 }}>
-            Kaynak Veriler
-          </div>
+        <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid #1f1f1f', background: '#0f0f0f', overflow: 'hidden' }}>
+          <button
+            onClick={() => setTechMetricsOpen(prev => !prev)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '14px 16px', background: 'transparent', border: 'none', borderBottom: techMetricsOpen ? '1px solid #1a1a1a' : 'none',
+              color: '#9a9a9a', cursor: 'pointer', fontSize: 11, fontWeight: 800,
+              letterSpacing: 1, textTransform: 'uppercase',
+            }}
+          >
+            <span>Teknik Metrikler &amp; Analitik Detaylar</span>
+            <span style={{ fontSize: 16, transform: techMetricsOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.25s ease', display: 'inline-block' }}>
+              ▾
+            </span>
+          </button>
 
-          <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', marginBottom: 12 }}>
-            <div style={{ border: '1px solid #262626', borderRadius: 10, padding: '9px 10px', background: '#121212' }}>
-              <div style={{ fontSize: 10, color: '#7f7f7f' }}>Match ID</div>
-              <div style={{ fontSize: 16, fontWeight: 800 }}>{story.matchId || '-'}</div>
-            </div>
-            <div style={{ border: '1px solid #262626', borderRadius: 10, padding: '9px 10px', background: '#121212' }}>
-              <div style={{ fontSize: 10, color: '#7f7f7f' }}>Durum</div>
-              <div style={{ fontSize: 16, fontWeight: 800 }}>{story.status}</div>
-            </div>
-            <div style={{ border: '1px solid #262626', borderRadius: 10, padding: '9px 10px', background: '#121212' }}>
-              <div style={{ fontSize: 10, color: '#7f7f7f' }}>Tahmin</div>
-              <div style={{ fontSize: 16, fontWeight: 800 }}>
-                {story.source?.predictionA ?? '-'} : {story.source?.predictionB ?? '-'}
+          <div style={{ maxHeight: techMetricsOpen ? 900 : 0, overflow: 'hidden', transition: 'max-height 0.3s ease' }}>
+            <div style={{ padding: '14px 16px 16px' }}>
+              <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', marginBottom: 12 }}>
+                <div style={{ border: '1px solid #222', borderRadius: 10, padding: '9px 10px', background: '#111' }}>
+                  <div style={{ fontSize: 10, color: '#555', marginBottom: 3 }}>Match ID</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{story.matchId || '-'}</div>
+                </div>
+                <div style={{ border: '1px solid #222', borderRadius: 10, padding: '9px 10px', background: '#111' }}>
+                  <div style={{ fontSize: 10, color: '#555', marginBottom: 3 }}>Durum</div>
+                  <div style={{ fontSize: 14, fontWeight: 800 }}>{story.status}</div>
+                </div>
+                <div style={{ border: '1px solid #222', borderRadius: 10, padding: '9px 10px', background: '#111' }}>
+                  <div style={{ fontSize: 10, color: '#555', marginBottom: 3 }}>Model Tahmini (Ham)</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+                    {fmtPct(story.source?.predictionA)} : {fmtPct(story.source?.predictionB)}
+                  </div>
+                </div>
+                <div style={{ border: '1px solid #222', borderRadius: 10, padding: '9px 10px', background: '#111' }}>
+                  <div style={{ fontSize: 10, color: '#555', marginBottom: 3 }}>Skor Marjı</div>
+                  <div style={{ fontSize: 14, fontWeight: 800 }}>{story.source?.margin ?? '-'}</div>
+                </div>
+              </div>
+
+              {matchData && (
+                <div style={{ fontSize: 12, color: '#666', marginBottom: 10 }}>
+                  Tarih: {fmtDate(matchData.scheduled_at)} · Turnuva: {matchData.tournament?.name || '-'}
+                </div>
+              )}
+
+              <div style={{ border: '1px solid #1e1e1e', borderRadius: 10, overflow: 'hidden' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', padding: '8px 10px', fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: '.8px', background: '#0e0e0e', borderBottom: '1px solid #1e1e1e' }}>
+                  <div>Takım</div>
+                  <div style={{ textAlign: 'right' }}>Score Metric</div>
+                </div>
+                {statsRows.length === 0 && (
+                  <div style={{ padding: '10px', color: '#555', fontSize: 12 }}>Ek match_stats verisi bulunamadı.</div>
+                )}
+                {statsRows.map((row, idx) => (
+                  <div key={`${row.team_id}_${idx}`} style={{ display: 'grid', gridTemplateColumns: '1fr 120px', padding: '9px 10px', fontSize: 12, borderBottom: idx === statsRows.length - 1 ? 'none' : '1px solid #181818', background: '#0d0d0d' }}>
+                    <div style={{ color: '#c0c0c0' }}>
+                      {Number(row.team_id) === Number(matchData?.team_a_id) ? (matchData?.team_a?.name || 'Team A') : (matchData?.team_b?.name || 'Team B')}
+                    </div>
+                    <div style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: '#e0e0e0', fontWeight: 700 }}>
+                      {Number(row?.stats?.score ?? 0).toFixed(0)}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-            <div style={{ border: '1px solid #262626', borderRadius: 10, padding: '9px 10px', background: '#121212' }}>
-              <div style={{ fontSize: 10, color: '#7f7f7f' }}>Skor Marji</div>
-              <div style={{ fontSize: 16, fontWeight: 800 }}>{story.source?.margin ?? '-'}</div>
-            </div>
-          </div>
-
-          {matchData && (
-            <div style={{ fontSize: 12, color: '#a9a9a9', marginBottom: 8 }}>
-              Match schedule: {fmtDate(matchData.scheduled_at)} | Tournament: {matchData.tournament?.name || '-'}
-            </div>
-          )}
-
-          <div style={{ border: '1px solid #252525', borderRadius: 10, overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', padding: '8px 10px', fontSize: 10, color: '#818181', textTransform: 'uppercase', letterSpacing: '.8px', background: '#141414', borderBottom: '1px solid #252525' }}>
-              <div>Team</div>
-              <div style={{ textAlign: 'right' }}>Score Metric</div>
-            </div>
-            {statsRows.length === 0 && <div style={{ padding: '10px', color: '#7a7a7a', fontSize: 12 }}>Ek match_stats verisi bulunamadi.</div>}
-            {statsRows.map((row, idx) => (
-              <div key={`${row.team_id}_${idx}`} style={{ display: 'grid', gridTemplateColumns: '1fr 120px', padding: '9px 10px', fontSize: 12, borderBottom: idx === statsRows.length - 1 ? 'none' : '1px solid #1e1e1e', background: '#101010' }}>
-                <div style={{ color: '#cdcdcd' }}>{Number(row.team_id) === Number(matchData?.team_a_id) ? (matchData?.team_a?.name || 'Team A') : (matchData?.team_b?.name || 'Team B')}</div>
-                <div style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: '#f4f4f4', fontWeight: 700 }}>{Number(row?.stats?.score ?? 0)}</div>
-              </div>
-            ))}
           </div>
         </section>
 

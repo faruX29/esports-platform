@@ -8,10 +8,11 @@ import { isTurkishTeam } from '../constants'
 import {
   NEWS_LIMIT,
   HERO_TIERS,
-  buildFinishedStory,
   buildUpcomingStory,
   normalizeGameId,
   normalizeTier,
+  getGameMeta,
+  tierWeight,
 } from '../utils/newsStories'
 import { isStoryForYou, prioritizeStoriesForYou } from '../utils/newsPersonalization'
 import InitialsImage from '../components/InitialsImage'
@@ -70,6 +71,47 @@ function fmtDate(iso) {
   })
 }
 
+function getArticleStoryTag(variant) {
+  if (variant === 'upset') return 'Surpriz Sonuc'
+  if (variant === 'stomp') return 'Skor Haberi'
+  if (variant === 'close') return 'Seri Ozeti'
+  return 'Gundem'
+}
+
+function articleRowToStory(row) {
+  const gameId = normalizeStoryGameId(row.game_slug)
+  const game = getGameMeta(gameId)
+  const tier = normalizeTier(row.tier)
+  return {
+    id: `match_${row.match_id}`,
+    matchId: row.match_id,
+    tournamentId: row.tournament_id,
+    status: 'finished',
+    variant: row.variant || 'close',
+    publishedAt: row.created_at,
+    priority: (tierWeight(tier) * 100) + (row.variant === 'upset' ? 35 : row.variant === 'stomp' ? 24 : 12),
+    title: row.title || '',
+    summary: row.summary || '',
+    content: row.content || '',
+    tag: getArticleStoryTag(row.variant),
+    heroScore: row.hero_score || '',
+    visuals: {
+      gameId,
+      gameLabel: game?.shortLabel || game?.label || 'ESPORTS',
+      gameColor: game?.color || '#C8102E',
+      gameIcon: game?.icon || '🎮',
+      tournamentName: row.tournament_name || 'Ana Sahne',
+      tier,
+      turkish: Boolean(isTurkishTeam?.(row.team_a_name) || isTurkishTeam?.(row.team_b_name)),
+      teamA: { name: row.team_a_name, logo_url: row.team_a_logo },
+      teamB: { name: row.team_b_name, logo_url: row.team_b_logo },
+    },
+    source: {
+      upset: row.variant === 'upset',
+    },
+  }
+}
+
 function NewsTrustLayer({ item, onReport }) {
   return (
     <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed #282828', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
@@ -107,16 +149,20 @@ function buildScoutRows(item) {
   }
 
   if (source.impactTeam || source.impactScore != null) {
+    const scoreLabel = source.impactScore != null ? ` (${Number(source.impactScore).toFixed(0)} puan)` : ''
     rows.push({
       label: 'MVP Sinyali',
-      value: `${source.impactTeam || 'Takim'}${source.impactScore != null ? ` (${source.impactScore})` : ''}`,
+      value: `${source.impactTeam || 'Takim'}${scoreLabel}`,
     })
   }
 
   if (source.favorite || source.predictionEdge != null) {
+    const edgeLabel = source.predictionEdge != null
+      ? ` +%${(Number(source.predictionEdge) * 100).toFixed(1)}`
+      : ''
     rows.push({
       label: 'Model Ayraci',
-      value: `${source.favorite || 'Belirsiz'}${source.predictionEdge != null ? ` +${source.predictionEdge}` : ''}`,
+      value: `${source.favorite || 'Belirsiz'}${edgeLabel}`,
     })
   }
 
@@ -394,11 +440,11 @@ export default function NewsPage() {
     setLoading(true)
     try {
       const now = new Date()
-      const since = new Date(now.getTime() - (24 * 60 * 60 * 1000))
-      const upcomingFrom = new Date(now.getTime() - (6 * 60 * 60 * 1000))
-      const upcomingUntil = new Date(now.getTime() + (72 * 60 * 60 * 1000))
+      const since48h = new Date(now.getTime() - 48 * 60 * 60 * 1000)
+      const upcomingFrom = new Date(now.getTime() - 6 * 60 * 60 * 1000)
+      const upcomingUntil = new Date(now.getTime() + 72 * 60 * 60 * 1000)
 
-      const commonSelect = `
+      const upcomingSelect = `
         id, scheduled_at, status, winner_id,
         team_a_id, team_b_id, team_a_score, team_b_score,
         prediction_team_a, prediction_team_b,
@@ -408,17 +454,17 @@ export default function NewsPage() {
         game:games(id,name,slug)
       `
 
-      const [finishedRes, upcomingRes] = await Promise.all([
+      // Fetch LLM-generated articles + upcoming matches in parallel
+      const [articlesRes, upcomingRes] = await Promise.all([
         supabase
-          .from('matches')
-          .select(commonSelect)
-          .eq('status', 'finished')
-          .gte('scheduled_at', since.toISOString())
-          .order('scheduled_at', { ascending: false })
+          .from('news_articles')
+          .select('*')
+          .gte('created_at', since48h.toISOString())
+          .order('created_at', { ascending: false })
           .limit(14),
         supabase
           .from('matches')
-          .select(commonSelect)
+          .select(upcomingSelect)
           .in('status', ['not_started', 'upcoming'])
           .gte('scheduled_at', upcomingFrom.toISOString())
           .lte('scheduled_at', upcomingUntil.toISOString())
@@ -426,50 +472,43 @@ export default function NewsPage() {
           .limit(10),
       ])
 
-      if (finishedRes.error) throw finishedRes.error
+      if (articlesRes.error) throw articlesRes.error
       if (upcomingRes.error) throw upcomingRes.error
 
-      const finishedMatches = finishedRes.data || []
       const upcomingMatches = upcomingRes.data || []
 
-      const tournamentIds = [...new Set([
-        ...finishedMatches.map(match => normalizeTournamentId(match?.tournament?.id ?? match?.tournament_id)).filter(id => id != null),
-        ...upcomingMatches.map(match => normalizeTournamentId(match?.tournament?.id ?? match?.tournament_id)).filter(id => id != null),
-      ])]
-
+      // Real-time tournament tier enrichment for upcoming stories only
+      const tournamentIds = [...new Set(
+        upcomingMatches
+          .map(m => normalizeTournamentId(m?.tournament?.id ?? m?.tournament_id))
+          .filter(id => id != null)
+      )]
       let tournamentById = new Map()
       if (tournamentIds.length > 0) {
         const { data: tournamentRows, error: tournamentError } = await supabase
           .from('tournaments')
           .select('id,name,tier')
           .in('id', tournamentIds)
-
         if (tournamentError) {
-          console.warn('NewsPage realtime tier fetch:', tournamentError.message || tournamentError)
+          console.warn('NewsPage tournament tier fetch:', tournamentError.message || tournamentError)
         } else {
-          tournamentById = new Map((tournamentRows || []).map(row => [normalizeTournamentId(row.id), row]))
+          tournamentById = new Map(
+            (tournamentRows || []).map(row => [normalizeTournamentId(row.id), row])
+          )
         }
       }
 
-      const matchIds = finishedMatches.map(match => match.id)
-      const { data: statsRows, error: statsError } = matchIds.length
-        ? await supabase.from('match_stats').select('match_id,team_id,stats').in('match_id', matchIds)
-        : { data: [], error: null }
+      // Map news_articles rows → story objects; generate upcoming stories locally
+      const finishedStories = (articlesRes.data || [])
+        .map(articleRowToStory)
+        .filter(story => story.visuals.gameId)
 
-      if (statsError) throw statsError
-
-      const statsByMatch = new Map()
-      for (const row of (statsRows || [])) {
-        if (!statsByMatch.has(row.match_id)) statsByMatch.set(row.match_id, [])
-        statsByMatch.get(row.match_id).push(row)
-      }
-
-      const generated = [
-        ...finishedMatches.map(match => buildFinishedStory(match, statsByMatch, isTurkishTeam)),
-        ...upcomingMatches.map(match => buildUpcomingStory(match, isTurkishTeam)),
-      ]
+      const upcomingStories = upcomingMatches
+        .map(match => buildUpcomingStory(match, isTurkishTeam))
         .filter(story => story.visuals.gameId)
         .map(story => applyRealtimeTournamentToStory(story, tournamentById))
+
+      const generated = [...finishedStories, ...upcomingStories]
         .map(story => ({
           ...story,
           visuals: {

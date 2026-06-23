@@ -9,11 +9,13 @@
  */
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate }           from 'react-router-dom'
-import { supabase }                         from './supabaseClient'
-import { getRoleBadge }                     from './roleHelper'
-import { isTurkishTeam } from './constants'
-import { useUser } from './context/UserContext'
-import { summarizePlayerMatchStats, metricBars } from './utils/playerMetrics'
+import { supabase }                         from '../supabaseClient'
+import { getRoleBadge, resolvePlayerRole }   from '../utils/roleHelper'
+import { normalizeGameId }                   from '../utils/gameUtils'
+import InitialsImage                         from '../components/InitialsImage'
+import { isTurkishTeam } from '../constants'
+import { useUser } from '../context/UserContext'
+import { summarizePlayerMatchStats, metricBars } from '../utils/playerMetrics'
 
 // ─── Yardımcılar ────────────────────────────────────────────────────────────
 
@@ -857,7 +859,7 @@ export default function PlayerPage() {
       // Paralel: takım + istatistikler + maçlar
       const [teamRes, statsRes, playerStatsRes] = await Promise.all([
         p.team_pandascore_id
-          ? supabase.from('teams').select('id, name, logo_url, acronym, location').eq('id', p.team_pandascore_id).single()
+          ? supabase.from('teams').select('id, name, logo_url, acronym, location, game:games(id,name,slug)').eq('id', p.team_pandascore_id).single()
           : { data: null, error: null },
 
         supabase.from('match_stats')
@@ -956,7 +958,9 @@ export default function PlayerPage() {
     </div>
   )
 
-  const badge   = getRoleBadge(player.role)
+  const playerGameId = normalizeGameId(team?.game?.slug ?? team?.game?.name ?? '')
+  const resolvedRole = resolvePlayerRole(player, playerGameId)
+  const badge   = getRoleBadge(resolvedRole)
   const isTR    = player.nationality === 'TR' || player.nationality === 'TUR' || isTurkishTeam(team?.name ?? '')
   const flag    = NAT_FLAGS[player.nationality] ?? (isTR ? '🇹🇷' : null)
   const followed = isPlayerFollowed(player.id)
@@ -1033,7 +1037,7 @@ export default function PlayerPage() {
 
             {/* Badge satırı */}
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14 }}>
-              {player.role && (
+              {badge && (
                 <span style={{
                   padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700,
                   background: badge.bg, border: `1px solid ${badge.border}`,
@@ -1065,10 +1069,7 @@ export default function PlayerPage() {
                 onMouseEnter={e => e.currentTarget.style.borderColor = '#FF4655'}
                 onMouseLeave={e => e.currentTarget.style.borderColor = '#222'}
               >
-                {team.logo_url
-                  ? <img src={team.logo_url} alt={team.name} style={{ width: 28, height: 28, objectFit: 'contain' }} />
-                  : <div style={{ width: 28, height: 28, background: '#1e1e1e', borderRadius: 6 }} />
-                }
+                <InitialsImage src={team.logo_url} name={team.name} width={28} height={28} borderRadius={6} />
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: '#ddd' }}>{team.name}</div>
                   {team.location && <div style={{ fontSize: 10, color: '#555' }}>📍 {team.location}</div>}
@@ -1077,6 +1078,13 @@ export default function PlayerPage() {
               </div>
             ) : (
               <div style={{ fontSize: 12, color: '#383838', fontStyle: 'italic' }}>Takım bilgisi yok (Free Agent?)</div>
+            )}
+
+            {formerTeams.length > 0 && (
+              <div style={{ marginTop: 8, padding: '5px 10px', borderRadius: 8, background: 'rgba(255,184,0,.06)', border: '1px solid rgba(255,184,0,.18)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 10 }}>⚠️</span>
+                <span style={{ fontSize: 10, color: '#888' }}>Transfer geçmişi mevcut — kadro verisi eski olabilir</span>
+              </div>
             )}
 
             {socials.length > 0 && (

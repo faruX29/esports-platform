@@ -4,16 +4,17 @@
  */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, Link }                from 'react-router-dom'
-import { supabase, subscribeToMatchesUpdates } from './supabaseClient'
-import { useGame, gameMatchesFilter, GAMES } from './GameContext'
-import { isTurkishTeam }                   from './constants'
-import { useUser }                          from './context/UserContext'
-import BRANDING                             from './branding.config'
-import { buildFinishedStory, buildUpcomingStory } from './utils/newsStories'
-import { isStoryForYou, prioritizeStoriesForYou } from './utils/newsPersonalization'
-import { calculatePredictionAccuracy, getMatchImpactLabel } from './utils/accuracyTracker'
+import { supabase, subscribeToMatchesUpdates } from '../supabaseClient'
+import { useGame, gameMatchesFilter, GAMES } from '../context/GameContext'
+import { isTurkishTeam }                   from '../constants'
+import { useUser }                          from '../context/UserContext'
+import BRANDING                             from '../branding.config'
+import { buildFinishedStory, buildUpcomingStory } from '../utils/newsStories'
+import { isStoryForYou, prioritizeStoriesForYou } from '../utils/newsPersonalization'
+import { calculatePredictionAccuracy, getMatchImpactLabel } from '../utils/accuracyTracker'
 import { memo }                             from 'react'
-import InitialsImage                        from './components/InitialsImage'
+import InitialsImage                        from '../components/InitialsImage'
+import { normalizeGameId }                  from '../utils/gameUtils'
 
 const MVP_HIDE_DREAM_TEAM = true
 const MVP_HIDE_PREDICTIONS = true
@@ -26,16 +27,6 @@ const DASHBOARD_GLOBAL_ERROR_TEXT = 'Sunucuyla bağlantı kesildi, tekrar deneni
 const POPULAR_TEAM_SEARCH_TERMS = ['galatasaray', 'eternal fire', 'fut', 'bbl', 'fenerbahce', 'sangal', 'g2', 'fnatic', 'navi']
 const PREFERENCE_GAMES = GAMES.filter(game => ['valorant', 'cs2', 'lol'].includes(game.id))
 const UPCOMING_WINDOW_DAYS = 7
-
-function normalizePreferenceGameId(raw) {
-  const value = String(raw || '').trim().toLowerCase()
-  if (!value) return null
-  if (value === 'valorant') return 'valorant'
-  if (value === 'cs2' || value === 'csgo' || value.includes('counter') || value.includes('cs-go')) return 'cs2'
-  if (value === 'lol' || value.includes('league')) return 'lol'
-  return null
-}
-
 
 /* ── Skeleton ─────────────────────────────────────────────────────────────── */
 function Sk({ w = '100%', h = '16px', r = '8px' }) {
@@ -98,8 +89,9 @@ function normalizeTierKey(value) {
 }
 
 function isHeroTier(rawTier) {
+  if (rawTier == null) return true
   const key = normalizeTierKey(rawTier)
-  return key === 'S' || key === 'A'
+  return key === null || key === 'S' || key === 'A'
 }
 
 function filterMatchesByTournamentTier(matches = [], showAll = false) {
@@ -308,7 +300,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 8 }}>
             {filteredTeams.map(team => {
               const active = selectedTeams.includes(team.id)
-              const teamGameId = normalizePreferenceGameId(team?.game?.slug ?? team?.game?.name ?? team?.game_id)
+              const teamGameId = normalizeGameId(team?.game?.slug ?? team?.game?.name ?? team?.game_id)
               const gameMeta = PREFERENCE_GAMES.find(game => game.id === teamGameId)
               return (
                 <button
@@ -385,7 +377,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
               const teamGameMap = {}
               for (const team of (popularTeams || [])) {
                 if (!selectedTeams.includes(team.id)) continue
-                const gameId = normalizePreferenceGameId(team?.game?.slug ?? team?.game?.name ?? team?.game_id)
+                const gameId = normalizeGameId(team?.game?.slug ?? team?.game?.name ?? team?.game_id)
                 if (gameId) teamGameMap[String(team.id)] = gameId
               }
 
@@ -1208,7 +1200,7 @@ export default function Dashboard() {
   const [upcomingMatches, setUpcomingMatches] = useState([])
   const [myFeedMatches,   setMyFeedMatches]   = useState([])
   const [liveFavCount,    setLiveFavCount]    = useState(0)
-  const [showAllTournamentTiers, setShowAllTournamentTiers] = useState(false)
+  const [showAllTournamentTiers, setShowAllTournamentTiers] = useState(true)
   const [quickAccess, setQuickAccess] = useState([])
   const [quickLoading, setQuickLoading] = useState(false)
   const [tickerItems, setTickerItems] = useState([])
@@ -2123,7 +2115,7 @@ export default function Dashboard() {
             Tournament Tier Filter
           </div>
           <div style={{ fontSize: 11, color: '#666', marginTop: 3 }}>
-            Varsayilan: sadece S-Tier ve A-Tier
+            {showAllTournamentTiers ? 'Tüm turnuvalar gösteriliyor' : 'Sadece S-Tier ve A-Tier'}
           </div>
         </div>
         <button

@@ -10,9 +10,9 @@
  */
 import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react'
 import { useParams, useNavigate }                     from 'react-router-dom'
-import { supabase }                                   from './supabaseClient'
-import { isTurkishTeam }                              from './constants'
-import { cleanDisplayName }                           from './utils/nameCleaner'
+import { supabase }                                   from '../supabaseClient'
+import { isTurkishTeam }                              from '../constants'
+import { cleanDisplayName }                           from '../utils/nameCleaner'
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 

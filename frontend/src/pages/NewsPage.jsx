@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useUser } from '../context/UserContext'
-import { GAMES } from '../GameContext'
+import { GAMES } from '../context/GameContext'
 import { isTurkishTeam } from '../constants'
 import {
   NEWS_LIMIT,
@@ -279,7 +279,9 @@ function NewsCard({ item, likes, liked, comments, onLike, onComment, canInteract
           >
             {liked ? 'STARRED' : 'STAR'} ({likes})
           </button>
-          <span style={{ fontSize: 12, color: '#888' }}>Yorum: {comments.length}</span>
+          <span style={{ fontSize: 11, color: comments.length > 0 ? '#a0c4ff' : '#555', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 8, background: comments.length > 0 ? 'rgba(100,160,255,.08)' : 'transparent', border: comments.length > 0 ? '1px solid rgba(100,160,255,.2)' : '1px solid transparent', fontWeight: comments.length > 0 ? 700 : 400 }}>
+            💬 {comments.length}
+          </span>
           {!canInteract && <span style={{ fontSize: 11, color: '#6a6a6a' }}>Etkilesim icin giris yapin</span>}
         </div>
 

@@ -5,9 +5,10 @@
  */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useNavigate, Link }             from 'react-router-dom'
-import { supabase }                                 from './supabaseClient'
-import { isTurkishTeam }                           from './constants'
-import { useUser }                                 from './context/UserContext'
+import { supabase }                                 from '../supabaseClient'
+import { isTurkishTeam }                           from '../constants'
+import { useUser }                                 from '../context/UserContext'
+import InitialsImage                               from '../components/InitialsImage'
 
 /* ─── Voter fingerprint ─────────────────────────────────────────────────────── */
 const VOTER_KEY = 'esports_voter_id'
@@ -1364,7 +1365,13 @@ export default function MatchDetail() {
             {/* Team A */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
               <div onClick={() => navigate(`/team/${aId}`)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, cursor: 'pointer', opacity: isFin && bWon ? 0.45 : 1, transition: 'opacity .2s' }}>
-                {aLogo ? <img src={aLogo} alt={aName} style={{ width: 72, height: 72, objectFit: 'contain', filter: isFin && bWon ? 'grayscale(80%)' : 'none' }} /> : <div style={{ width: 72, height: 72, background: '#1a1a1a', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🛡️</div>}
+                <InitialsImage
+                  src={aLogo}
+                  name={aName}
+                  width={72} height={72}
+                  borderRadius={12}
+                  imgStyle={{ objectFit: 'contain', filter: isFin && bWon ? 'grayscale(80%)' : 'none' }}
+                />
                 <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (aWon ? '#4CAF50' : '#555') : '#fff' }}>{aName}{isTurkishTeam(aName) && ' 🇹🇷'}</div>
               </div>
               <FavButton teamId={aId} active={favA} onToggle={toggleTeamFollow} />
@@ -1395,7 +1402,13 @@ export default function MatchDetail() {
             {/* Team B */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
               <div onClick={() => navigate(`/team/${bId}`)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6, cursor: 'pointer', opacity: isFin && aWon ? 0.45 : 1, transition: 'opacity .2s' }}>
-                {bLogo ? <img src={bLogo} alt={bName} style={{ width: 72, height: 72, objectFit: 'contain', filter: isFin && aWon ? 'grayscale(80%)' : 'none' }} /> : <div style={{ width: 72, height: 72, background: '#1a1a1a', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🛡️</div>}
+                <InitialsImage
+                  src={bLogo}
+                  name={bName}
+                  width={72} height={72}
+                  borderRadius={12}
+                  imgStyle={{ objectFit: 'contain', filter: isFin && aWon ? 'grayscale(80%)' : 'none' }}
+                />
                 <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (bWon ? '#4CAF50' : '#555') : '#fff' }}>{isTurkishTeam(bName) && '🇹🇷 '}{bName}</div>
               </div>
               <FavButton teamId={bId} active={favB} onToggle={toggleTeamFollow} />

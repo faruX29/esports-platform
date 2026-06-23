@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { GAMES, useGame } from '../GameContext'
-import { getRoleBadge } from '../roleHelper'
+import { GAMES, useGame } from '../context/GameContext'
+import { getRoleBadge, normalizeRoleForGame } from '../utils/roleHelper'
 import { useUser } from '../context/UserContext'
 import { summarizePlayerMatchStats, metricBars, pickRowTimestamp } from '../utils/playerMetrics'
 import InitialsImage from '../components/InitialsImage'
+import { normalizeGameId } from '../utils/gameUtils'
 
 function toNum(v) {
   const n = Number(v)
@@ -58,15 +59,6 @@ function extractTeamFallbackMetrics(rows) {
   }
 }
 
-function normalizeGameId(raw) {
-  const value = String(raw || '').trim().toLowerCase()
-  if (!value) return null
-  if (value === 'valorant') return 'valorant'
-  if (value === 'cs2' || value === 'csgo' || value.includes('counter') || value.includes('cs-go')) return 'cs2'
-  if (value === 'lol' || value.includes('league')) return 'lol'
-  if (value === 'dota2' || value === 'dota' || value.includes('dota')) return 'dota2'
-  return null
-}
 
 function resolveRowGameId(row, matchGameById) {
   return normalizeGameId(
@@ -78,40 +70,6 @@ function resolveRowGameId(row, matchGameById) {
   )
 }
 
-function normalizeRoleForGame(role, gameId) {
-  const value = String(role || '').trim().toLowerCase()
-
-  if (gameId === 'lol') {
-    if (value === 'adc') return 'adc'
-    if (value === 'bot' || value === 'bottom') return 'bot'
-    if (value.includes('top')) return 'top'
-    if (value.includes('jung')) return 'jungler'
-    if (value.includes('mid')) return 'mid'
-    if (value.includes('support') || value === 'sup') return 'support'
-    if (value.includes('carry')) return 'carry'
-    return 'General'
-  }
-
-  if (gameId === 'valorant') {
-    if (value.includes('duelist')) return 'duelist'
-    if (value.includes('controller')) return 'controller'
-    if (value.includes('initiator')) return 'initiator'
-    if (value.includes('sentinel')) return 'sentinel'
-    return 'General'
-  }
-
-  if (gameId === 'cs2') {
-    if (value === 'awp' || value.includes('sniper')) return 'sniper'
-    if (value.includes('igl')) return 'igl'
-    if (value.includes('entry')) return 'entry'
-    if (value.includes('support')) return 'support'
-    if (value.includes('lurk')) return 'lurker'
-    if (value.includes('rifl')) return 'rifler'
-    return 'General'
-  }
-
-  return role || 'General'
-}
 
 function fmt(value, digits = 2) {
   return Number.isFinite(value) ? value.toFixed(digits) : '0.00'
@@ -751,6 +709,7 @@ export default function PlayersPage() {
             {!loading && !error && visiblePlayers.map((player, idx) => {
             const followed = isPlayerFollowed(player.id)
             const roleBadge = getRoleBadge(player.role)
+            const showRoleBadge = roleBadge !== null
             return (
               <div
                 key={player.id}
@@ -780,9 +739,11 @@ export default function PlayersPage() {
                   />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.nickname || 'Unknown'}</div>
+                    {showRoleBadge && (
                     <div style={{ display: 'inline-flex', alignItems: 'center', marginTop: 3, padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700, background: roleBadge.bg, color: roleBadge.color, border: `1px solid ${roleBadge.border}` }}>
                       {roleBadge.label}
                     </div>
+                  )}
                   </div>
                 </div>
 

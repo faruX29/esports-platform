@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from './supabaseClient'
-import { useAuth } from './context/AuthContext'
-import { useUser } from './context/UserContext'
+import { supabase } from '../supabaseClient'
+import { useAuth } from '../context/AuthContext'
+import { useUser } from '../context/UserContext'
 
 export default function ProfileSettings() {
   const navigate = useNavigate()

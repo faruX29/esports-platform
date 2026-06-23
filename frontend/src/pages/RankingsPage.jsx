@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { useGame, gameMatchesFilter, GAMES } from '../GameContext'
+import { useGame, gameMatchesFilter, GAMES } from '../context/GameContext'
 import { useUser } from '../context/UserContext'
 
 function toNum(v) {

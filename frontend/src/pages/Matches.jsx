@@ -5,12 +5,20 @@
  */
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate }                      from 'react-router-dom'
-import { supabase }                         from './supabaseClient'
-import { useGame, GAMES }                   from './GameContext'
-import { getFavorites, addFavorite, removeFavorite, isFavorite } from './favoritesHelper'
-import { isTurkishTeam }                   from './constants'
+import { supabase }                         from '../supabaseClient'
+import { useGame, GAMES }                   from '../context/GameContext'
+import { getFavorites, addFavorite, removeFavorite, isFavorite } from '../utils/favoritesHelper'
+import { isTurkishTeam }                   from '../constants'
+import { normalizeGameId }                  from '../utils/gameUtils'
+import InitialsImage                        from '../components/InitialsImage'
 
 const PAGE_SIZE = 50   // 20 → 50
+
+const GAME_SHORT_NAMES = { valorant: 'VALORANT', cs2: 'CS2', lol: 'LoL', dota2: 'Dota2' }
+function gameDisplayName(game) {
+  const id = normalizeGameId(game?.slug ?? game?.name ?? '')
+  return GAME_SHORT_NAMES[id] ?? game?.name ?? '?'
+}
 
 const FALLBACK_GAME_IDS = {
   valorant: 1,
@@ -50,6 +58,14 @@ function formatMatchTime(match, localeOptions) {
   if (!iso) return 'TBA'
   const time = new Date(iso)
   if (Number.isNaN(time.getTime())) return 'TBA'
+  const now = new Date()
+  const isToday =
+    time.getDate() === now.getDate() &&
+    time.getMonth() === now.getMonth() &&
+    time.getFullYear() === now.getFullYear()
+  if (isToday) {
+    return 'Bugün, ' + time.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+  }
   return time.toLocaleString('tr-TR', localeOptions)
 }
 
@@ -102,7 +118,6 @@ function Matches() {
       if (!cancelled) {
         const rows = data || []
         setGameNames(rows)
-        console.log('🎮 DB Games:', (rows || []).map(g => `${g?.name ?? '?'} (${g?.slug ?? '?'})`))
         setGamesLoading(false)
       }
     }
@@ -198,7 +213,6 @@ function Matches() {
             throw new Error(`Game filter id bulunamadi: ${activeGame}`)
           }
 
-          console.log(`🎯 Game filter id=${gameId} (${activeGame})`)
           query = query.eq('game_id', gameId)
         }
 
@@ -218,13 +232,6 @@ function Matches() {
       if (fetchError) {
         console.error('Supabase error:', fetchError)
         throw fetchError
-      }
-
-      console.log(`📊 Fetched ${data?.length} matches (total: ${count}) | game: ${activeGame} | tab: ${activeTab} | page: ${currentPage}`)
-
-      if (data?.length === 0 && gameNames.length > 0) {
-        // Hangi game_id'lerin DB'de olduğunu logla
-        console.warn('⚠️ 0 matches returned. DB games:', (gameNames || []).map(g => `${g?.slug ?? '?'}=${g?.id ?? '?'}`))
       }
 
       setMatches(data || [])
@@ -614,7 +621,7 @@ function Matches() {
                   {/* Top row */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
                     <span style={{ padding: '2px 9px', borderRadius: 6, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', background: '#1e1e1e', border: '1px solid #2e2e2e', color: '#777' }}>
-                      {match.game?.name ?? '?'}
+                      {gameDisplayName(match.game)}
                     </span>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                       {/* AI Hot Pick */}
@@ -647,10 +654,14 @@ function Matches() {
                       <button onClick={e => toggleFavorite(match.team_a_id, e)} style={{ position: 'absolute', top: 0, left: 2, background: 'none', border: 'none', fontSize: 14, cursor: 'pointer', padding: 2 }}>
                         {teamAFav ? '⭐' : '☆'}
                       </button>
-                      {match.team_a?.logo_url
-                        ? <img src={match.team_a.logo_url} alt={match.team_a.name} style={{ width: 52, height: 52, objectFit: 'contain', marginBottom: 8, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.5))' }} />
-                        : <div style={{ width: 52, height: 52, margin: '0 auto 8px', background: '#1e1e1e', borderRadius: 8 }} />
-                      }
+                      <InitialsImage
+                        src={match.team_a?.logo_url}
+                        name={match.team_a?.name ?? '?'}
+                        width={52} height={52}
+                        borderRadius={8}
+                        style={{ margin: '0 auto 8px' }}
+                        imgStyle={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.5))' }}
+                      />
                       <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.3, wordBreak: 'break-word', color: turkA ? '#FFD700' : 'white' }}>
                         {match.team_a?.name}
                       </div>
@@ -677,10 +688,14 @@ function Matches() {
                       <button onClick={e => toggleFavorite(match.team_b_id, e)} style={{ position: 'absolute', top: 0, right: 2, background: 'none', border: 'none', fontSize: 14, cursor: 'pointer', padding: 2 }}>
                         {teamBFav ? '⭐' : '☆'}
                       </button>
-                      {match.team_b?.logo_url
-                        ? <img src={match.team_b.logo_url} alt={match.team_b.name} style={{ width: 52, height: 52, objectFit: 'contain', marginBottom: 8, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.5))' }} />
-                        : <div style={{ width: 52, height: 52, margin: '0 auto 8px', background: '#1e1e1e', borderRadius: 8 }} />
-                      }
+                      <InitialsImage
+                        src={match.team_b?.logo_url}
+                        name={match.team_b?.name ?? '?'}
+                        width={52} height={52}
+                        borderRadius={8}
+                        style={{ margin: '0 auto 8px' }}
+                        imgStyle={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.5))' }}
+                      />
                       <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.3, wordBreak: 'break-word', color: turkB ? '#FFD700' : 'white' }}>
                         {match.team_b?.name}
                       </div>
@@ -737,17 +752,29 @@ function Matches() {
             <button onClick={closeModal} style={{ position: 'absolute', top: 15, right: 15, background: 'none', border: 'none', color: '#888', fontSize: 30, cursor: 'pointer' }}>×</button>
 
             <div style={{ display: 'inline-block', padding: '5px 15px', backgroundColor: '#FF4655', borderRadius: 20, fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase', marginBottom: 20 }}>
-              {selectedMatch.game?.name}
+              {gameDisplayName(selectedMatch.game)}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', marginBottom: 30, padding: '20px 0' }}>
               <div style={{ textAlign: 'center', flex: 1 }}>
-                {selectedMatch.team_a?.logo_url && <img src={selectedMatch.team_a.logo_url} alt={selectedMatch.team_a.name} style={{ width: 100, height: 100, objectFit: 'contain', marginBottom: 15 }} />}
+                <InitialsImage
+                  src={selectedMatch.team_a?.logo_url}
+                  name={selectedMatch.team_a?.name ?? '?'}
+                  width={100} height={100}
+                  borderRadius={12}
+                  style={{ margin: '0 auto 15px' }}
+                />
                 <div style={{ fontSize: 20, fontWeight: 'bold' }}>{selectedMatch.team_a?.name}</div>
               </div>
               <div style={{ fontSize: 40, fontWeight: 'bold', color: '#FF4655', padding: '0 30px' }}>VS</div>
               <div style={{ textAlign: 'center', flex: 1 }}>
-                {selectedMatch.team_b?.logo_url && <img src={selectedMatch.team_b.logo_url} alt={selectedMatch.team_b.name} style={{ width: 100, height: 100, objectFit: 'contain', marginBottom: 15 }} />}
+                <InitialsImage
+                  src={selectedMatch.team_b?.logo_url}
+                  name={selectedMatch.team_b?.name ?? '?'}
+                  width={100} height={100}
+                  borderRadius={12}
+                  style={{ margin: '0 auto 15px' }}
+                />
                 <div style={{ fontSize: 20, fontWeight: 'bold' }}>{selectedMatch.team_b?.name}</div>
               </div>
             </div>

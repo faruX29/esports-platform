@@ -1,4 +1,7 @@
 import { cleanDisplayName } from './nameCleaner'
+import { normalizeGameId } from './gameUtils'
+
+export { normalizeGameId }
 
 const GAME_META = {
   valorant: { id: 'valorant', label: 'VALORANT', shortLabel: 'VAL', color: '#FF4655', icon: '⚡' },
@@ -8,15 +11,6 @@ const GAME_META = {
 
 export const NEWS_LIMIT = 20
 export const HERO_TIERS = new Set(['S', 'A'])
-
-export function normalizeGameId(raw) {
-  const value = String(raw || '').trim().toLowerCase()
-  if (!value) return null
-  if (value === 'valorant') return 'valorant'
-  if (value === 'cs2' || value === 'csgo' || value.includes('counter') || value.includes('cs-go')) return 'cs2'
-  if (value === 'lol' || value.includes('league')) return 'lol'
-  return null
-}
 
 export function normalizeTier(raw) {
   const value = String(raw || '').trim().toLowerCase()

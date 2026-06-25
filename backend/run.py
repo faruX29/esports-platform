@@ -120,6 +120,12 @@ def main():
     )
 
     parser.add_argument(
+        '--live',
+        action='store_true',
+        help='Sadece live (running) maçları senkronize et — sık polling için tasarlandı',
+    )
+
+    parser.add_argument(
         '--fix-stale',
         action='store_true',
         help='X saat önce başlamış ama hâlâ running olan maçları finished yap',
@@ -189,6 +195,17 @@ def main():
 
     syncer = MatchSyncer()
     total_stats = {'fetched': 0, 'cleaned': 0, 'synced': 0}
+
+    # ── Live-only sync (--live flag) ──────────────────────────────────────────
+    if args.live:
+        games = ['valorant', 'csgo', 'lol'] if args.all_games else [args.game]
+        total_live = {'fetched': 0, 'cleaned': 0, 'synced': 0}
+        for game in games:
+            r = syncer.sync_running_matches(game, limit=args.limit)
+            for k in total_live:
+                total_live[k] += r.get(k, 0)
+        logger.info(f"📡 Live sync done — synced {total_live['synced']} running matches")
+        return   # live sync sonrası dur, diğer adımları çalıştırma
 
     has_non_enrichment_work = any([
         args.predict,

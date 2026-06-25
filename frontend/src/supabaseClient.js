@@ -138,9 +138,12 @@ export function subscribeToMatchesUpdates(onUpdate) {
 		.on(
 			'postgres_changes',
 			{ event: 'UPDATE', schema: 'public', table: 'matches' },
-			payload => {
-				onUpdate(payload)
-			}
+			payload => onUpdate({ ...payload, eventType: 'UPDATE' })
+		)
+		.on(
+			'postgres_changes',
+			{ event: 'INSERT', schema: 'public', table: 'matches' },
+			payload => onUpdate({ ...payload, eventType: 'INSERT', old: {} })
 		)
 		.subscribe()
 

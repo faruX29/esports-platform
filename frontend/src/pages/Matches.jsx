@@ -5,7 +5,7 @@
  */
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate }                      from 'react-router-dom'
-import { supabase }                         from '../supabaseClient'
+import { supabase, subscribeToMatchesUpdates } from '../supabaseClient'
 import { useGame, GAMES }                   from '../context/GameContext'
 import { getFavorites, addFavorite, removeFavorite, isFavorite } from '../utils/favoritesHelper'
 import { isTurkishTeam }                   from '../constants'
@@ -69,6 +69,42 @@ function formatMatchTime(match, localeOptions) {
   return time.toLocaleString('tr-TR', localeOptions)
 }
 
+// number_of_games varsa önce onu kullan; yoksa skor heuristiği (finished)
+function getBOFormat(aScore, bScore, numberOfGames) {
+  const n = Number(numberOfGames)
+  if (n >= 5) return 'Bo5'
+  if (n >= 3) return 'Bo3'
+  if (n === 1) return 'Bo1'
+  const maxScore = Math.max(Number(aScore) || 0, Number(bScore) || 0)
+  if (maxScore >= 3) return 'Bo5'
+  if (maxScore >= 2) return 'Bo3'
+  if (maxScore === 1) return 'Bo1'
+  return null
+}
+
+function fmtMapDuration(seconds) {
+  if (!seconds || seconds <= 0) return null
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+function buildMapBreakdown(statsRows, teamAId, teamBId, teamAName, teamBName) {
+  const anyRow = (statsRows || []).find(r => Array.isArray(r?.stats?.games_detail) && r.stats.games_detail.length > 0)
+  if (!anyRow) return []
+  return (anyRow.stats.games_detail || [])
+    .filter(g => g.winner_id != null)
+    .map(g => ({
+      position:    g.position ?? 0,
+      teamAWon:    Number(g.winner_id) === Number(teamAId),
+      teamBWon:    Number(g.winner_id) === Number(teamBId),
+      winnerName:  Number(g.winner_id) === Number(teamAId) ? teamAName
+                 : Number(g.winner_id) === Number(teamBId) ? teamBName : '—',
+      duration:    fmtMapDuration(g.length_seconds),
+    }))
+    .sort((a, b) => a.position - b.position)
+}
+
 function Matches() {
   const navigate = useNavigate()
   const { activeGame } = useGame()
@@ -97,6 +133,7 @@ function Matches() {
   const [modalPlayers, setModalPlayers]               = useState({ teamA: [], teamB: [] })
   const [loadingModalPlayers, setLoadingModalPlayers] = useState(false)
   const [h2hData, setH2hData]                         = useState(null)
+  const [mapBreakdown, setMapBreakdown]               = useState([])
 
   // Sekme / oyun değişince 1. sayfaya dön
   useEffect(() => {
@@ -136,10 +173,37 @@ function Matches() {
   // NOT: activeGame artık burada YOK — filtre Supabase sorgusunda yapılıyor
 
   useEffect(() => {
-    let interval
-    if (autoRefresh) interval = setInterval(fetchMatches, 30000)
-    return () => { if (interval) clearInterval(interval) }
-  }, [autoRefresh, activeGame, sortBy, activeTab, currentPage, gamesLoading])
+    // Live tab: Realtime subscription — polling'e gerek yok
+    if (activeTab === 'live') {
+      const unsub = subscribeToMatchesUpdates(payload => {
+        const nextRow = payload?.new
+        if (!nextRow?.id) return
+        const isInsert = payload.eventType === 'INSERT'
+        const nextStatus = String(nextRow.status || '').toLowerCase()
+
+        if (isInsert && nextStatus === 'running') {
+          setMatches(prev => prev.some(m => m.id === nextRow.id) ? prev : [nextRow, ...prev])
+          return
+        }
+        if (nextStatus === 'running') {
+          setMatches(prev =>
+            prev.some(m => m.id === nextRow.id)
+              ? prev.map(m => m.id === nextRow.id ? { ...m, ...nextRow } : m)
+              : [nextRow, ...prev]
+          )
+        } else {
+          // Artık live değil (finished/cancelled) — listeden çıkar
+          setMatches(prev => prev.filter(m => m.id !== nextRow.id))
+        }
+      })
+      return unsub
+    }
+
+    // Diğer tablarda opsiyonel polling
+    if (!autoRefresh) return
+    const interval = setInterval(fetchMatches, 30000)
+    return () => clearInterval(interval)
+  }, [autoRefresh, activeTab, activeGame, sortBy, currentPage, gamesLoading])
 
   // ── Supabase game filtresi builder ─────────────────────────────
   function buildGameFilter(query) {
@@ -190,7 +254,7 @@ function Matches() {
             id, status, scheduled_at,
             team_a_id, team_b_id, winner_id,
             team_a_score, team_b_score,
-            game_id,
+            number_of_games, stream_url, game_id,
             prediction_team_a, prediction_team_b, prediction_confidence,
             team_a:teams!matches_team_a_id_fkey(id, name, logo_url, acronym),
             team_b:teams!matches_team_b_id_fkey(id, name, logo_url, acronym),
@@ -198,7 +262,9 @@ function Matches() {
             game:games(id, name, slug)
           `, { count: 'exact' })
 
-        if (activeTab === 'upcoming') {
+        if (activeTab === 'live') {
+          query = query.eq('status', 'running')
+        } else if (activeTab === 'upcoming') {
           query = query
             .eq('status', 'not_started')
             .gt('scheduled_at', nowIso)
@@ -284,12 +350,15 @@ function Matches() {
     setShowModal(true)
     setModalPlayers({ teamA: [], teamB: [] })
     setH2hData(null)
+    setMapBreakdown([])
     setLoadingModalPlayers(true)
 
-    const teamAId = match.team_a_id ?? match.team_a?.id
-    const teamBId = match.team_b_id ?? match.team_b?.id
+    const teamAId   = match.team_a_id ?? match.team_a?.id
+    const teamBId   = match.team_b_id ?? match.team_b?.id
+    const teamAName = match.team_a?.name ?? '?'
+    const teamBName = match.team_b?.name ?? '?'
 
-    const [{ data: playersA }, { data: playersB }, { data: h2hMatches }] = await Promise.all([
+    const [{ data: playersA }, { data: playersB }, { data: h2hMatches }, { data: statsRows }] = await Promise.all([
       supabase.from('players').select('nickname, role, image_url').eq('team_pandascore_id', teamAId),
       supabase.from('players').select('nickname, role, image_url').eq('team_pandascore_id', teamBId),
       supabase.from('matches')
@@ -298,9 +367,14 @@ function Matches() {
         .or(`and(team_a_id.eq.${teamAId},team_b_id.eq.${teamBId}),and(team_a_id.eq.${teamBId},team_b_id.eq.${teamAId})`)
         .order('scheduled_at', { ascending: false })
         .limit(10),
+      supabase.from('match_stats')
+        .select('team_id, stats')
+        .eq('match_id', match.id)
+        .limit(2),
     ])
 
     setModalPlayers({ teamA: playersA || [], teamB: playersB || [] })
+    setMapBreakdown(buildMapBreakdown(statsRows, teamAId, teamBId, teamAName, teamBName))
 
     const h2h       = h2hMatches || []
     const teamAWins = h2h.filter(m => m.winner_id === teamAId).length
@@ -481,23 +555,35 @@ function Matches() {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 20 }}>
         {[
+          { key: 'live',     label: 'LIVE',          isLive: true },
           { key: 'upcoming', label: '⏳ Upcoming' },
-          { key: 'past',     label: '✅ Past Results'   },
+          { key: 'past',     label: '✅ Past Results' },
         ].map(t => (
           <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
             padding: '9px 22px', borderRadius: 12, border: 'none', cursor: 'pointer',
             fontSize: 13, fontWeight: activeTab === t.key ? 700 : 500,
-            background: activeTab === t.key ? '#FF4655' : '#1a1a1a',
-            color: activeTab === t.key ? '#fff' : '#888',
+            background: activeTab === t.key
+              ? (t.isLive ? '#FF4655' : '#FF4655')
+              : '#1a1a1a',
+            color: activeTab === t.key ? '#fff' : (t.isLive ? '#FF4655' : '#888'),
+            display: 'flex', alignItems: 'center', gap: 7,
             transition: 'all .18s',
-          }}>{t.label}</button>
+            border: t.isLive && activeTab !== t.key ? '1px solid rgba(255,70,85,.4)' : 'none',
+          }}>
+            {t.isLive && (
+              <span style={{
+                width: 7, height: 7, borderRadius: '50%',
+                background: '#FF4655',
+                boxShadow: activeTab === t.key ? '0 0 0 2px rgba(255,255,255,.5)' : '0 0 8px rgba(255,70,85,.9)',
+                animation: 'pulse 1.4s infinite',
+                flexShrink: 0,
+              }} />
+            )}
+            {t.label}
+          </button>
         ))}
       </div>
 
-      {/* Debug banner */}
-      <div style={{ textAlign: 'center', marginBottom: 8 }}>
-        <GameDebugBanner />
-      </div>
 
       {/* Toolbar */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 18, justifyContent: 'center', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -545,8 +631,10 @@ function Matches() {
       {/* Match Grid */}
       {filteredMatches.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px', color: '#555' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
-          <h3 style={{ margin: 0, color: '#444' }}>Maç bulunamadı</h3>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>{activeTab === 'live' ? '📡' : '📭'}</div>
+          <h3 style={{ margin: 0, color: '#444' }}>
+            {activeTab === 'live' ? 'Şu an canlı maç yok' : 'Maç bulunamadı'}
+          </h3>
           <p style={{ margin: '8px 0 0', fontSize: 13 }}>
             {activeGame !== 'all'
               ? `"${activeGame}" için kayıt yok. Konsolu kontrol et (F12) — hangi game_id eşleşiyor?`
@@ -624,6 +712,12 @@ function Matches() {
                       {gameDisplayName(match.game)}
                     </span>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      {/* Bo Format */}
+                      {getBOFormat(match.team_a_score, match.team_b_score, match.number_of_games) && (
+                        <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: 'rgba(255,255,255,.06)', border: '1px solid #2e2e2e', color: '#666' }}>
+                          {getBOFormat(match.team_a_score, match.team_b_score, match.number_of_games)}
+                        </span>
+                      )}
                       {/* AI Hot Pick */}
                       {isHotPick && (
                         <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 800, background: 'rgba(255,100,50,.2)', border: '1px solid rgba(255,100,50,.5)', color: '#ff8c42' }}>
@@ -729,8 +823,31 @@ function Matches() {
                     <div style={{ fontSize: 11, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                       🏆 {match.tournament?.name ?? '—'}
                     </div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: isLive ? '#FF4655' : '#4CAF50', flexShrink: 0, background: isLive ? 'rgba(255,70,85,.1)' : 'rgba(76,175,80,.1)', padding: '2px 8px', borderRadius: 6 }}>
-                      {isLive ? '🔴 LIVE' : formatMatchTime(match, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                      {match.stream_url && (
+                        <a
+                          href={match.stream_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={e => e.stopPropagation()}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            fontSize: 10, fontWeight: 700,
+                            color: '#a78bfa', background: 'rgba(167,139,250,.12)',
+                            border: '1px solid rgba(167,139,250,.35)',
+                            borderRadius: 6, padding: '2px 8px',
+                            textDecoration: 'none',
+                            transition: 'background .15s',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(167,139,250,.22)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'rgba(167,139,250,.12)'}
+                        >
+                          ▶ İzle
+                        </a>
+                      )}
+                      <div style={{ fontSize: 11, fontWeight: 600, color: isLive ? '#FF4655' : '#4CAF50', background: isLive ? 'rgba(255,70,85,.1)' : 'rgba(76,175,80,.1)', padding: '2px 8px', borderRadius: 6 }}>
+                        {isLive ? '🔴 LIVE' : formatMatchTime(match, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -790,12 +907,34 @@ function Matches() {
                   {formatMatchTime(selectedMatch, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
-              <div>
+              <div style={{ marginBottom: selectedMatch.stream_url ? 15 : 0 }}>
                 <div style={{ color: '#888', fontSize: 14, marginBottom: 5 }}>📊 Status</div>
                 <div style={{ fontSize: 16, fontWeight: 'bold', color: selectedMatch.status === 'not_started' ? '#FFB800' : '#4CAF50' }}>
                   {selectedMatch.status === 'not_started' ? '⏳ Upcoming' : selectedMatch.status === 'running' ? '🔴 Live' : '✅ Finished'}
                 </div>
               </div>
+              {selectedMatch.stream_url && (
+                <div>
+                  <div style={{ color: '#888', fontSize: 14, marginBottom: 8 }}>📺 Yayın</div>
+                  <a
+                    href={selectedMatch.stream_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 8,
+                      padding: '10px 20px', borderRadius: 10,
+                      background: 'linear-gradient(135deg, rgba(167,139,250,.25), rgba(167,139,250,.12))',
+                      border: '1px solid rgba(167,139,250,.5)',
+                      color: '#c4b5fd', fontSize: 14, fontWeight: 700,
+                      textDecoration: 'none', transition: 'all .15s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'linear-gradient(135deg, rgba(167,139,250,.35), rgba(167,139,250,.2))'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'linear-gradient(135deg, rgba(167,139,250,.25), rgba(167,139,250,.12))'}
+                  >
+                    ▶ Canlı İzle
+                  </a>
+                </div>
+              )}
             </div>
 
             {/* H2H */}
@@ -815,6 +954,37 @@ function Matches() {
                     <div style={{ fontSize: 24, fontWeight: 'bold', color: '#4CAF50' }}>{h2hData.teamBWins}</div>
                     <div style={{ fontSize: 11, color: '#777', marginTop: 2 }}>{selectedMatch.team_b?.name}</div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Map Breakdown */}
+            {mapBreakdown.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ color: '#888', fontSize: 13, fontWeight: 'bold', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  🗺️ Map Breakdown — {getBOFormat(selectedMatch?.team_a_score, selectedMatch?.team_b_score, selectedMatch?.number_of_games) || 'Series'}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {mapBreakdown.map((g, idx) => (
+                    <div key={idx} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '8px 12px', borderRadius: 9,
+                      background: g.teamAWon ? 'rgba(76,175,80,.08)' : g.teamBWon ? 'rgba(255,70,85,.08)' : '#0d0d0d',
+                      border: g.teamAWon ? '1px solid rgba(76,175,80,.25)' : g.teamBWon ? '1px solid rgba(255,70,85,.2)' : '1px solid #1e1e1e',
+                    }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#555', minWidth: 48 }}>
+                        MAP {g.position}
+                      </span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: g.teamAWon ? '#4CAF50' : g.teamBWon ? '#ff7683' : '#888', flex: 1, textAlign: 'center' }}>
+                        {g.winnerName} kazandı
+                      </span>
+                      {g.duration && (
+                        <span style={{ fontSize: 11, color: '#444', minWidth: 48, textAlign: 'right' }}>
+                          {g.duration}
+                        </span>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

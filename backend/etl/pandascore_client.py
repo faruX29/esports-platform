@@ -119,6 +119,23 @@ class PandaScoreClient:
                 logger.error(f"❌ API request failed: {fallback_error}")
         return []
     
+    def get_running_matches(self, game_slug, limit=50):
+        """Fetch currently running (live) matches from PandaScore /running endpoint."""
+        url = f"{self.base_url}/{game_slug}/matches/running"
+        params = {
+            'token': self.api_token,
+            'per_page': limit,
+        }
+        try:
+            logger.info(f"📡 Fetching live matches for {game_slug}...")
+            matches = self._request_json_with_backoff(
+                url, params, f"PandaScore running matches for {game_slug}"
+            )
+            return matches or []
+        except requests.exceptions.RequestException as e:
+            logger.error(f"❌ Running matches fetch failed for {game_slug}: {e}")
+            return []
+
     def get_past_matches(self, game_slug, limit=50, page=1):
         """
         Fetch past (finished) matches from PandaScore API

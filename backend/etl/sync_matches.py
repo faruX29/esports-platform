@@ -13,6 +13,22 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def _extract_stream_url(streams_list):
+    """Pick best stream URL from PandaScore streams_list (official → main → any)."""
+    if not streams_list:
+        return None
+    for priority in ('official', 'main', None):
+        for s in streams_list:
+            if not isinstance(s, dict):
+                continue
+            url = (s.get('raw_url') or '').strip()
+            if not url:
+                continue
+            if priority is None or s.get(priority):
+                return url
+    return None
+
+
 class MatchSyncer:
     """Sync match data from PandaScore to Supabase"""
 
@@ -23,6 +39,20 @@ class MatchSyncer:
             RiotAdapter(),
             SteamAdapter(),
         ])
+
+    def sync_running_matches(self, game_slug, limit=50):
+        """Fetch /running endpoint and upsert — intended for frequent (5-min) live sync."""
+        logger.info(f"\n📡 Syncing LIVE matches for {game_slug.upper()}...")
+        raw_matches = self.client.get_running_matches(game_slug, limit)
+        if not raw_matches:
+            logger.info(f"   No running matches for {game_slug}")
+            return {'fetched': 0, 'cleaned': 0, 'synced': 0}
+        cleaned = self.cleaner.clean_matches(raw_matches)
+        if not cleaned:
+            return {'fetched': len(raw_matches), 'cleaned': 0, 'synced': 0}
+        synced = self._upsert_matches(cleaned)
+        logger.info(f"✅ Live sync: {synced}/{len(cleaned)} upserted for {game_slug}")
+        return {'fetched': len(raw_matches), 'cleaned': len(cleaned), 'synced': synced}
 
     def sync_game_matches(self, game_slug, limit=50, past=False, page=1, upcoming_days=7):
         """
@@ -146,6 +176,8 @@ class MatchSyncer:
                             scheduled_dt = None
 
                         # ── Upsert — tüm mutable alanlar güncelleniyor ──
+                        raw = match.get('raw_data') or {}
+                        stream_url = _extract_stream_url(raw.get('streams_list') or [])
                         cur.execute(
                             """
                             INSERT INTO matches (
@@ -161,27 +193,33 @@ class MatchSyncer:
                                 team_a_score,
                                 team_b_score,
                                 round_info,
+                                number_of_games,
+                                stream_url,
                                 raw_data,
                                 updated_at
                             )
                             VALUES (
                                 %s, %s, %s, %s, %s,
                                 %s, %s, %s, %s, %s,
-                                %s, %s, %s,
+                                %s, %s, %s, %s, %s,
                                 CURRENT_TIMESTAMP
                             )
                             ON CONFLICT (id) DO UPDATE SET
-                                status        = EXCLUDED.status,
-                                winner_id     = EXCLUDED.winner_id,
-                                team_a_score  = EXCLUDED.team_a_score,
-                                team_b_score  = EXCLUDED.team_b_score,
-                                scheduled_at  = EXCLUDED.scheduled_at,
-                                tournament_id = COALESCE(EXCLUDED.tournament_id,
-                                                         matches.tournament_id),
-                                round_info    = COALESCE(EXCLUDED.round_info,
-                                                         matches.round_info),
-                                raw_data      = EXCLUDED.raw_data,
-                                updated_at    = CURRENT_TIMESTAMP
+                                status          = EXCLUDED.status,
+                                winner_id       = EXCLUDED.winner_id,
+                                team_a_score    = EXCLUDED.team_a_score,
+                                team_b_score    = EXCLUDED.team_b_score,
+                                scheduled_at    = EXCLUDED.scheduled_at,
+                                tournament_id   = COALESCE(EXCLUDED.tournament_id,
+                                                           matches.tournament_id),
+                                round_info      = COALESCE(EXCLUDED.round_info,
+                                                           matches.round_info),
+                                number_of_games = COALESCE(EXCLUDED.number_of_games,
+                                                           matches.number_of_games),
+                                stream_url      = COALESCE(EXCLUDED.stream_url,
+                                                           matches.stream_url),
+                                raw_data        = EXCLUDED.raw_data,
+                                updated_at      = CURRENT_TIMESTAMP
                             """,
                             (
                                 match['id'],
@@ -196,7 +234,9 @@ class MatchSyncer:
                                 match.get('team_a_score'),
                                 match.get('team_b_score'),
                                 match.get('round_info'),
-                                json.dumps(match['raw_data']),
+                                raw.get('number_of_games'),
+                                stream_url,
+                                json.dumps(raw),
                             ),
                         )
                         cur.execute(f'RELEASE SAVEPOINT "{savepoint_name}"')

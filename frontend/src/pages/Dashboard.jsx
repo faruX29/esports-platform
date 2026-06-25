@@ -28,6 +28,106 @@ const POPULAR_TEAM_SEARCH_TERMS = ['galatasaray', 'eternal fire', 'fut', 'bbl', 
 const PREFERENCE_GAMES = GAMES.filter(game => ['valorant', 'cs2', 'lol'].includes(game.id))
 const UPCOMING_WINDOW_DAYS = 7
 
+/* ── FormStrip ────────────────────────────────────────────────────────────── */
+function FormStrip({ form }) {
+  if (!form?.length) return null
+  return (
+    <div style={{ display: 'flex', gap: 2, marginTop: 3 }}>
+      {form.map((r, i) => (
+        <span key={i} style={{
+          width: 13, height: 13, borderRadius: 3, flexShrink: 0,
+          background: r === 'W' ? 'rgba(76,175,80,.85)' : 'rgba(255,70,85,.75)',
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 7, fontWeight: 900, color: '#fff', letterSpacing: 0,
+        }}>{r}</span>
+      ))}
+    </div>
+  )
+}
+
+/* ── TodaySchedule ────────────────────────────────────────────────────────── */
+const TodaySchedule = memo(function TodaySchedule({ matches, liveMatches, onMatchClick }) {
+  const now   = new Date()
+  const today = matches => (matches || []).filter(m => {
+    if (!m.scheduled_at) return false
+    const d = new Date(m.scheduled_at)
+    return d.getFullYear() === now.getFullYear() &&
+           d.getMonth()    === now.getMonth()    &&
+           d.getDate()     === now.getDate()
+  })
+
+  const todayUpcoming = today(matches)
+  const todayLive     = (liveMatches || [])
+  const all           = [...todayLive, ...todayUpcoming]
+
+  if (all.length === 0) return null
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          padding: '4px 12px', borderRadius: 20,
+          background: 'linear-gradient(135deg,rgba(76,175,80,.15),rgba(76,175,80,.07))',
+          border: '1px solid rgba(76,175,80,.35)', flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 9, fontWeight: 900, color: '#9ee6a3', letterSpacing: '.5px', textTransform: 'uppercase' }}>
+            📅 Bugün
+          </span>
+          <span style={{ padding: '1px 6px', borderRadius: 8, background: 'rgba(76,175,80,.25)', color: '#9ee6a3', fontSize: 10, fontWeight: 700 }}>
+            {all.length}
+          </span>
+        </div>
+        <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(76,175,80,.25),transparent)' }} />
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {all.map(m => {
+          const isLive = m.status === 'running'
+          const gameShort = (m.game?.name || '—').slice(0, 3).toUpperCase()
+          const tA = m.team_a?.name || '?'
+          const tB = m.team_b?.name || '?'
+          return (
+            <div
+              key={m.id}
+              onClick={() => onMatchClick(m.id)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '8px 12px', borderRadius: 10, cursor: 'pointer',
+                background: isLive ? 'rgba(255,70,85,.07)' : '#0d0d0d',
+                border: isLive ? '1px solid rgba(255,70,85,.3)' : '1px solid #181818',
+                transition: 'all .15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = isLive ? 'rgba(255,70,85,.12)' : '#141414'; e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.5)' : '#2a2a2a' }}
+              onMouseLeave={e => { e.currentTarget.style.background = isLive ? 'rgba(255,70,85,.07)' : '#0d0d0d'; e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.3)' : '#181818' }}
+            >
+              {/* Saat */}
+              <span style={{ fontSize: 11, color: '#555', fontVariantNumeric: 'tabular-nums', flexShrink: 0, width: 38, textAlign: 'center' }}>
+                {isLive
+                  ? <span style={{ color: '#FF4655', fontWeight: 800, animation: 'livePulse 1.2s infinite' }}>● LIVE</span>
+                  : fmtTime(m.scheduled_at)
+                }
+              </span>
+              {/* Game */}
+              <span style={{ fontSize: 8, padding: '2px 5px', borderRadius: 4, background: '#181818', color: '#444', fontWeight: 700, letterSpacing: '.4px', flexShrink: 0 }}>
+                {gameShort}
+              </span>
+              {/* Teams */}
+              <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: '#ccc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {tA} <span style={{ color: '#333' }}>vs</span> {tB}
+              </span>
+              {/* Tournament */}
+              <span style={{ fontSize: 9, color: '#2a2a2a', flexShrink: 0, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>
+                {m.tournament?.name || ''}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+})
+
 /* ── Skeleton ─────────────────────────────────────────────────────────────── */
 function Sk({ w = '100%', h = '16px', r = '8px' }) {
   return (
@@ -43,6 +143,18 @@ function Sk({ w = '100%', h = '16px', r = '8px' }) {
 function fmtTime(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+}
+
+function getBOFormat(aScore, bScore, numberOfGames) {
+  const n = Number(numberOfGames)
+  if (n >= 5) return 'Bo5'
+  if (n >= 3) return 'Bo3'
+  if (n === 1) return 'Bo1'
+  const maxScore = Math.max(Number(aScore) || 0, Number(bScore) || 0)
+  if (maxScore >= 3) return 'Bo5'
+  if (maxScore >= 2) return 'Bo3'
+  if (maxScore === 1) return 'Bo1'
+  return null
 }
 
 function normalizeMatchStatus(status) {
@@ -649,7 +761,7 @@ const FavoritesBar = memo(function FavoritesBar({ onMatchClick, showAllTournamen
       .join(',')
     supabase.from('matches').select(`
       id, status, scheduled_at, team_a_id, team_b_id, winner_id,
-      team_a_score, team_b_score,
+      team_a_score, team_b_score, number_of_games,
       prediction_team_a, prediction_team_b, prediction_confidence,
       team_a:teams!matches_team_a_id_fkey(id,name,logo_url),
       team_b:teams!matches_team_b_id_fkey(id,name,logo_url),
@@ -758,6 +870,11 @@ const FavoritesBar = memo(function FavoritesBar({ onMatchClick, showAllTournamen
                       {m.game?.name || '—'}
                     </span>
                     <MatchImpactPill match={m} compact />
+                    {getBOFormat(m.team_a_score, m.team_b_score, m.number_of_games) && (
+                      <span style={{ fontSize: 8, fontWeight: 700, color: '#555', background: 'rgba(255,255,255,.05)', border: '1px solid #2a2a2a', borderRadius: 4, padding: '1px 5px' }}>
+                        {getBOFormat(m.team_a_score, m.team_b_score, m.number_of_games)}
+                      </span>
+                    )}
                   </div>
                   {isLive  && <span style={{ fontSize: 9, fontWeight: 800, color: '#FF4655', animation: 'livePulse 1.2s infinite' }}>● LIVE</span>}
                   {!isLive && !isFin && <span style={{ fontSize: 9, color: '#444' }}>{fmtTime(m.scheduled_at)}</span>}
@@ -888,12 +1005,14 @@ function MatchImpactPill({ match, compact = false }) {
 }
 
 /* ── LiveMatchCard ────────────────────────────────────────────────────────── */
-const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs, onToggleFav }) {
+const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs, onToggleFav, teamForms }) {
   const isLive     = m.status === 'running'
   const isFin      = m.status === 'finished'
   const aggressiveLiveMode = isLive && !isFin
   const aId        = m.team_a_id || m.team_a?.id
   const bId        = m.team_b_id || m.team_b?.id
+  const formA      = teamForms?.get(aId) || []
+  const formB      = teamForms?.get(bId) || []
   const aWon       = isFin && m.winner_id === aId
   const bWon       = isFin && m.winner_id === bId
   const favA       = favs.includes(aId)
@@ -960,6 +1079,11 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
             {m.game?.name || '—'}
           </span>
           <MatchImpactPill match={m} />
+          {getBOFormat(m.team_a_score, m.team_b_score, m.number_of_games) && (
+            <span style={{ fontSize: 8, fontWeight: 700, color: '#555', background: 'rgba(255,255,255,.05)', border: '1px solid #2a2a2a', borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap' }}>
+              {getBOFormat(m.team_a_score, m.team_b_score, m.number_of_games)}
+            </span>
+          )}
         </div>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 800, color: '#ff7683' }}>
           <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#FF4655', boxShadow: '0 0 10px rgba(255,70,85,.9)', animation: 'liveNeonBlink 1.05s infinite' }} />
@@ -1012,6 +1136,11 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
           }}>
             {m.team_a?.name || '?'}{turkA && ' 🇹🇷'}
           </div>
+          {formA.length > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <FormStrip form={formA} />
+            </div>
+          )}
           {favA && (
             <button
               onClick={e => { e.stopPropagation(); onToggleFav(aId) }}
@@ -1068,6 +1197,11 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
           }}>
             {m.team_b?.name || '?'}{turkB && ' 🇹🇷'}
           </div>
+          {formB.length > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <FormStrip form={formB} />
+            </div>
+          )}
           {favB && (
             <button
               onClick={e => { e.stopPropagation(); onToggleFav(bId) }}
@@ -1085,16 +1219,43 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
           confidence={m.prediction_confidence}
         />
       )}
+
+      {/* ── Stream linki ── */}
+      {m.stream_url && (
+        <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,70,85,.15)' }}>
+          <a
+            href={m.stream_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              padding: '5px 0', borderRadius: 7,
+              background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.3)',
+              color: '#c4b5fd', fontSize: 10, fontWeight: 700,
+              textDecoration: 'none', transition: 'background .15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(167,139,250,.22)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(167,139,250,.12)'}
+          >
+            ▶ Canlı İzle
+          </a>
+        </div>
+      )}
     </div>
   )
 })
 
 /* ── UpcomingRow ──────────────────────────────────────────────────────────── */
-const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick }) {
+const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForms }) {
   const badge = getStatusBadge(m.status)
   const isLive = m.status === 'running'
   const turkA = isTurkishTeam(m.team_a?.name ?? '')
   const turkB = isTurkishTeam(m.team_b?.name ?? '')
+  const aId   = m.team_a_id || m.team_a?.id
+  const bId   = m.team_b_id || m.team_b?.id
+  const formA = teamForms?.get(aId) || []
+  const formB = teamForms?.get(bId) || []
   return (
     <div
       onClick={() => onMatchClick(m.id)}
@@ -1148,9 +1309,12 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick }) {
           borderRadius={4}
           objectFit='contain'
         />
-        <span style={{ fontSize: 12, fontWeight: 600, color: turkA ? '#ff6b7a' : '#bbb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
-          {m.team_a?.name || '?'}{turkA && ' 🇹🇷'}
-        </span>
+        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: turkA ? '#ff6b7a' : '#bbb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
+            {m.team_a?.name || '?'}{turkA && ' 🇹🇷'}
+          </span>
+          {formA.length > 0 && <FormStrip form={formA} />}
+        </div>
         <span style={{ fontSize: 9, color: '#2a2a2a', flexShrink: 0 }}>vs</span>
         <InitialsImage
           src={m.team_b?.logo_url}
@@ -1161,9 +1325,12 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick }) {
           borderRadius={4}
           objectFit='contain'
         />
-        <span style={{ fontSize: 12, fontWeight: 600, color: turkB ? '#ff6b7a' : '#bbb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
-          {m.team_b?.name || '?'}{turkB && ' 🇹🇷'}
-        </span>
+        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: turkB ? '#ff6b7a' : '#bbb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
+            {m.team_b?.name || '?'}{turkB && ' 🇹🇷'}
+          </span>
+          {formB.length > 0 && <FormStrip form={formB} />}
+        </div>
       </div>
 
       {/* Turnuva */}
@@ -1198,6 +1365,8 @@ export default function Dashboard() {
 
   const [liveMatches,     setLiveMatches]     = useState([])
   const [upcomingMatches, setUpcomingMatches] = useState([])
+  const [teamFormMap,          setTeamFormMap]          = useState(new Map())
+  const [expandedScheduleGroups, setExpandedScheduleGroups] = useState(new Set())
   const [myFeedMatches,   setMyFeedMatches]   = useState([])
   const [liveFavCount,    setLiveFavCount]    = useState(0)
   const [showAllTournamentTiers, setShowAllTournamentTiers] = useState(true)
@@ -1323,6 +1492,7 @@ export default function Dashboard() {
       const selectStr = `
         id, status, scheduled_at,
         team_a_id, team_b_id, winner_id, team_a_score, team_b_score,
+        number_of_games, stream_url,
         prediction_team_a, prediction_team_b, prediction_confidence,
         team_a:teams!matches_team_a_id_fkey(id,name,logo_url),
         team_b:teams!matches_team_b_id_fkey(id,name,logo_url),
@@ -1371,6 +1541,48 @@ export default function Dashboard() {
       total: liveMatches.length + upcomingMatches.length,
       teams: new Set([...liveMatches, ...upcomingMatches].flatMap(m => [m.team_a_id, m.team_b_id]).filter(Boolean)).size,
     })
+  }, [liveMatches, upcomingMatches])
+
+  useEffect(() => {
+    const allMatches = [...liveMatches, ...upcomingMatches]
+    if (allMatches.length === 0) { setTeamFormMap(new Map()); return }
+
+    const teamIds = [...new Set(allMatches.flatMap(m => [m.team_a_id, m.team_b_id].filter(Boolean)))]
+    if (teamIds.length === 0) return
+
+    let cancelled = false
+    const idsStr = teamIds.join(',')
+
+    ;(async () => {
+      try {
+        const { data, error } = await supabase
+          .from('matches')
+          .select('winner_id,team_a_id,team_b_id')
+          .eq('status', 'finished')
+          .or(`team_a_id.in.(${idsStr}),team_b_id.in.(${idsStr})`)
+          .order('scheduled_at', { ascending: false })
+          .limit(300)
+
+        if (error || cancelled) return
+
+        const map = new Map()
+        for (const row of data || []) {
+          const { winner_id, team_a_id, team_b_id } = row
+          if (!winner_id) continue
+          for (const tid of [team_a_id, team_b_id]) {
+            if (!tid) continue
+            const form = map.get(tid) || []
+            if (form.length < 5) {
+              form.push(Number(winner_id) === Number(tid) ? 'W' : 'L')
+              map.set(tid, form)
+            }
+          }
+        }
+        if (!cancelled) setTeamFormMap(map)
+      } catch { /* non-critical */ }
+    })()
+
+    return () => { cancelled = true }
   }, [liveMatches, upcomingMatches])
 
   useEffect(() => {
@@ -1446,25 +1658,46 @@ export default function Dashboard() {
       if (!active) return
 
       const nextRow = payload?.new
-      const oldRow = payload?.old || {}
+      const oldRow  = payload?.old || {}
       if (!nextRow?.id) return
 
-      const scoreChanged =
+      const isInsert = payload.eventType === 'INSERT'
+      const nextStatus = normalizeMatchStatus(nextRow.status)
+      const prevStatus = normalizeMatchStatus(oldRow.status)
+
+      // INSERT: yeni live maç — sadece running ise listeye ekle
+      if (isInsert) {
+        if (nextStatus === 'running') {
+          setLiveMatches(prev => prev.some(m => m.id === nextRow.id) ? prev : [...prev, nextRow])
+        } else if (isUpcomingStatus(nextStatus)) {
+          setUpcomingMatches(prev => prev.some(m => m.id === nextRow.id) ? prev : [...prev, nextRow])
+        }
+        return
+      }
+
+      // UPDATE: sadece anlamlı değişiklikler
+      const changed =
+        prevStatus !== nextStatus ||
         oldRow.team_a_score !== nextRow.team_a_score ||
         oldRow.team_b_score !== nextRow.team_b_score ||
-        oldRow.status !== nextRow.status ||
-        oldRow.winner_id !== nextRow.winner_id
+        oldRow.winner_id    !== nextRow.winner_id
 
-      if (!scoreChanged) return
+      if (!changed) return
 
-      setLiveMatches(prev => patchMatchCollection(prev, nextRow).filter(match => normalizeMatchStatus(match.status) === 'running'))
-      setUpcomingMatches(prev => patchMatchCollection(prev, nextRow).filter(match => isUpcomingStatus(match.status)))
+      setLiveMatches(prev =>
+        patchMatchCollection(prev, nextRow)
+          .filter(m => normalizeMatchStatus(m.status) === 'running')
+      )
+      setUpcomingMatches(prev =>
+        patchMatchCollection(prev, nextRow)
+          .filter(m => isUpcomingStatus(normalizeMatchStatus(m.status)))
+      )
       setMyFeedMatches(prev => {
-        const patched = patchMatchCollection(prev, nextRow).filter(match => {
-          const status = normalizeMatchStatus(match.status)
-          return status === 'running' || isUpcomingStatus(status)
+        const patched = patchMatchCollection(prev, nextRow).filter(m => {
+          const s = normalizeMatchStatus(m.status)
+          return s === 'running' || isUpcomingStatus(s)
         })
-        setLiveFavCount(patched.filter(match => normalizeMatchStatus(match.status) === 'running').length)
+        setLiveFavCount(patched.filter(m => normalizeMatchStatus(m.status) === 'running').length)
         return patched
       })
     })
@@ -2183,7 +2416,7 @@ export default function Dashboard() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               {myFeedMatches.slice(0, 8).map(m => (
-                <UpcomingRow key={m.id} match={m} onMatchClick={handleMatchOpen} />
+                <UpcomingRow key={m.id} match={m} onMatchClick={handleMatchOpen} teamForms={teamFormMap} />
               ))}
             </div>
           )}
@@ -2366,62 +2599,185 @@ export default function Dashboard() {
                 onMatchClick={handleMatchOpen}
                 favs={followedTeamIds}
                 onToggleFav={handleToggleFav}
+                teamForms={teamFormMap}
               />
             ))}
           </div>
         )}
       </div>
 
-      {/* ── Bugünün Maçları ──────────────────────────────────────────────── */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: '#4CAF50', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-            ⏳ Upcoming
-          </span>
-          {!loading && (
-            <span style={{ padding: '1px 7px', borderRadius: 8, background: 'rgba(76,175,80,.15)', color: '#4CAF50', fontSize: 10, fontWeight: 700 }}>
-              {upcomingMatches.length}
-            </span>
-          )}
-          <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(76,175,80,.3),transparent)' }} />
-          <Link
-            to="/matches"
-            style={{ fontSize: 10, color: '#383838', textDecoration: 'none', transition: 'color .15s' }}
-            onMouseEnter={e => e.currentTarget.style.color = '#888'}
-            onMouseLeave={e => e.currentTarget.style.color = '#383838'}
-          >Tümü →</Link>
-        </div>
+      {/* ── Maç Programı ─────────────────────────────────────────────────── */}
+      {(() => {
+        const now = new Date()
+        const todayStr = now.toDateString()
+        const tomorrowStr = new Date(now.getTime() + 86400000).toDateString()
 
-        {loading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {[1,2,3,4,5].map(i => <Sk key={i} h="40px" r="12px" />)}
-          </div>
-        ) : upcomingMatches.length === 0 ? (
-          <div style={{ padding: '16px', borderRadius: 14, background: '#0e0e0e', border: '1px solid #181818', textAlign: 'center', fontSize: 11, color: '#2a2a2a' }}>
-            Yaklaşan maç bulunamadı
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            {upcomingMatches.slice(0, 14).map(m => (
-              <UpcomingRow key={m.id} match={m} onMatchClick={handleMatchOpen} />
-            ))}
-            {upcomingMatches.length > 14 && (
+        // Live maçlar zaten yukarıda gösteriliyor — burada yalnızca non-live
+        // Ayrıca: scheduled_at geçmiş ama hâlâ not_started olanlar stale veri (sync gecikmesi)
+        const staleThreshold = now.getTime() - 20 * 60 * 1000   // 20 dk önce başlamış ama güncellenmemiş
+        const scheduled = upcomingMatches.filter(m =>
+          m.status !== 'running' &&
+          (!m.scheduled_at || new Date(m.scheduled_at).getTime() >= staleThreshold)
+        )
+        const stale = upcomingMatches.filter(m =>
+          m.status !== 'running' &&
+          m.scheduled_at && new Date(m.scheduled_at).getTime() < staleThreshold
+        )
+
+        // Tarihe göre grupla
+        const groups = []
+        const seen = new Map()
+        for (const m of scheduled) {
+          const d = m.scheduled_at ? new Date(m.scheduled_at) : null
+          const key = d ? d.toDateString() : '__unknown'
+          if (!seen.has(key)) {
+            seen.set(key, groups.length)
+            let label
+            if      (key === todayStr)    label = 'Bugün'
+            else if (key === tomorrowStr) label = 'Yarın'
+            else if (d) label = d.toLocaleDateString('tr-TR', { weekday: 'short', day: 'numeric', month: 'short' })
+            else         label = '—'
+            groups.push({ key, label, matches: [] })
+          }
+          groups[seen.get(key)].matches.push(m)
+        }
+
+        return (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: '#4CAF50', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
+                📅 Maç Programı
+              </span>
+              {!loading && scheduled.length > 0 && (
+                <span style={{ padding: '1px 7px', borderRadius: 8, background: 'rgba(76,175,80,.15)', color: '#4CAF50', fontSize: 10, fontWeight: 700 }}>
+                  {scheduled.length}
+                </span>
+              )}
+              <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(76,175,80,.3),transparent)' }} />
               <Link
                 to="/matches"
-                style={{
-                  display: 'block', textAlign: 'center', padding: '9px',
-                  borderRadius: 10, background: '#0a0a0a', border: '1px solid #181818',
-                  fontSize: 10, color: '#383838', textDecoration: 'none', transition: 'all .15s',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#888' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = '#181818'; e.currentTarget.style.color = '#383838' }}
-              >
-                +{upcomingMatches.length - 14} maç daha →
-              </Link>
+                style={{ fontSize: 10, color: '#383838', textDecoration: 'none', transition: 'color .15s' }}
+                onMouseEnter={e => e.currentTarget.style.color = '#888'}
+                onMouseLeave={e => e.currentTarget.style.color = '#383838'}
+              >Tümü →</Link>
+            </div>
+
+            {loading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {[1,2,3,4,5].map(i => <Sk key={i} h="40px" r="12px" />)}
+              </div>
+            ) : groups.length === 0 ? (
+              <div style={{ padding: '16px', borderRadius: 14, background: '#0e0e0e', border: '1px solid #181818', textAlign: 'center', fontSize: 11, color: '#2a2a2a' }}>
+                Yaklaşan maç bulunamadı
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                {groups.map((g, gi) => (
+                  <div key={g.key}>
+                    {/* Gün ayırıcı */}
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      marginTop: gi > 0 ? 14 : 0, marginBottom: 6,
+                    }}>
+                      <span style={{
+                        fontSize: 9, fontWeight: 900, letterSpacing: '.8px',
+                        textTransform: 'uppercase', color: g.key === todayStr ? '#4CAF50' : '#333',
+                        background: g.key === todayStr ? 'rgba(76,175,80,.1)' : 'transparent',
+                        border: g.key === todayStr ? '1px solid rgba(76,175,80,.25)' : '1px solid transparent',
+                        padding: '2px 8px', borderRadius: 6, flexShrink: 0,
+                      }}>
+                        {g.label}
+                      </span>
+                      <div style={{ flex: 1, height: 1, background: g.key === todayStr ? 'rgba(76,175,80,.15)' : '#181818' }} />
+                      <span style={{ fontSize: 9, color: '#2a2a2a', flexShrink: 0 }}>{g.matches.length} maç</span>
+                    </div>
+
+                    {(() => {
+                      const isExpanded = expandedScheduleGroups.has(g.key)
+                      const defaultLimit = gi === 0 ? 8 : 4
+                      const visible = isExpanded ? g.matches : g.matches.slice(0, defaultLimit)
+                      const hidden  = g.matches.length - defaultLimit
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {visible.map(m => (
+                            <UpcomingRow key={m.id} match={m} onMatchClick={handleMatchOpen} teamForms={teamFormMap} />
+                          ))}
+                          {!isExpanded && hidden > 0 && (
+                            <button
+                              onClick={() => setExpandedScheduleGroups(prev => new Set([...prev, g.key]))}
+                              style={{
+                                background: 'none', border: '1px solid #1e1e1e', borderRadius: 8,
+                                color: '#3a3a3a', fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                                padding: '7px 0', width: '100%', transition: 'all .15s',
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#888' }}
+                              onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e1e1e'; e.currentTarget.style.color = '#3a3a3a' }}
+                            >
+                              +{hidden} maç daha göster
+                            </button>
+                          )}
+                          {isExpanded && g.matches.length > defaultLimit && (
+                            <button
+                              onClick={() => setExpandedScheduleGroups(prev => { const s = new Set(prev); s.delete(g.key); return s })}
+                              style={{
+                                background: 'none', border: '1px solid #1e1e1e', borderRadius: 8,
+                                color: '#3a3a3a', fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                                padding: '7px 0', width: '100%', transition: 'all .15s',
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#888' }}
+                              onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e1e1e'; e.currentTarget.style.color = '#3a3a3a' }}
+                            >
+                              Daralt ↑
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })()}
+                  </div>
+                ))}
+
+                {scheduled.length > 0 && (
+                  <Link
+                    to="/matches"
+                    style={{
+                      display: 'block', textAlign: 'center', padding: '9px',
+                      borderRadius: 10, background: '#0a0a0a', border: '1px solid #181818',
+                      fontSize: 10, color: '#383838', textDecoration: 'none',
+                      transition: 'all .15s', marginTop: 10,
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#888' }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = '#181818'; e.currentTarget.style.color = '#383838' }}
+                  >
+                    Tüm program →
+                  </Link>
+                )}
+
+                {/* Stale maçlar — başlamış olabilir ama DB henüz güncellenemedi */}
+                {stale.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <span style={{
+                        fontSize: 9, fontWeight: 800, letterSpacing: '.6px', textTransform: 'uppercase',
+                        color: '#3a3a3a', padding: '2px 8px', borderRadius: 6,
+                        border: '1px solid #222',
+                      }}>
+                        ⟳ Sonuç Bekleniyor
+                      </span>
+                      <div style={{ flex: 1, height: 1, background: '#181818' }} />
+                      <span style={{ fontSize: 9, color: '#252525' }}>veri gecikmesi</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, opacity: 0.45 }}>
+                      {stale.map(m => (
+                        <UpcomingRow key={m.id} match={m} onMatchClick={handleMatchOpen} teamForms={teamFormMap} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
+        )
+      })()}
 
       {/* ── Hızlı Linkler — 4 Bento tile ────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,minmax(0,1fr))' : 'repeat(4,1fr)', gap: 10 }}>

@@ -258,29 +258,38 @@ export default function NewsDetailPage() {
   const [forumComingSoon, setForumComingSoon] = useState(false)
   const [votesFallback, setVotesFallback] = useState(false)
   const [votePulse, setVotePulse] = useState({ commentId: null, direction: 0, token: 0 })
+  const [sortMode, setSortMode] = useState('best')
   const canInteract = !!user?.id
   const [techMetricsOpen, setTechMetricsOpen] = useState(false)
 
   const rankedComments = useMemo(() => {
     const list = [...comments]
-    list.sort((left, right) => {
-      const lVotes = votesByComment[left.id] || { up: 0, down: 0 }
-      const rVotes = votesByComment[right.id] || { up: 0, down: 0 }
+    if (sortMode === 'newest') {
+      list.sort((left, right) => {
+        const lTs = new Date(left.created_at || 0).getTime()
+        const rTs = new Date(right.created_at || 0).getTime()
+        return rTs - lTs
+      })
+    } else {
+      list.sort((left, right) => {
+        const lVotes = votesByComment[left.id] || { up: 0, down: 0 }
+        const rVotes = votesByComment[right.id] || { up: 0, down: 0 }
 
-      const lScore = commentScore(lVotes)
-      const rScore = commentScore(rVotes)
-      if (rScore !== lScore) return rScore - lScore
+        const lScore = commentScore(lVotes)
+        const rScore = commentScore(rVotes)
+        if (rScore !== lScore) return rScore - lScore
 
-      const lTotal = Number(lVotes.up || 0) + Number(lVotes.down || 0)
-      const rTotal = Number(rVotes.up || 0) + Number(rVotes.down || 0)
-      if (rTotal !== lTotal) return rTotal - lTotal
+        const lTotal = Number(lVotes.up || 0) + Number(lVotes.down || 0)
+        const rTotal = Number(rVotes.up || 0) + Number(rVotes.down || 0)
+        if (rTotal !== lTotal) return rTotal - lTotal
 
-      const lTs = new Date(left.created_at || 0).getTime()
-      const rTs = new Date(right.created_at || 0).getTime()
-      return rTs - lTs
-    })
+        const lTs = new Date(left.created_at || 0).getTime()
+        const rTs = new Date(right.created_at || 0).getTime()
+        return rTs - lTs
+      })
+    }
     return list
-  }, [comments, votesByComment])
+  }, [comments, votesByComment, sortMode])
 
   const topCommentId = rankedComments[0]?.id || null
 
@@ -375,7 +384,7 @@ export default function NewsDetailPage() {
       if (authorIds.length) {
         const { data: profileRows, error: profileError } = await supabase
           .from('profiles')
-          .select('id,username,scout_score')
+          .select('id,username,scout_score,avatar_url')
           .in('id', authorIds)
 
         if (!profileError) {
@@ -392,6 +401,7 @@ export default function NewsDetailPage() {
           ...row,
           author: authorProfile?.username || fallbackName,
           authorScoutScore: normalizeScoutScore(authorProfile?.scout_score ?? fallbackScore),
+          authorAvatarUrl: authorProfile?.avatar_url ?? null,
         }
       })
 
@@ -700,6 +710,23 @@ export default function NewsDetailPage() {
     }
   }
 
+  async function deleteComment(commentId) {
+    if (!user?.id || !commentId) return
+    setComments(prev => prev.filter(c => String(c.id) !== String(commentId)))
+    try {
+      const { error: deleteErr } = await supabase
+        .from('news_comments')
+        .delete()
+        .eq('id', commentId)
+        .eq('user_id', user.id)
+      if (deleteErr) throw deleteErr
+    } catch (err) {
+      console.error('deleteComment error:', err?.message || err)
+      setCommentWarning('Yorum silinemedi.')
+      if (story?.id) await loadForum(story.id)
+    }
+  }
+
   async function reportStoryIssue(currentStory) {
     if (!currentStory) return
     const payload = {
@@ -909,10 +936,28 @@ export default function NewsDetailPage() {
 
         <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid #1f1f1f', background: '#0f0f0f', padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
-            <div style={{ fontSize: 11, color: '#f4f4f4', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800 }}>
-              Forum
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ fontSize: 11, color: '#f4f4f4', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800 }}>
+                Forum
+              </div>
+              <div style={{ fontSize: 12, color: '#8f8f8f' }}>{comments.length} yorum</div>
             </div>
-            <div style={{ fontSize: 12, color: '#8f8f8f' }}>Yorum: {comments.length}</div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {[{ key: 'best', label: 'En İyi' }, { key: 'newest', label: 'En Yeni' }].map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setSortMode(key)}
+                  style={{
+                    fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 999,
+                    border: sortMode === key ? '1px solid #FF4655' : '1px solid #2d2d2d',
+                    background: sortMode === key ? 'rgba(255,70,85,.12)' : 'transparent',
+                    color: sortMode === key ? '#FF4655' : '#666',
+                    cursor: 'pointer', letterSpacing: '.3px',
+                  }}
+                >{label}</button>
+              ))}
+            </div>
           </div>
 
           {commentWarning && !forumComingSoon && (
@@ -944,7 +989,10 @@ export default function NewsDetailPage() {
                 rows={3}
                 style={{ resize: 'vertical', minHeight: 86, borderRadius: 10, border: '1px solid #2a2a2a', background: '#121212', color: '#e5e5e5', padding: '10px 12px', fontSize: 13 }}
               />
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 10, color: commentInput.length > 900 ? '#ff6b6b' : '#444' }}>
+                  {commentInput.length}/1000
+                </span>
                 <button
                   disabled={!commentInput.trim() || commentSubmitting}
                   style={{ border: '1px solid #3b3b3b', background: '#181818', color: '#f1f1f1', borderRadius: 8, padding: '8px 12px', fontSize: 12, cursor: 'pointer' }}
@@ -952,9 +1000,15 @@ export default function NewsDetailPage() {
                   {commentSubmitting ? 'Gonderiliyor...' : 'Yorumu Gonder'}
                 </button>
               </div>
-              <div style={{ fontSize: 11, color: '#8f8f8f' }}>
-                {canInteract ? 'Yorumun hesabinla paylasilir.' : 'Misafir olarak yorum yapiyorsun.'}
-              </div>
+              {canInteract
+                ? <div style={{ fontSize: 11, color: '#8f8f8f' }}>Yorumun hesabinla paylasilir.</div>
+                : <div style={{ fontSize: 11, color: '#8f8f8f' }}>
+                    Yorum yazmak icin{' '}
+                    <Link to="/login" style={{ color: '#FF4655', textDecoration: 'none', fontWeight: 600 }}>giris yap</Link>
+                    {' '}veya{' '}
+                    <Link to="/register" style={{ color: '#FF4655', textDecoration: 'none', fontWeight: 600 }}>kayit ol</Link>.
+                  </div>
+              }
             </form>
           )}
 
@@ -977,6 +1031,15 @@ export default function NewsDetailPage() {
                   <div key={comment.id} style={{ border: isTopComment ? '1px solid rgba(255,184,0,.42)' : '1px solid #242424', borderRadius: 12, background: isTopComment ? 'linear-gradient(145deg, rgba(255,184,0,.08), #111)' : '#111', padding: '10px 11px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flexWrap: 'wrap' }}>
+                        <InitialsImage
+                          src={comment.authorAvatarUrl}
+                          name={comment.author || 'Topluluk'}
+                          width={28}
+                          height={28}
+                          borderRadius="50%"
+                          objectFit="cover"
+                          textScale={0.38}
+                        />
                         <div style={{ fontSize: 12, color: '#d2d2d2', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{comment.author || 'Topluluk'}</div>
                         <ScoutRankBadge score={comment.authorScoutScore} />
                         {isTopComment && (
@@ -985,7 +1048,19 @@ export default function NewsDetailPage() {
                           </span>
                         )}
                       </div>
-                      <div style={{ fontSize: 11, color: '#777' }}>{fmtDate(comment.created_at)}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                        <div style={{ fontSize: 11, color: '#777' }}>{fmtDate(comment.created_at)}</div>
+                        {user?.id && comment.user_id === user.id && (
+                          <button
+                            type="button"
+                            onClick={() => deleteComment(comment.id)}
+                            title="Yorumu sil"
+                            style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 13, padding: '0 2px', lineHeight: 1, display: 'flex', alignItems: 'center' }}
+                            onMouseEnter={e => { e.currentTarget.style.color = '#ff6b6b' }}
+                            onMouseLeave={e => { e.currentTarget.style.color = '#555' }}
+                          >✕</button>
+                        )}
+                      </div>
                     </div>
                     <div style={{ fontSize: 13, lineHeight: 1.55, color: '#cdcdcd', marginBottom: 8 }}>{comment.comment_text}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

@@ -146,6 +146,11 @@ class PlayerStatsSyncer:
                     CREATE INDEX IF NOT EXISTS idx_player_match_stats_player_id
                     ON public.player_match_stats(player_id)
                 """)
+                # teams: roster senkronizasyon takibi için updated_at
+                cur.execute("""
+                    ALTER TABLE public.teams
+                      ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now()
+                """)
         logger.info("✅ Şema hazır")
 
     # ── Oyuncular ──────────────────────────────────────────────────────────────
@@ -153,34 +158,33 @@ class PlayerStatsSyncer:
     def sync_team_players(self, limit=50):
         """
         DB'deki takımlar için PandaScore /teams/{id} endpoint'ini çağırır.
-        Incremental: oyuncusu zaten yüklü takımları atlar.
+        Her çalışmada tüm takımların rosterını replace eder — transfer sonrası
+        eski oyuncular takımdan otomatik temizlenir.
+
+        Strateji:
+          1. Takımın mevcut oyuncularının team_pandascore_id'sini NULL yap
+          2. API'dan gelen güncel roster'ı upsert et
+          Bu sayede transfer olan oyuncular artık eski takımda görünmez.
 
         Args:
-            limit: Bir seferde işlenecek max takım sayısı
-
-        Returns:
-            int: Eklenen/güncellenen toplam oyuncu sayısı
+            limit: Bir seferde işlenecek max takım sayısı (en eski sync'lenenler önce)
         """
-        # Oyuncusu henüz yüklenmemiş takımları bul
         with Database.get_connection() as conn:
             with conn.cursor() as cur:
+                # En uzun süredir güncellenmemiş takımları önce işle
                 cur.execute("""
-                    SELECT t.id, t.name
-                    FROM teams t
-                    WHERE NOT EXISTS (
-                        SELECT 1 FROM players p
-                        WHERE p.team_pandascore_id = t.id
-                    )
-                    ORDER BY t.id
+                    SELECT id, name
+                    FROM teams
+                    ORDER BY updated_at ASC NULLS FIRST
                     LIMIT %s
                 """, (limit,))
                 teams = cur.fetchall()
 
         if not teams:
-            logger.info("✅ Tüm takımların oyuncuları zaten yüklü.")
+            logger.info("✅ Senkronize edilecek takım bulunamadı.")
             return 0
 
-        logger.info(f"👤 {len(teams)} takım için oyuncu verisi çekiliyor...")
+        logger.info(f"👤 {len(teams)} takım için roster güncelleniyor...")
         total_players = 0
         empty_teams   = 0
 
@@ -201,12 +205,23 @@ class PlayerStatsSyncer:
                     continue
 
                 api_players = resp.json().get('players', [])
-                if not api_players:
-                    empty_teams += 1
-                    continue
 
                 with Database.get_connection() as conn:
                     with conn.cursor() as cur:
+                        # Adım 1: Bu takımın tüm mevcut oyuncularını serbest bırak
+                        # (transfer etmiş oyuncular artık bu takımda görünmez)
+                        cur.execute("""
+                            UPDATE players
+                            SET team_pandascore_id = NULL
+                            WHERE team_pandascore_id = %s
+                        """, (team_id,))
+
+                        if not api_players:
+                            empty_teams += 1
+                            conn.commit()
+                            continue
+
+                        # Adım 2: Güncel roster'ı upsert et
                         for p in api_players:
                             parts     = [p.get('first_name', ''), p.get('last_name', '')]
                             real_name = ' '.join(x for x in parts if x).strip() or None
@@ -233,18 +248,24 @@ class PlayerStatsSyncer:
                                 p['id'],
                                 team_id,
                             ))
+
+                        # Adım 3: Takımın updated_at'ini güncelle (sıra takibi için)
+                        cur.execute("""
+                            UPDATE teams SET updated_at = now() WHERE id = %s
+                        """, (team_id,))
+
                     conn.commit()
 
                 total_players += len(api_players)
                 logger.info(f"  ✅ {team_name}: {len(api_players)} oyuncu")
-                time.sleep(0.1)   # Rate-limit koruması
+                time.sleep(0.15)  # Rate-limit koruması
 
             except Exception as e:
                 logger.warning(f"  ⚠️  {team_name}: {e}")
                 continue
 
-        logger.info(f"\n📊 Sonuç: {total_players} oyuncu eklendi/güncellendi"
-              f" | {empty_teams} boş takım atlandı")
+        logger.info(f"\n📊 Sonuç: {total_players} oyuncu güncellendi"
+              f" | {empty_teams} boş/silinmiş takım atlandı")
         return total_players
 
     # ── Maç İstatistikleri ────────────────────────────────────────────────────

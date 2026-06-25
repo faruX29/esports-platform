@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate }           from 'react-router-dom'
-import { supabase }                         from './supabaseClient'
-import { getRoleBadge }                     from './roleHelper'
-import { isTurkishTeam }                   from './constants'
-import { useUser }                          from './context/UserContext'
+import { supabase }                         from '../supabaseClient'
+import { getRoleBadge }                     from '../utils/roleHelper'
+import { isTurkishTeam }                   from '../constants'
+import { useUser }                          from '../context/UserContext'
+import InitialsImage                        from '../components/InitialsImage'
 
 // ── Yardımcılar ───────────────────────────────────────────────────────────────
 function calcTeamRating(wins, total) {
@@ -587,14 +588,13 @@ export default function TeamPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 24, mt: 8, marginTop: 24 }}>
           {/* Logo */}
           <div style={{ position: 'relative', flexShrink: 0 }}>
-            {team.logo_url
-              ? <img src={team.logo_url} alt={team.name} style={{ width: 100, height: 100, objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,.7))' }} />
-              : (
-                <div style={{ width: 100, height: 100, background: '#1e1e1e', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, border: '2px solid #2a2a2a' }}>
-                  🛡️
-                </div>
-              )
-            }
+            <InitialsImage
+              src={team.logo_url}
+              name={team.name}
+              width={100} height={100}
+              borderRadius={16}
+              imgStyle={{ objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,.7))' }}
+            />
             {isTR && (
               <span style={{ position: 'absolute', bottom: -2, right: -2, fontSize: 20 }}>🇹🇷</span>
             )}
@@ -712,6 +712,15 @@ export default function TeamPage() {
             </div>
           ) : (
             <div>
+              {players.length > 7 && (
+                <div style={{ marginBottom: 14, padding: '10px 14px', borderRadius: 10, background: 'rgba(255,184,0,.06)', border: '1px solid rgba(255,184,0,.2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>⚠️</span>
+                  <span style={{ fontSize: 11, color: '#999' }}>
+                    Bu kadroda {players.length} oyuncu görünüyor. Bazıları transfer olmuş ancak veri henüz güncellenmemiş olabilir. Backend&apos;den <code style={{ background: '#1a1a1a', padding: '1px 5px', borderRadius: 4, color: '#fbbf24' }}>sync_team_players</code> çalıştırıldığında roster otomatik düzelecek.
+                  </span>
+                </div>
+              )}
+
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 14 }}>
                 {players.map((p, i) => <PlayerCard key={p.id ?? i} player={p} />)}
               </div>

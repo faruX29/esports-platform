@@ -2,7 +2,7 @@
  * App.jsx — Router + Navbar + GameSelectorBar
  */
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
-import { GameProvider, useGame, GAMES } from './GameContext'
+import { GameProvider, useGame, GAMES } from './context/GameContext'
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
 import toast, { Toaster } from 'react-hot-toast'
 import { UserProvider } from './context/UserContext'
@@ -20,16 +20,16 @@ import {
 import ProtectedRoute from './components/ProtectedRoute'
 import NavbarComponent from './components/Navbar'
 
-const Dashboard = lazy(() => import('./Dashboard'))
-const Matches = lazy(() => import('./Matches'))
-const MatchDetailPage = lazy(() => import('./MatchDetailPage'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Matches = lazy(() => import('./pages/Matches'))
+const MatchDetailPage = lazy(() => import('./pages/MatchDetailPage'))
 const RankingsPage = lazy(() => import('./pages/RankingsPage'))
-const TeamPage = lazy(() => import('./TeamPage'))
-const TournamentPage = lazy(() => import('./TournamentPage'))
+const TeamPage = lazy(() => import('./pages/TeamPage'))
+const TournamentPage = lazy(() => import('./pages/TournamentPage'))
 const PlayersPage = lazy(() => import('./pages/PlayersPage'))
-const PlayerPage = lazy(() => import('./PlayerPage'))
-const SearchPage = lazy(() => import('./SearchPage'))
-const ProfileSettings = lazy(() => import('./ProfileSettings'))
+const PlayerPage = lazy(() => import('./pages/PlayerPage'))
+const SearchPage = lazy(() => import('./pages/SearchPage'))
+const ProfileSettings = lazy(() => import('./pages/ProfileSettings'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const RegisterPage = lazy(() => import('./pages/RegisterPage'))
 const NewsPage = lazy(() => import('./pages/NewsPage'))

@@ -2,19 +2,11 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from './AuthContext'
 import BRANDING from '../branding.config'
+import { normalizeGameId } from '../utils/gameUtils'
 
 const STORAGE_KEY = BRANDING.followStateStorageKey
 
 const UserContext = createContext(null)
-
-function normalizeGameId(raw) {
-  const value = String(raw || '').trim().toLowerCase()
-  if (!value) return null
-  if (value === 'valorant') return 'valorant'
-  if (value === 'cs2' || value === 'csgo' || value.includes('counter') || value.includes('cs-go')) return 'cs2'
-  if (value === 'lol' || value.includes('league')) return 'lol'
-  return null
-}
 
 function uniqueCanonicalGames(gameList = []) {
   return [...new Set((gameList || []).map(normalizeGameId).filter(Boolean))]

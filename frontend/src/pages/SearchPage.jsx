@@ -10,10 +10,10 @@
  */
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useSearchParams }              from 'react-router-dom'
-import { supabase }                                  from './supabaseClient'
-import { getRoleBadge }                              from './roleHelper'
-import { isTurkishTeam }                             from './constants'
-import { GAMES }                                     from './GameContext'
+import { supabase }                                  from '../supabaseClient'
+import { getRoleBadge }                              from '../utils/roleHelper'
+import { isTurkishTeam }                             from '../constants'
+import { GAMES }                                     from '../context/GameContext'
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 

@@ -291,7 +291,7 @@ class PlayerStatsSyncer:
             VALUES (%s, %s, %s)
             ON CONFLICT (match_id, team_id)
               WHERE match_id IS NOT NULL AND team_id IS NOT NULL
-            DO NOTHING
+            DO UPDATE SET stats = EXCLUDED.stats
         """
 
         INSERT_PLAYER_STATS_SQL = """
@@ -326,17 +326,20 @@ class PlayerStatsSyncer:
 
         with Database.get_connection() as conn:
             with conn.cursor() as cur:
-                # 1) İşlenecek maçları çek
+                # 1) İşlenecek maçları çek — finished + running (canlı maçları da dahil et)
                 cur.execute("""
-                                        SELECT m.id, m.team_a_id, m.team_b_id, m.winner_id, m.scheduled_at, m.raw_data
+                    SELECT m.id, m.team_a_id, m.team_b_id, m.winner_id, m.scheduled_at, m.raw_data
                     FROM matches m
-                    WHERE m.status = 'finished'
+                    WHERE m.status IN ('finished', 'running')
                       AND m.raw_data IS NOT NULL
-                      AND NOT EXISTS (
-                          SELECT 1 FROM match_stats ms
-                          WHERE ms.match_id = m.id
+                      AND (
+                          m.status = 'running'   -- canlı maçları her zaman yenile
+                          OR NOT EXISTS (
+                              SELECT 1 FROM match_stats ms
+                              WHERE ms.match_id = m.id
+                          )
                       )
-                    ORDER BY m.id DESC
+                    ORDER BY m.status DESC, m.id DESC
                     LIMIT %s
                 """, (limit,))
                 matches = cur.fetchall()
@@ -368,25 +371,53 @@ class PlayerStatsSyncer:
                         results = raw_data.get('results', [])
                         games   = raw_data.get('games',   [])
 
-                        if not results or not (team_a_id or team_b_id):
+                        if not (team_a_id or team_b_id):
                             skipped += 1
                             continue
 
                         score_map = {
                             r['team_id']: r['score']
-                            for r in results
+                            for r in (results or [])
                             if r.get('team_id') is not None
                         }
 
-                        games_detail = [
-                            {
+                        games_detail = []
+                        for g in (games or []):
+                            # Harita başına oyuncu KDA'ları
+                            game_players = []
+                            for team_entry in (g.get('teams') or []):
+                                t_obj = team_entry.get('team') or {}
+                                t_id  = t_obj.get('id')
+                                t_score = team_entry.get('score')
+                                for p_entry in (team_entry.get('players') or []):
+                                    p_obj = p_entry.get('player') or {}
+                                    game_players.append({
+                                        'player_id':   p_obj.get('id'),
+                                        'player_name': p_obj.get('name') or p_obj.get('nickname'),
+                                        'team_id':     t_id,
+                                        'kills':       p_entry.get('kills'),
+                                        'deaths':      p_entry.get('deaths'),
+                                        'assists':     p_entry.get('assists'),
+                                        'headshots':   p_entry.get('headshots'),
+                                        'team_score':  t_score,
+                                    })
+
+                            # Harita başına takım skorları {team_id: score}
+                            game_team_scores = {
+                                (te.get('team') or {}).get('id'): te.get('score')
+                                for te in (g.get('teams') or [])
+                                if (te.get('team') or {}).get('id') is not None
+                            }
+
+                            games_detail.append({
                                 'position':       g.get('position'),
+                                'map_name':       (g.get('map') or {}).get('name'),
                                 'winner_id':      (g.get('winner') or {}).get('id'),
                                 'length_seconds': g.get('length'),
                                 'status':         g.get('status'),
-                            }
-                            for g in games
-                        ]
+                                'team_scores':    game_team_scores,
+                                'players':        game_players,
+                            })
 
                         for tid in [team_a_id, team_b_id]:
                             if not tid:

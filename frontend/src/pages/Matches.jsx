@@ -93,15 +93,38 @@ function buildMapBreakdown(statsRows, teamAId, teamBId, teamAName, teamBName) {
   const anyRow = (statsRows || []).find(r => Array.isArray(r?.stats?.games_detail) && r.stats.games_detail.length > 0)
   if (!anyRow) return []
   return (anyRow.stats.games_detail || [])
-    .filter(g => g.winner_id != null)
-    .map(g => ({
-      position:    g.position ?? 0,
-      teamAWon:    Number(g.winner_id) === Number(teamAId),
-      teamBWon:    Number(g.winner_id) === Number(teamBId),
-      winnerName:  Number(g.winner_id) === Number(teamAId) ? teamAName
-                 : Number(g.winner_id) === Number(teamBId) ? teamBName : '—',
-      duration:    fmtMapDuration(g.length_seconds),
-    }))
+    .filter(g => g.winner_id != null || g.status === 'running')
+    .map(g => {
+      const ts = g.team_scores || {}
+      const aScore = ts[String(teamAId)] ?? ts[Number(teamAId)] ?? null
+      const bScore = ts[String(teamBId)] ?? ts[Number(teamBId)] ?? null
+      const isLive = g.status === 'running'
+
+      // Oyuncu KDA'larını takıma göre ayır
+      const players = (g.players || []).map(p => ({
+        name:      p.player_name || '?',
+        teamId:    Number(p.team_id),
+        kills:     p.kills ?? 0,
+        deaths:    p.deaths ?? 0,
+        assists:   p.assists ?? 0,
+        headshots: p.headshots ?? null,
+      })).sort((a, b) => b.kills - a.kills)
+
+      return {
+        position:   g.position ?? 0,
+        mapName:    g.map_name || null,
+        teamAWon:   !isLive && Number(g.winner_id) === Number(teamAId),
+        teamBWon:   !isLive && Number(g.winner_id) === Number(teamBId),
+        winnerName: isLive ? null
+                  : Number(g.winner_id) === Number(teamAId) ? teamAName
+                  : Number(g.winner_id) === Number(teamBId) ? teamBName : '—',
+        duration:   fmtMapDuration(g.length_seconds),
+        teamAScore: aScore,
+        teamBScore: bScore,
+        isLive,
+        players,
+      }
+    })
     .sort((a, b) => a.position - b.position)
 }
 
@@ -964,27 +987,68 @@ function Matches() {
                 <div style={{ color: '#888', fontSize: 13, fontWeight: 'bold', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '1px' }}>
                   🗺️ Map Breakdown — {getBOFormat(selectedMatch?.team_a_score, selectedMatch?.team_b_score, selectedMatch?.number_of_games) || 'Series'}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {mapBreakdown.map((g, idx) => (
-                    <div key={idx} style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '8px 12px', borderRadius: 9,
-                      background: g.teamAWon ? 'rgba(76,175,80,.08)' : g.teamBWon ? 'rgba(255,70,85,.08)' : '#0d0d0d',
-                      border: g.teamAWon ? '1px solid rgba(76,175,80,.25)' : g.teamBWon ? '1px solid rgba(255,70,85,.2)' : '1px solid #1e1e1e',
-                    }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#555', minWidth: 48 }}>
-                        MAP {g.position}
-                      </span>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: g.teamAWon ? '#4CAF50' : g.teamBWon ? '#ff7683' : '#888', flex: 1, textAlign: 'center' }}>
-                        {g.winnerName} kazandı
-                      </span>
-                      {g.duration && (
-                        <span style={{ fontSize: 11, color: '#444', minWidth: 48, textAlign: 'right' }}>
-                          {g.duration}
-                        </span>
-                      )}
-                    </div>
-                  ))}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {mapBreakdown.map((g, idx) => {
+                    const aPlayers = g.players.filter(p => p.teamId === Number(selectedMatch.team_a_id || selectedMatch.team_a?.id))
+                    const bPlayers = g.players.filter(p => p.teamId === Number(selectedMatch.team_b_id || selectedMatch.team_b?.id))
+                    const hasPlayers = aPlayers.length > 0 || bPlayers.length > 0
+
+                    return (
+                      <div key={idx} style={{
+                        borderRadius: 10,
+                        background: g.teamAWon ? 'rgba(76,175,80,.06)' : g.teamBWon ? 'rgba(255,70,85,.06)' : g.isLive ? 'rgba(255,184,0,.06)' : '#0d0d0d',
+                        border: g.teamAWon ? '1px solid rgba(76,175,80,.2)' : g.teamBWon ? '1px solid rgba(255,70,85,.18)' : g.isLive ? '1px solid rgba(255,184,0,.35)' : '1px solid #1e1e1e',
+                        overflow: 'hidden',
+                      }}>
+                        {/* Harita başlık satırı */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px' }}>
+                          <span style={{ fontSize: 10, fontWeight: 800, color: '#444', flexShrink: 0 }}>
+                            {g.mapName ? g.mapName.toUpperCase() : `MAP ${g.position}`}
+                          </span>
+                          {g.isLive && (
+                            <span style={{ fontSize: 9, fontWeight: 800, color: '#FFB800', background: 'rgba(255,184,0,.12)', border: '1px solid rgba(255,184,0,.3)', padding: '1px 6px', borderRadius: 4 }}>
+                              ● LIVE
+                            </span>
+                          )}
+                          {/* Tur skoru */}
+                          {(g.teamAScore != null || g.teamBScore != null) && (
+                            <span style={{ fontSize: 14, fontWeight: 900, color: g.teamAWon ? '#4CAF50' : g.teamBWon ? '#ff7683' : '#ccc', flex: 1, textAlign: 'center', letterSpacing: '-0.5px' }}>
+                              {g.teamAScore ?? '?'} — {g.teamBScore ?? '?'}
+                            </span>
+                          )}
+                          {!g.isLive && g.winnerName && !(g.teamAScore != null) && (
+                            <span style={{ fontSize: 11, fontWeight: 700, color: g.teamAWon ? '#4CAF50' : '#ff7683', flex: 1, textAlign: 'center' }}>
+                              {g.winnerName} kazandı
+                            </span>
+                          )}
+                          {g.duration && (
+                            <span style={{ fontSize: 10, color: '#444', flexShrink: 0 }}>{g.duration}</span>
+                          )}
+                        </div>
+
+                        {/* Oyuncu KDA tablosu */}
+                        {hasPlayers && (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', borderTop: '1px solid #181818' }}>
+                            {[aPlayers, bPlayers].map((side, si) => (
+                              <div key={si} style={{ padding: '6px 10px' }}>
+                                {side.slice(0, 5).map((p, pi) => (
+                                  <div key={pi} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 0' }}>
+                                    <span style={{ fontSize: 10, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 90 }}>
+                                      {p.name}
+                                    </span>
+                                    <span style={{ fontSize: 10, fontWeight: 700, color: '#ccc', flexShrink: 0, letterSpacing: '.3px' }}>
+                                      {p.kills}/{p.deaths}/{p.assists}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ))}
+                            <div style={{ background: '#181818', width: 1 }} />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}

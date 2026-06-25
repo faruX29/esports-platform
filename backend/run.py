@@ -205,7 +205,13 @@ def main():
             for k in total_live:
                 total_live[k] += r.get(k, 0)
         logger.info(f"📡 Live sync done — synced {total_live['synced']} running matches")
-        return   # live sync sonrası dur, diğer adımları çalıştırma
+
+        # Canlı maç istatistiklerini de güncelle (harita/KDA/tur skoru)
+        ps = PlayerStatsSyncer()
+        ps.ensure_schema()
+        stats_count = ps.sync_match_stats(limit=50)
+        logger.info(f"📊 Live stats refreshed — {stats_count} matches processed")
+        return
 
     has_non_enrichment_work = any([
         args.predict,

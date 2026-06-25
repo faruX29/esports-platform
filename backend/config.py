@@ -16,6 +16,9 @@ class Config:
     # Liquipedia MediaWiki API
     LIQUIPEDIA_USER_AGENT = os.getenv('LIQUIPEDIA_USER_AGENT')
     LIQUIPEDIA_API_KEY = os.getenv('LIQUIPEDIA_API_KEY')
+
+    # Google Gemini — LLM News Generation
+    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
     
     # Database
     DATABASE_URL = os.getenv('DATABASE_URL')

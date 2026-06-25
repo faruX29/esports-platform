@@ -9,7 +9,8 @@ from utils.logger import setup_logging
 from etl.sync_matches import MatchSyncer
 from etl.predict import MatchPredictor
 from etl.sync_players import PlayerStatsSyncer
-from etl.adapters import LiquipediaAdapter
+from etl.adapters import LiquipediaAdapter, GeminiAdapter
+from etl.news_generator import NewsGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +150,18 @@ def main():
     )
 
     parser.add_argument(
+        '--generate-news',
+        action='store_true',
+        help='Son 24 saatte biten maçlar için LLM (Gemini) ile Türkçe haber makalesi üret',
+    )
+    parser.add_argument(
+        '--news-hours',
+        type=int,
+        default=24,
+        help='--generate-news için kaç saate kadar geriye bakılsın (varsayılan: 24)',
+    )
+
+    parser.add_argument(
         '--liquipedia-enrich',
         action='store_true',
         help='Liquipedia MediaWiki API ile Data Enrichment çalıştır',
@@ -188,6 +201,7 @@ def main():
         args.past,
         args.all_games,
         args.accuracy_check,
+        args.generate_news,
     ])
     should_sync_matches = not args.liquipedia_enrich or has_non_enrichment_work
 
@@ -322,6 +336,24 @@ def main():
             f"📊 Accuracy sonucu: {result['correct']}/{result['total']} "
             f"doğru → %{result['accuracy_pct']}"
         )
+
+    if args.generate_news:
+        logger.info("\n" + "=" * 60)
+        logger.info("📰 LLM NEWS GENERATION (Gemini)")
+        logger.info("=" * 60)
+        try:
+            llm = GeminiAdapter()
+            generator = NewsGenerator(llm)
+            result = generator.generate_pending(hours_back=args.news_hours)
+            logger.info(
+                f"✅ Haber üretimi tamamlandı — "
+                f"deneme: {result['attempted']} | "
+                f"yazıldı: {result['generated']} | "
+                f"hata: {result['failed']}"
+            )
+        except Exception as news_err:
+            logger.error(f"❌ Haber üretimi başlatılamadı: {news_err}")
+        logger.info("=" * 60)
 
     if args.liquipedia_enrich:
         logger.info("\n" + "=" * 60)

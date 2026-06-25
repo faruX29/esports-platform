@@ -2,9 +2,9 @@ name: Sync Esports Matches
 
 on:
   schedule:
-    # Her saat başı çalış (15 dakika yerine - daha az yük)
+    # Her saat başı çalış
     - cron: '0 * * * *'
-  
+
   # Manuel çalıştırma seçeneği
   workflow_dispatch:
     inputs:
@@ -17,7 +17,7 @@ on:
 # Concurrency: Aynı anda sadece 1 çalışsın
 concurrency:
   group: sync-matches
-  cancel-in-progress: false  # Eski işi iptal etme, bekle
+  cancel-in-progress: false
 
 jobs:
   match-sync:
@@ -37,23 +37,42 @@ jobs:
           test -f run.py
           test -f requirements.txt
 
-      - name: Set up Python
+      - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
 
       - name: Install dependencies
-        run: pip install -r requirements.txt --break-system-packages
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Validate config import
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python -c "from config import Config; print('✅ Config OK')"
 
       - name: Sync matches + predict + extract stats
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python run.py --all-games --limit 50 --predict --stats
+
+      - name: Generate AI news articles
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python run.py --generate-news --news-hours 2
 
       - name: Notify on failure
         if: failure()
-        run: echo "❌ Match sync failed! Check logs."
+        run: echo "❌ Match sync failed! Check logs above for the exact error."
 
   roster-sync:
     runs-on: ubuntu-latest
@@ -72,20 +91,31 @@ jobs:
           test -f run.py
           test -f requirements.txt
 
-      - name: Set up Python
+      - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
 
       - name: Install dependencies
-        run: pip install -r requirements.txt --break-system-packages
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Validate config import
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python -c "from config import Config; print('✅ Config OK')"
 
       - name: Sync active player rosters (incremental, son 90 gün)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          # Manuel tetiklemede force=true ise tüm kadroları yenile
           FORCE_FLAG=""
           if [ "${{ github.event.inputs.force_rosters }}" = "true" ]; then
             FORCE_FLAG="--roster-force"
@@ -94,4 +124,4 @@ jobs:
 
       - name: Notify on failure
         if: failure()
-        run: echo "❌ Roster sync failed! Check logs."
+        run: echo "❌ Roster sync failed! Check logs above for the exact error."

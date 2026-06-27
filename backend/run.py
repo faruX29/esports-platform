@@ -138,6 +138,12 @@ def main():
     )
 
     parser.add_argument(
+        '--fix-orphans',
+        action='store_true',
+        help='DB\'deki tüm running maçları PandaScore\'dan çek, final skor+status\'ü güncelle',
+    )
+
+    parser.add_argument(
         '--roster-flush',
         action='store_true',
         help='Roster Integrity Flush: kadroda olmayan oyuncuların team_id\'sini NULL yap',
@@ -205,6 +211,13 @@ def main():
             for k in total_live:
                 total_live[k] += r.get(k, 0)
         logger.info(f"📡 Live sync done — synced {total_live['synced']} running matches")
+
+        # --fix-orphans: tüm DB running maçları PandaScore'dan çek, final skor+status güncelle
+        if args.fix_orphans:
+            logger.info("\n🔍 Force orphan resolution (all games)...")
+            for game in ['valorant', 'csgo', 'lol']:
+                syncer._resolve_finished_matches(game, set())
+            logger.info("✅ Orphan resolution tamamlandı")
 
         # Canlı maç istatistiklerini de güncelle (harita/KDA/tur skoru)
         ps = PlayerStatsSyncer()
@@ -348,6 +361,13 @@ def main():
     if args.fix_stale:
         logger.info("\n🕒 Stale match cleanup...")
         syncer.mark_stale_matches_finished(hours_ago=args.stale_hours)
+
+    if args.fix_orphans:
+        logger.info("\n🔍 Orphan match resolution (all games)...")
+        for game in ['valorant', 'csgo', 'lol']:
+            # live_ids=set() → tüm DB running maçları orphan kabul edilir
+            syncer._resolve_finished_matches(game, set())
+        logger.info("✅ Orphan resolution tamamlandı")
 
     if args.accuracy_check:
         logger.info("\n" + "=" * 60)

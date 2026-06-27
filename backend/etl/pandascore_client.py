@@ -136,6 +136,25 @@ class PandaScoreClient:
             logger.error(f"❌ Running matches fetch failed for {game_slug}: {e}")
             return []
 
+    def get_match_by_id(self, match_id):
+        """Fetch a single match by ID — used to resolve final score after match leaves /running."""
+        url = f"{self.base_url}/matches/{match_id}"
+        params = {'token': self.api_token}
+        try:
+            response = requests.get(url, params=params, timeout=30)
+            if response.status_code == 404:
+                logger.warning(f"⚠️  Match {match_id} not found on PandaScore (404)")
+                return None
+            if response.status_code == 429:
+                logger.warning(f"⚠️  Rate limited fetching match {match_id}")
+                return None
+            response.raise_for_status()
+            data = response.json()
+            return data if isinstance(data, dict) else None
+        except requests.exceptions.RequestException as e:
+            logger.error(f"❌ get_match_by_id({match_id}) failed: {e}")
+            return None
+
     def get_past_matches(self, game_slug, limit=50, page=1):
         """
         Fetch past (finished) matches from PandaScore API

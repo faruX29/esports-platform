@@ -30,9 +30,9 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Sync running matches (all games)
+      - name: Sync running matches + resolve finished (all games)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python run.py --live --all-games --limit 20
+        run: python run.py --live --all-games --limit 20 --fix-orphans

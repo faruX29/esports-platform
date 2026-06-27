@@ -10,6 +10,7 @@ import { useGame, GAMES }                   from '../context/GameContext'
 import { getFavorites, addFavorite, removeFavorite, isFavorite } from '../utils/favoritesHelper'
 import { isTurkishTeam }                   from '../constants'
 import { normalizeGameId }                  from '../utils/gameUtils'
+import { getBOFormat }                       from '../utils/matchFormat'
 import InitialsImage                        from '../components/InitialsImage'
 
 const PAGE_SIZE = 50   // 20 → 50
@@ -70,18 +71,6 @@ function formatMatchTime(match, localeOptions) {
 }
 
 // number_of_games varsa önce onu kullan; yoksa skor heuristiği (finished)
-function getBOFormat(aScore, bScore, numberOfGames) {
-  const n = Number(numberOfGames)
-  if (n >= 5) return 'Bo5'
-  if (n >= 3) return 'Bo3'
-  if (n === 1) return 'Bo1'
-  const maxScore = Math.max(Number(aScore) || 0, Number(bScore) || 0)
-  if (maxScore >= 3) return 'Bo5'
-  if (maxScore >= 2) return 'Bo3'
-  if (maxScore === 1) return 'Bo1'
-  return null
-}
-
 function fmtMapDuration(seconds) {
   if (!seconds || seconds <= 0) return null
   const m = Math.floor(seconds / 60)

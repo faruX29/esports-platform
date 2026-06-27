@@ -13,6 +13,7 @@ import { useParams, useNavigate }                     from 'react-router-dom'
 import { supabase }                                   from '../supabaseClient'
 import { isTurkishTeam }                              from '../constants'
 import { cleanDisplayName }                           from '../utils/nameCleaner'
+import { getBOFormat }                                from '../utils/matchFormat'
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 
@@ -23,7 +24,6 @@ const TIER_META = {
   C: { color: '#818cf8', bg: 'rgba(129,140,248,.15)', border: 'rgba(129,140,248,.4)', label: 'C-Tier · Challenger'  },
 }
 
-const MVP_TOURNAMENT_RESCUE = false
 const TOURNAMENT_DEBUG = false
 
 function gameColor(name = '') {
@@ -1556,6 +1556,13 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
             {m.game?.name ?? ''}
           </span>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            {getBOFormat(m.team_a_score, m.team_b_score, m.number_of_games) && (
+              <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 8,
+                background: 'rgba(96,165,250,.12)', border: '1px solid rgba(96,165,250,.3)',
+                color: '#60a5fa', fontWeight: 700 }}>
+                {getBOFormat(m.team_a_score, m.team_b_score, m.number_of_games)}
+              </span>
+            )}
             {m.round_info && (
               <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 8,
                 background: `${gc}18`, border: `1px solid ${gc}44`, color: gc,
@@ -2020,8 +2027,8 @@ export default function TournamentPage() {
       {/* ══════════════ CONTENT ════════════════════════════════════ */}
       <div style={{ padding: '0 20px', animation: 'fadeUp .3s ease' }}>
 
-        {/* ── DEV: Manual View Override ─────────────────────────── */}
-        {!MVP_TOURNAMENT_RESCUE && <div style={{
+        {/* ── DEV: Manual View Override (yalnızca TOURNAMENT_DEBUG açıkken) ─── */}
+        {TOURNAMENT_DEBUG && <div style={{
           marginBottom: 16,
           display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
           background: '#0d0d0d', border: '1px solid #202020', borderRadius: 12,
@@ -2054,7 +2061,7 @@ export default function TournamentPage() {
         </div>}
 
         {/* ── STANDINGS (round-robin) ─────────────────────────────── */}
-        {!MVP_TOURNAMENT_RESCUE && format !== 'elimination' && pastMatches.length > 0 && (
+        {format !== 'elimination' && pastMatches.length > 0 && (
           <div style={{ marginBottom: 36 }}>
             <ST icon="📊" label="Puan Durumu" />
             <StandingsTable matches={pastMatches} navigate={navigate} />
@@ -2174,7 +2181,7 @@ export default function TournamentPage() {
         )}
 
         {/* ── NON-BRACKET STAGE LIST ───────────────────────────── */}
-        {!MVP_TOURNAMENT_RESCUE && effectiveViewMode === 'list' && matches.length > 0 && (
+        {effectiveViewMode === 'list' && matches.length > 0 && (
           <div style={{ marginBottom: 36 }}>
             <ST
               icon="📋"

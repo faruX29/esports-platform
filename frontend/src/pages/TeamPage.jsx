@@ -5,6 +5,7 @@ import { getRoleBadge }                     from '../utils/roleHelper'
 import { isTurkishTeam }                   from '../constants'
 import { useUser }                          from '../context/UserContext'
 import InitialsImage                        from '../components/InitialsImage'
+import { getBOFormat }                       from '../utils/matchFormat'
 
 // ── Yardımcılar ───────────────────────────────────────────────────────────────
 function calcTeamRating(wins, total) {
@@ -338,9 +339,16 @@ function MatchCard({ match, teamId, navigate }) {
     >
       {/* Top row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#444', letterSpacing: '.5px' }}>
-          {match.game?.name === 'Counter-Strike 2' ? 'CS2' : match.game?.name === 'League of Legends' ? 'LoL' : (match.game?.name ?? '?')}
-        </span>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#444', letterSpacing: '.5px' }}>
+            {match.game?.name === 'Counter-Strike 2' ? 'CS2' : match.game?.name === 'League of Legends' ? 'LoL' : (match.game?.name ?? '?')}
+          </span>
+          {getBOFormat(match.team_a_score, match.team_b_score, match.number_of_games) && (
+            <span style={{ fontSize: 9, fontWeight: 700, color: '#60a5fa', background: 'rgba(96,165,250,.12)', border: '1px solid rgba(96,165,250,.3)', borderRadius: 5, padding: '1px 6px' }}>
+              {getBOFormat(match.team_a_score, match.team_b_score, match.number_of_games)}
+            </span>
+          )}
+        </div>
 
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           {isLive && (
@@ -448,7 +456,7 @@ export default function TeamPage() {
         supabase.from('matches').select(`
           id, status, scheduled_at,
           team_a_id, team_b_id, winner_id,
-          team_a_score, team_b_score,
+          team_a_score, team_b_score, number_of_games,
           prediction_team_a, prediction_team_b, prediction_confidence,
           team_a:teams!matches_team_a_id_fkey(id, name, logo_url),
           team_b:teams!matches_team_b_id_fkey(id, name, logo_url),

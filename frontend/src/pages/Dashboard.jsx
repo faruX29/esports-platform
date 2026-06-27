@@ -15,9 +15,10 @@ import { calculatePredictionAccuracy, getMatchImpactLabel } from '../utils/accur
 import { memo }                             from 'react'
 import InitialsImage                        from '../components/InitialsImage'
 import { normalizeGameId }                  from '../utils/gameUtils'
+import { getBOFormat }                       from '../utils/matchFormat'
 
 const MVP_HIDE_DREAM_TEAM = true
-const MVP_HIDE_PREDICTIONS = true
+const MVP_HIDE_PREDICTIONS = false
 const DASHBOARD_TICKER_CACHE_KEY = 'dashboard_live_ticker_cache_v1'
 const DASHBOARD_NEWS_CACHE_KEY = 'dashboard_news_cache_v1'
 const DASHBOARD_CACHE_TTL_MS = 5 * 60 * 1000
@@ -143,18 +144,6 @@ function Sk({ w = '100%', h = '16px', r = '8px' }) {
 function fmtTime(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
-}
-
-function getBOFormat(aScore, bScore, numberOfGames) {
-  const n = Number(numberOfGames)
-  if (n >= 5) return 'Bo5'
-  if (n >= 3) return 'Bo3'
-  if (n === 1) return 'Bo1'
-  const maxScore = Math.max(Number(aScore) || 0, Number(bScore) || 0)
-  if (maxScore >= 3) return 'Bo5'
-  if (maxScore >= 2) return 'Bo3'
-  if (maxScore === 1) return 'Bo1'
-  return null
 }
 
 function normalizeMatchStatus(status) {

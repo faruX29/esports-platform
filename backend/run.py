@@ -9,7 +9,7 @@ from utils.logger import setup_logging
 from etl.sync_matches import MatchSyncer
 from etl.predict import MatchPredictor
 from etl.sync_players import PlayerStatsSyncer
-from etl.adapters import LiquipediaAdapter, GeminiAdapter
+from etl.adapters import LiquipediaAdapter, GeminiAdapter, HybridStatsBackfiller
 from etl.news_generator import NewsGenerator
 
 logger = logging.getLogger(__name__)
@@ -141,6 +141,18 @@ def main():
         '--fix-orphans',
         action='store_true',
         help='DB\'deki tüm running maçları PandaScore\'dan çek, final skor+status\'ü güncelle',
+    )
+
+    parser.add_argument(
+        '--hybrid-stats',
+        action='store_true',
+        help='PandaScore NULL bıraktığı harita/KDA verisini Hibrit Adapter (Liquipedia) ile doldur',
+    )
+    parser.add_argument(
+        '--hybrid-limit',
+        type=int,
+        default=50,
+        help='--hybrid-stats için bir seferde işlenecek max maç (varsayılan: 50)',
     )
 
     parser.add_argument(
@@ -361,6 +373,18 @@ def main():
     if args.fix_stale:
         logger.info("\n🕒 Stale match cleanup...")
         syncer.mark_stale_matches_finished(hours_ago=args.stale_hours)
+
+    if args.hybrid_stats:
+        logger.info("\n" + "=" * 60)
+        logger.info("🧩 HYBRID STATS BACKFILL (PandaScore NULL → Liquipedia)")
+        logger.info("=" * 60)
+        backfiller = HybridStatsBackfiller()
+        result = backfiller.backfill(limit=args.hybrid_limit)
+        logger.info(
+            f"📊 Hybrid stats: aday={result['candidates']} | "
+            f"zenginleştirildi={result['enriched']} | veri yok={result['skipped']}"
+        )
+        logger.info("=" * 60)
 
     if args.fix_orphans:
         logger.info("\n🔍 Orphan match resolution (all games)...")

@@ -1,6 +1,15 @@
 """Adapter package for external data sources and LLM providers."""
 
 from .base_adapter import BaseDataAdapter
+from .hybrid_stats_adapter import (
+	BaseMatchStatsSource,
+	HybridStatsBackfiller,
+	LiquipediaStatsSource,
+	MapStat,
+	MapStatsResult,
+	MatchContext,
+	PlayerStat,
+)
 from .liquipedia_adapter import LiquipediaAdapter
 from .llm_adapter import BaseLLMAdapter, GeminiAdapter, LLMAdapterError
 from .multi_source_aggregator import MultiSourceDataAggregator
@@ -10,6 +19,13 @@ from .transfer_adapter import BaseTransferAdapter, LiquipediaTransferAdapter, Tr
 
 __all__ = [
 	"BaseDataAdapter",
+	"BaseMatchStatsSource",
+	"HybridStatsBackfiller",
+	"LiquipediaStatsSource",
+	"MapStat",
+	"MapStatsResult",
+	"MatchContext",
+	"PlayerStat",
 	"LiquipediaAdapter",
 	"BaseLLMAdapter",
 	"GeminiAdapter",

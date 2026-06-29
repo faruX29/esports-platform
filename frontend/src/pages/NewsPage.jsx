@@ -17,7 +17,9 @@ import {
 import { isStoryForYou, prioritizeStoriesForYou } from '../utils/newsPersonalization'
 import InitialsImage from '../components/InitialsImage'
 import ShareButton from '../components/ShareButton'
+import SeoHead from '../components/SeoHead'
 import { cleanDisplayName } from '../utils/nameCleaner'
+import { buildNewsSlug } from '../utils/newsSlug'
 
 const GAME_FILTERS = GAMES.filter(game => !game.soon && game.id !== 'all' && ['valorant', 'cs2', 'lol'].includes(game.id))
 const CATEGORY_TABS = [
@@ -117,7 +119,7 @@ function NewsTrustLayer({ item, onReport }) {
     <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed #282828', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
       <span style={{ fontSize: 11, color: '#8f8f8f' }}>PandaScore verileriyle otomatik uretilmistir.</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-        <ShareButton path={`/news/${item.id}`} title={item.title} compact />
+        <ShareButton path={`/news/${buildNewsSlug(item)}`} title={item.title} compact />
         <button
           onClick={e => {
             e.stopPropagation()
@@ -582,7 +584,7 @@ export default function NewsPage() {
   }
 
   function openStoryDetail(item) {
-    navigate(`/news/${item.id}`, {
+    navigate(`/news/${buildNewsSlug(item)}`, {
       state: {
         story: item,
       },
@@ -591,6 +593,11 @@ export default function NewsPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#090909', color: '#f2f2f2' }}>
+      <SeoHead
+        title="Günün E-Spor Bülteni"
+        description="Tier öncelikli manşetler, skora dayalı sonuç haberleri ve yaklaşan haftanın maçları tek akışta — Valorant, CS2, LoL."
+        type="website"
+      />
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: isMobile ? '14px 10px 34px' : '22px 16px 48px' }}>
         <div style={{ borderRadius: 18, border: '1px solid #1f1f1f', overflow: 'hidden', marginBottom: 18, background: 'linear-gradient(180deg,#0b0b0b 0%,#111 100%)' }}>
           <div style={{ background: 'linear-gradient(90deg,#C8102E,#8c0e20 45%,#f4f4f4)', color: '#fff', fontSize: 11, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase', textAlign: 'center', padding: 8 }}>

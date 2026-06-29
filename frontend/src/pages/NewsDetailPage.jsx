@@ -17,7 +17,9 @@ import {
 } from '../utils/scoutRank'
 import InitialsImage from '../components/InitialsImage'
 import ShareButton from '../components/ShareButton'
+import SeoHead from '../components/SeoHead'
 import { cleanDisplayName } from '../utils/nameCleaner'
+import { buildNewsSlug, parseNewsId } from '../utils/newsSlug'
 
 function isMissingTableError(error, tableName) {
   const code = error?.code || ''
@@ -104,15 +106,7 @@ function fmtPct(val) {
   return `%${(n * 100).toFixed(1)}`
 }
 
-function parseMatchId(newsId) {
-  if (!newsId) return null
-  if (newsId.startsWith('match_')) {
-    const v = Number(newsId.replace('match_', ''))
-    return Number.isFinite(v) ? v : null
-  }
-  const v = Number(newsId)
-  return Number.isFinite(v) ? v : null
-}
+const parseMatchId = parseNewsId
 
 function commentScore(voteState) {
   const up = Number(voteState?.up || 0)
@@ -228,7 +222,7 @@ function TrustLayer({ story, onReport }) {
     <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed #2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
       <span style={{ fontSize: 12, color: '#9a9a9a' }}>PandaScore verileriyle otomatik uretilmistir.</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <ShareButton path={`/news/${story.id}`} title={story.title} />
+        <ShareButton path={`/news/${buildNewsSlug(story)}`} title={story.title} />
         <button
           onClick={() => onReport(story)}
           style={{ border: '1px solid #353535', background: '#121212', color: '#ddd', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer' }}
@@ -826,6 +820,12 @@ export default function NewsDetailPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#090909', color: '#f2f2f2' }}>
+      <SeoHead
+        title={story.title}
+        description={story.summary || story.heroScore || ''}
+        image={story.visuals?.teamA?.logo_url || story.visuals?.teamB?.logo_url || ''}
+        type="article"
+      />
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '22px 16px 48px' }}>
         <style>{`
           @keyframes voteUpPop {

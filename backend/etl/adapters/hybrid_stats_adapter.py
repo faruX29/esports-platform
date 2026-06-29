@@ -59,6 +59,8 @@ class PlayerStat:
     assists: Optional[float] = None
     headshots: Optional[float] = None
     hs_percentage: Optional[float] = None
+    # Kaynak-özel ek metrikler (acs, agent, rating vb.) → stats jsonb'ye yazılır.
+    extra: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -106,6 +108,139 @@ class BaseMatchStatsSource(ABC):
         Verilen maç için harita/KDA verisini döner.
         Veri bulunamazsa None döner (fallback chain bir sonraki kaynağa geçer).
         """
+
+
+# ── Liquipedia Wikitext kaynağı (API key GEREKTİRMEZ — birincil hat) ──────────
+
+class LiquipediaWikitextSource(BaseMatchStatsSource):
+    """
+    Liquipedia turnuva sayfasının wikitext'inden harita adı + skor + oyuncu KDA
+    çıkarır. action=parse/revisions standart MediaWiki'dir → API key GEREKTİRMEZ.
+
+    Cargo API key onayı beklenirken birincil (primary) kaynak budur. Key gelince
+    LiquipediaStatsSource (Cargo) öne alınabilir; bu kaynak yedek olarak kalır.
+
+    Veri zenginliği: Valorant {{Map}} şablonları oyuncu başına {{PSI|kills|deaths|
+    assists|acs|agent}} taşır → harita-bazlı KDA tam çıkar. Skorlar t*atk+t*def
+    toplamından hesaplanır.
+    """
+
+    source_name = "liquipedia_wikitext"
+
+    SUPPORTED_GAMES = {"valorant", "csgo", "cs2", "lol"}
+
+    MAX_TOURNAMENT_CANDIDATES = 2
+
+    def __init__(self) -> None:
+        self._services: Dict[str, Any] = {}
+
+    def supports_game(self, game_slug: str) -> bool:
+        return str(game_slug or "").strip().lower() in self.SUPPORTED_GAMES
+
+    def _service(self, game_slug: str):
+        from etl.liquipedia_service import LiquipediaService
+        slug = str(game_slug or "").strip().lower()
+        if slug not in self._services:
+            self._services[slug] = LiquipediaService(game_slug=slug)
+        return self._services[slug]
+
+    def fetch_map_stats(self, ctx: MatchContext) -> Optional[MapStatsResult]:
+        if not (ctx.team_a_name and ctx.team_b_name):
+            return None
+
+        tournament_names = ctx.tournament_candidates or (
+            [ctx.tournament_name] if ctx.tournament_name else []
+        )
+        if not tournament_names:
+            return None
+
+        rows: List[Dict[str, Any]] = []
+        service = self._service(ctx.game_slug)
+        for tour_name in tournament_names[:self.MAX_TOURNAMENT_CANDIDATES]:
+            try:
+                rows = service.get_match_maps_wikitext(
+                    tournament_name=tour_name,
+                    team_a=ctx.team_a_name,
+                    team_b=ctx.team_b_name,
+                )
+            except Exception as err:
+                logger.warning(
+                    "⚠️  Liquipedia wikitext hata (match %s, tour='%s'): %s",
+                    ctx.match_id, tour_name, err,
+                )
+                continue
+            if rows:
+                break
+
+        if not rows:
+            return None
+        return self._normalize(ctx, rows)
+
+    def _normalize(self, ctx: MatchContext, rows: List[Dict[str, Any]]) -> Optional[MapStatsResult]:
+        """Wikitext satırlarını MapStatsResult'a çevirir; team1/2 → team_a/b eşler."""
+        # team1 (Liquipedia opponent1) bizim team_a mı? İsim normalize karşılaştır.
+        first = rows[0]
+        team1_is_a = _names_match(first.get("team1_name"), ctx.team_a_name)
+
+        def team_id_for(team_no: int) -> Optional[int]:
+            is_a = (team_no == 1) == team1_is_a
+            return ctx.team_a_id if is_a else ctx.team_b_id
+
+        maps: List[MapStat] = []
+        # Oyuncuları maç bazında topla (player_match_stats: 1 satır/oyuncu/maç).
+        # Harita başına ayrıntı extra["maps"] içinde saklanır.
+        player_acc: Dict[str, Dict[str, Any]] = {}
+
+        for r in rows:
+            map_name = str(r.get("map") or "").strip()
+            t1, t2 = r.get("team1_score"), r.get("team2_score")
+            row_players = r.get("players") or []
+            # Oynanmamış harita (skor yok + oyuncu yok) → atla
+            if not map_name or (t1 is None and t2 is None and not row_players):
+                continue
+            maps.append(MapStat(
+                map_name=map_name,
+                team_a_id=ctx.team_a_id,
+                team_b_id=ctx.team_b_id,
+                team_a_score=t1 if team1_is_a else t2,
+                team_b_score=t2 if team1_is_a else t1,
+            ))
+            for p in row_players:
+                name = (p.get("player") or "").strip()
+                if not name:
+                    continue
+                acc = player_acc.setdefault(name, {
+                    "team_id": team_id_for(int(p.get("team") or 1)),
+                    "kills": 0, "deaths": 0, "assists": 0,
+                    "headshots": None, "maps": [],
+                })
+                acc["kills"] += p.get("kills") or 0
+                acc["deaths"] += p.get("deaths") or 0
+                acc["assists"] += p.get("assists") or 0
+                if p.get("headshots") is not None:
+                    acc["headshots"] = (acc["headshots"] or 0) + p["headshots"]
+                acc["maps"].append({
+                    "map": map_name,
+                    "acs": p.get("acs"),
+                    "agent": p.get("agent"),
+                })
+
+        if not maps:
+            return None
+
+        players = [
+            PlayerStat(
+                player_name=name,
+                team_id=acc["team_id"],
+                kills=acc["kills"],
+                deaths=acc["deaths"],
+                assists=acc["assists"],
+                headshots=acc["headshots"],
+                extra={"maps": acc["maps"]},
+            )
+            for name, acc in player_acc.items()
+        ]
+        return MapStatsResult(source=self.source_name, maps=maps, players=players)
 
 
 # ── Liquipedia Cargo kaynağı ──────────────────────────────────────────────────
@@ -211,7 +346,13 @@ class HybridStatsBackfiller:
 
     def __init__(self, sources: Optional[List[BaseMatchStatsSource]] = None) -> None:
         # Öncelik sırası listedeki sıradır (ilk dolu sonuç kazanır).
-        self.sources: List[BaseMatchStatsSource] = sources or [LiquipediaStatsSource()]
+        # Birincil: Wikitext (API key gerektirmez). Yedek: Cargo (key gelince
+        # öne alınabilir). Wikitext zaten oyuncu KDA'sı da verdiği için şu an
+        # daha zengin; Cargo onaylanınca iki kaynak birbirini tamamlar.
+        self.sources: List[BaseMatchStatsSource] = sources or [
+            LiquipediaWikitextSource(),
+            LiquipediaStatsSource(),
+        ]
 
     # ── 1) Eksik maç tespiti ──────────────────────────────────────────────────
 
@@ -384,7 +525,7 @@ class HybridStatsBackfiller:
                                 pid, ctx.match_id, ps.team_id,
                                 ps.kills, ps.deaths, ps.assists,
                                 ps.headshots, ps.hs_percentage,
-                                _json({'map_source': result.source}),
+                                _json({'map_source': result.source, **(ps.extra or {})}),
                                 ctx.scheduled_at,
                             ),
                         )
@@ -449,6 +590,15 @@ class HybridStatsBackfiller:
 def _normalize_name(name: Any) -> str:
     """Oyuncu nickname'ini eşleme için normalize eder."""
     return str(name or "").strip().lower()
+
+
+def _names_match(a: Any, b: Any) -> bool:
+    """İki takım adını normalize edip eşitlik/containment ile karşılaştırır."""
+    na = re.sub(r"[^a-z0-9]", "", str(a or "").casefold())
+    nb = re.sub(r"[^a-z0-9]", "", str(b or "").casefold())
+    if not na or not nb:
+        return False
+    return na == nb or na in nb or nb in na
 
 
 def _tournament_name_candidates(raw_data: Dict[str, Any], db_name: Optional[str]) -> List[str]:

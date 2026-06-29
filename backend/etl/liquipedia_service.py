@@ -39,6 +39,39 @@ class LiquipediaApiError(RuntimeError):
         self.params = params or {}
 
 
+def _norm_team(name: Any) -> str:
+    """Takım adını eşleştirme için normalize eder (alfanümerik, küçük harf)."""
+    return re.sub(r"[^a-z0-9]", "", str(name or "").casefold())
+
+
+def _team_in(target: str, candidates: set) -> bool:
+    """target, adaylardan biriyle eşit veya containment ilişkisindeyse True."""
+    if not target:
+        return False
+    for c in candidates:
+        if not c:
+            continue
+        if target == c or target in c or c in target:
+            return True
+    return False
+
+
+def _to_int(value: Any) -> int:
+    """Parse edilemeyen değerler için 0 döner (skor toplamı için)."""
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError):
+        return 0
+
+
+def _to_int_or_none(value: Any) -> Optional[int]:
+    """Parse edilemeyen değerler için None döner (KDA için)."""
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+
+
 class LiquipediaService:
     """Gateway for Liquipedia MediaWiki API.
 
@@ -594,6 +627,206 @@ class LiquipediaService:
         ], context=f"match_maps_games:{match_id}")
 
         return [{"source": "cargo", "match_id": match_id, **row} for row in game_rows]
+
+    # ── Wikitext tabanlı harita/KDA çıkarımı (API key GEREKTİRMEZ) ────────────
+    #
+    # Cargo için LIQUIPEDIA_API_KEY beklenirken kullanılacak birincil hat.
+    # action=parse/revisions standart MediaWiki'dir, key olmadan çalışır.
+    # Yapı (Valorant örneği):
+    #   {{Match
+    #     |opponent1={{TeamOpponent|Karmine Corp}}
+    #     |opponent2={{TeamOpponent|FunPlus Phoenix}}
+    #     |map1={{Map |t1p1={{PSI|player=..|kills=..|deaths=..|assists=..|acs=..}}
+    #               ... |map=Icebox|t1atk=6|t1def=7|t2atk=5|t2def=3|winner=1}}
+    #   }}
+
+    @staticmethod
+    def _extract_named_templates(text: str, name_prefix: str) -> List[str]:
+        """
+        Verilen isimle başlayan TÜM template bloklarını (iç içe olanlar dahil)
+        brace-dengeli olarak çıkarır. `_extract_templates` yalnızca top-level
+        bulur; bu metod nested {{Match}} / {{Map}} için gereklidir.
+        """
+        text = text or ""
+        out: List[str] = []
+        needle = "{{" + name_prefix
+        n = len(text)
+        i = 0
+        while True:
+            start = text.find(needle, i)
+            if start == -1:
+                break
+            # İsim sınırını doğrula: prefix'ten sonra harf gelmemeli
+            # (örn. "Map" ararken "MapVeto"yu kaçır).
+            after = start + len(needle)
+            if after < n and (text[after].isalpha()):
+                i = start + 2
+                continue
+            depth = 0
+            j = start
+            while j < n - 1:
+                pair = text[j:j + 2]
+                if pair == "{{":
+                    depth += 1
+                    j += 2
+                elif pair == "}}":
+                    depth -= 1
+                    j += 2
+                    if depth == 0:
+                        break
+                else:
+                    j += 1
+            if depth == 0:
+                out.append(text[start:j])
+                i = j
+            else:
+                break
+        return out
+
+    @staticmethod
+    def _split_params_brace_aware(block: str) -> Dict[str, str]:
+        """
+        Bir template bloğunun parametrelerini, nested {{...}} ve [[...]] içindeki
+        '|' karakterlerini yok sayarak ayrıştırır (depth-0 split).
+        """
+        inner = block[2:-2] if block.startswith("{{") and block.endswith("}}") else block
+        params: Dict[str, str] = {}
+        buf: List[str] = []
+        parts: List[str] = []
+        curly = 0
+        square = 0
+        i = 0
+        n = len(inner)
+        while i < n:
+            pair = inner[i:i + 2]
+            if pair == "{{":
+                curly += 1; buf.append(pair); i += 2; continue
+            if pair == "}}":
+                curly -= 1; buf.append(pair); i += 2; continue
+            if pair == "[[":
+                square += 1; buf.append(pair); i += 2; continue
+            if pair == "]]":
+                square -= 1; buf.append(pair); i += 2; continue
+            ch = inner[i]
+            if ch == "|" and curly == 0 and square == 0:
+                parts.append("".join(buf)); buf = []; i += 1; continue
+            buf.append(ch); i += 1
+        if buf:
+            parts.append("".join(buf))
+
+        # İlk parça template adıdır → atla
+        positional = 1
+        for part in parts[1:]:
+            chunk = part.strip()
+            if not chunk:
+                continue
+            if "=" in chunk:
+                key, value = chunk.split("=", 1)
+                params[key.strip()] = value.strip()
+            else:
+                params[f"_{positional}"] = chunk
+                positional += 1
+        return params
+
+    def get_match_maps_wikitext(
+        self,
+        tournament_name: str,
+        team_a: str,
+        team_b: str,
+        limit: int = 20,
+    ) -> List[Dict[str, Any]]:
+        """
+        Turnuva sayfasının wikitext'inden, team_a vs team_b maçının harita
+        bazlı verisini (harita adı + skor + oyuncu KDA) çıkarır.
+
+        API key GEREKTİRMEZ. Eşleşme bulunamazsa boş liste döner.
+
+        Returns:
+            list[dict]: her biri {map, winner, team1_score, team2_score,
+                        team1_name, team2_name, players[], source}
+        """
+        page_candidates = [tournament_name, tournament_name.replace(" ", "_")]
+        page_title, wikitext = self.get_page_wikitext(page_candidates)
+        if not wikitext:
+            searched = self.search_page_titles(tournament_name, limit=5)
+            if searched:
+                page_title, wikitext = self.get_page_wikitext(searched)
+        if not wikitext:
+            self._record_error("match_maps_wikitext", f"No wikitext for {tournament_name}")
+            return []
+
+        norm_a = _norm_team(team_a)
+        norm_b = _norm_team(team_b)
+
+        for match_block in self._extract_named_templates(wikitext, "Match"):
+            params = self._split_params_brace_aware(match_block)
+            opp1 = self._extract_opponent_name(params.get("opponent1", ""))
+            opp2 = self._extract_opponent_name(params.get("opponent2", ""))
+            if not (opp1 and opp2):
+                continue
+            n1, n2 = _norm_team(opp1), _norm_team(opp2)
+            pair = {n1, n2}
+            if not (_team_in(norm_a, pair) and _team_in(norm_b, pair)):
+                continue
+
+            # Eşleşen maç bulundu → haritaları çıkar
+            maps_out: List[Dict[str, Any]] = []
+            for map_block in self._extract_named_templates(match_block, "Map"):
+                mp = self._split_params_brace_aware(map_block)
+                map_name = (mp.get("map") or "").strip()
+                if not map_name:
+                    continue
+                t1 = _to_int(mp.get("t1atk")) + _to_int(mp.get("t1def"))
+                t2 = _to_int(mp.get("t2atk")) + _to_int(mp.get("t2def"))
+                players = self._extract_psi_players(map_block)
+                maps_out.append({
+                    "source": "wikitext",
+                    "page": page_title,
+                    "map": map_name,
+                    "winner": mp.get("winner"),
+                    "team1_name": opp1,
+                    "team2_name": opp2,
+                    "team1_score": t1 or None,
+                    "team2_score": t2 or None,
+                    "players": players,
+                })
+                if len(maps_out) >= limit:
+                    break
+            return maps_out
+
+        return []
+
+    @staticmethod
+    def _extract_opponent_name(opponent_param: str) -> str:
+        """{{TeamOpponent|Karmine Corp}} → 'Karmine Corp'."""
+        m = re.search(r"\{\{[^|}]*\|([^|}]+)", opponent_param or "")
+        return m.group(1).strip() if m else ""
+
+    def _extract_psi_players(self, map_block: str) -> List[Dict[str, Any]]:
+        """
+        Map bloğundaki {{PSI|player=..|kills=..|deaths=..|...}} şablonlarını
+        oyuncu listesine çevirir. t1p* → team 1, t2p* → team 2.
+        """
+        players: List[Dict[str, Any]] = []
+        # tX p Y = {{PSI ...}} eşlemesi için anahtar bazlı tarama
+        params = self._split_params_brace_aware(map_block)
+        for key, value in params.items():
+            m = re.match(r"^t([12])p\d+$", key)
+            if not m or "PSI" not in value:
+                continue
+            team_no = int(m.group(1))
+            psi = self._split_params_brace_aware(value)
+            players.append({
+                "player":    (psi.get("player") or "").strip(),
+                "team":      team_no,
+                "agent":     psi.get("agent"),
+                "kills":     _to_int_or_none(psi.get("kills")),
+                "deaths":    _to_int_or_none(psi.get("deaths")),
+                "assists":   _to_int_or_none(psi.get("assists")),
+                "acs":       _to_int_or_none(psi.get("acs")),
+                "headshots": _to_int_or_none(psi.get("headshots")),
+            })
+        return [p for p in players if p["player"]]
 
     def get_team_transfers(self, team_name: str) -> List[Dict[str, Any]]:
         safe_name = team_name.replace("'", "\\'")

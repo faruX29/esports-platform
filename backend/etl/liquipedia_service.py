@@ -523,6 +523,78 @@ class LiquipediaService:
             for row in template_rows
         ]
 
+    def get_match_maps(
+        self,
+        tournament_name: str,
+        team_a: str,
+        team_b: str,
+        limit: int = 20,
+    ) -> List[Dict[str, Any]]:
+        """
+        Bir maçın harita bazlı verisini (harita adı + tur skorları) Cargo'dan
+        çeker. İki adımlı: önce Match2'den MatchId, sonra Match2Games'ten
+        haritalar. Cargo erişilemezse (API key yoksa) boş liste döner.
+
+        NOT: cargoquery action'ı LIQUIPEDIA_API_KEY gerektirir. Key yoksa tüm
+        adaylar fail eder ve [] döner (sessiz fail değil — last_errors dolar).
+
+        Returns:
+            list[dict]: her biri {map, winner, opponent_scores, match_id, source}
+        """
+        safe_tour = tournament_name.replace("'", "\\'")
+        safe_a = team_a.replace("'", "\\'")
+        safe_b = team_b.replace("'", "\\'")
+
+        # ── Adım 1: MatchId'yi bul (her iki takım sıralaması için) ──
+        match_rows = self.run_candidates([
+            CargoCandidate(
+                tables="Match2",
+                fields="MatchId,Team1,Team2,DateTime_UTC",
+                where=(
+                    f"Tournament='{safe_tour}' AND "
+                    f"((Team1='{safe_a}' AND Team2='{safe_b}') OR "
+                    f"(Team1='{safe_b}' AND Team2='{safe_a}'))"
+                ),
+                order_by="DateTime_UTC DESC",
+                limit=5,
+            ),
+            CargoCandidate(
+                tables="Match2",
+                fields="MatchId,Team1,Team2,DateTime_UTC",
+                where=(
+                    f"Tournament LIKE '%{safe_tour}%' AND "
+                    f"((Team1 LIKE '%{safe_a}%' AND Team2 LIKE '%{safe_b}%') OR "
+                    f"(Team1 LIKE '%{safe_b}%' AND Team2 LIKE '%{safe_a}%'))"
+                ),
+                order_by="DateTime_UTC DESC",
+                limit=5,
+            ),
+        ], context=f"match_maps_lookup:{team_a} vs {team_b}")
+
+        match_ids = [r.get("MatchId") for r in match_rows if r.get("MatchId")]
+        if not match_ids:
+            return []
+
+        # ── Adım 2: Match2Games'ten harita verisini çek ──
+        match_id = match_ids[0]
+        safe_mid = str(match_id).replace("'", "\\'")
+        game_rows = self.run_candidates([
+            CargoCandidate(
+                tables="Match2Games",
+                fields="Map,Winner,OpponentScores,MatchId",
+                where=f"MatchId='{safe_mid}'",
+                limit=limit,
+            ),
+            CargoCandidate(
+                tables="Match2Games",
+                fields="Map,Winner,Scores,Match2Id",
+                where=f"Match2Id='{safe_mid}'",
+                limit=limit,
+            ),
+        ], context=f"match_maps_games:{match_id}")
+
+        return [{"source": "cargo", "match_id": match_id, **row} for row in game_rows]
+
     def get_team_transfers(self, team_name: str) -> List[Dict[str, Any]]:
         safe_name = team_name.replace("'", "\\'")
         return self.run_candidates([

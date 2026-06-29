@@ -17,14 +17,17 @@ Akış:
     3. _persist() → match_stats.games_detail + player_match_stats'e yazar,
        stats.map_source işaretiyle tekrar işlemeyi önler.
 
-Not: LiquipediaStatsSource.fetch_map_stats() şu an STUB'dur (None döner).
-Cargo sorgusu implemente edilince backfiller uçtan uca çalışır — detection
-ve persist katmanları tamamdır ve test edilebilir.
+⚠️ Liquipedia cargoquery action'ı LIQUIPEDIA_API_KEY gerektirir. Key yoksa
+Cargo sorguları fail eder, fetch_map_stats() None döner ve backfiller hiçbir
+maçı zenginleştiremez (sessiz fail değil — loglanır). Key set edilince
+(GitHub Actions secret) pipeline uçtan uca çalışır. Detection ve persist
+katmanları key'den bağımsız çalışır ve test edilebilir.
 """
 
 from __future__ import annotations
 
 import logging
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
@@ -80,6 +83,10 @@ class MatchContext:
     team_b_name: Optional[str]
     tournament_name: Optional[str]
     scheduled_at: Any
+    # Liquipedia eşleştirmesi için turnuva adı adayları (en iyi → en zayıf).
+    # DB'deki tournament.name çoğu zaman "Group Stage" gibi aşama adıdır;
+    # raw_data'daki league/serie isimleri çok daha eşleştirilebilir.
+    tournament_candidates: List[str] = field(default_factory=list)
 
 
 # ── Kaynak sözleşmesi ─────────────────────────────────────────────────────────
@@ -108,37 +115,90 @@ class LiquipediaStatsSource(BaseMatchStatsSource):
     Liquipedia MediaWiki Cargo API üzerinden harita/KDA verisi sağlar.
 
     Mevcut LiquipediaService altyapısını (rate-limit, pacing, cache) yeniden
-    kullanır. Liquipedia Cargo'da ilgili tablolar:
-      - MatchMaps / Matches : harita adı + tur skorları
-      - GameTables          : oyuncu bazlı KDA (oyuna göre değişir)
+    kullanır. Cargo tabloları:
+      - Match2      : maçı bul (Tournament + Team1/Team2)
+      - Match2Games : harita adı + tur skorları (OpponentScores)
 
-    DURUM: fetch_map_stats() henüz STUB'dur. Cargo sorgu tasarımı yapılınca
-    burada LiquipediaService.cargo_query(...) çağrısı + normalize mantığı yer
-    alacaktır.
+    ⚠️ AKTİVASYON: Liquipedia cargoquery action'ı LIQUIPEDIA_API_KEY gerektirir.
+    Key yoksa Cargo sorguları fail eder ve fetch_map_stats() None döner (fallback
+    chain devam eder). Key bir GitHub Actions secret'ı olarak set edilince
+    uçtan uca çalışır. Ücretsiz key: https://liquipedia.net/api-access
+
+    Oyuncu KDA: Cargo'da harita-bazlı oyuncu KDA tablosu oyuna göre çok değişken
+    ve güvenilmez; bu sürüm harita adı + skorlara odaklanır (yüksek güven),
+    players boş döner. KDA ileride ayrı bir candidate ile eklenebilir.
     """
 
     source_name = "liquipedia"
 
-    # Cargo veri kalitesi oyuna göre değişir; harita adı/skor her oyunda
-    # güçlü, oyuncu KDA özellikle Valorant/CS2'de kısmi.
+    # Cargo veri kalitesi oyuna göre değişir; harita adı/skor her oyunda güçlü.
     SUPPORTED_GAMES = {"valorant", "csgo", "cs2", "lol"}
+
+    def __init__(self) -> None:
+        # game_slug başına LiquipediaService cache'le (her oyun farklı wiki).
+        self._services: Dict[str, Any] = {}
 
     def supports_game(self, game_slug: str) -> bool:
         return str(game_slug or "").strip().lower() in self.SUPPORTED_GAMES
 
+    def _service(self, game_slug: str):
+        from etl.liquipedia_service import LiquipediaService
+        slug = str(game_slug or "").strip().lower()
+        if slug not in self._services:
+            self._services[slug] = LiquipediaService(game_slug=slug)
+        return self._services[slug]
+
+    # Maç başına denenecek max turnuva-adı adayı (rate-limit koruması).
+    MAX_TOURNAMENT_CANDIDATES = 2
+
     def fetch_map_stats(self, ctx: MatchContext) -> Optional[MapStatsResult]:
-        # TODO(hybrid-stats): LiquipediaService(game_slug=ctx.game_slug) ile
-        # Cargo sorgusu yazılacak:
-        #   1. Maçı bul (tournament_name + takım adları + tarih ile eşleştir)
-        #   2. MatchMaps'ten harita adı + tur skorlarını çek → MapStat listesi
-        #   3. GameTables'tan oyuncu KDA'larını çek → PlayerStat listesi
-        #   4. MapStatsResult(source=self.source_name, ...) döndür
-        # Eşleşme bulunamazsa None döndür (fallback chain devam etsin).
-        logger.debug(
-            "LiquipediaStatsSource.fetch_map_stats stub — match %s (%s) atlandı",
-            ctx.match_id, ctx.game_slug,
+        if not (ctx.team_a_name and ctx.team_b_name):
+            return None  # eşleştirme için takım adları şart
+
+        tournament_names = ctx.tournament_candidates or (
+            [ctx.tournament_name] if ctx.tournament_name else []
         )
-        return None
+        if not tournament_names:
+            return None
+
+        rows = []
+        service = self._service(ctx.game_slug)
+        for tour_name in tournament_names[:self.MAX_TOURNAMENT_CANDIDATES]:
+            try:
+                rows = service.get_match_maps(
+                    tournament_name=tour_name,
+                    team_a=ctx.team_a_name,
+                    team_b=ctx.team_b_name,
+                )
+            except Exception as err:
+                logger.warning(
+                    "⚠️  Liquipedia get_match_maps hata (match %s, tour='%s'): %s",
+                    ctx.match_id, tour_name, err,
+                )
+                continue
+            if rows:
+                break
+
+        if not rows:
+            return None
+
+        maps: List[MapStat] = []
+        for row in rows:
+            map_name = str(row.get("Map") or "").strip()
+            if not map_name:
+                continue
+            scores = _parse_opponent_scores(row.get("OpponentScores") or row.get("Scores"))
+            maps.append(MapStat(
+                map_name=map_name,
+                team_a_id=ctx.team_a_id,
+                team_b_id=ctx.team_b_id,
+                team_a_score=scores[0] if len(scores) > 0 else None,
+                team_b_score=scores[1] if len(scores) > 1 else None,
+            ))
+
+        if not maps:
+            return None
+        return MapStatsResult(source=self.source_name, maps=maps, players=[])
 
 
 # ── Orkestratör ───────────────────────────────────────────────────────────────
@@ -216,7 +276,8 @@ class HybridStatsBackfiller:
 
         for (mid, a_id, b_id, sched, raw, slug,
              a_name, b_name, t_name) in rows:
-            if not self._match_needs_enrichment(raw or {}):
+            raw = raw or {}
+            if not self._match_needs_enrichment(raw):
                 continue
             candidates.append(MatchContext(
                 match_id=mid,
@@ -227,6 +288,7 @@ class HybridStatsBackfiller:
                 team_b_name=b_name,
                 tournament_name=t_name,
                 scheduled_at=sched,
+                tournament_candidates=_tournament_name_candidates(raw, t_name),
             ))
             if len(candidates) >= limit:
                 break
@@ -387,6 +449,59 @@ class HybridStatsBackfiller:
 def _normalize_name(name: Any) -> str:
     """Oyuncu nickname'ini eşleme için normalize eder."""
     return str(name or "").strip().lower()
+
+
+def _tournament_name_candidates(raw_data: Dict[str, Any], db_name: Optional[str]) -> List[str]:
+    """
+    raw_data'dan Liquipedia eşleştirmesi için turnuva adı adaylarını üretir
+    (en eşleştirilebilir → en zayıf). DB'deki tournament.name çoğu zaman
+    "Group Stage" gibi aşama adıdır; league/serie isimleri daha güçlüdür.
+
+    Örnek PandaScore: league.name="VCL", serie.full_name="North America: Stage 3 2026"
+    """
+    out: List[str] = []
+
+    def _add(value: Any) -> None:
+        text = str(value or "").strip()
+        if text and text not in out and text.lower() not in ("group stage", "play-in", "playoffs", "unknown"):
+            out.append(text)
+
+    league = raw_data.get("league") if isinstance(raw_data, dict) else None
+    serie = raw_data.get("serie") if isinstance(raw_data, dict) else None
+    league_name = (league or {}).get("name") if isinstance(league, dict) else None
+    serie_name = (serie or {}).get("name") if isinstance(serie, dict) else None
+    serie_full = (serie or {}).get("full_name") if isinstance(serie, dict) else None
+
+    # En güçlü: league + serie full ("VCL North America: Stage 3 2026")
+    if league_name and serie_full:
+        _add(f"{league_name} {serie_full}")
+    _add(serie_full)
+    if league_name and serie_name:
+        _add(f"{league_name} {serie_name}")
+    _add(league_name)
+    _add(db_name)
+    return out
+
+
+def _parse_opponent_scores(raw: Any) -> List[int]:
+    """
+    Liquipedia OpponentScores alanını int listesine çevirir.
+    Format değişken olabilir: "13,11" | [13, 11] | "13 : 11".
+    Parse edilemeyen değerler atlanır.
+    """
+    if raw is None:
+        return []
+    if isinstance(raw, (list, tuple)):
+        parts = raw
+    else:
+        parts = re.split(r"[,:;\s]+", str(raw).strip())
+    scores: List[int] = []
+    for p in parts:
+        try:
+            scores.append(int(str(p).strip()))
+        except (TypeError, ValueError):
+            continue
+    return scores
 
 
 def _json(obj: Any) -> str:

@@ -16,6 +16,7 @@ import {
 } from '../utils/newsStories'
 import { isStoryForYou, prioritizeStoriesForYou } from '../utils/newsPersonalization'
 import InitialsImage from '../components/InitialsImage'
+import ShareButton from '../components/ShareButton'
 import { cleanDisplayName } from '../utils/nameCleaner'
 
 const GAME_FILTERS = GAMES.filter(game => !game.soon && game.id !== 'all' && ['valorant', 'cs2', 'lol'].includes(game.id))
@@ -26,7 +27,6 @@ const CATEGORY_TABS = [
   { id: 'cs2', label: 'CS2' },
 ]
 const NEWS_PAGE_SIZE = 6
-const COMMENT_CONTENT_COLUMN = 'content'
 
 function normalizeStoryGameId(raw) {
   const normalized = normalizeGameId(raw)
@@ -116,23 +116,26 @@ function NewsTrustLayer({ item, onReport }) {
   return (
     <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed #282828', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
       <span style={{ fontSize: 11, color: '#8f8f8f' }}>PandaScore verileriyle otomatik uretilmistir.</span>
-      <button
-        onClick={e => {
-          e.stopPropagation()
-          onReport(item)
-        }}
-        style={{
-          border: '1px solid #353535',
-          background: '#121212',
-          color: '#d6d6d6',
-          borderRadius: 8,
-          padding: '5px 8px',
-          fontSize: 11,
-          cursor: 'pointer',
-        }}
-      >
-        Hata Bildir
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <ShareButton path={`/news/${item.id}`} title={item.title} compact />
+        <button
+          onClick={e => {
+            e.stopPropagation()
+            onReport(item)
+          }}
+          style={{
+            border: '1px solid #353535',
+            background: '#121212',
+            color: '#d6d6d6',
+            borderRadius: 8,
+            padding: '5px 8px',
+            fontSize: 11,
+            cursor: 'pointer',
+          }}
+        >
+          Hata Bildir
+        </button>
+      </div>
     </div>
   )
 }
@@ -200,24 +203,8 @@ function ScoutNoteCard({ item, compact = false }) {
   )
 }
 
-function NewsCard({ item, likes, liked, comments, onLike, onComment, canInteract, onOpenDetail, onReport, isForYou, isMobile = false }) {
-  const [commentInput, setCommentInput] = useState('')
-  const [sending, setSending] = useState(false)
+function NewsCard({ item, likes, liked, comments, onLike, canInteract, onOpenDetail, onReport, isForYou, isMobile = false }) {
   const { visuals } = item
-
-  async function submitComment(e) {
-    e.preventDefault()
-    e.stopPropagation()
-    const text = commentInput.trim()
-    if (!text) return
-    setSending(true)
-    try {
-      await onComment(item.id, text)
-      setCommentInput('')
-    } finally {
-      setSending(false)
-    }
-  }
 
   return (
     <article
@@ -325,36 +312,17 @@ function NewsCard({ item, likes, liked, comments, onLike, onComment, canInteract
           >
             {liked ? 'STARRED' : 'STAR'} ({likes})
           </button>
-          <span style={{ fontSize: 11, color: comments.length > 0 ? '#a0c4ff' : '#555', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 8, background: comments.length > 0 ? 'rgba(100,160,255,.08)' : 'transparent', border: comments.length > 0 ? '1px solid rgba(100,160,255,.2)' : '1px solid transparent', fontWeight: comments.length > 0 ? 700 : 400 }}>
-            💬 {comments.length}
-          </span>
+          <button
+            onClick={e => {
+              e.stopPropagation()
+              onOpenDetail(item)
+            }}
+            style={{ fontSize: 11, color: comments.length > 0 ? '#a0c4ff' : '#888', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 8, background: comments.length > 0 ? 'rgba(100,160,255,.08)' : '#151515', border: comments.length > 0 ? '1px solid rgba(100,160,255,.2)' : '1px solid #2a2a2a', fontWeight: comments.length > 0 ? 700 : 400, cursor: 'pointer' }}
+          >
+            💬 {comments.length > 0 ? `${comments.length} yorum` : 'Yorum yap'} ›
+          </button>
           {!canInteract && <span style={{ fontSize: 11, color: '#6a6a6a' }}>Etkilesim icin giris yapin</span>}
         </div>
-
-        {comments.length > 0 && (
-          <div style={{ marginTop: 10, borderTop: '1px solid #232323', paddingTop: 8, display: 'grid', gap: 7 }}>
-            {comments.slice(0, 3).map(comment => (
-              <div key={comment.id} style={{ fontSize: 12, color: '#c7c7c7', background: '#121212', borderRadius: 8, padding: '7px 9px', border: '1px solid #1f1f1f' }}>
-                <div style={{ fontSize: 10, color: '#777', marginBottom: 3 }}>{comment.author}</div>
-                {getCommentContent(comment)}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {canInteract && (
-          <form onSubmit={submitComment} style={{ marginTop: 10, display: 'flex', gap: 8, flexDirection: isMobile ? 'column' : 'row' }} onClick={e => e.stopPropagation()}>
-            <input
-              value={commentInput}
-              onChange={e => setCommentInput(e.target.value)}
-              placeholder='Yorum yaz...'
-              style={{ flex: 1, background: '#131313', border: '1px solid #2a2a2a', borderRadius: 8, color: '#f5f5f5', padding: '8px 10px', fontSize: 12 }}
-            />
-            <button disabled={sending || !commentInput.trim()} style={{ border: '1px solid #444', background: '#1b1b1b', color: '#ddd', borderRadius: 8, padding: '8px 10px', fontSize: 12, cursor: 'pointer', width: isMobile ? '100%' : 'auto' }}>
-              Gonder
-            </button>
-          </form>
-        )}
 
         <NewsTrustLayer item={item} onReport={onReport} />
       </div>
@@ -585,43 +553,6 @@ export default function NewsPage() {
     }
   }
 
-  async function addComment(newsId, text) {
-    if (!canInteract) return
-    try {
-      const { data, error } = await supabase
-        .from('news_comments')
-        .insert({ news_id: newsId, user_id: user.id, [COMMENT_CONTENT_COLUMN]: text })
-        .select('id,news_id,user_id,content,created_at')
-        .single()
-
-      if (error) {
-        if (isMissingNewsCommentsTable(error)) {
-          warnMissingCommentsTable(error)
-          return
-        }
-        throw error
-      }
-
-      if (data) {
-        const content = getCommentContent(data) || text
-        setCommentsByNews(prev => ({
-          ...prev,
-          [newsId]: [
-            {
-              ...data,
-              content,
-              comment_text: content,
-              author: profile?.username || 'Sen',
-            },
-            ...(prev[newsId] || []),
-          ],
-        }))
-      }
-    } catch (error) {
-      console.error('addComment error:', error?.message || error)
-    }
-  }
-
   async function reportStoryIssue(item) {
     const payload = {
       news_id: item.id,
@@ -804,7 +735,6 @@ export default function NewsPage() {
                 liked={likedSet.has(item.id)}
                 comments={commentsByNews[item.id] || []}
                 onLike={toggleLike}
-                onComment={addComment}
                 canInteract={canInteract}
                 onOpenDetail={openStoryDetail}
                 onReport={reportStoryIssue}

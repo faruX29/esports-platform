@@ -152,6 +152,28 @@ export function subscribeToMatchesUpdates(onUpdate) {
 	}
 }
 
+export function subscribeToNewsComments(newsId, { onInsert, onDelete } = {}) {
+	if (!newsId) return () => {}
+
+	const channel = supabase
+		.channel(`news_comments_${String(newsId).replace(/[^a-z0-9]/gi, '_')}_${Math.random().toString(36).slice(2, 9)}`)
+		.on(
+			'postgres_changes',
+			{ event: 'INSERT', schema: 'public', table: 'news_comments', filter: `news_id=eq.${newsId}` },
+			payload => { if (typeof onInsert === 'function') onInsert(payload.new) }
+		)
+		.on(
+			'postgres_changes',
+			{ event: 'DELETE', schema: 'public', table: 'news_comments', filter: `news_id=eq.${newsId}` },
+			payload => { if (typeof onDelete === 'function') onDelete(payload.old) }
+		)
+		.subscribe()
+
+	return () => {
+		supabase.removeChannel(channel)
+	}
+}
+
 export function buildManualTestNotification(kind = 'start') {
 	const normalized = String(kind || 'start').toLowerCase()
 	if (normalized === 'finish' || normalized === 'finished') {

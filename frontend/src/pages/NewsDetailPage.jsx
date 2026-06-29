@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
-import { supabase } from '../supabaseClient'
+import { supabase, subscribeToNewsComments } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { isTurkishTeam } from '../constants'
 import {
@@ -16,6 +16,7 @@ import {
   normalizeScoutScore,
 } from '../utils/scoutRank'
 import InitialsImage from '../components/InitialsImage'
+import ShareButton from '../components/ShareButton'
 import { cleanDisplayName } from '../utils/nameCleaner'
 
 function isMissingTableError(error, tableName) {
@@ -226,12 +227,15 @@ function TrustLayer({ story, onReport }) {
   return (
     <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed #2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
       <span style={{ fontSize: 12, color: '#9a9a9a' }}>PandaScore verileriyle otomatik uretilmistir.</span>
-      <button
-        onClick={() => onReport(story)}
-        style={{ border: '1px solid #353535', background: '#121212', color: '#ddd', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer' }}
-      >
-        Hata Bildir
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <ShareButton path={`/news/${story.id}`} title={story.title} />
+        <button
+          onClick={() => onReport(story)}
+          style={{ border: '1px solid #353535', background: '#121212', color: '#ddd', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer' }}
+        >
+          Hata Bildir
+        </button>
+      </div>
     </div>
   )
 }
@@ -565,6 +569,45 @@ export default function NewsDetailPage() {
     return () => { cancelled = true }
   }, [loadForum, newsId])
 
+  // ── Realtime forum: başkalarının yorumları anında görünür ──
+  useEffect(() => {
+    if (!story?.id || forumComingSoon) return
+
+    const enrichRealtimeRow = async (row) => {
+      let author = 'Topluluk'
+      let authorScoutScore = 0
+      let authorAvatarUrl = null
+      if (row.user_id) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('username,scout_score,avatar_url')
+          .eq('id', row.user_id)
+          .maybeSingle()
+        if (prof) {
+          author = prof.username || author
+          authorScoutScore = normalizeScoutScore(prof.scout_score)
+          authorAvatarUrl = prof.avatar_url ?? null
+        }
+      }
+      return { ...row, comment_text: row.content ?? '', author, authorScoutScore, authorAvatarUrl }
+    }
+
+    const unsubscribe = subscribeToNewsComments(story.id, {
+      onInsert: async (row) => {
+        // Kendi optimistic eklediğim yorum zaten listede → enrich için fetch yapma
+        const enriched = await enrichRealtimeRow(row)
+        setComments(prev =>
+          prev.some(c => String(c.id) === String(enriched.id)) ? prev : [enriched, ...prev]
+        )
+      },
+      onDelete: (row) => {
+        setComments(prev => prev.filter(c => String(c.id) !== String(row.id)))
+      },
+    })
+
+    return unsubscribe
+  }, [story?.id, forumComingSoon])
+
   async function submitComment(e) {
     e.preventDefault()
     if (forumComingSoon) return
@@ -585,6 +628,13 @@ export default function NewsDetailPage() {
       setCommentInput('')
       setCommentSuccess('Yorum yerel olarak eklendi.')
       setCommentWarning('')
+      return
+    }
+
+    // Misafir DB'ye yazamaz (RLS/NOT NULL) — girişe yönlendir, insert deneme
+    if (!canInteract) {
+      setCommentWarning('Yorum yazmak için giriş yapmalısın.')
+      setCommentSuccess('')
       return
     }
 
@@ -703,7 +753,7 @@ export default function NewsDetailPage() {
       if (authorUserId && authorUserId !== user?.id && scoutDelta !== 0) {
         applyLocalScoutDelta(authorUserId, scoutDelta)
       }
-      if (story?.id) await loadForum(story.id)
+      // Optimistic update yeterli — tüm forum'u yeniden çekmeye gerek yok (flicker önlenir)
     } catch (voteErr) {
       console.error('voteComment error:', voteErr?.message || voteErr)
       setCommentWarning('Yorum oyu kaydedilemedi.')
@@ -994,8 +1044,8 @@ export default function NewsDetailPage() {
                   {commentInput.length}/1000
                 </span>
                 <button
-                  disabled={!commentInput.trim() || commentSubmitting}
-                  style={{ border: '1px solid #3b3b3b', background: '#181818', color: '#f1f1f1', borderRadius: 8, padding: '8px 12px', fontSize: 12, cursor: 'pointer' }}
+                  disabled={!commentInput.trim() || commentSubmitting || (!canInteract && !forumFallback)}
+                  style={{ border: '1px solid #3b3b3b', background: '#181818', color: '#f1f1f1', borderRadius: 8, padding: '8px 12px', fontSize: 12, cursor: (!canInteract && !forumFallback) ? 'not-allowed' : 'pointer', opacity: (!canInteract && !forumFallback) ? 0.5 : 1 }}
                 >
                   {commentSubmitting ? 'Gonderiliyor...' : 'Yorumu Gonder'}
                 </button>

@@ -72,7 +72,28 @@ class FactSheetBuilder:
         return f"{int(seconds // 60)} dk"
 
     @staticmethod
-    def build(match: dict, stats_rows: list[dict]) -> str:
+    def _format_top_players(player_rows: list[dict]) -> Optional[str]:
+        """
+        En yüksek KDA'ya sahip oyuncuları tek satırlık öne-çıkanlar metni yapar.
+        player_rows: [{nickname, team_name, kills, deaths, assists}, ...]
+        """
+        if not player_rows:
+            return None
+        parts = []
+        for p in player_rows[:3]:
+            nick = p.get("nickname")
+            if not nick:
+                continue
+            k = int(p.get("kills") or 0)
+            d = int(p.get("deaths") or 0)
+            a = int(p.get("assists") or 0)
+            team = p.get("team_name")
+            team_tag = f" ({team})" if team else ""
+            parts.append(f"{nick}{team_tag} {k}/{d}/{a}")
+        return " | ".join(parts) if parts else None
+
+    @staticmethod
+    def build(match: dict, stats_rows: list[dict], player_rows: Optional[list[dict]] = None) -> str:
         team_a = match.get("team_a") or {}
         team_b = match.get("team_b") or {}
         tournament = match.get("tournament") or {}
@@ -153,6 +174,9 @@ class FactSheetBuilder:
             lines.append(f"En uzun harita: {FactSheetBuilder._fmt_seconds(longest_secs)}")
         if impact_team and impact_score:
             lines.append(f"MVP tarafı: {impact_team} ({int(impact_score)} impact puanı)")
+        top_players = FactSheetBuilder._format_top_players(player_rows or [])
+        if top_players:
+            lines.append(f"Öne çıkan oyuncular (K/D/A): {top_players}")
         if pred_a is not None and pred_b is not None:
             lines.append(
                 f"Model tahmini: {a_name}={float(pred_a):.2f} / {b_name}={float(pred_b):.2f}"
@@ -221,6 +245,29 @@ class NewsGenerator:
             with conn.cursor() as cur:
                 cur.execute(
                     "SELECT team_id, stats FROM match_stats WHERE match_id = %s",
+                    (match_id,),
+                )
+                cols = [d[0] for d in cur.description]
+                return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    def _fetch_player_stats(self, match_id) -> list[dict]:
+        """
+        Maçın en yüksek kill'e sahip oyuncularını döner (Hibrit Adapter ile
+        player_match_stats dolduğunda makaleleri zenginleştirir). Veri yoksa [].
+        """
+        with Database.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT p.nickname, t.name AS team_name,
+                           pms.kills, pms.deaths, pms.assists
+                    FROM player_match_stats pms
+                    JOIN players p ON p.id = pms.player_id
+                    LEFT JOIN teams t ON t.id = pms.team_id
+                    WHERE pms.match_id = %s AND pms.kills IS NOT NULL
+                    ORDER BY pms.kills DESC NULLS LAST
+                    LIMIT 5
+                    """,
                     (match_id,),
                 )
                 cols = [d[0] for d in cur.description]
@@ -337,8 +384,9 @@ class NewsGenerator:
         for row in rows:
             match = self._denormalize(row)
             stats_rows = self._fetch_stats(match["id"])
+            player_rows = self._fetch_player_stats(match["id"])
 
-            fact_sheet = FactSheetBuilder.build(match, stats_rows)
+            fact_sheet = FactSheetBuilder.build(match, stats_rows, player_rows)
             user_prompt = (
                 "Aşağıdaki maç özet raporunu kullanarak Türkçe haber bülteni üret:\n\n"
                 + fact_sheet

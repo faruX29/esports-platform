@@ -9,6 +9,7 @@ import { supabase }                                 from '../supabaseClient'
 import { isTurkishTeam }                           from '../constants'
 import { useUser }                                 from '../context/UserContext'
 import InitialsImage                               from '../components/InitialsImage'
+import LiquipediaCredit                            from '../components/LiquipediaCredit'
 import { getBOFormat }                              from '../utils/matchFormat'
 
 /* ─── Voter fingerprint ─────────────────────────────────────────────────────── */
@@ -1482,6 +1483,7 @@ export default function MatchDetail() {
                   </div>
                 )
               }
+              <LiquipediaCredit compact />
             </div>
 
             {/* H2H */}

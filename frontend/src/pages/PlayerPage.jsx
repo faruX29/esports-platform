@@ -13,6 +13,7 @@ import { supabase }                         from '../supabaseClient'
 import { getRoleBadge, resolvePlayerRole }   from '../utils/roleHelper'
 import { normalizeGameId }                   from '../utils/gameUtils'
 import InitialsImage                         from '../components/InitialsImage'
+import LiquipediaCredit                       from '../components/LiquipediaCredit'
 import { isTurkishTeam } from '../constants'
 import { useUser } from '../context/UserContext'
 import { summarizePlayerMatchStats, metricBars } from '../utils/playerMetrics'
@@ -1172,6 +1173,7 @@ export default function PlayerPage() {
 
         {/* Scout Analytics */}
         <ScoutPanel analytics={analytics} individual={individualStats} />
+        <LiquipediaCredit align="center" />
 
         <PlayerSignatureElements items={signatureElements} />
 

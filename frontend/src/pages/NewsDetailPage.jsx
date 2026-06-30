@@ -243,9 +243,14 @@ function AIProbabilityBar({ story }) {
 }
 
 function TrustLayer({ story, onReport }) {
+  const isTransfer = story?.variant === 'transfer' || story?.status === 'transfer'
   return (
     <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed #2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-      <span style={{ fontSize: 12, color: '#9a9a9a' }}>PandaScore verileriyle otomatik uretilmistir.</span>
+      <span style={{ fontSize: 12, color: '#9a9a9a' }}>
+        {isTransfer
+          ? <>Transfer verisi <a href="https://liquipedia.net" target="_blank" rel="noopener noreferrer" style={{ color: '#8a8a8a', textDecoration: 'underline' }}>Liquipedia</a> kaynaklıdır; haber otomatik üretildi.</>
+          : 'PandaScore verileriyle otomatik uretilmistir.'}
+      </span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <ShareButton path={`/news/${buildNewsSlug(story)}`} title={story.title} />
         <button

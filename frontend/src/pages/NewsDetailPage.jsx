@@ -18,6 +18,7 @@ import {
 import InitialsImage from '../components/InitialsImage'
 import ShareButton from '../components/ShareButton'
 import SeoHead from '../components/SeoHead'
+import NewsCover, { scoreFromHero } from '../components/NewsCover'
 import { cleanDisplayName } from '../utils/nameCleaner'
 import { buildNewsSlug, parseNewsId } from '../utils/newsSlug'
 
@@ -856,34 +857,12 @@ export default function NewsDetailPage() {
             <span style={{ marginLeft: 'auto', fontSize: 11, color: '#878787' }}>{fmtDate(story.publishedAt)}</span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 14, alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <InitialsImage
-                src={story.visuals.teamA.logo_url}
-                alt={story.visuals.teamA.name || ''}
-                name={story.visuals.teamA.name}
-                width={52}
-                height={52}
-                borderRadius={12}
-                objectFit='contain'
-                style={{ background: '#111', padding: 5, border: '1px solid #2a2a2a' }}
-              />
-              <InitialsImage
-                src={story.visuals.teamB.logo_url}
-                alt={story.visuals.teamB.name || ''}
-                name={story.visuals.teamB.name}
-                width={52}
-                height={52}
-                borderRadius={12}
-                objectFit='contain'
-                style={{ background: '#111', padding: 5, border: '1px solid #2a2a2a' }}
-              />
-            </div>
-            <div>
-              <div style={{ fontSize: 12, color: '#9d9d9d', marginBottom: 5 }}>{story.visuals.tournamentName}</div>
-              <h1 style={{ margin: '0 0 8px', fontSize: 38, fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.3px', textAlign: 'left' }}>{story.title}</h1>
-              <div style={{ fontSize: 18, fontWeight: 800, color: '#f0d3d8' }}>{story.heroScore}</div>
-            </div>
+          <div style={{ marginBottom: 14 }}>
+            <NewsCover visuals={story.visuals} score={scoreFromHero(story.heroScore)} height={220} />
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <h1 style={{ margin: '0 0 8px', fontSize: 38, fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.3px', textAlign: 'left' }}>{story.title}</h1>
+            <div style={{ fontSize: 18, fontWeight: 800, color: '#f0d3d8' }}>{story.heroScore}</div>
           </div>
 
           <p style={{ margin: 0, color: '#9fa3af', lineHeight: 1.85, textAlign: 'left', fontSize: 15 }}>{story.summary}</p>

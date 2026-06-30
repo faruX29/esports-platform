@@ -15,9 +15,9 @@ import {
   tierWeight,
 } from '../utils/newsStories'
 import { isStoryForYou, prioritizeStoriesForYou } from '../utils/newsPersonalization'
-import InitialsImage from '../components/InitialsImage'
 import ShareButton from '../components/ShareButton'
 import SeoHead from '../components/SeoHead'
+import NewsCover, { scoreFromHero } from '../components/NewsCover'
 import { cleanDisplayName } from '../utils/nameCleaner'
 import { buildNewsSlug } from '../utils/newsSlug'
 
@@ -252,40 +252,12 @@ function NewsCard({ item, likes, liked, comments, onLike, canInteract, onOpenDet
           <span style={{ fontSize: 10, color: '#7f7f7f' }}>{fmtDate(item.publishedAt)}</span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'auto 1fr auto', gap: 12, alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'flex-start', gap: 8 }}>
-            <InitialsImage
-              src={visuals.teamA.logo_url}
-              alt={visuals.teamA.name || ''}
-              name={visuals.teamA.name}
-              width={34}
-              height={34}
-              borderRadius={10}
-              objectFit='contain'
-              style={{ background: '#111', padding: 4, border: '1px solid #242424' }}
-            />
-            <InitialsImage
-              src={visuals.teamB.logo_url}
-              alt={visuals.teamB.name || ''}
-              name={visuals.teamB.name}
-              width={34}
-              height={34}
-              borderRadius={10}
-              objectFit='contain'
-              style={{ background: '#111', padding: 4, border: '1px solid #242424' }}
-            />
-          </div>
+        <div style={{ marginBottom: 12 }}>
+          <NewsCover visuals={visuals} score={scoreFromHero(item.heroScore)} height={isMobile ? 150 : 168} compact />
+        </div>
 
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 11, color: '#a9a9a9', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{visuals.tournamentName}</div>
-            <h3 style={{ margin: 0, fontSize: 19, lineHeight: 1.3 }}>{item.title}</h3>
-          </div>
-
-          {!isMobile && visuals.turkish && (
-            <div style={{ fontSize: 10, fontWeight: 800, color: '#ffd9df', padding: '5px 8px', borderRadius: 999, border: '1px solid rgba(200,16,46,.38)', background: 'rgba(200,16,46,.16)' }}>
-              Turkish Pride
-            </div>
-          )}
+        <div style={{ minWidth: 0, marginBottom: 8 }}>
+          <h3 style={{ margin: 0, fontSize: 19, lineHeight: 1.3 }}>{item.title}</h3>
         </div>
 
         <div style={{ fontSize: 14, color: '#f0d3d8', marginBottom: 8, fontWeight: 700 }}>{item.heroScore}</div>
@@ -668,34 +640,12 @@ export default function NewsPage() {
                   <div style={{ fontSize: 11, color: '#a0a0a0' }}>{fmtDate(hero.publishedAt)}</div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'auto 1fr', gap: 16, alignItems: 'center', marginBottom: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'flex-start', gap: 10 }}>
-                    <InitialsImage
-                      src={hero.visuals.teamA.logo_url}
-                      alt={hero.visuals.teamA.name || ''}
-                      name={hero.visuals.teamA.name}
-                      width={isMobile ? 50 : 56}
-                      height={isMobile ? 50 : 56}
-                      borderRadius={14}
-                      objectFit='contain'
-                      style={{ background: '#111', padding: 6, border: '1px solid #2c2c2c' }}
-                    />
-                    <InitialsImage
-                      src={hero.visuals.teamB.logo_url}
-                      alt={hero.visuals.teamB.name || ''}
-                      name={hero.visuals.teamB.name}
-                      width={isMobile ? 50 : 56}
-                      height={isMobile ? 50 : 56}
-                      borderRadius={14}
-                      objectFit='contain'
-                      style={{ background: '#111', padding: 6, border: '1px solid #2c2c2c' }}
-                    />
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ color: '#b3b3b3', fontSize: 12, marginBottom: 6 }}>{hero.visuals.tournamentName}</div>
-                    <h2 style={{ margin: '0 0 10px', fontSize: isMobile ? 24 : 32, lineHeight: 1.1 }}>{hero.title}</h2>
-                    <div style={{ color: '#f0d3d8', fontSize: 17, fontWeight: 700 }}>{hero.heroScore}</div>
-                  </div>
+                <div style={{ marginBottom: 14 }}>
+                  <NewsCover visuals={hero.visuals} score={scoreFromHero(hero.heroScore)} height={isMobile ? 190 : 230} />
+                </div>
+                <div style={{ minWidth: 0, marginBottom: 12 }}>
+                  <h2 style={{ margin: '0 0 8px', fontSize: isMobile ? 24 : 32, lineHeight: 1.1 }}>{hero.title}</h2>
+                  <div style={{ color: '#f0d3d8', fontSize: 17, fontWeight: 700 }}>{hero.heroScore}</div>
                 </div>
 
                 <p style={{ margin: 0, color: '#d8d8d8', lineHeight: 1.7 }}>{hero.summary}</p>

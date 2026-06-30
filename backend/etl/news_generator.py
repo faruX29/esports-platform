@@ -63,6 +63,22 @@ PREVIEW_SYSTEM_PROMPT = (
     '{"title": "...", "summary": "...", "paragraphs": ["1. paragraf", "2. paragraf"]}'
 )
 
+# ── Transfer haberi editör persona'sı ─────────────────────────────────────────
+TRANSFER_SYSTEM_PROMPT = (
+    "Sen profesyonel bir espor transfer muhabirisin. Gelen roster değişikliği "
+    "verisini kullanarak espor jargonuna hakim, net ve tarafsız Türkçe transfer "
+    "haberi yazıyorsun.\n\n"
+    "Kurallar:\n"
+    "- Yalnızca fact sheet'teki veriyi kullan; oyuncu/takım/istatistik UYDURMA.\n"
+    "- Oyuncunun performans metriği (KDA/Impact) verildiyse habere doğal şekilde "
+    "işle (örn. 'son dönemde X K/D ile öne çıkan oyuncu').\n"
+    "- Başlık (title) en fazla 12 kelime, özet (summary) 2-3 cümle.\n"
+    "- Gövde 2-4 paragraf string'i içeren 'paragraphs' dizisi olsun.\n"
+    "- JSON string içinde çift tırnak (\") kullanma; vurgu için tek tırnak (').\n"
+    "- Yanıtı yalnızca şu JSON şemasında ver:\n"
+    '{"title": "...", "summary": "...", "paragraphs": ["1. paragraf", "2. paragraf"]}'
+)
+
 # ── Tier display labels ───────────────────────────────────────────────────────
 _TIER_LABELS = {
     "S": "S-Tier (Premier)",
@@ -118,6 +134,42 @@ class FactSheetBuilder:
             lines.append(f"Model favorisi: {fav} (tahmin {float(pred_a):.2f} / {float(pred_b):.2f})")
         else:
             lines.append("Model tahmini: henüz yok (dengeli beklenti)")
+        return "\n".join(lines)
+
+    @staticmethod
+    def build_transfer(transfer: dict, player_form: Optional[str] = None) -> str:
+        """
+        Roster değişikliği için transfer haberi fact sheet'i.
+        transfer: {player, old_team, new_team, role, transfer_date, transfer_type, game}
+        player_form: opsiyonel performans özeti (KDA/Impact) — varsa derinlik katar.
+        """
+        player = transfer.get("player") or "Bilinmeyen Oyuncu"
+        old_team = transfer.get("old_team")
+        new_team = transfer.get("new_team")
+        role = transfer.get("role")
+        ttype = (transfer.get("transfer_type") or "permanent").lower()
+        game = str(transfer.get("game") or "esports").upper()
+
+        if new_team and not old_team:
+            hareket = f"{new_team} kadrosuna KATILDI"
+        elif old_team and not new_team:
+            hareket = f"{old_team} kadrosundan AYRILDI (serbest oyuncu)"
+        else:
+            hareket = f"{old_team} → {new_team} TRANSFER oldu"
+
+        lines = [
+            "TRANSFER RAPORU",
+            f"Oyuncu: {player}",
+            f"Oyun: {game}",
+            f"Hareket: {hareket}",
+            f"Tarih: {transfer.get('transfer_date')}",
+        ]
+        if role:
+            lines.append(f"Rol: {role}")
+        if ttype in ("loan", "trial", "release"):
+            lines.append(f"Transfer tipi: {ttype}")
+        if player_form:
+            lines.append(f"Oyuncu son dönem performansı: {player_form}")
         return "\n".join(lines)
 
     @staticmethod
@@ -573,6 +625,115 @@ class NewsGenerator:
                 logger.info("✅ Önizleme yazıldı  match_id=%-10s  %s", match["id"], article.get("title", "")[:60])
             except Exception as exc:
                 logger.warning("⚠️  Önizleme kayıt hatası match %s: %s", match["id"], exc)
+                stats["failed"] += 1
+            time.sleep(4)
+
+        return stats
+
+    # ── Transfer haberi üretimi ───────────────────────────────────────────────
+
+    def _fetch_pending_transfers(self, limit: int = 15) -> list[dict]:
+        """news_generated=false, oyuncusu DB'de çözülmüş roster değişiklikleri."""
+        with Database.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT rc.id AS rc_id, p.id AS player_id, p.nickname AS player,
+                           COALESCE(st.name, rc.raw_payload->>'old_team') AS old_team,
+                           COALESCE(tt.name, rc.raw_payload->>'new_team') AS new_team,
+                           rc.raw_payload->>'role' AS role,
+                           rc.raw_payload->>'game' AS game,
+                           rc.transfer_date, rc.transfer_type
+                    FROM roster_changes rc
+                    JOIN players p ON p.id = rc.player_id
+                    LEFT JOIN teams st ON st.id = rc.source_team_id
+                    LEFT JOIN teams tt ON tt.id = rc.target_team_id
+                    WHERE rc.news_generated = false
+                      AND rc.player_id IS NOT NULL
+                    ORDER BY rc.transfer_date DESC
+                    LIMIT %s
+                    """,
+                    (limit,),
+                )
+                cols = [d[0] for d in cur.description]
+                return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    def _player_form_summary(self, player_id) -> Optional[str]:
+        """Oyuncunun son maç KDA ortalaması (player_match_stats varsa). Yoksa None."""
+        try:
+            with Database.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        SELECT AVG(kills), AVG(deaths), AVG(assists), COUNT(*)
+                        FROM player_match_stats
+                        WHERE player_id = %s AND kills IS NOT NULL
+                        """,
+                        (player_id,),
+                    )
+                    k, d, a, n = cur.fetchone()
+                    if not n:
+                        return None
+                    return f"son {n} maçta ort. {float(k):.1f}/{float(d):.1f}/{float(a):.1f} (K/D/A)"
+        except Exception:
+            return None
+
+    def _save_transfer(self, transfer: dict, article: dict) -> None:
+        """Transfer makalesini news_articles'a yazar (content_type='transfer', match_id NULL)."""
+        content = "\n\n".join(article["paragraphs"]) if isinstance(article.get("paragraphs"), list) else article.get("content", "")
+        old_team = transfer.get("old_team") or "Serbest"
+        new_team = transfer.get("new_team") or "Serbest"
+        with Database.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO news_articles (
+                        match_id, content_type, title, summary, content, variant,
+                        game_slug, tier, tournament_name, team_a_name, team_b_name, hero_score
+                    )
+                    VALUES (NULL, 'transfer', %s, %s, %s, 'transfer', %s, 'C', %s, %s, %s, %s)
+                    """,
+                    (
+                        article.get("title", ""), article.get("summary", ""), content,
+                        transfer.get("game"),
+                        "Transfer Haberi",
+                        old_team, new_team,
+                        transfer.get("player") or "",
+                    ),
+                )
+                cur.execute(
+                    "UPDATE roster_changes SET news_generated = true WHERE id = %s",
+                    (transfer["rc_id"],),
+                )
+            conn.commit()
+
+    def generate_transfers(self, limit: int = 15) -> dict:
+        """Bekleyen roster değişiklikleri için LLM transfer haberi üret."""
+        rows = self._fetch_pending_transfers(limit=limit)
+        logger.info("🔁 Transfer haberi üretilecek: %d", len(rows))
+        stats = {"attempted": len(rows), "generated": 0, "failed": 0}
+
+        for tr in rows:
+            form = self._player_form_summary(tr["player_id"])
+            fact_sheet = FactSheetBuilder.build_transfer(tr, player_form=form)
+            user_prompt = (
+                "Aşağıdaki transfer raporunu kullanarak Türkçe transfer haberi üret:\n\n"
+                + fact_sheet
+            )
+            raw = self._generate_with_backoff(user_prompt, tr["rc_id"], system_prompt=TRANSFER_SYSTEM_PROMPT)
+            if raw is None:
+                stats["failed"] += 1
+                continue
+            article = self._parse_llm_json(raw)
+            if article is None:
+                stats["failed"] += 1
+                continue
+            try:
+                self._save_transfer(tr, article)
+                stats["generated"] += 1
+                logger.info("✅ Transfer haberi  %s  %s", tr.get("player"), article.get("title", "")[:50])
+            except Exception as exc:
+                logger.warning("⚠️  Transfer kayıt hatası rc=%s: %s", tr["rc_id"], exc)
                 stats["failed"] += 1
             time.sleep(4)
 

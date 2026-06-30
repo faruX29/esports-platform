@@ -202,6 +202,12 @@ def main():
         default=14,
         help='--sync-transfers için kaç günlük geriye bakılsın (varsayılan: 14)',
     )
+
+    parser.add_argument(
+        '--generate-transfers',
+        action='store_true',
+        help='roster_changes (news_generated=false) için LLM ile Türkçe transfer haberi üret',
+    )
     parser.add_argument(
         '--preview-hours',
         type=int,
@@ -465,6 +471,22 @@ def main():
             f"✅ Transfer sync — bulundu:{grand['found']} | yazıldı:{grand['inserted']} | "
             f"atlandı:{grand['skipped']} | hata:{grand['failed']}"
         )
+        logger.info("=" * 60)
+
+    if args.generate_transfers:
+        logger.info("\n" + "=" * 60)
+        logger.info("🔁 LLM TRANSFER NEWS GENERATION (Gemini)")
+        logger.info("=" * 60)
+        try:
+            llm = GeminiAdapter()
+            generator = NewsGenerator(llm)
+            result = generator.generate_transfers(limit=15)
+            logger.info(
+                f"✅ Transfer haberi üretimi tamamlandı — "
+                f"deneme: {result['attempted']} | yazıldı: {result['generated']} | hata: {result['failed']}"
+            )
+        except Exception as tr_err:
+            logger.error(f"❌ Transfer haberi üretimi başlatılamadı: {tr_err}")
         logger.info("=" * 60)
 
     if args.generate_previews:

@@ -30,10 +30,28 @@ function extractMatchId(id) {
  * Başlık yoksa ya da id çıkarılamazsa ham id'ye düşer (geriye uyumlu).
  */
 export function buildNewsSlug(story) {
+  const id = String(story?.id ?? '')
+  // Transfer makalesi: maç yok, id = "transfer_<uuid>" — slug sonuna eklenir
+  if (id.startsWith('transfer_')) {
+    const titleSlug = slugify(story?.title)
+    return titleSlug ? `${titleSlug}-${id}` : id
+  }
   const matchId = extractMatchId(story?.id ?? story?.matchId)
-  if (!matchId) return String(story?.id ?? '')
+  if (!matchId) return id
   const titleSlug = slugify(story?.title)
   return titleSlug ? `${titleSlug}-${matchId}` : matchId
+}
+
+/**
+ * URL parametresini çözer: maç haberi mi, transfer haberi mi?
+ * @returns {{type:'match'|'transfer'|'unknown', id: number|string|null}}
+ */
+export function parseNewsRef(param) {
+  const str = String(param || '')
+  const tr = str.match(/transfer_([0-9a-fA-F-]{36})/)
+  if (tr) return { type: 'transfer', id: tr[1] }
+  const mid = parseNewsId(param)
+  return mid != null ? { type: 'match', id: mid } : { type: 'unknown', id: null }
 }
 
 /**

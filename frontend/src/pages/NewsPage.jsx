@@ -74,6 +74,7 @@ function fmtDate(iso) {
 }
 
 function getArticleStoryTag(variant) {
+  if (variant === 'transfer') return 'Transfer'
   if (variant === 'preview') return 'Önizleme'
   if (variant === 'upset') return 'Surpriz Sonuc'
   if (variant === 'stomp') return 'Skor Haberi'
@@ -85,19 +86,22 @@ function articleRowToStory(row) {
   const gameId = normalizeStoryGameId(row.game_slug)
   const game = getGameMeta(gameId)
   const tier = normalizeTier(row.tier)
+  const isTransfer = row.content_type === 'transfer'
   const isPreview = row.variant === 'preview'
+  // Transfer'ın maçı yok → id uuid'den; match recap/preview → match_<id>
+  const storyId = isTransfer ? `transfer_${row.id}` : `match_${row.match_id}`
   return {
-    id: `match_${row.match_id}`,
-    matchId: row.match_id,
+    id: storyId,
+    matchId: isTransfer ? null : row.match_id,
     tournamentId: row.tournament_id,
-    status: isPreview ? 'not_started' : 'finished',
+    status: isTransfer ? 'transfer' : (isPreview ? 'not_started' : 'finished'),
     variant: row.variant || 'close',
     publishedAt: row.created_at,
-    priority: (tierWeight(tier) * 100) + (row.variant === 'upset' ? 35 : row.variant === 'stomp' ? 24 : 12),
+    priority: (tierWeight(tier) * 100) + (isTransfer ? 30 : row.variant === 'upset' ? 35 : row.variant === 'stomp' ? 24 : 12),
     title: row.title || '',
     summary: row.summary || '',
     content: row.content || '',
-    tag: getArticleStoryTag(row.variant),
+    tag: getArticleStoryTag(isTransfer ? 'transfer' : row.variant),
     heroScore: row.hero_score || '',
     visuals: {
       gameId,
@@ -255,7 +259,7 @@ function NewsCard({ item, likes, liked, comments, onLike, canInteract, onOpenDet
         </div>
 
         <div style={{ marginBottom: 12 }}>
-          <NewsCover visuals={visuals} score={scoreFromHero(item.heroScore)} height={isMobile ? 150 : 168} compact />
+          <NewsCover visuals={visuals} score={item.status === 'transfer' ? '➜' : scoreFromHero(item.heroScore)} height={isMobile ? 150 : 168} compact />
         </div>
 
         <div style={{ minWidth: 0, marginBottom: 8 }}>
@@ -452,7 +456,7 @@ export default function NewsPage() {
 
       // Dedup: bir maçın LLM makalesi (recap/önizleme) varsa, yerel upcoming
       // şablon hikayesini kullanma — zengin LLM içeriği kazanır.
-      const articleMatchIds = new Set(articleStories.map(s => s.matchId))
+      const articleMatchIds = new Set(articleStories.map(s => s.matchId).filter(Boolean))
 
       const finishedStories = articleStories
 
@@ -650,7 +654,7 @@ export default function NewsPage() {
                 </div>
 
                 <div style={{ marginBottom: 14 }}>
-                  <NewsCover visuals={hero.visuals} score={scoreFromHero(hero.heroScore)} height={isMobile ? 190 : 230} />
+                  <NewsCover visuals={hero.visuals} score={hero.status === 'transfer' ? '➜' : scoreFromHero(hero.heroScore)} height={isMobile ? 190 : 230} />
                 </div>
                 <div style={{ minWidth: 0, marginBottom: 12 }}>
                   <h2 style={{ margin: '0 0 8px', fontSize: isMobile ? 24 : 32, lineHeight: 1.1 }}>{hero.title}</h2>

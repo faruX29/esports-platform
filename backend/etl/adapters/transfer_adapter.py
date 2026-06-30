@@ -423,5 +423,5 @@ class LiquipediaWikitextTransferAdapter(BaseTransferAdapter):
             transfer_type=transfer_type,
             game_slug=self.game_slug,
             data_source=self.data_source,
-            raw_payload={"source": "wikitext", **row},
+            raw_payload={"source": "wikitext", "game": self.game_slug, **row},
         )

@@ -20,7 +20,7 @@ import ShareButton from '../components/ShareButton'
 import SeoHead from '../components/SeoHead'
 import NewsCover, { scoreFromHero } from '../components/NewsCover'
 import { cleanDisplayName } from '../utils/nameCleaner'
-import { buildNewsSlug, parseNewsId } from '../utils/newsSlug'
+import { buildNewsSlug, parseNewsRef } from '../utils/newsSlug'
 
 function isMissingTableError(error, tableName) {
   const code = error?.code || ''
@@ -107,7 +107,31 @@ function fmtPct(val) {
   return `%${(n * 100).toFixed(1)}`
 }
 
-const parseMatchId = parseNewsId
+/** news_articles transfer satırını detay sayfası story şekline çevirir. */
+function mapTransferRowToStory(row) {
+  return {
+    id: `transfer_${row.id}`,
+    matchId: null,
+    status: 'transfer',
+    variant: 'transfer',
+    publishedAt: row.created_at,
+    title: row.title || '',
+    summary: row.summary || '',
+    content: row.content || '',
+    heroScore: row.hero_score || '',
+    visuals: {
+      gameId: row.game_slug || null,
+      gameLabel: (row.game_slug || 'ESPORTS').toUpperCase(),
+      gameColor: '#C8102E',
+      tier: normalizeTier(row.tier),
+      tournamentName: row.tournament_name || 'Transfer Haberi',
+      turkish: false,
+      teamA: { name: row.team_a_name, logo_url: row.team_a_logo },
+      teamB: { name: row.team_b_name, logo_url: row.team_b_logo },
+    },
+    source: {},
+  }
+}
 
 function commentScore(voteState) {
   const up = Number(voteState?.up || 0)
@@ -470,7 +494,33 @@ export default function NewsDetailPage() {
     let cancelled = false
 
     async function loadFromSource() {
-      const matchId = parseMatchId(newsId)
+      const ref = parseNewsRef(newsId)
+
+      // ── Transfer haberi: maç yok, news_articles'tan uuid ile yükle ──
+      if (ref.type === 'transfer') {
+        setLoading(true)
+        setError('')
+        try {
+          const { data: art, error: artErr } = await supabase
+            .from('news_articles')
+            .select('*')
+            .eq('id', ref.id)
+            .single()
+          if (artErr) throw artErr
+          const transferStory = mapTransferRowToStory(art)
+          if (!cancelled) {
+            setStory(transferStory)
+            await loadForum(transferStory.id)
+          }
+        } catch (err) {
+          if (!cancelled) setError(err.message || 'Transfer haberi yuklenemedi.')
+        } finally {
+          if (!cancelled) setLoading(false)
+        }
+        return
+      }
+
+      const matchId = ref.id
       if (!matchId) {
         setError('Gecerli bir haber kimligi bulunamadi.')
         setLoading(false)
@@ -858,7 +908,7 @@ export default function NewsDetailPage() {
           </div>
 
           <div style={{ marginBottom: 14 }}>
-            <NewsCover visuals={story.visuals} score={scoreFromHero(story.heroScore)} height={220} />
+            <NewsCover visuals={story.visuals} score={story.status === 'transfer' ? '➜' : scoreFromHero(story.heroScore)} height={220} />
           </div>
           <div style={{ marginBottom: 12 }}>
             <h1 style={{ margin: '0 0 8px', fontSize: 38, fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.3px', textAlign: 'left' }}>{story.title}</h1>

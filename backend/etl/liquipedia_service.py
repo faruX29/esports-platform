@@ -8,7 +8,7 @@ import random
 import re
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -131,6 +131,8 @@ class LiquipediaService:
         self.game_slug = game_slug
         self.wiki = self.WIKI_BY_GAME.get(game_slug, "valorant")
         self.base_url = f"https://liquipedia.net/{self.wiki}/api.php"
+        # Liquipedia v3 yapısal veri API'si (API key gerektirir — cargo'nun yerini alır)
+        self.v3_base_url = "https://api.liquipedia.net/api/v3"
 
         user_agent = (os.getenv(
             "LIQUIPEDIA_USER_AGENT",
@@ -727,6 +729,95 @@ class LiquipediaService:
                 params[f"_{positional}"] = chunk
                 positional += 1
         return params
+
+    # ── Liquipedia v3 yapısal veri API'si (API key ile) ──────────────────────
+
+    def _request_v3(self, datapoint: str, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        v3 API isteği (api.liquipedia.net/api/v3/<datapoint>). Apikey header
+        __init__'te set edilir. Pacing/cooldown yeniden kullanılır. Key yoksa
+        veya hata olursa None döner (caller fallback'e düşer).
+        """
+        if not os.getenv("LIQUIPEDIA_API_KEY"):
+            return None
+        url = f"{self.v3_base_url}/{datapoint}"
+        for attempt in range(1, 4):
+            self._respect_rate_limit()
+            try:
+                resp = self.session.get(url, params=params, timeout=30)
+            except requests.RequestException as err:
+                self._record_error("v3", f"{datapoint} -> {err}")
+                return None
+            if resp.status_code == 429 and attempt < 3:
+                wait = self._mark_shared_cooldown(60.0, reason="v3 429")
+                time.sleep(min(wait, 5.0))
+                continue
+            if resp.status_code != 200:
+                self._record_error("v3", f"{datapoint} HTTP {resp.status_code}")
+                return None
+            try:
+                return resp.json()
+            except ValueError:
+                return None
+        return None
+
+    def get_recent_match_stats_v3(self, days_back: int = 14, limit: int = 100) -> List[Dict[str, Any]]:
+        """
+        Son N gündeki bitmiş maçları v3 /match endpoint'inden çeker; her maçı
+        harita + oyuncu KDA ile normalize eder. API key yoksa [] döner.
+
+        Returns: [{match2id, date, teams[], maps:[{map, winner, scores,
+                   players:[{player, agent, kills, deaths, assists, acs, side}]}]}]
+        """
+        since = (datetime.utcnow() - timedelta(days=max(1, days_back))).strftime("%Y-%m-%d")
+        payload = self._request_v3("match", {
+            "wiki": self.wiki,
+            "limit": limit,
+            "conditions": f"[[finished::1]] AND [[date::>{since}]]",
+            "order": "date DESC",
+        })
+        if not payload or "result" not in payload:
+            return []
+
+        out: List[Dict[str, Any]] = []
+        for m in payload["result"]:
+            opponents = m.get("match2opponents") or []
+            team_names = [
+                str(o.get("name") or o.get("template") or o.get("teamtemplate") or "").strip()
+                for o in opponents
+            ]
+            maps: List[Dict[str, Any]] = []
+            for g in (m.get("match2games") or []):
+                map_name = str(g.get("map") or "").strip()
+                if not map_name:
+                    continue
+                players = []
+                for key, p in (g.get("participants") or {}).items():
+                    if not isinstance(p, dict):
+                        continue
+                    side = str(key).split("_")[0]  # "1_1" → opponent index
+                    players.append({
+                        "player":  (p.get("player") or p.get("displayName") or "").strip(),
+                        "agent":   p.get("agent"),
+                        "kills":   _to_int_or_none(p.get("kills")),
+                        "deaths":  _to_int_or_none(p.get("deaths")),
+                        "assists": _to_int_or_none(p.get("assists")),
+                        "acs":     _to_int_or_none(p.get("acs")),
+                        "side":    side,
+                    })
+                maps.append({
+                    "map": map_name,
+                    "winner": g.get("winner"),
+                    "scores": g.get("scores"),
+                    "players": players,
+                })
+            out.append({
+                "match2id": m.get("match2id"),
+                "date": m.get("date"),
+                "teams": team_names,
+                "maps": maps,
+            })
+        return out
 
     def get_transfers_wikitext(self, year: int, month_name: str) -> List[Dict[str, Any]]:
         """

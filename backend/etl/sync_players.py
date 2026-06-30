@@ -150,7 +150,9 @@ class PlayerStatsSyncer:
                       ADD COLUMN IF NOT EXISTS hs_percentage numeric,
                       ADD COLUMN IF NOT EXISTS is_win        boolean,
                       ADD COLUMN IF NOT EXISTS stats         jsonb DEFAULT '{}'::jsonb,
-                      ADD COLUMN IF NOT EXISTS played_at     timestamptz
+                      ADD COLUMN IF NOT EXISTS played_at     timestamptz,
+                      ADD COLUMN IF NOT EXISTS created_at    timestamptz DEFAULT now(),
+                      ADD COLUMN IF NOT EXISTS updated_at    timestamptz DEFAULT now()
                 """)
                 cur.execute("""
                     CREATE UNIQUE INDEX IF NOT EXISTS uq_player_match_stats_player_match

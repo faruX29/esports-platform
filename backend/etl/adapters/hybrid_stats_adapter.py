@@ -27,6 +27,7 @@ katmanları key'den bağımsız çalışır ve test edilebilir.
 from __future__ import annotations
 
 import logging
+import os
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -243,6 +244,125 @@ class LiquipediaWikitextSource(BaseMatchStatsSource):
         return MapStatsResult(source=self.source_name, maps=maps, players=players)
 
 
+# ── Liquipedia v3 API kaynağı (API KEY ile — birincil, en zengin) ─────────────
+
+class LiquipediaV3StatsSource(BaseMatchStatsSource):
+    """
+    Liquipedia v3 yapısal veri API'sinden (api.liquipedia.net) harita + oyuncu
+    KDA çeker. API key gerektirir (LIQUIPEDIA_API_KEY). Wikitext'ten daha temiz
+    ve güvenilir; oyun başına TEK bulk sorgu + lazy index (rate-limit dostu).
+
+    Eşleştirme: takım-çifti (normalize) + (opsiyonel) tarih. Wikitext'in sayfa-
+    başlığı tahmin sorununu çözer. Key yoksa devre dışı (supports_game False).
+    """
+
+    source_name = "liquipedia_v3"
+    SUPPORTED_GAMES = {"valorant", "csgo", "cs2", "lol"}
+
+    def __init__(self, days_back: int = 21) -> None:
+        self._days_back = days_back
+        self._services: Dict[str, Any] = {}
+        self._index: Dict[str, Dict[frozenset, Dict[str, Any]]] = {}
+
+    def supports_game(self, game_slug: str) -> bool:
+        return (
+            bool(os.getenv("LIQUIPEDIA_API_KEY"))
+            and str(game_slug or "").strip().lower() in self.SUPPORTED_GAMES
+        )
+
+    def _service(self, game_slug: str):
+        from etl.liquipedia_service import LiquipediaService
+        slug = str(game_slug or "").strip().lower()
+        if slug not in self._services:
+            self._services[slug] = LiquipediaService(game_slug=slug)
+        return self._services[slug]
+
+    def _ensure_index(self, game_slug: str) -> None:
+        """Oyun başına bir kez v3 bulk fetch → takım-çifti index'i (yalnız KDA'lı)."""
+        if game_slug in self._index:
+            return
+        idx: Dict[frozenset, Dict[str, Any]] = {}
+        try:
+            rows = self._service(game_slug).get_recent_match_stats_v3(
+                days_back=self._days_back, limit=200,
+            )
+        except Exception as err:
+            logger.warning("⚠️  v3 index fetch hatası (%s): %s", game_slug, err)
+            rows = []
+        for m in rows:
+            teams = [t for t in (m.get("teams") or []) if t]
+            if len(teams) < 2:
+                continue
+            if not any(mp.get("players") for mp in m.get("maps", [])):
+                continue  # oyuncu verisi olmayan maçı index'leme
+            key = frozenset({_norm_team_key(teams[0]), _norm_team_key(teams[1])})
+            idx[key] = m
+        self._index[game_slug] = idx
+        logger.info("📇 v3 index (%s): %d KDA'lı maç", game_slug, len(idx))
+
+    def fetch_map_stats(self, ctx: MatchContext) -> Optional[MapStatsResult]:
+        if not (ctx.team_a_name and ctx.team_b_name):
+            return None
+        self._ensure_index(ctx.game_slug)
+        key = frozenset({_norm_team_key(ctx.team_a_name), _norm_team_key(ctx.team_b_name)})
+        m = self._index.get(ctx.game_slug, {}).get(key)
+        if not m:
+            return None
+        return self._normalize(ctx, m)
+
+    def _normalize(self, ctx: MatchContext, m: Dict[str, Any]) -> Optional[MapStatsResult]:
+        teams = m.get("teams") or []
+        team1_is_a = _names_match(teams[0], ctx.team_a_name) if teams else True
+
+        def team_id_for(side: int) -> Optional[int]:
+            is_a = (side == 1) == team1_is_a
+            return ctx.team_a_id if is_a else ctx.team_b_id
+
+        maps: List[MapStat] = []
+        player_acc: Dict[str, Dict[str, Any]] = {}
+        for mp in m.get("maps", []):
+            map_name = str(mp.get("map") or "").strip()
+            if not map_name:
+                continue
+            scores = _parse_opponent_scores(mp.get("scores"))
+            s1 = scores[0] if len(scores) > 0 else None
+            s2 = scores[1] if len(scores) > 1 else None
+            maps.append(MapStat(
+                map_name=map_name,
+                team_a_id=ctx.team_a_id, team_b_id=ctx.team_b_id,
+                team_a_score=s1 if team1_is_a else s2,
+                team_b_score=s2 if team1_is_a else s1,
+            ))
+            for p in mp.get("players", []):
+                name = (p.get("player") or "").strip()
+                if not name:
+                    continue
+                try:
+                    side = int(p.get("side") or 1)
+                except (TypeError, ValueError):
+                    side = 1
+                acc = player_acc.setdefault(name, {
+                    "team_id": team_id_for(side),
+                    "kills": 0, "deaths": 0, "assists": 0, "maps": [],
+                })
+                acc["kills"] += p.get("kills") or 0
+                acc["deaths"] += p.get("deaths") or 0
+                acc["assists"] += p.get("assists") or 0
+                acc["maps"].append({"map": map_name, "acs": p.get("acs"), "agent": p.get("agent")})
+
+        if not maps:
+            return None
+        players = [
+            PlayerStat(
+                player_name=name, team_id=a["team_id"],
+                kills=a["kills"], deaths=a["deaths"], assists=a["assists"],
+                extra={"maps": a["maps"]},
+            )
+            for name, a in player_acc.items()
+        ]
+        return MapStatsResult(source=self.source_name, maps=maps, players=players)
+
+
 # ── Liquipedia Cargo kaynağı ──────────────────────────────────────────────────
 
 class LiquipediaStatsSource(BaseMatchStatsSource):
@@ -350,8 +470,9 @@ class HybridStatsBackfiller:
         # öne alınabilir). Wikitext zaten oyuncu KDA'sı da verdiği için şu an
         # daha zengin; Cargo onaylanınca iki kaynak birbirini tamamlar.
         self.sources: List[BaseMatchStatsSource] = sources or [
-            LiquipediaWikitextSource(),
-            LiquipediaStatsSource(),
+            LiquipediaV3StatsSource(),     # birincil: v3 API (key varsa, en zengin)
+            LiquipediaWikitextSource(),    # yedek: wikitext (key gerektirmez)
+            LiquipediaStatsSource(),       # eski cargo (api.php — artık kapalı)
         ]
 
     # ── 1) Eksik maç tespiti ──────────────────────────────────────────────────
@@ -590,6 +711,11 @@ class HybridStatsBackfiller:
 def _normalize_name(name: Any) -> str:
     """Oyuncu nickname'ini eşleme için normalize eder."""
     return str(name or "").strip().lower()
+
+
+def _norm_team_key(name: Any) -> str:
+    """Takım adını index anahtarı için normalize eder (alfanümerik, küçük harf)."""
+    return re.sub(r"[^a-z0-9]", "", str(name or "").casefold())
 
 
 def _names_match(a: Any, b: Any) -> bool:

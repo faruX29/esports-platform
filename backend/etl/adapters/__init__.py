@@ -20,6 +20,7 @@ from .steam_adapter import SteamAdapter
 from .transfer_adapter import (
 	BaseTransferAdapter,
 	LiquipediaTransferAdapter,
+	LiquipediaV3TransferAdapter,
 	LiquipediaWikitextTransferAdapter,
 	TransferEvent,
 )
@@ -44,6 +45,7 @@ __all__ = [
 	"MultiSourceDataAggregator",
 	"BaseTransferAdapter",
 	"LiquipediaTransferAdapter",
+	"LiquipediaV3TransferAdapter",
 	"LiquipediaWikitextTransferAdapter",
 	"TransferEvent",
 ]

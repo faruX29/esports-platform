@@ -34,8 +34,9 @@ CREATE INDEX IF NOT EXISTS idx_roster_changes_news_pending
     WHERE news_generated = false;
 
 -- 3. Thin trigger function ────────────────────────────────────────────────────
--- Rule: only updates players.team_id. No business logic, no side effects.
--- loan + release left to application layer to avoid trigger complexity.
+-- Rule: oyuncunun güncel takımını günceller. players.team_pandascore_id (bigint)
+-- güncellenir — roster linkimiz bu kolon (players.team_id uuid LEGACY, kullanılmaz
+-- ve target_team_id bigint ile tip uyumsuz). loan + release app katmanında.
 CREATE OR REPLACE FUNCTION public.sync_player_team_on_transfer()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -46,7 +47,7 @@ BEGIN
        AND NEW.target_team_id IS NOT NULL
     THEN
         UPDATE public.players
-           SET team_id = NEW.target_team_id
+           SET team_pandascore_id = NEW.target_team_id
          WHERE id = NEW.player_id;
     END IF;
     RETURN NEW;

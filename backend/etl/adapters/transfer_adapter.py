@@ -343,13 +343,72 @@ class LiquipediaTransferAdapter(BaseTransferAdapter):
         )
 
 
+class LiquipediaV3TransferAdapter(BaseTransferAdapter):
+    """
+    Liquipedia v3 /transfer endpoint'inden roster değişikliklerini çeker
+    (yapısal API — SCRAPER YOK, Liquipedia kural #2 uyumlu). API key gerektirir.
+
+    Birincil transfer kaynağı; key yoksa wikitext adapter'a düşülür.
+    """
+
+    data_source = "liquipedia_v3"
+    SUPPORTED_GAMES = ("valorant", "cs2", "lol")
+
+    def __init__(self, game_slug: str = "valorant") -> None:
+        if game_slug not in self.SUPPORTED_GAMES:
+            raise ValueError(f"Desteklenmeyen oyun: {game_slug!r}. Geçerli: {self.SUPPORTED_GAMES}")
+        self.game_slug = game_slug
+
+    def fetch_raw_transfers(self, days_back: int = 7) -> list[TransferEvent]:
+        import os
+        if not os.getenv("LIQUIPEDIA_API_KEY"):
+            return []
+        svc = LiquipediaService(game_slug=self.game_slug)
+        try:
+            rows = svc.get_recent_transfers_v3(days_back=days_back, limit=200)
+        except Exception as exc:
+            logger.warning("⚠️  v3 transfer fetch hatası (%s): %s", self.game_slug, exc)
+            return []
+
+        events: list[TransferEvent] = []
+        seen: set[str] = set()
+        for row in rows:
+            name = (row.get("player") or "").strip()
+            if not name:
+                continue
+            try:
+                tdate = date.fromisoformat((row.get("date") or "").strip())
+            except ValueError:
+                continue
+            old_team = row.get("old_team")
+            new_team = row.get("new_team")
+            ttype = "release" if (old_team and not new_team) else "permanent"
+            event = TransferEvent(
+                player_name=name,
+                old_team_name=old_team,
+                new_team_name=new_team,
+                transfer_date=tdate,
+                transfer_type=ttype,
+                game_slug=self.game_slug,
+                data_source=self.data_source,
+                raw_payload={"source": "v3", "game": self.game_slug, **row},
+            )
+            if event.idempotency_hash in seen:
+                continue
+            seen.add(event.idempotency_hash)
+            events.append(event)
+
+        logger.info("📥 v3 transfer: %d olay (son %d gün, %s)", len(events), days_back, self.game_slug)
+        return events
+
+
 class LiquipediaWikitextTransferAdapter(BaseTransferAdapter):
     """
     Cargo API KEY GEREKTİRMEYEN transfer kaynağı — aylık 'Player Transfers/<yıl>/<ay>'
     wikitext sayfalarından roster değişikliklerini çeker (action=parse).
 
-    Cargo key onayı beklenirken birincil hat; key gelince Cargo'lu adapter öne
-    alınabilir, bu yedek kalır (Chain of Responsibility — [[strategic-decisions]]).
+    YEDEK hat: key yoksa veya v3 boş dönerse kullanılır (Chain of Responsibility).
+    Liquipedia kural #2 gereği v3 birincil; bu scraper minimal/yedek tutulur.
     """
 
     data_source = "liquipedia_wikitext"

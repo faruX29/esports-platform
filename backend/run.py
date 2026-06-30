@@ -4,12 +4,16 @@ Usage: python run.py [options]
 """
 import argparse
 import logging
+import os
 from datetime import datetime
 from utils.logger import setup_logging
 from etl.sync_matches import MatchSyncer
 from etl.predict import MatchPredictor
 from etl.sync_players import PlayerStatsSyncer
-from etl.adapters import LiquipediaAdapter, GeminiAdapter, HybridStatsBackfiller, LiquipediaWikitextTransferAdapter
+from etl.adapters import (
+    LiquipediaAdapter, GeminiAdapter, HybridStatsBackfiller,
+    LiquipediaV3TransferAdapter, LiquipediaWikitextTransferAdapter,
+)
 from etl.news_generator import NewsGenerator
 
 logger = logging.getLogger(__name__)
@@ -458,10 +462,15 @@ def main():
         logger.info("🔁 TRANSFER SYNC (Liquipedia wikitext → roster_changes)")
         logger.info("=" * 60)
         grand = {'found': 0, 'inserted': 0, 'skipped': 0, 'failed': 0}
+        has_key = bool(os.getenv('LIQUIPEDIA_API_KEY'))
         for tgame in ['valorant', 'cs2', 'lol']:
             try:
-                adapter = LiquipediaWikitextTransferAdapter(tgame)
-                r = adapter.ingest(days_back=args.transfer_days)
+                # Birincil: v3 API (scraper yok, kural #2). Boş/key yoksa wikitext yedek.
+                r = {'found': 0, 'inserted': 0, 'skipped': 0, 'failed': 0}
+                if has_key:
+                    r = LiquipediaV3TransferAdapter(tgame).ingest(days_back=args.transfer_days)
+                if r.get('found', 0) == 0:
+                    r = LiquipediaWikitextTransferAdapter(tgame).ingest(days_back=args.transfer_days)
                 logger.info(f"  {tgame}: {r}")
                 for k in grand:
                     grand[k] += r.get(k, 0)

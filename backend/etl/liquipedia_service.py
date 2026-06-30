@@ -819,6 +819,37 @@ class LiquipediaService:
             })
         return out
 
+    def get_recent_transfers_v3(self, days_back: int = 14, limit: int = 200) -> List[Dict[str, Any]]:
+        """
+        Son N gündeki roster değişikliklerini v3 /transfer endpoint'inden çeker
+        (yapısal — scraper YOK). API key yoksa [] döner.
+
+        Returns: [{date, player, old_team, new_team, role, nationality}]
+        """
+        since = (datetime.utcnow() - timedelta(days=max(1, days_back))).strftime("%Y-%m-%d")
+        payload = self._request_v3("transfer", {
+            "wiki": self.wiki,
+            "limit": limit,
+            "conditions": f"[[date::>{since}]]",
+            "order": "date DESC",
+        })
+        if not payload or "result" not in payload:
+            return []
+        out: List[Dict[str, Any]] = []
+        for t in payload["result"]:
+            player = str(t.get("player") or "").strip()
+            if not player:
+                continue
+            out.append({
+                "date":        str(t.get("date") or "").strip()[:10],
+                "player":      player,
+                "old_team":    str(t.get("fromteam") or "").strip() or None,
+                "new_team":    str(t.get("toteam") or "").strip() or None,
+                "role":        (t.get("role2") or t.get("role1") or "").strip() or None,
+                "nationality": t.get("nationality"),
+            })
+        return out
+
     def get_transfers_wikitext(self, year: int, month_name: str) -> List[Dict[str, Any]]:
         """
         Aylık transfer sayfasının ("Player Transfers/<year>/<month>") wikitext'inden

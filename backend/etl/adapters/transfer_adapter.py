@@ -182,8 +182,8 @@ class BaseTransferAdapter(ABC):
                 cur.execute(
                     """
                     SELECT id FROM players
-                     WHERE LOWER(nickname) = LOWER(%s)
-                        OR LOWER(name)     = LOWER(%s)
+                     WHERE LOWER(nickname)  = LOWER(%s)
+                        OR LOWER(real_name) = LOWER(%s)
                      LIMIT 1
                     """,
                     (event.player_name, event.player_name),
@@ -340,4 +340,88 @@ class LiquipediaTransferAdapter(BaseTransferAdapter):
                 "NewTeam":     new_team,
                 "JoinOrLeave": row.get("JoinOrLeave"),
             },
+        )
+
+
+class LiquipediaWikitextTransferAdapter(BaseTransferAdapter):
+    """
+    Cargo API KEY GEREKTİRMEYEN transfer kaynağı — aylık 'Player Transfers/<yıl>/<ay>'
+    wikitext sayfalarından roster değişikliklerini çeker (action=parse).
+
+    Cargo key onayı beklenirken birincil hat; key gelince Cargo'lu adapter öne
+    alınabilir, bu yedek kalır (Chain of Responsibility — [[strategic-decisions]]).
+    """
+
+    data_source = "liquipedia_wikitext"
+    SUPPORTED_GAMES = ("valorant", "cs2", "lol")
+    _MONTHS = ["January", "February", "March", "April", "May", "June",
+               "July", "August", "September", "October", "November", "December"]
+
+    def __init__(self, game_slug: str = "valorant") -> None:
+        if game_slug not in self.SUPPORTED_GAMES:
+            raise ValueError(
+                f"Desteklenmeyen oyun: {game_slug!r}. Geçerli: {self.SUPPORTED_GAMES}"
+            )
+        self.game_slug = game_slug
+
+    def fetch_raw_transfers(self, days_back: int = 7) -> list[TransferEvent]:
+        svc = LiquipediaService(game_slug=self.game_slug)
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days_back)).date()
+
+        events: list[TransferEvent] = []
+        seen: set[str] = set()
+        for (yr, mo) in self._months_in_window(cutoff):
+            try:
+                rows = svc.get_transfers_wikitext(yr, self._MONTHS[mo - 1])
+            except Exception as exc:
+                logger.warning("⚠️  Transfer wikitext alınamadı %s/%s: %s", yr, mo, exc)
+                continue
+            for row in rows:
+                event = self._row_to_event(row)
+                if event is None or event.transfer_date < cutoff:
+                    continue
+                if event.idempotency_hash in seen:
+                    continue
+                seen.add(event.idempotency_hash)
+                events.append(event)
+
+        logger.info("📥 Wikitext transfer: %d olay (son %d gün)", len(events), days_back)
+        return events
+
+    def _months_in_window(self, cutoff: date) -> list[tuple[int, int]]:
+        """cutoff ayından bugünün ayına kadar (yıl, ay) listesi."""
+        today = datetime.now(timezone.utc).date()
+        out: list[tuple[int, int]] = []
+        y, m = cutoff.year, cutoff.month
+        while (y, m) <= (today.year, today.month):
+            out.append((y, m))
+            m += 1
+            if m > 12:
+                m = 1
+                y += 1
+        return out
+
+    def _row_to_event(self, row: dict) -> Optional[TransferEvent]:
+        name = (row.get("player") or "").strip()
+        if not name:
+            return None
+        try:
+            transfer_date = date.fromisoformat((row.get("date") or "").strip())
+        except ValueError:
+            return None
+
+        old_team = row.get("old_team")
+        new_team = row.get("new_team")
+        # Tür: yeni takım var/eski yok → katılım; eski var/yeni yok → ayrılık
+        transfer_type = "release" if (old_team and not new_team) else "permanent"
+
+        return TransferEvent(
+            player_name=name,
+            old_team_name=old_team,
+            new_team_name=new_team,
+            transfer_date=transfer_date,
+            transfer_type=transfer_type,
+            game_slug=self.game_slug,
+            data_source=self.data_source,
+            raw_payload={"source": "wikitext", **row},
         )

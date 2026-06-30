@@ -16,7 +16,12 @@ from .llm_adapter import BaseLLMAdapter, GeminiAdapter, LLMAdapterError
 from .multi_source_aggregator import MultiSourceDataAggregator
 from .riot_adapter import RiotAdapter
 from .steam_adapter import SteamAdapter
-from .transfer_adapter import BaseTransferAdapter, LiquipediaTransferAdapter, TransferEvent
+from .transfer_adapter import (
+	BaseTransferAdapter,
+	LiquipediaTransferAdapter,
+	LiquipediaWikitextTransferAdapter,
+	TransferEvent,
+)
 
 __all__ = [
 	"BaseDataAdapter",
@@ -37,5 +42,6 @@ __all__ = [
 	"MultiSourceDataAggregator",
 	"BaseTransferAdapter",
 	"LiquipediaTransferAdapter",
+	"LiquipediaWikitextTransferAdapter",
 	"TransferEvent",
 ]

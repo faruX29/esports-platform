@@ -9,7 +9,7 @@ from utils.logger import setup_logging
 from etl.sync_matches import MatchSyncer
 from etl.predict import MatchPredictor
 from etl.sync_players import PlayerStatsSyncer
-from etl.adapters import LiquipediaAdapter, GeminiAdapter, HybridStatsBackfiller
+from etl.adapters import LiquipediaAdapter, GeminiAdapter, HybridStatsBackfiller, LiquipediaWikitextTransferAdapter
 from etl.news_generator import NewsGenerator
 
 logger = logging.getLogger(__name__)
@@ -189,6 +189,18 @@ def main():
         '--generate-previews',
         action='store_true',
         help='Yaklaşan yüksek-tier (S/A) maçlar için LLM ile Türkçe maç önizlemesi üret',
+    )
+
+    parser.add_argument(
+        '--sync-transfers',
+        action='store_true',
+        help='Liquipedia wikitext transfer sayfalarından roster_changes doldur (API key gerektirmez)',
+    )
+    parser.add_argument(
+        '--transfer-days',
+        type=int,
+        default=14,
+        help='--sync-transfers için kaç günlük geriye bakılsın (varsayılan: 14)',
     )
     parser.add_argument(
         '--preview-hours',
@@ -433,6 +445,26 @@ def main():
             )
         except Exception as news_err:
             logger.error(f"❌ Haber üretimi başlatılamadı: {news_err}")
+        logger.info("=" * 60)
+
+    if args.sync_transfers:
+        logger.info("\n" + "=" * 60)
+        logger.info("🔁 TRANSFER SYNC (Liquipedia wikitext → roster_changes)")
+        logger.info("=" * 60)
+        grand = {'found': 0, 'inserted': 0, 'skipped': 0, 'failed': 0}
+        for tgame in ['valorant', 'cs2', 'lol']:
+            try:
+                adapter = LiquipediaWikitextTransferAdapter(tgame)
+                r = adapter.ingest(days_back=args.transfer_days)
+                logger.info(f"  {tgame}: {r}")
+                for k in grand:
+                    grand[k] += r.get(k, 0)
+            except Exception as terr:
+                logger.error(f"❌ Transfer sync hatası ({tgame}): {terr}")
+        logger.info(
+            f"✅ Transfer sync — bulundu:{grand['found']} | yazıldı:{grand['inserted']} | "
+            f"atlandı:{grand['skipped']} | hata:{grand['failed']}"
+        )
         logger.info("=" * 60)
 
     if args.generate_previews:

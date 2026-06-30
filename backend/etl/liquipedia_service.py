@@ -728,6 +728,42 @@ class LiquipediaService:
                 positional += 1
         return params
 
+    def get_transfers_wikitext(self, year: int, month_name: str) -> List[Dict[str, Any]]:
+        """
+        Aylık transfer sayfasının ("Player Transfers/<year>/<month>") wikitext'inden
+        {{Transfer Row|date|name|flag|team1(eski)|team2(yeni)|role1|role2}} satırlarını
+        çıkarır. API key GEREKTİRMEZ (action=parse).
+
+        Returns: [{date, player, old_team, new_team, role, flag}], boş satırlar atlanır.
+        """
+        page = f"Player Transfers/{year}/{month_name}"
+        _, wikitext = self.get_page_wikitext([page, page.replace(" ", "_")])
+        if not wikitext:
+            self._record_error("transfers_wikitext", f"No wikitext for {page}")
+            return []
+
+        # HTML yorumlarını temizle (commented şablon örnekleri gerçek değil)
+        wikitext = re.sub(r"<!--.*?-->", "", wikitext, flags=re.S)
+
+        out: List[Dict[str, Any]] = []
+        for block in self._extract_named_templates(wikitext, "Transfer Row"):
+            p = self._split_params_brace_aware(block)
+            name = self._clean_wikitext_value(p.get("name", "")).strip()
+            if not name:
+                continue
+            old_team = self._clean_wikitext_value(p.get("team1", "")).strip() or None
+            new_team = self._clean_wikitext_value(p.get("team2", "")).strip() or None
+            role = (p.get("role2") or p.get("role1") or "").strip() or None
+            out.append({
+                "date":     (p.get("date") or "").strip(),
+                "player":   name,
+                "old_team": old_team,
+                "new_team": new_team,
+                "role":     role,
+                "flag":     (p.get("flag") or "").strip() or None,
+            })
+        return out
+
     def get_match_maps_wikitext(
         self,
         tournament_name: str,

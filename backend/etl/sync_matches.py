@@ -41,7 +41,8 @@ class MatchSyncer:
         ])
 
     def sync_running_matches(self, game_slug, limit=50):
-        """Fetch /running endpoint and upsert — also resolves matches that just finished."""
+        """Fetch /running endpoint and upsert. Orphan resolution caller tarafından
+        tüm oyunların live_id birleşimiyle ayrıca yapılır (bkz. resolve_orphans)."""
         logger.info(f"\n📡 Syncing LIVE matches for {game_slug.upper()}...")
         raw_matches = self.client.get_running_matches(game_slug, limit)
 
@@ -59,44 +60,45 @@ class MatchSyncer:
         else:
             logger.info(f"   No running matches for {game_slug}")
 
-        # Detect matches that left /running (finished) and fetch their final state
-        self._resolve_finished_matches(game_slug, live_ids)
+        return {'fetched': fetched, 'cleaned': cleaned_count, 'synced': synced, 'live_ids': live_ids}
 
-        return {'fetched': fetched, 'cleaned': cleaned_count, 'synced': synced}
-
-    def _resolve_finished_matches(self, game_slug: str, live_ids: set):
+    def resolve_orphans(self, live_ids: set, cap: int = 40) -> int:
         """
-        DB'de 'running' olan ama PandaScore /running'de artık görünmeyen maçları
-        /matches/{id} endpoint'i ile çek, final skor + status'ü upsert et.
-        Her live sync döngüsünde max 10 API çağrısı yapılır (rate limit koruması).
+        DB'de 'running' olup PandaScore /running'de artık görünmeyen maçları
+        (orphan) tespit edip /matches/{id} ile final skor+status'ü günceller.
+
+        ÖNEMLİ: Oyun-slug'ından BAĞIMSIZ çalışır — DB'deki slug'lar ('cs-go',
+        'league-of-legends') ile PandaScore endpoint slug'ları ('csgo','lol')
+        tutarsız olabildiği için global karşılaştırma yapılır.
+
+        live_ids: tüm oyunların /running'inden gelen ID birleşimi (boş set =
+        tüm running maçları PandaScore'a karşı yeniden doğrula). get_match_by_id
+        gerçek status döndürdüğü için boş set bile güvenlidir (gerçekten canlı
+        maçlar 'running' kalır).
+
+        cap: tek çağrıda max API isteği (rate-limit koruması).
         """
         try:
             with Database.get_connection() as conn:
                 with conn.cursor() as cur:
+                    # En eski başlamış maçlar önce (en olası bitmiş olanlar)
                     cur.execute(
-                        """
-                        SELECT m.id FROM matches m
-                        JOIN games g ON m.game_id = g.id
-                        WHERE m.status = 'running' AND g.slug = %s
-                        """,
-                        (game_slug,),
+                        "SELECT id FROM matches WHERE status = 'running' "
+                        "ORDER BY scheduled_at ASC NULLS FIRST"
                     )
-                    db_running_ids = {row[0] for row in cur.fetchall()}
+                    db_running_ids = [row[0] for row in cur.fetchall()]
         except Exception as e:
-            logger.warning(f"⚠️  Could not query running matches for {game_slug}: {e}")
-            return
+            logger.warning(f"⚠️  Could not query running matches: {e}")
+            return 0
 
-        orphaned = db_running_ids - live_ids
+        orphaned = [mid for mid in db_running_ids if mid not in live_ids]
         if not orphaned:
-            return
+            return 0
 
-        logger.info(
-            f"🔍 {len(orphaned)} match(es) no longer in PandaScore /running for {game_slug} "
-            "— fetching final status..."
-        )
+        logger.info(f"🔍 {len(orphaned)} orphan running match — fetching final status (cap={cap})...")
 
         resolved = []
-        for match_id in list(orphaned)[:10]:
+        for match_id in orphaned[:cap]:
             raw = self.client.get_match_by_id(match_id)
             if raw and isinstance(raw, dict):
                 cleaned = self.cleaner.clean_matches([raw])
@@ -105,9 +107,9 @@ class MatchSyncer:
                     continue
             self._force_finish_match(match_id)
 
-        if resolved:
-            synced = self._upsert_matches(resolved)
-            logger.info(f"✅ Resolved {synced} finished match(es) — status+score updated from PandaScore")
+        count = self._upsert_matches(resolved) if resolved else 0
+        logger.info(f"✅ Resolved {count} finished match(es) — status+score updated from PandaScore")
+        return count
 
     def _force_finish_match(self, match_id: int):
         """PandaScore'dan alınamayan maçı 'finished' olarak işaretle (score değişmez)."""

@@ -218,18 +218,19 @@ def main():
     if args.live:
         games = ['valorant', 'csgo', 'lol'] if args.all_games else [args.game]
         total_live = {'fetched': 0, 'cleaned': 0, 'synced': 0}
+        all_live_ids = set()
         for game in games:
             r = syncer.sync_running_matches(game, limit=args.limit)
+            all_live_ids |= r.get('live_ids', set())
             for k in total_live:
                 total_live[k] += r.get(k, 0)
         logger.info(f"📡 Live sync done — synced {total_live['synced']} running matches")
 
-        # --fix-orphans: tüm DB running maçları PandaScore'dan çek, final skor+status güncelle
-        if args.fix_orphans:
-            logger.info("\n🔍 Force orphan resolution (all games)...")
-            for game in ['valorant', 'csgo', 'lol']:
-                syncer._resolve_finished_matches(game, set())
-            logger.info("✅ Orphan resolution tamamlandı")
+        # Orphan resolution: tüm oyunların live_id birleşimiyle TEK seferde
+        # (oyun-slug'ından bağımsız → 'cs-go'/'league-of-legends' slug bug'ı yok).
+        # --fix-orphans verilirse cap'i yükselt (backlog temizliği için).
+        resolved = syncer.resolve_orphans(all_live_ids, cap=40 if args.fix_orphans else 15)
+        logger.info(f"🔍 Orphan resolution: {resolved} maç finished'a güncellendi")
 
         # Canlı maç istatistiklerini de güncelle (harita/KDA/tur skoru)
         ps = PlayerStatsSyncer()
@@ -387,11 +388,11 @@ def main():
         logger.info("=" * 60)
 
     if args.fix_orphans:
-        logger.info("\n🔍 Orphan match resolution (all games)...")
-        for game in ['valorant', 'csgo', 'lol']:
-            # live_ids=set() → tüm DB running maçları orphan kabul edilir
-            syncer._resolve_finished_matches(game, set())
-        logger.info("✅ Orphan resolution tamamlandı")
+        logger.info("\n🔍 Manual orphan resolution (tüm running maçlar PandaScore'a karşı doğrulanıyor)...")
+        # live_ids=set() → tüm running maçlar doğrulanır. Yüksek cap ile tek
+        # geçişte backlog temizlenir (get_match_by_id gerçek status döndürür).
+        total = syncer.resolve_orphans(set(), cap=500)
+        logger.info(f"✅ Orphan resolution tamamlandı — {total} maç güncellendi")
 
     if args.accuracy_check:
         logger.info("\n" + "=" * 60)

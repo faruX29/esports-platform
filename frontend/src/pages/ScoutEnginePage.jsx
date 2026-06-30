@@ -1,0 +1,257 @@
+import { useEffect, useState } from 'react'
+import { supabase } from '../supabaseClient'
+import SeoHead from '../components/SeoHead'
+import InitialsImage from '../components/InitialsImage'
+
+/**
+ * Scout Engine — B2B "Private Beta / Waitlist" landing.
+ *
+ * Gemini stratejisi (%30 B2B): devasa dashboard yerine waitlist + 3-5 örnek
+ * scouting raporu. Ajansları kapalı betaya çekerken B2C trafiğiyle güç gösterir.
+ * Örnek raporlar gerçek oyuncu isimleriyle beslenir (graceful fallback).
+ */
+
+const ACCENT = '#5eead4'  // teal — B2B/analitik kimliği (B2C kırmızıdan ayrışsın)
+
+const FEATURES = [
+  { icon: '📊', title: 'Derin Performans Analitiği', desc: 'Harita bazlı KDA, Impact skoru, HS% ve tempo metrikleri — hibrit veri hattıyla zenginleştirilmiş.' },
+  { icon: '📈', title: 'Form & Trend Takibi', desc: 'Oyuncunun son N maçtaki yükseliş/düşüş eğrisi, ajan/rol bazlı tutarlılık.' },
+  { icon: '🎯', title: 'Rakip & Uyum Analizi', desc: 'Oyuncunun takım oyun tarzına uyumu, güçlü/zayıf harita profili, transfer uygunluğu.' },
+  { icon: '🔍', title: 'Erken Yetenek Tespiti', desc: 'Alt liglerden yükselen oyuncular için otomatik radar — rakiplerden önce keşfet.' },
+]
+
+const SAMPLE_REPORTS = [
+  {
+    role: 'Duelist', game: 'VALORANT',
+    verdict: 'Yüksek Tavan',
+    note: 'Agresif giriş oyuncusu. Pistol round dönüşüm oranı lig ortalamasının %18 üstünde; clutch durumlarda soğukkanlı. Yapı oturmuş takımda patlama potansiyeli yüksek.',
+    metrics: [['Impact', '1.24'], ['K/D', '1.31'], ['Opening WR', '%58']],
+  },
+  {
+    role: 'IGL / Controller', game: 'VALORANT',
+    verdict: 'İstikrar Çapası',
+    note: 'Düşük varyanslı, takım odaklı oyuncu. Bireysel istatistikleri orta seviye ama harita kontrolü ve util kullanımı elit. Genç kadroya liderlik için ideal.',
+    metrics: [['Impact', '0.98'], ['Util/round', '3.4'], ['Map WR', '%61']],
+  },
+  {
+    role: 'AWPer', game: 'CS2',
+    verdict: 'Takip Listesi',
+    note: 'Yüksek tavan/düşük taban profili. İyi günlerinde maç çeviriyor ama tutarlılık riski var. Yapılandırılmış bir sistemde değer kazanır. 6 ay izleme önerilir.',
+    metrics: [['Rating 2.0', '1.15'], ['Opening K', '0.19'], ['HS%', '%41']],
+  },
+]
+
+function SampleReportCard({ report, player }) {
+  return (
+    <div style={{
+      background: 'linear-gradient(160deg, rgba(20,184,166,.06), #0d0d0f)',
+      border: '1px solid rgba(94,234,212,.18)', borderRadius: 16, padding: 16,
+      display: 'flex', flexDirection: 'column', gap: 10,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <InitialsImage
+          src={player?.image_url} name={player?.nickname || report.role}
+          width={44} height={44} borderRadius={10} objectFit="cover"
+          style={{ border: '1px solid rgba(94,234,212,.25)', flexShrink: 0 }}
+        />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: '#f2f2f2', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {player?.nickname || 'Örnek Oyuncu'}
+          </div>
+          <div style={{ fontSize: 11, color: '#8bd9cd' }}>
+            {report.role} · {report.game}{player?.team_name ? ` · ${player.team_name}` : ''}
+          </div>
+        </div>
+        <span style={{
+          marginLeft: 'auto', fontSize: 10, fontWeight: 800, color: '#04201b',
+          background: ACCENT, borderRadius: 999, padding: '3px 9px', whiteSpace: 'nowrap',
+        }}>
+          {report.verdict}
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8 }}>
+        {report.metrics.map(([label, val]) => (
+          <div key={label} style={{ flex: 1, background: 'rgba(255,255,255,.03)', border: '1px solid #1e1e22', borderRadius: 9, padding: '7px 8px', textAlign: 'center' }}>
+            <div style={{ fontSize: 15, fontWeight: 900, color: '#dffaf5', fontVariantNumeric: 'tabular-nums' }}>{val}</div>
+            <div style={{ fontSize: 9, color: '#6f6f6f', textTransform: 'uppercase', letterSpacing: '.4px' }}>{label}</div>
+          </div>
+        ))}
+      </div>
+
+      <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6, color: '#bdbdbd' }}>{report.note}</p>
+
+      <div style={{ marginTop: 'auto', fontSize: 9, color: '#4a4a4a', textTransform: 'uppercase', letterSpacing: '.6px' }}>
+        Örnek Scout Raporu · İllüstratif
+      </div>
+    </div>
+  )
+}
+
+export default function ScoutEnginePage() {
+  const [players, setPlayers] = useState([])
+  const [email, setEmail] = useState('')
+  const [org, setOrg] = useState('')
+  const [role, setRole] = useState('agency')
+  const [status, setStatus] = useState('idle')  // idle | sending | done | error
+  const [errorMsg, setErrorMsg] = useState('')
+
+  // Örnek raporları gerçek oyuncu isimleriyle beslemek için birkaç oyuncu çek
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { data } = await supabase
+          .from('players')
+          .select('id,nickname,image_url,role')
+          .not('nickname', 'is', null)
+          .not('image_url', 'is', null)
+          .limit(3)
+        if (!cancelled && data) setPlayers(data)
+      } catch { /* sessiz — fallback örnek isimler kullanılır */ }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  async function submitWaitlist(e) {
+    e.preventDefault()
+    const trimmed = email.trim()
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setErrorMsg('Geçerli bir e-posta gir.')
+      setStatus('error')
+      return
+    }
+    setStatus('sending')
+    setErrorMsg('')
+    try {
+      const { error } = await supabase.from('scout_waitlist').insert({
+        email: trimmed,
+        organization: org.trim() || null,
+        role,
+      })
+      if (error) throw error
+      setStatus('done')
+      setEmail(''); setOrg('')
+    } catch (err) {
+      // Tablo yoksa / RLS — yine de kullanıcıya nazik geri bildirim
+      setErrorMsg('Kayıt alınamadı. Lütfen daha sonra tekrar dene.')
+      setStatus('error')
+      console.error('scout_waitlist insert:', err?.message || err)
+    }
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#08090a', color: '#f2f2f2' }}>
+      <SeoHead
+        title="Scout Engine — Ajanslar için Espor Scouting (Private Beta)"
+        description="Derin performans analitiği, form takibi ve erken yetenek tespiti. Espor ajansları ve scout'lar için kapalı beta — bekleme listesine katıl."
+        type="website"
+      />
+      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '28px 16px 60px' }}>
+
+        {/* Hero */}
+        <section style={{
+          borderRadius: 20, border: '1px solid rgba(94,234,212,.2)', overflow: 'hidden',
+          background: `radial-gradient(circle at 85% 10%, rgba(20,184,166,.16), transparent 40%), linear-gradient(160deg,#0d1413,#0a0a0b)`,
+          padding: '34px 24px', marginBottom: 22,
+        }}>
+          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase', color: ACCENT, border: `1px solid ${ACCENT}55`, borderRadius: 999, padding: '4px 12px' }}>
+            Private Beta · Bekleme Listesi
+          </span>
+          <h1 style={{ margin: '16px 0 10px', fontSize: 38, lineHeight: 1.1, fontWeight: 900, maxWidth: 720 }}>
+            Scout Engine — Ajanslar için Veri Odaklı Espor Scouting
+          </h1>
+          <p style={{ margin: 0, fontSize: 16, lineHeight: 1.7, color: '#b6c4c1', maxWidth: 680 }}>
+            Yüzlerce oyuncuyu manuel izlemeyi bırak. Hibrit veri hattımız harita bazlı KDA,
+            Impact skoru ve form trendlerini otomatik analiz eder; sana sadece doğru
+            transfer kararını sunar. Rakiplerinden önce yeteneği keşfet.
+          </p>
+          <a href="#waitlist" style={{
+            display: 'inline-block', marginTop: 20, background: ACCENT, color: '#04201b',
+            fontWeight: 800, fontSize: 14, padding: '11px 22px', borderRadius: 10, textDecoration: 'none',
+          }}>
+            Bekleme Listesine Katıl →
+          </a>
+        </section>
+
+        {/* Features */}
+        <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(230px,1fr))', gap: 12, marginBottom: 26 }}>
+          {FEATURES.map(f => (
+            <div key={f.title} style={{ background: '#0d0d0f', border: '1px solid #1c1c20', borderRadius: 14, padding: 16 }}>
+              <div style={{ fontSize: 24, marginBottom: 8 }}>{f.icon}</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#eaeaea', marginBottom: 5 }}>{f.title}</div>
+              <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6, color: '#9a9a9a' }}>{f.desc}</p>
+            </div>
+          ))}
+        </section>
+
+        {/* Sample reports */}
+        <section style={{ marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 6 }}>
+            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>Örnek Scouting Raporları</h2>
+            <span style={{ fontSize: 12, color: '#6f6f6f' }}>Beta'da her oyuncu için otomatik üretilir</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 14 }}>
+            {SAMPLE_REPORTS.map((rep, i) => (
+              <SampleReportCard key={rep.role} report={rep} player={players[i]} />
+            ))}
+          </div>
+        </section>
+
+        {/* Waitlist form */}
+        <section id="waitlist" style={{
+          borderRadius: 18, border: `1px solid ${ACCENT}33`, padding: 24,
+          background: 'linear-gradient(160deg, rgba(20,184,166,.07), #0b0b0c)',
+        }}>
+          <h2 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 900 }}>Kapalı Beta'ya Erken Erişim</h2>
+          <p style={{ margin: '0 0 18px', fontSize: 13.5, color: '#a6a6a6', maxWidth: 560 }}>
+            İlk dalgaya ajanslar ve profesyonel scout'lar davet edilecek. E-postanı bırak,
+            sıra sana gelince ilk sen haberdar ol.
+          </p>
+
+          {status === 'done' ? (
+            <div style={{ border: '1px solid #23442e', background: '#102117', color: '#9fe2b7', borderRadius: 12, padding: '14px 16px', fontSize: 14 }}>
+              ✅ Listeye eklendin! Beta açıldığında e-posta ile haber vereceğiz.
+            </div>
+          ) : (
+            <form onSubmit={submitWaitlist} style={{ display: 'grid', gap: 10, maxWidth: 520 }}>
+              <input
+                type="email" value={email} onChange={e => { setEmail(e.target.value); if (status === 'error') setStatus('idle') }}
+                placeholder="E-posta adresin *"
+                style={{ background: '#121214', border: '1px solid #2a2a2e', borderRadius: 10, color: '#f2f2f2', padding: '11px 13px', fontSize: 14 }}
+              />
+              <input
+                type="text" value={org} onChange={e => setOrg(e.target.value)}
+                placeholder="Organizasyon / takım (opsiyonel)"
+                style={{ background: '#121214', border: '1px solid #2a2a2e', borderRadius: 10, color: '#f2f2f2', padding: '11px 13px', fontSize: 14 }}
+              />
+              <select
+                value={role} onChange={e => setRole(e.target.value)}
+                style={{ background: '#121214', border: '1px solid #2a2a2e', borderRadius: 10, color: '#f2f2f2', padding: '11px 13px', fontSize: 14 }}
+              >
+                <option value="agency">Ajans / Menajerlik</option>
+                <option value="team">Takım / Org</option>
+                <option value="scout">Bağımsız Scout</option>
+                <option value="other">Diğer</option>
+              </select>
+
+              {status === 'error' && <div style={{ color: '#ff8c9a', fontSize: 12.5 }}>{errorMsg}</div>}
+
+              <button
+                type="submit" disabled={status === 'sending'}
+                style={{
+                  background: ACCENT, color: '#04201b', fontWeight: 800, fontSize: 15,
+                  border: 'none', borderRadius: 10, padding: '12px', cursor: status === 'sending' ? 'wait' : 'pointer',
+                }}
+              >
+                {status === 'sending' ? 'Gönderiliyor…' : 'Bekleme Listesine Katıl'}
+              </button>
+              <span style={{ fontSize: 11, color: '#5f5f5f' }}>Spam yok. Sadece beta daveti ve büyük güncellemeler.</span>
+            </form>
+          )}
+        </section>
+
+      </div>
+    </div>
+  )
+}

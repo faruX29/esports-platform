@@ -35,6 +35,7 @@ const RegisterPage = lazy(() => import('./pages/RegisterPage'))
 const NewsPage = lazy(() => import('./pages/NewsPage'))
 const NewsDetailPage = lazy(() => import('./pages/NewsDetailPage'))
 const TournamentsListPage = lazy(() => import('./pages/TournamentsListPage'))
+const ScoutEnginePage = lazy(() => import('./pages/ScoutEnginePage'))
 
 import './App.css'
 
@@ -46,6 +47,7 @@ const NAV_LINKS = [
   { to: '/rankings', label: '🏆 Rankings', end: false },
   { to: '/players',  label: '👤 Players',  end: false },
   { to: '/news',     label: '📰 News',     end: false },
+  { to: '/scout',    label: '🔬 Scout',    end: false },
 ]
 
 /* ─── NavSearch ─────────────────────────────────────────────────────────────── */
@@ -533,6 +535,7 @@ function AppShell() {
           <Route path="/search"                   element={<SearchPage />}     />
           <Route path="/news"                     element={<NewsPage />}       />
           <Route path="/news/:newsId"             element={<NewsDetailPage />} />
+          <Route path="/scout"                    element={<ScoutEnginePage />} />
           <Route path="/login"                    element={<LoginPage />}      />
           <Route path="/register"                 element={<RegisterPage />}   />
           <Route path="/settings"                 element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />

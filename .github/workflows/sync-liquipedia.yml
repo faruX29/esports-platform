@@ -1,0 +1,60 @@
+name: Sync Liquipedia (hybrid stats + transfers)
+
+# Liquipedia rate-limit'ine saygı için GÜNLÜK (saatlik değil). Hybrid harita/KDA
+# backfill + transfer senkronu. v3 API birincil, key yoksa wikitext yedek.
+on:
+  schedule:
+    - cron: '0 5 * * *'   # her gün 05:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: sync-liquipedia
+  cancel-in-progress: false
+
+jobs:
+  liquipedia-sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Hybrid stats backfill (map + player KDA → player_match_stats)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          LIQUIPEDIA_API_KEY: ${{ secrets.LIQUIPEDIA_API_KEY }}
+        run: python run.py --hybrid-stats --hybrid-limit 50
+
+      - name: Sync transfers (v3 → roster_changes)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          LIQUIPEDIA_API_KEY: ${{ secrets.LIQUIPEDIA_API_KEY }}
+        run: python run.py --sync-transfers --transfer-days 14
+
+      - name: Generate transfer news (LLM, bekleyen roster_changes)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          LIQUIPEDIA_API_KEY: ${{ secrets.LIQUIPEDIA_API_KEY }}
+        run: python run.py --generate-transfers
+
+      - name: Notify on failure
+        if: failure()
+        run: echo "❌ Liquipedia sync failed! Check logs above."

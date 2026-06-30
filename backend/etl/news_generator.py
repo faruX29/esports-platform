@@ -304,24 +304,31 @@ class NewsGenerator:
         """
         Maçın en yüksek kill'e sahip oyuncularını döner (Hibrit Adapter ile
         player_match_stats dolduğunda makaleleri zenginleştirir). Veri yoksa [].
+
+        OPSİYONEL zenginleştirme: şema/veri sorununda [] döner — haber üretimini
+        ASLA çökertmez (no silent fail: hata loglanır).
         """
-        with Database.get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT p.nickname, t.name AS team_name,
-                           pms.kills, pms.deaths, pms.assists
-                    FROM player_match_stats pms
-                    JOIN players p ON p.id = pms.player_id
-                    LEFT JOIN teams t ON t.id = pms.team_id
-                    WHERE pms.match_id = %s AND pms.kills IS NOT NULL
-                    ORDER BY pms.kills DESC NULLS LAST
-                    LIMIT 5
-                    """,
-                    (match_id,),
-                )
-                cols = [d[0] for d in cur.description]
-                return [dict(zip(cols, row)) for row in cur.fetchall()]
+        try:
+            with Database.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        SELECT p.nickname, t.name AS team_name,
+                               pms.kills, pms.deaths, pms.assists
+                        FROM player_match_stats pms
+                        JOIN players p ON p.id = pms.player_id
+                        LEFT JOIN teams t ON t.id = pms.team_id
+                        WHERE pms.match_id = %s AND pms.kills IS NOT NULL
+                        ORDER BY pms.kills DESC NULLS LAST
+                        LIMIT 5
+                        """,
+                        (match_id,),
+                    )
+                    cols = [d[0] for d in cur.description]
+                    return [dict(zip(cols, row)) for row in cur.fetchall()]
+        except Exception as exc:
+            logger.warning("⚠️  player_match_stats okunamadı (atlanıyor) match %s: %s", match_id, exc)
+            return []
 
     def _denormalize(self, row: dict) -> dict:
         """Map the flat JOIN row into the nested structure FactSheetBuilder expects."""

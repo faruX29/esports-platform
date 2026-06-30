@@ -138,6 +138,20 @@ class PlayerStatsSyncer:
                         updated_at    timestamptz DEFAULT now()
                     )
                 """)
+                # Eski şemayla oluşmuş tablolar için eksik kolonları ekle
+                # (CREATE TABLE IF NOT EXISTS mevcut tabloya kolon EKLEMEZ).
+                cur.execute("""
+                    ALTER TABLE public.player_match_stats
+                      ADD COLUMN IF NOT EXISTS team_id       bigint,
+                      ADD COLUMN IF NOT EXISTS kills         numeric,
+                      ADD COLUMN IF NOT EXISTS deaths        numeric,
+                      ADD COLUMN IF NOT EXISTS assists       numeric,
+                      ADD COLUMN IF NOT EXISTS headshots     numeric,
+                      ADD COLUMN IF NOT EXISTS hs_percentage numeric,
+                      ADD COLUMN IF NOT EXISTS is_win        boolean,
+                      ADD COLUMN IF NOT EXISTS stats         jsonb DEFAULT '{}'::jsonb,
+                      ADD COLUMN IF NOT EXISTS played_at     timestamptz
+                """)
                 cur.execute("""
                     CREATE UNIQUE INDEX IF NOT EXISTS uq_player_match_stats_player_match
                     ON public.player_match_stats(player_id, match_id)

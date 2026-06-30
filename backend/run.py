@@ -186,6 +186,18 @@ def main():
     )
 
     parser.add_argument(
+        '--generate-previews',
+        action='store_true',
+        help='Yaklaşan yüksek-tier (S/A) maçlar için LLM ile Türkçe maç önizlemesi üret',
+    )
+    parser.add_argument(
+        '--preview-hours',
+        type=int,
+        default=48,
+        help='--generate-previews için kaç saat ileriye bakılsın (varsayılan: 48)',
+    )
+
+    parser.add_argument(
         '--liquipedia-enrich',
         action='store_true',
         help='Liquipedia MediaWiki API ile Data Enrichment çalıştır',
@@ -421,6 +433,24 @@ def main():
             )
         except Exception as news_err:
             logger.error(f"❌ Haber üretimi başlatılamadı: {news_err}")
+        logger.info("=" * 60)
+
+    if args.generate_previews:
+        logger.info("\n" + "=" * 60)
+        logger.info("🔮 LLM MATCH PREVIEW GENERATION (Gemini)")
+        logger.info("=" * 60)
+        try:
+            llm = GeminiAdapter()
+            generator = NewsGenerator(llm)
+            result = generator.generate_previews(hours_ahead=args.preview_hours)
+            logger.info(
+                f"✅ Önizleme üretimi tamamlandı — "
+                f"deneme: {result['attempted']} | "
+                f"yazıldı: {result['generated']} | "
+                f"hata: {result['failed']}"
+            )
+        except Exception as prev_err:
+            logger.error(f"❌ Önizleme üretimi başlatılamadı: {prev_err}")
         logger.info("=" * 60)
 
     if args.liquipedia_enrich:

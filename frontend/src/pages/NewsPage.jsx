@@ -74,6 +74,7 @@ function fmtDate(iso) {
 }
 
 function getArticleStoryTag(variant) {
+  if (variant === 'preview') return 'Önizleme'
   if (variant === 'upset') return 'Surpriz Sonuc'
   if (variant === 'stomp') return 'Skor Haberi'
   if (variant === 'close') return 'Seri Ozeti'
@@ -84,11 +85,12 @@ function articleRowToStory(row) {
   const gameId = normalizeStoryGameId(row.game_slug)
   const game = getGameMeta(gameId)
   const tier = normalizeTier(row.tier)
+  const isPreview = row.variant === 'preview'
   return {
     id: `match_${row.match_id}`,
     matchId: row.match_id,
     tournamentId: row.tournament_id,
-    status: 'finished',
+    status: isPreview ? 'not_started' : 'finished',
     variant: row.variant || 'close',
     publishedAt: row.created_at,
     priority: (tierWeight(tier) * 100) + (row.variant === 'upset' ? 35 : row.variant === 'stomp' ? 24 : 12),
@@ -384,7 +386,8 @@ export default function NewsPage() {
     setLoading(true)
     try {
       const now = new Date()
-      const since48h = new Date(now.getTime() - 48 * 60 * 60 * 1000)
+      // Haberler birikir: son 7 gün penceresi (eski 48s yerine)
+      const articlesSince = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
       const upcomingFrom = new Date(now.getTime() - 6 * 60 * 60 * 1000)
       const upcomingUntil = new Date(now.getTime() + 72 * 60 * 60 * 1000)
 
@@ -403,9 +406,9 @@ export default function NewsPage() {
         supabase
           .from('news_articles')
           .select('*')
-          .gte('created_at', since48h.toISOString())
+          .gte('created_at', articlesSince.toISOString())
           .order('created_at', { ascending: false })
-          .limit(14),
+          .limit(50),
         supabase
           .from('matches')
           .select(upcomingSelect)
@@ -443,13 +446,19 @@ export default function NewsPage() {
       }
 
       // Map news_articles rows → story objects; generate upcoming stories locally
-      const finishedStories = (articlesRes.data || [])
+      const articleStories = (articlesRes.data || [])
         .map(articleRowToStory)
         .filter(story => story.visuals.gameId)
 
+      // Dedup: bir maçın LLM makalesi (recap/önizleme) varsa, yerel upcoming
+      // şablon hikayesini kullanma — zengin LLM içeriği kazanır.
+      const articleMatchIds = new Set(articleStories.map(s => s.matchId))
+
+      const finishedStories = articleStories
+
       const upcomingStories = upcomingMatches
         .map(match => buildUpcomingStory(match, isTurkishTeam))
-        .filter(story => story.visuals.gameId)
+        .filter(story => story.visuals.gameId && !articleMatchIds.has(story.matchId))
         .map(story => applyRealtimeTournamentToStory(story, tournamentById))
 
       const generated = [...finishedStories, ...upcomingStories]

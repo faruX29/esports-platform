@@ -48,6 +48,21 @@ SYSTEM_PROMPT = (
     '{"title": "...", "summary": "...", "paragraphs": ["1. paragraf", "2. paragraf", "3. paragraf"]}'
 )
 
+# ── Önizleme (upcoming) editör persona'sı ─────────────────────────────────────
+PREVIEW_SYSTEM_PROMPT = (
+    "Sen profesyonel bir espor editörüsün. Gelen YAKLAŞAN maç verilerini kullanarak "
+    "espor jargonuna hakim, merak uyandıran, tarafsız Türkçe maç ÖNİZLEMESİ yazıyorsun.\n\n"
+    "Kurallar:\n"
+    "- Maç henüz OYNANMADI; sonuç/skor uydurma. Beklenti, form ve favori analizi yaz.\n"
+    "- Model favorisi verildiyse ona değin ama kesin sonuç verme; 'kağıt üstünde favori' tonu kullan.\n"
+    "- Kesinlikle icat edilmiş istatistik veya oyuncu ismi ekleme; yalnızca fact sheet verisi.\n"
+    "- Başlık (title) en fazla 12 kelime, özet (summary) 2-3 cümle.\n"
+    "- Gövde 3-4 paragraf string'i içeren 'paragraphs' dizisi olsun.\n"
+    "- JSON string içinde çift tırnak (\") kullanma; vurgu için tek tırnak (').\n"
+    "- Yanıtı yalnızca şu JSON şemasında ver:\n"
+    '{"title": "...", "summary": "...", "paragraphs": ["1. paragraf", "2. paragraf"]}'
+)
+
 # ── Tier display labels ───────────────────────────────────────────────────────
 _TIER_LABELS = {
     "S": "S-Tier (Premier)",
@@ -70,6 +85,40 @@ class FactSheetBuilder:
         if not seconds:
             return None
         return f"{int(seconds // 60)} dk"
+
+    @staticmethod
+    def build_preview(match: dict) -> str:
+        """
+        Yaklaşan (upcoming) maç için önizleme fact sheet'i — final skor yok;
+        tahmin, tier, takım ve zaman bağlamı kullanılır.
+        """
+        team_a = match.get("team_a") or {}
+        team_b = match.get("team_b") or {}
+        tournament = match.get("tournament") or {}
+        a_name = team_a.get("name") or "Team A"
+        b_name = team_b.get("name") or "Team B"
+
+        tier = str(tournament.get("tier") or match.get("tier") or "C").upper()
+        tier_label = _TIER_LABELS.get(tier, "Bilinmeyen Tier")
+        t_name = tournament.get("name") or match.get("tournament_name") or "Ana Sahne"
+        game = str((match.get("game") or {}).get("slug") or match.get("game_slug") or "esports").upper()
+        when = match.get("scheduled_at") or "yakında"
+
+        lines = [
+            "MAÇ ÖNİZLEME RAPORU",
+            f"Turnuva: {t_name} [{tier_label}]",
+            f"Oyun: {game}",
+            f"Eşleşme: {a_name} vs {b_name}",
+            f"Tarih: {when}",
+        ]
+        pred_a = match.get("prediction_team_a")
+        pred_b = match.get("prediction_team_b")
+        if pred_a is not None and pred_b is not None:
+            fav = a_name if float(pred_a) >= float(pred_b) else b_name
+            lines.append(f"Model favorisi: {fav} (tahmin {float(pred_a):.2f} / {float(pred_b):.2f})")
+        else:
+            lines.append("Model tahmini: henüz yok (dengeli beklenti)")
+        return "\n".join(lines)
 
     @staticmethod
     def _format_top_players(player_rows: list[dict]) -> Optional[str]:
@@ -230,7 +279,8 @@ class NewsGenerator:
                     WHERE m.status = 'finished'
                       AND m.scheduled_at >= %s
                       AND NOT EXISTS (
-                          SELECT 1 FROM news_articles na WHERE na.match_id = m.id
+                          SELECT 1 FROM news_articles na
+                          WHERE na.match_id = m.id AND na.variant <> 'preview'
                       )
                     ORDER BY m.scheduled_at DESC
                     LIMIT 20
@@ -348,7 +398,11 @@ class NewsGenerator:
                         team_a_name, team_b_name, team_a_logo, team_b_logo, hero_score
                     )
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (match_id) DO NOTHING
+                    ON CONFLICT (match_id) DO UPDATE SET
+                        title = EXCLUDED.title, summary = EXCLUDED.summary,
+                        content = EXCLUDED.content, variant = EXCLUDED.variant,
+                        hero_score = EXCLUDED.hero_score, created_at = now()
+                    WHERE news_articles.variant = 'preview'
                     """,
                     (
                         match["id"],
@@ -418,6 +472,105 @@ class NewsGenerator:
 
         return stats
 
+    # ── Önizleme (upcoming) üretimi ───────────────────────────────────────────
+
+    def _fetch_upcoming_for_preview(self, hours_ahead: int = 48) -> list[dict]:
+        """Önümüzdeki X saatteki, makalesi olmayan yüksek tier (S/A) upcoming maçlar."""
+        until = (datetime.now(timezone.utc) + timedelta(hours=hours_ahead)).isoformat()
+        now = datetime.now(timezone.utc).isoformat()
+        with Database.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        m.id, m.scheduled_at,
+                        m.team_a_id, m.team_b_id,
+                        m.prediction_team_a, m.prediction_team_b,
+                        t_a.id AS ta_id, t_a.name AS ta_name, t_a.logo_url AS ta_logo,
+                        t_b.id AS tb_id, t_b.name AS tb_name, t_b.logo_url AS tb_logo,
+                        tn.id AS tn_id, tn.name AS tn_name, tn.tier AS tn_tier,
+                        g.slug AS game_slug
+                    FROM matches m
+                    LEFT JOIN teams       t_a ON t_a.id = m.team_a_id
+                    LEFT JOIN teams       t_b ON t_b.id = m.team_b_id
+                    LEFT JOIN tournaments tn  ON tn.id  = m.tournament_id
+                    LEFT JOIN games       g   ON g.id   = m.game_id
+                    WHERE m.status IN ('not_started', 'upcoming')
+                      AND m.scheduled_at BETWEEN %s AND %s
+                      AND UPPER(COALESCE(tn.tier, 'C')) IN ('S', 'A')
+                      AND t_a.name IS NOT NULL AND t_b.name IS NOT NULL
+                      AND NOT EXISTS (
+                          SELECT 1 FROM news_articles na WHERE na.match_id = m.id
+                      )
+                    ORDER BY m.scheduled_at ASC
+                    LIMIT 10
+                    """,
+                    (now, until),
+                )
+                cols = [d[0] for d in cur.description]
+                return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    def _save_preview(self, match: dict, article: dict) -> None:
+        """Önizleme makalesini variant='preview' ile kaydeder (skor yok, conflict'te dokunma)."""
+        team_a = match["team_a"]; team_b = match["team_b"]; tournament = match["tournament"]
+        a_name = team_a.get("name") or "Team A"
+        b_name = team_b.get("name") or "Team B"
+        content = "\n\n".join(article["paragraphs"]) if isinstance(article.get("paragraphs"), list) else article.get("content", "")
+        with Database.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO news_articles (
+                        match_id, title, summary, content, variant,
+                        game_slug, tier, tournament_name, tournament_id,
+                        team_a_name, team_b_name, team_a_logo, team_b_logo, hero_score
+                    )
+                    VALUES (%s, %s, %s, %s, 'preview', %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (match_id) DO NOTHING
+                    """,
+                    (
+                        match["id"], article.get("title", ""), article.get("summary", ""), content,
+                        match.get("game_slug"), str(tournament.get("tier") or "C").upper(),
+                        tournament.get("name") or "Ana Sahne", tournament.get("id"),
+                        a_name, b_name, team_a.get("logo_url"), team_b.get("logo_url"),
+                        f"{a_name} vs {b_name}",
+                    ),
+                )
+            conn.commit()
+
+    def generate_previews(self, hours_ahead: int = 48) -> dict:
+        """Yaklaşan yüksek-tier maçlar için LLM önizleme makaleleri üret."""
+        rows = self._fetch_upcoming_for_preview(hours_ahead=hours_ahead)
+        logger.info("🔮 Önizleme üretilecek maç: %d", len(rows))
+        stats = {"attempted": len(rows), "generated": 0, "failed": 0}
+
+        for row in rows:
+            match = self._denormalize(row)
+            fact_sheet = FactSheetBuilder.build_preview(match)
+            user_prompt = (
+                "Aşağıdaki yaklaşan maç önizleme raporunu kullanarak Türkçe maç önizlemesi üret:\n\n"
+                + fact_sheet
+            )
+
+            raw = self._generate_with_backoff(user_prompt, match["id"], system_prompt=PREVIEW_SYSTEM_PROMPT)
+            if raw is None:
+                stats["failed"] += 1
+                continue
+            article = self._parse_llm_json(raw)
+            if article is None:
+                stats["failed"] += 1
+                continue
+            try:
+                self._save_preview(match, article)
+                stats["generated"] += 1
+                logger.info("✅ Önizleme yazıldı  match_id=%-10s  %s", match["id"], article.get("title", "")[:60])
+            except Exception as exc:
+                logger.warning("⚠️  Önizleme kayıt hatası match %s: %s", match["id"], exc)
+                stats["failed"] += 1
+            time.sleep(4)
+
+        return stats
+
     # "Please retry in 47 seconds." veya "retry in 47.3s" gibi API mesajlarını yakalar
     _RETRY_AFTER_RE = re.compile(r"retry\s+in\s+([\d.]+)\s*s", re.IGNORECASE)
 
@@ -431,7 +584,7 @@ class NewsGenerator:
             return int(float(m.group(1))) + 2  # +2s güvenlik tamponu
         return None
 
-    def _generate_with_backoff(self, user_prompt: str, match_id) -> Optional[str]:
+    def _generate_with_backoff(self, user_prompt: str, match_id, system_prompt: str = SYSTEM_PROMPT) -> Optional[str]:
         """
         LLM çağrısını 3 denemeye kadar yeniden dener.
 
@@ -446,7 +599,7 @@ class NewsGenerator:
             try:
                 raw = self._llm.generate(
                     user_prompt=user_prompt,
-                    system_prompt=SYSTEM_PROMPT,
+                    system_prompt=system_prompt,
                     response_schema=NewsArticleSchema,
                 )
                 return raw

@@ -9,7 +9,7 @@ const GAME_META = {
   lol: { id: 'lol', label: 'League of Legends', shortLabel: 'LoL', color: '#C89B3C', icon: '🏆' },
 }
 
-export const NEWS_LIMIT = 20
+export const NEWS_LIMIT = 60
 export const HERO_TIERS = new Set(['S', 'A'])
 
 export function normalizeTier(raw) {

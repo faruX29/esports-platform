@@ -146,6 +146,11 @@ def main():
         action='store_true',
         help='DB\'deki tüm running maçları PandaScore\'dan çek, final skor+status\'ü güncelle',
     )
+    parser.add_argument(
+        '--clean-stale-matches',
+        action='store_true',
+        help='Planlı zamanı geçmiş ama hâlâ not_started olan "hayalet" maçları toplu temizle (bulk)',
+    )
 
     parser.add_argument(
         '--hybrid-stats',
@@ -432,6 +437,11 @@ def main():
         # geçişte backlog temizlenir (get_match_by_id gerçek status döndürür).
         total = syncer.resolve_orphans(set(), cap=500)
         logger.info(f"✅ Orphan resolution tamamlandı — {total} maç güncellendi")
+
+    if args.clean_stale_matches:
+        logger.info("\n🧹 Bulk stale not_started temizliği (hayalet maçlar)...")
+        total = syncer.resolve_stale_upcoming(hours_ago=6, bulk=True)
+        logger.info(f"✅ Bulk stale cleanup tamamlandı — {total} maç güncellendi")
 
     if args.accuracy_check:
         logger.info("\n" + "=" * 60)

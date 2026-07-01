@@ -111,7 +111,7 @@ class MatchSyncer:
         logger.info(f"✅ Resolved {count} finished match(es) — status+score updated from PandaScore")
         return count
 
-    def resolve_stale_upcoming(self, hours_ago: int = 6, cap: int = 40) -> int:
+    def resolve_stale_upcoming(self, hours_ago: int = 6, cap: int = 40, bulk: bool = False) -> int:
         """
         scheduled_at geçmiş ama hâlâ 'not_started' olan maçları PandaScore'dan
         gerçek status'leriyle günceller (bitmiş/canceled/postponed). Turnuva
@@ -119,16 +119,27 @@ class MatchSyncer:
 
         get_match_by_id gerçek status döndürür — hâlâ planlıysa not_started kalır
         (güvenli), bittiyse finished+skor, iptal/ertelendiyse ilgili status.
+
+        bulk=True: TÜM stale maçları tek geçişte (her biri bir kez) işler; aksi
+        halde en eski `cap` maçı işler (cron için).
         """
         try:
             with Database.get_connection() as conn:
                 with conn.cursor() as cur:
-                    cur.execute(
-                        "SELECT id FROM matches WHERE status = 'not_started' "
-                        "AND scheduled_at < NOW() - (%s * INTERVAL '1 hour') "
-                        "ORDER BY scheduled_at ASC LIMIT %s",
-                        (hours_ago, cap),
-                    )
+                    if bulk:
+                        cur.execute(
+                            "SELECT id FROM matches WHERE status = 'not_started' "
+                            "AND scheduled_at < NOW() - (%s * INTERVAL '1 hour') "
+                            "ORDER BY scheduled_at ASC",
+                            (hours_ago,),
+                        )
+                    else:
+                        cur.execute(
+                            "SELECT id FROM matches WHERE status = 'not_started' "
+                            "AND scheduled_at < NOW() - (%s * INTERVAL '1 hour') "
+                            "ORDER BY scheduled_at ASC LIMIT %s",
+                            (hours_ago, cap),
+                        )
                     ids = [r[0] for r in cur.fetchall()]
         except Exception as e:
             logger.warning(f"⚠️  Could not query stale upcoming matches: {e}")
@@ -137,16 +148,20 @@ class MatchSyncer:
         if not ids:
             return 0
 
-        logger.info(f"🔍 {len(ids)} stale not_started match — fetching real status (cap={cap})...")
-        resolved = []
-        for match_id in ids:
-            raw = self.client.get_match_by_id(match_id)
-            if raw and isinstance(raw, dict):
-                cleaned = self.cleaner.clean_matches([raw])
-                if cleaned:
-                    resolved.extend(cleaned)
-
-        count = self._upsert_matches(resolved) if resolved else 0
+        logger.info(f"🔍 {len(ids)} stale not_started match — fetching real status...")
+        count = 0
+        # Her maç TEK kez işlenir; 40'lık batch'lerle upsert (bellek + ilerleme)
+        for i in range(0, len(ids), 40):
+            batch = ids[i:i + 40]
+            resolved = []
+            for match_id in batch:
+                raw = self.client.get_match_by_id(match_id)
+                if raw and isinstance(raw, dict):
+                    cleaned = self.cleaner.clean_matches([raw])
+                    if cleaned:
+                        resolved.extend(cleaned)
+            if resolved:
+                count += self._upsert_matches(resolved)
         logger.info(f"✅ Resolved {count} stale not_started match(es) from PandaScore")
         return count
 

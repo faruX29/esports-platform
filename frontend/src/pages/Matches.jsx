@@ -117,6 +117,25 @@ function buildMapBreakdown(statsRows, teamAId, teamBId, teamAName, teamBName) {
     .sort((a, b) => a.position - b.position)
 }
 
+/* Upcoming maçlar için geri sayım — kendi interval'ını yönetir (30sn tick),
+   sadece sayaç re-render olur (tüm liste değil). */
+function Countdown({ target }) {
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30000)
+    return () => clearInterval(t)
+  }, [])
+  const ts = target ? new Date(target).getTime() : 0
+  if (!ts) return null
+  const diff = ts - now
+  if (diff <= 0) return <span style={{ fontSize: 10, color: '#4CAF50', fontWeight: 700 }}>● Başlıyor</span>
+  const d = Math.floor(diff / 86400000)
+  const h = Math.floor((diff % 86400000) / 3600000)
+  const m = Math.floor((diff % 3600000) / 60000)
+  const label = d > 0 ? `${d}g ${h}s` : h > 0 ? `${h}s ${m}dk` : `${m}dk`
+  return <span style={{ fontSize: 10, color: '#FFB800', fontWeight: 700, whiteSpace: 'nowrap' }}>⏱ {label}</span>
+}
+
 function Matches() {
   const navigate = useNavigate()
   const { activeGame } = useGame()
@@ -782,6 +801,7 @@ function Matches() {
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                       <span style={{ fontSize: 11, fontWeight: 800, color: '#FF4655', letterSpacing: '2px', textShadow: isLive ? '0 0 8px rgba(255,70,85,.6)' : 'none' }}>VS</span>
                       <div style={{ width: 1, height: 24, background: '#2a2a2a' }} />
+                      {match.status === 'not_started' && <Countdown target={getMatchTimestamp(match)} />}
                     </div>
 
                     {/* Team B */}

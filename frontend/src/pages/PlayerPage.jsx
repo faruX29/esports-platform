@@ -1156,8 +1156,9 @@ export default function PlayerPage() {
               label="Impact"
               color={(individualStats?.impact ?? analytics.impactScore) >= 70 ? '#4CAF50' : (individualStats?.impact ?? analytics.impactScore) >= 45 ? '#818cf8' : '#FF4655'}
             />
-            {individualStats && <StatBox icon="📌" value={`${Math.round(individualStats.hsPct)}%`} label="HS%" color="#f4f4f4" />}
             {individualStats && <StatBox icon="⚡" value={individualStats.kd.toFixed(2)} label="K/D" color="#ff6a7f" />}
+            {individualStats?.acs != null && <StatBox icon="🔥" value={individualStats.acs} label="ACS" color="#5eead4" />}
+            {individualStats && individualStats.hsPct > 0 && <StatBox icon="📌" value={`${Math.round(individualStats.hsPct)}%`} label="HS%" color="#f4f4f4" />}
           </div>
         )}
       </div>

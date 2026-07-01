@@ -45,6 +45,9 @@ export function parsePlayerMatchRow(row) {
     row?.is_win ?? row?.won ?? row?.win ?? row?.result ?? stats?.is_win ?? stats?.won ?? stats?.result
   )
 
+  // ACS (Valorant premier metriği) — Liquipedia v3 hybrid verisinde acs_avg
+  const acs = toNum(stats?.acs_avg ?? stats?.acs ?? row?.acs)
+
   return {
     kills,
     deaths,
@@ -52,6 +55,7 @@ export function parsePlayerMatchRow(row) {
     headshots,
     hsPct,
     winFlag,
+    acs,
   }
 }
 
@@ -65,6 +69,8 @@ export function summarizePlayerMatchStats(rows) {
   let totalHeadshots = 0
   let wins = 0
   let winsCountable = 0
+  let acsSum = 0
+  let acsCount = 0
 
   for (const p of parsed) {
     totalKills += p.kills
@@ -75,11 +81,16 @@ export function summarizePlayerMatchStats(rows) {
       winsCountable += 1
       wins += p.winFlag
     }
+    if (p.acs != null) {
+      acsSum += p.acs
+      acsCount += 1
+    }
   }
 
   const kd = totalDeaths > 0 ? totalKills / totalDeaths : (totalKills > 0 ? totalKills : 0)
   const hsPct = totalKills > 0 ? safePct((totalHeadshots / totalKills) * 100) : 0
   const winRate = winsCountable > 0 ? safePct((wins / winsCountable) * 100) : 0
+  const acs = acsCount > 0 ? Math.round(acsSum / acsCount) : null
 
   // Impact scoring is shared across PlayersPage, PlayerPage and Dashboard Dream Team.
   const kdSignal = clamp(kd * 34, 0, 100)
@@ -95,6 +106,7 @@ export function summarizePlayerMatchStats(rows) {
     kd,
     hsPct,
     winRate,
+    acs,
     impact,
   }
 }

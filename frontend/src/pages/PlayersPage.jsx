@@ -542,6 +542,7 @@ export default function PlayersPage() {
 
     filtered.sort((a, b) => {
       if (sortKey === 'kd') return b.kd - a.kd
+      if (sortKey === 'acs') return (b.acs || 0) - (a.acs || 0)
       if (sortKey === 'hs') return b.hsPct - a.hsPct
       if (sortKey === 'wr') return b.winRate - a.winRate
       return b.impact - a.impact
@@ -576,7 +577,10 @@ export default function PlayersPage() {
       <div style={{ position: 'relative', zIndex: 1 }}>
         <h1 style={{ margin: 0, fontSize: 30, letterSpacing: '.5px' }}>Player Scout Engine</h1>
         <p style={{ margin: '8px 0 16px', color: '#a8a8a8', fontSize: 13 }}>
-          Secili oyuna gore oyunculari listeleyin. Veri kaynagi: {metricsSource === 'player_match_stats' ? 'player_match_stats' : 'team fallback'}
+          Seçili oyuna göre oyuncuları K/D, ACS ve Impact'e göre sıralayın.
+          {metricsSource === 'player_match_stats'
+            ? <span style={{ color: '#5eead4' }}> · Gerçek maç istatistikleri</span>
+            : <span style={{ color: '#777' }}> · Takım bazlı tahmin</span>}
         </p>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
@@ -656,6 +660,7 @@ export default function PlayersPage() {
             >
               <option value='impact'>Impact Score</option>
               <option value='kd'>K/D</option>
+              <option value='acs'>ACS</option>
               <option value='hs'>Headshot %</option>
               <option value='wr'>Win Rate</option>
             </select>
@@ -676,7 +681,7 @@ export default function PlayersPage() {
           }}>
             <div style={{
             display: 'grid',
-            gridTemplateColumns: '1.7fr 1.2fr .7fr .7fr .7fr .7fr .6fr',
+            gridTemplateColumns: '1.7fr 1.2fr .7fr .7fr .7fr .7fr .7fr .6fr',
             gap: 8,
             padding: '12px 14px',
             borderBottom: '1px solid #232323',
@@ -688,6 +693,7 @@ export default function PlayersPage() {
             <div>Player</div>
             <div>Team</div>
             <div>K/D</div>
+            <div>ACS</div>
             <div>HS%</div>
             <div>Win%</div>
             <div>Impact</div>
@@ -715,7 +721,7 @@ export default function PlayersPage() {
                 key={player.id}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '1.7fr 1.2fr .7fr .7fr .7fr .7fr .6fr',
+                  gridTemplateColumns: '1.7fr 1.2fr .7fr .7fr .7fr .7fr .7fr .6fr',
                   gap: 8,
                   alignItems: 'center',
                   padding: '12px 14px',
@@ -764,7 +770,8 @@ export default function PlayersPage() {
                 </div>
 
                 <div style={{ fontWeight: 700 }}>{fmt(player.kd)}</div>
-                <div style={{ fontWeight: 700 }}>{Math.round(player.hsPct)}%</div>
+                <div style={{ fontWeight: 700, color: player.acs != null ? '#5eead4' : '#444' }}>{player.acs != null ? player.acs : '—'}</div>
+                <div style={{ fontWeight: 700, color: player.hsPct > 0 ? '#f4f4f4' : '#444' }}>{player.hsPct > 0 ? `${Math.round(player.hsPct)}%` : '—'}</div>
                 <div style={{ fontWeight: 700 }}>{Math.round(player.winRate)}%</div>
                 <div style={{ color: '#ff9aa9', fontWeight: 800 }}>{Math.round(player.impact)}</div>
 

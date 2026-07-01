@@ -277,6 +277,8 @@ export default function NewsDetailPage() {
   const [comments, setComments] = useState([])
   const [commentsLoading, setCommentsLoading] = useState(false)
   const [commentInput, setCommentInput] = useState('')
+  const [replyTo, setReplyTo] = useState(null)      // yanıtlanan yorum id'si
+  const [replyText, setReplyText] = useState('')
   const [commentWarning, setCommentWarning] = useState('')
   const [commentSuccess, setCommentSuccess] = useState('')
   const [commentSubmitting, setCommentSubmitting] = useState(false)
@@ -290,8 +292,22 @@ export default function NewsDetailPage() {
   const canInteract = !!user?.id
   const [techMetricsOpen, setTechMetricsOpen] = useState(false)
 
+  // Yanıtları parent'a göre grupla (okuma sırası: eskiden yeniye)
+  const repliesByParent = useMemo(() => {
+    const map = {}
+    for (const c of comments) {
+      if (!c.parent_id) continue
+      if (!map[c.parent_id]) map[c.parent_id] = []
+      map[c.parent_id].push(c)
+    }
+    for (const k of Object.keys(map)) {
+      map[k].sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0))
+    }
+    return map
+  }, [comments])
+
   const rankedComments = useMemo(() => {
-    const list = [...comments]
+    const list = comments.filter(c => !c.parent_id)  // sadece üst-seviye
     if (sortMode === 'newest') {
       list.sort((left, right) => {
         const lTs = new Date(left.created_at || 0).getTime()
@@ -384,7 +400,7 @@ export default function NewsDetailPage() {
 
       const { data: commentRows, error: commentsErr } = await supabase
         .from('news_comments')
-        .select('id,news_id,user_id,content,created_at')
+        .select('id,news_id,user_id,content,created_at,parent_id')
         .eq('news_id', currentNewsId)
         .order('created_at', { ascending: false })
 
@@ -696,7 +712,7 @@ export default function NewsDetailPage() {
       const { data, error: insertErr } = await supabase
         .from('news_comments')
         .insert({ news_id: story.id, user_id: user?.id || null, [COMMENT_CONTENT_COLUMN]: text })
-        .select('id,news_id,user_id,content,created_at')
+        .select('id,news_id,user_id,content,created_at,parent_id')
         .single()
 
       if (insertErr) {
@@ -742,6 +758,43 @@ export default function NewsDetailPage() {
       setCommentSuccess('')
     } finally {
       setCommentSubmitting(false)
+    }
+  }
+
+  async function submitReply(parentId) {
+    const text = replyText.trim()
+    if (!text || !story?.id || forumComingSoon) return
+    if (!canInteract && !forumFallback) {
+      setCommentWarning('Yanıtlamak için giriş yapmalısın.')
+      return
+    }
+    // Fallback (offline) modda yerel yanıt
+    if (forumFallback || !canInteract) {
+      setComments(prev => [...prev, {
+        id: `local_${Date.now()}`, news_id: story.id, user_id: user?.id || null,
+        parent_id: parentId, comment_text: text, created_at: new Date().toISOString(),
+        author: profile?.username || 'Sen', authorScoutScore: normalizeScoutScore(profile?.scout_score),
+      }])
+      setReplyTo(null); setReplyText('')
+      return
+    }
+    try {
+      const { data, error: insertErr } = await supabase
+        .from('news_comments')
+        .insert({ news_id: story.id, user_id: user.id, [COMMENT_CONTENT_COLUMN]: text, parent_id: parentId })
+        .select('id,news_id,user_id,content,created_at,parent_id')
+        .single()
+      if (insertErr) throw insertErr
+      if (data) {
+        setComments(prev => [...prev, {
+          ...data, comment_text: data.content ?? text,
+          author: profile?.username || 'Sen', authorScoutScore: normalizeScoutScore(profile?.scout_score),
+        }])
+      }
+      setReplyTo(null); setReplyText('')
+    } catch (err) {
+      console.error('submitReply error:', err?.message || err)
+      setCommentWarning('Yanıt gönderilemedi.')
     }
   }
 
@@ -1171,7 +1224,48 @@ export default function NewsDetailPage() {
                         ▼ {voteState.down || 0}
                       </button>
                       <span style={{ marginLeft: 4, fontSize: 12, color: '#a2a2a2' }}>Skor: {score}</span>
+                      {!forumComingSoon && (
+                        <button
+                          type="button"
+                          onClick={() => { setReplyTo(replyTo === comment.id ? null : comment.id); setReplyText('') }}
+                          style={{ marginLeft: 'auto', border: 'none', background: 'none', color: '#7dd3fc', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                        >💬 Yanıtla</button>
+                      )}
                     </div>
+
+                    {/* Inline yanıt input */}
+                    {replyTo === comment.id && (
+                      <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
+                        <input
+                          value={replyText}
+                          onChange={e => setReplyText(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') submitReply(comment.id) }}
+                          placeholder={`${comment.author || 'yoruma'} yanıt yaz...`}
+                          autoFocus
+                          style={{ flex: 1, background: '#161616', border: '1px solid #2a2a2a', borderRadius: 8, color: '#e5e5e5', padding: '7px 10px', fontSize: 12 }}
+                        />
+                        <button type="button" onClick={() => submitReply(comment.id)} disabled={!replyText.trim()} style={{ border: '1px solid #2f6846', background: '#10281a', color: '#8de3af', borderRadius: 8, padding: '0 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Gönder</button>
+                      </div>
+                    )}
+
+                    {/* Yanıtlar (iç içe) */}
+                    {(repliesByParent[comment.id] || []).length > 0 && (
+                      <div style={{ marginTop: 8, marginLeft: 14, paddingLeft: 10, borderLeft: '2px solid #232323', display: 'grid', gap: 6 }}>
+                        {(repliesByParent[comment.id] || []).map(reply => (
+                          <div key={reply.id} style={{ background: '#0d0d0d', border: '1px solid #1c1c1c', borderRadius: 9, padding: '7px 9px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: '#bdbdbd' }}>{reply.author || 'Topluluk'}</span>
+                              <ScoutRankBadge score={reply.authorScoutScore} />
+                              <span style={{ fontSize: 10, color: '#666', marginLeft: 'auto' }}>{fmtDate(reply.created_at)}</span>
+                              {user?.id && reply.user_id === user.id && (
+                                <button type="button" onClick={() => deleteComment(reply.id)} title="Yanıtı sil" style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 12 }}>✕</button>
+                              )}
+                            </div>
+                            <div style={{ fontSize: 12.5, lineHeight: 1.5, color: '#c4c4c4' }}>{reply.comment_text}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )
               })}

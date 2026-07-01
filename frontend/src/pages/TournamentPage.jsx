@@ -679,6 +679,60 @@ const TeamAv = memo(function TeamAv({ src, name, size = 36 }) {
 
 // ─── Standings Table ─────────────────────────────────────────────────────────
 
+/* ── Top Performers: oyuncu KDA agregasyonu (hybrid v3) ── */
+function aggregateTopPerformers(rows) {
+  const acc = {}
+  for (const r of rows) {
+    const pid = r.player_id
+    if (!pid) continue
+    if (!acc[pid]) acc[pid] = {
+      pid, nickname: r.player?.nickname || '?', image: r.player?.image_url || null,
+      k: 0, d: 0, a: 0, n: 0, wins: 0, winCountable: 0, acsSum: 0, acsN: 0,
+    }
+    const p = acc[pid]
+    p.k += Number(r.kills) || 0
+    p.d += Number(r.deaths) || 0
+    p.a += Number(r.assists) || 0
+    p.n += 1
+    if (r.is_win != null) { p.winCountable += 1; if (r.is_win) p.wins += 1 }
+    const acs = r.stats?.acs_avg
+    if (acs != null) { p.acsSum += Number(acs); p.acsN += 1 }
+  }
+  return Object.values(acc)
+    .map(p => ({
+      ...p,
+      kd: p.d > 0 ? p.k / p.d : p.k,
+      winRate: p.winCountable > 0 ? Math.round((p.wins / p.winCountable) * 100) : null,
+      acs: p.acsN > 0 ? Math.round(p.acsSum / p.acsN) : null,
+    }))
+    .filter(p => p.n >= 1)
+    .sort((x, y) => y.kd - x.kd)
+    .slice(0, 8)
+}
+
+function TopPerformers({ rows, navigate }) {
+  if (!rows?.length) return null
+  return (
+    <div style={{ background: '#0a0a0a', borderRadius: 16, border: '1px solid #1a1a1a', padding: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr 44px 60px 44px', gap: 8, padding: '0 8px 8px', fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: '.6px', borderBottom: '1px solid #1a1a1a' }}>
+        <div>#</div><div>Oyuncu</div><div style={{ textAlign: 'right' }}>K/D</div><div style={{ textAlign: 'right' }}>K/D/A</div><div style={{ textAlign: 'right' }}>ACS</div>
+      </div>
+      {rows.map((p, i) => (
+        <div key={p.pid} style={{ display: 'grid', gridTemplateColumns: '20px 1fr 44px 60px 44px', gap: 8, alignItems: 'center', padding: '8px', borderBottom: i === rows.length - 1 ? 'none' : '1px solid #141414', fontSize: 12 }}>
+          <div style={{ color: i < 3 ? '#FFD700' : '#555', fontWeight: 800 }}>{i + 1}</div>
+          <div style={{ color: '#ddd', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nickname}</div>
+          <div style={{ textAlign: 'right', fontWeight: 800, color: p.kd >= 1 ? '#4ade80' : '#ff6a7f', fontVariantNumeric: 'tabular-nums' }}>{p.kd.toFixed(2)}</div>
+          <div style={{ textAlign: 'right', color: '#999', fontVariantNumeric: 'tabular-nums' }}>{p.k}/{p.d}/{p.a}</div>
+          <div style={{ textAlign: 'right', color: p.acs != null ? '#5eead4' : '#333', fontWeight: 700 }}>{p.acs ?? '—'}</div>
+        </div>
+      ))}
+      <div style={{ marginTop: 8, fontSize: 9, color: '#4a4a4a', textAlign: 'right' }}>
+        Data powered by <a href="https://liquipedia.net" target="_blank" rel="noopener noreferrer" style={{ color: '#6a6a6a' }}>Liquipedia</a>
+      </div>
+    </div>
+  )
+}
+
 function StandingsTable({ matches, navigate }) {
   // Katılımcı takımları maçlardan türet
   const table = useMemo(() => {
@@ -1643,6 +1697,7 @@ export default function TournamentPage() {
 
   const [tournament,  setTournament]  = useState(null)
   const [matches,     setMatches]     = useState([])
+  const [topPerformers, setTopPerformers] = useState([])
   const [loading,     setLoading]     = useState(true)
   const [error,       setError]       = useState(null)
   const [activeTab,   setActiveTab]   = useState('upcoming')
@@ -1731,6 +1786,18 @@ export default function TournamentPage() {
 
       setTournament(normalizedTournament)
       setMatches(normalizedMatches)
+
+      // ── Top Performers: turnuvanın enriched maçlarından oyuncu KDA agregasyonu (hybrid v3) ──
+      const finishedIds = normalizedMatches.filter(m => m.status === 'finished').map(m => m.id)
+      if (finishedIds.length > 0) {
+        const { data: pms } = await supabase
+          .from('player_match_stats')
+          .select('player_id,kills,deaths,assists,is_win,stats,player:players(nickname,image_url)')
+          .in('match_id', finishedIds)
+        setTopPerformers(aggregateTopPerformers(pms || []))
+      } else {
+        setTopPerformers([])
+      }
     } catch (e) {
       console.error('TournamentPage fetch error:', e)
       setError(e.message)
@@ -2065,6 +2132,14 @@ export default function TournamentPage() {
           <div style={{ marginBottom: 36 }}>
             <ST icon="📊" label="Puan Durumu" />
             <StandingsTable matches={pastMatches} navigate={navigate} />
+          </div>
+        )}
+
+        {/* ── TOP PERFORMERS (hybrid v3 oyuncu KDA) ────────────────── */}
+        {topPerformers.length > 0 && (
+          <div style={{ marginBottom: 36 }}>
+            <ST icon="🎯" label="Öne Çıkan Oyuncular" />
+            <TopPerformers rows={topPerformers} navigate={navigate} />
           </div>
         )}
 

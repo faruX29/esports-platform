@@ -266,6 +266,17 @@ function PlayerCard({ player }) {
         <div style={{ fontSize: 11, color: '#333' }}>—</div>
       )}
 
+      {/* K/D — hybrid v3 verisi (varsa) */}
+      {player.kd != null && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: -2 }}>
+          <span style={{ fontSize: 10, color: '#666' }}>K/D</span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: player.kd >= 1 ? '#4ade80' : '#ff6a7f', fontVariantNumeric: 'tabular-nums' }}>
+            {player.kd.toFixed(2)}
+          </span>
+          <span style={{ fontSize: 9, color: '#444' }}>({player.statMatches} maç)</span>
+        </div>
+      )}
+
       {/* Profil linki göstergesi */}
       {player.id && (
         <div style={{ fontSize: 9, color: '#383838', marginTop: -4 }}>profili gör →</div>
@@ -478,7 +489,32 @@ export default function TeamPage() {
 
       setTeam(teamRes.data)
       setMatches(matchRes.data || [])
-      setPlayers(playerRes.data || [])
+      const roster = playerRes.data || []
+      setPlayers(roster)
+
+      // Roster oyuncularının K/D'sini player_match_stats'ten (hybrid v3) çek — varsa
+      const pids = roster.map(p => p.id).filter(Boolean)
+      if (pids.length > 0) {
+        const { data: pms } = await supabase
+          .from('player_match_stats')
+          .select('player_id,kills,deaths')
+          .in('player_id', pids)
+          .not('kills', 'is', null)
+        if (pms?.length) {
+          const acc = {}
+          for (const r of pms) {
+            const s = acc[r.player_id] || { k: 0, d: 0, n: 0 }
+            s.k += Number(r.kills) || 0
+            s.d += Number(r.deaths) || 0
+            s.n += 1
+            acc[r.player_id] = s
+          }
+          setPlayers(roster.map(p => {
+            const s = acc[p.id]
+            return (s && s.n > 0) ? { ...p, kd: s.d > 0 ? s.k / s.d : s.k, statMatches: s.n } : p
+          }))
+        }
+      }
     } catch (e) {
       setError(e.message)
     } finally {

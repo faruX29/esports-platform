@@ -17,6 +17,7 @@ import { GAMES }                                     from '../context/GameContex
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 
+const SEARCH_DEBUG = false   // prod'da debug UI (🐛 buton + panel) gizli
 const YEARS     = [2024, 2025, 2026]
 const TIER_META = {
   S: { color: '#FFD700', bg: 'rgba(255,215,0,.15)',  label: 'S · Premier'  },
@@ -1187,16 +1188,18 @@ export default function SearchPage() {
                 <div style={{ flex: 1, height: 1, background: '#1a1a1a' }} />
               </div>
 
-              {/* Debug butonu */}
-              <button
-                onClick={() => setShowDebug(v => !v)}
-                style={{
-                  marginLeft: 8, padding: '3px 10px', borderRadius: 6,
-                  background: '#111', border: '1px solid #222',
-                  color: '#444', fontSize: 10, cursor: 'pointer',
-                }}
-                title="Debug log göster"
-              >🐛</button>
+              {/* Debug butonu (yalnızca SEARCH_DEBUG) */}
+              {SEARCH_DEBUG && (
+                <button
+                  onClick={() => setShowDebug(v => !v)}
+                  style={{
+                    marginLeft: 8, padding: '3px 10px', borderRadius: 6,
+                    background: '#111', border: '1px solid #222',
+                    color: '#444', fontSize: 10, cursor: 'pointer',
+                  }}
+                  title="Debug log göster"
+                >🐛</button>
+              )}
             </div>
 
             {/* Aktif filtreler özeti */}
@@ -1280,8 +1283,8 @@ export default function SearchPage() {
                       'linear-gradient(135deg,rgba(255,70,85,.2),rgba(255,140,0,.1))'}
                   >🔄 Kriterleri Temizle ve Tümünü Göster</button>
                 )}
-                {/* Debug bilgisi */}
-                {debugInfo && (
+                {/* Debug bilgisi (yalnızca SEARCH_DEBUG) */}
+                {SEARCH_DEBUG && debugInfo && (
                   <div style={{ marginTop: 20, padding: '10px 14px', borderRadius: 10,
                     background: '#111', border: '1px solid #1e1e1e',
                     textAlign: 'left', fontSize: 10, color: '#555' }}>
@@ -1311,8 +1314,8 @@ export default function SearchPage() {
         </div>
       </div>
 
-      {/* Debug overlay */}
-      {showDebug && (
+      {/* Debug overlay (yalnızca SEARCH_DEBUG) */}
+      {SEARCH_DEBUG && showDebug && (
         <DebugPanel info={debugInfo} onClose={() => setShowDebug(false)} />
       )}
     </div>

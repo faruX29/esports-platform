@@ -257,12 +257,13 @@ class LiquipediaV3StatsSource(BaseMatchStatsSource):
     """
 
     source_name = "liquipedia_v3"
-    SUPPORTED_GAMES = {"valorant", "csgo", "cs2", "lol"}
+    # LoL match2games'te participants KDA formatı farklı (index boş dönüyor);
+    # şu an KDA-zengin oyunlar: Valorant + CS.
+    SUPPORTED_GAMES = {"valorant", "csgo", "cs2"}
 
-    def __init__(self, days_back: int = 21) -> None:
-        self._days_back = days_back
+    def __init__(self) -> None:
         self._services: Dict[str, Any] = {}
-        self._index: Dict[str, Dict[frozenset, Dict[str, Any]]] = {}
+        self._cache: Dict[frozenset, Any] = {}  # takım-çifti → maç dict | None
 
     def supports_game(self, game_slug: str) -> bool:
         return (
@@ -277,35 +278,24 @@ class LiquipediaV3StatsSource(BaseMatchStatsSource):
             self._services[slug] = LiquipediaService(game_slug=slug)
         return self._services[slug]
 
-    def _ensure_index(self, game_slug: str) -> None:
-        """Oyun başına bir kez v3 bulk fetch → takım-çifti index'i (yalnız KDA'lı)."""
-        if game_slug in self._index:
-            return
-        idx: Dict[frozenset, Dict[str, Any]] = {}
-        try:
-            rows = self._service(game_slug).get_recent_match_stats_v3(
-                days_back=self._days_back, limit=200,
-            )
-        except Exception as err:
-            logger.warning("⚠️  v3 index fetch hatası (%s): %s", game_slug, err)
-            rows = []
-        for m in rows:
-            teams = [t for t in (m.get("teams") or []) if t]
-            if len(teams) < 2:
-                continue
-            if not any(mp.get("players") for mp in m.get("maps", [])):
-                continue  # oyuncu verisi olmayan maçı index'leme
-            key = frozenset({_norm_team_key(teams[0]), _norm_team_key(teams[1])})
-            idx[key] = m
-        self._index[game_slug] = idx
-        logger.info("📇 v3 index (%s): %d KDA'lı maç", game_slug, len(idx))
-
     def fetch_map_stats(self, ctx: MatchContext) -> Optional[MapStatsResult]:
         if not (ctx.team_a_name and ctx.team_b_name):
             return None
-        self._ensure_index(ctx.game_slug)
-        key = frozenset({_norm_team_key(ctx.team_a_name), _norm_team_key(ctx.team_b_name)})
-        m = self._index.get(ctx.game_slug, {}).get(key)
+        # Per-match opponent sorgusu (hacimden bağımsız kesin lookup).
+        cache_key = frozenset({
+            _norm_team_key(ctx.team_a_name), _norm_team_key(ctx.team_b_name), ctx.game_slug,
+        })
+        if cache_key in self._cache:
+            m = self._cache[cache_key]
+        else:
+            try:
+                m = self._service(ctx.game_slug).get_match_maps_v3_by_teams(
+                    ctx.team_a_name, ctx.team_b_name,
+                )
+            except Exception as err:
+                logger.warning("⚠️  v3 by-teams hata (match %s): %s", ctx.match_id, err)
+                m = None
+            self._cache[cache_key] = m
         if not m:
             return None
         return self._normalize(ctx, m)
@@ -470,9 +460,10 @@ class HybridStatsBackfiller:
         # öne alınabilir). Wikitext zaten oyuncu KDA'sı da verdiği için şu an
         # daha zengin; Cargo onaylanınca iki kaynak birbirini tamamlar.
         self.sources: List[BaseMatchStatsSource] = sources or [
-            LiquipediaV3StatsSource(),     # birincil: v3 API (key varsa, en zengin)
+            LiquipediaV3StatsSource(),     # birincil: v3 API (per-match opponent lookup)
             LiquipediaWikitextSource(),    # yedek: wikitext (key gerektirmez)
-            LiquipediaStatsSource(),       # eski cargo (api.php — artık kapalı)
+            # NOT: LiquipediaStatsSource (eski api.php cargoquery) KAPALI — zincirden
+            # çıkarıldı (her zaman "Unrecognized action" fail'i + boşa sorgu).
         ]
 
     # ── 1) Eksik maç tespiti ──────────────────────────────────────────────────
@@ -529,7 +520,13 @@ class HybridStatsBackfiller:
                     LEFT JOIN tournaments t ON m.tournament_id = t.id
                     WHERE m.status = 'finished'
                       AND m.raw_data IS NOT NULL
-                    ORDER BY m.scheduled_at DESC NULLS LAST
+                    -- TIER ÖNCELİĞİ: Liquipedia üst-tier'i kapsar; alt-lig maçları
+                    -- için veri yok. S→A→B→C→D→? sırası hem eşleşme hem değer artırır.
+                    ORDER BY
+                      CASE UPPER(COALESCE(t.tier, 'Z'))
+                        WHEN 'S' THEN 0 WHEN 'A' THEN 1 WHEN 'B' THEN 2
+                        WHEN 'C' THEN 3 WHEN 'D' THEN 4 ELSE 5 END,
+                      m.scheduled_at DESC NULLS LAST
                     LIMIT %s
                     """,
                     (limit * 4,),  # filtre Python'da; aday havuzunu geniş tut

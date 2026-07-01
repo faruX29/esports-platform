@@ -778,46 +778,79 @@ class LiquipediaService:
         })
         if not payload or "result" not in payload:
             return []
+        return [self._normalize_v3_match(m) for m in payload["result"]]
 
-        out: List[Dict[str, Any]] = []
-        for m in payload["result"]:
-            opponents = m.get("match2opponents") or []
-            team_names = [
-                str(o.get("name") or o.get("template") or o.get("teamtemplate") or "").strip()
-                for o in opponents
-            ]
-            maps: List[Dict[str, Any]] = []
-            for g in (m.get("match2games") or []):
-                map_name = str(g.get("map") or "").strip()
-                if not map_name:
+    @staticmethod
+    def _normalize_v3_match(m: Dict[str, Any]) -> Dict[str, Any]:
+        """v3 /match kaydını {match2id, date, teams[], maps[]} şekline normalize eder."""
+        opponents = m.get("match2opponents") or []
+        team_names = [
+            str(o.get("name") or o.get("template") or o.get("teamtemplate") or "").strip()
+            for o in opponents
+        ]
+        maps: List[Dict[str, Any]] = []
+        for g in (m.get("match2games") or []):
+            map_name = str(g.get("map") or "").strip()
+            if not map_name:
+                continue
+            players = []
+            for key, p in (g.get("participants") or {}).items():
+                if not isinstance(p, dict):
                     continue
-                players = []
-                for key, p in (g.get("participants") or {}).items():
-                    if not isinstance(p, dict):
-                        continue
-                    side = str(key).split("_")[0]  # "1_1" → opponent index
-                    players.append({
-                        "player":  (p.get("player") or p.get("displayName") or "").strip(),
-                        "agent":   p.get("agent"),
-                        "kills":   _to_int_or_none(p.get("kills")),
-                        "deaths":  _to_int_or_none(p.get("deaths")),
-                        "assists": _to_int_or_none(p.get("assists")),
-                        "acs":     _to_int_or_none(p.get("acs")),
-                        "side":    side,
-                    })
-                maps.append({
-                    "map": map_name,
-                    "winner": g.get("winner"),
-                    "scores": g.get("scores"),
-                    "players": players,
+                side = str(key).split("_")[0]  # "1_1" → opponent index
+                players.append({
+                    "player":  (p.get("player") or p.get("displayName") or "").strip(),
+                    "agent":   p.get("agent"),
+                    "kills":   _to_int_or_none(p.get("kills")),
+                    "deaths":  _to_int_or_none(p.get("deaths")),
+                    "assists": _to_int_or_none(p.get("assists")),
+                    "acs":     _to_int_or_none(p.get("acs")),
+                    "side":    side,
                 })
-            out.append({
-                "match2id": m.get("match2id"),
-                "date": m.get("date"),
-                "teams": team_names,
-                "maps": maps,
+            maps.append({
+                "map": map_name,
+                "winner": g.get("winner"),
+                "scores": g.get("scores"),
+                "players": players,
             })
-        return out
+        return {
+            "match2id": m.get("match2id"),
+            "date": m.get("date"),
+            "teams": team_names,
+            "maps": maps,
+        }
+
+    def get_match_maps_v3_by_teams(self, team_a: str, team_b: str) -> Optional[Dict[str, Any]]:
+        """
+        v3 /match opponent koşuluyla team_a vs team_b maçını bulur (hacimden
+        bağımsız kesin lookup). Normalize edilmiş maç dict'i veya None döner.
+        """
+        def _norm(s: str) -> str:
+            return re.sub(r"[^a-z0-9]", "", str(s or "").casefold())
+
+        na, nb = _norm(team_a), _norm(team_b)
+        if not (na and nb):
+            return None
+
+        for probe_team, other_norm in ((team_a, nb), (team_b, na)):
+            safe = str(probe_team).replace("]", "").replace("[", "").strip()
+            if not safe:
+                continue
+            payload = self._request_v3("match", {
+                "wiki": self.wiki,
+                "limit": 20,
+                "conditions": f"[[finished::1]] AND [[opponent::{safe}]]",
+                "order": "date DESC",
+            })
+            for m in (payload or {}).get("result", []):
+                norm_match = self._normalize_v3_match(m)
+                team_keys = {_norm(t) for t in norm_match["teams"]}
+                # Her iki takım da (containment toleranslı) eşleşmeli
+                if any(other_norm == k or other_norm in k or k in other_norm for k in team_keys) \
+                   and any(_norm(probe_team) == k or _norm(probe_team) in k or k in _norm(probe_team) for k in team_keys):
+                    if any(mp["players"] for mp in norm_match["maps"]):
+                        return norm_match
+        return None
 
     def get_recent_transfers_v3(self, days_back: int = 14, limit: int = 200) -> List[Dict[str, Any]]:
         """

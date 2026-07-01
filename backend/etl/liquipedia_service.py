@@ -817,6 +817,7 @@ class LiquipediaService:
             "match2id": m.get("match2id"),
             "date": m.get("date"),
             "teams": team_names,
+            "winner": m.get("winner"),   # kazanan opponent index ("1"/"2")
             "maps": maps,
         }
 

@@ -60,6 +60,7 @@ class PlayerStat:
     assists: Optional[float] = None
     headshots: Optional[float] = None
     hs_percentage: Optional[float] = None
+    is_win: Optional[bool] = None
     # Kaynak-özel ek metrikler (acs, agent, rating vb.) → stats jsonb'ye yazılır.
     extra: Dict[str, Any] = field(default_factory=dict)
 
@@ -303,6 +304,10 @@ class LiquipediaV3StatsSource(BaseMatchStatsSource):
     def _normalize(self, ctx: MatchContext, m: Dict[str, Any]) -> Optional[MapStatsResult]:
         teams = m.get("teams") or []
         team1_is_a = _names_match(teams[0], ctx.team_a_name) if teams else True
+        try:
+            winner_side = int(m.get("winner"))   # 1 veya 2
+        except (TypeError, ValueError):
+            winner_side = None
 
         def team_id_for(side: int) -> Optional[int]:
             is_a = (side == 1) == team1_is_a
@@ -332,24 +337,30 @@ class LiquipediaV3StatsSource(BaseMatchStatsSource):
                 except (TypeError, ValueError):
                     side = 1
                 acc = player_acc.setdefault(name, {
-                    "team_id": team_id_for(side),
-                    "kills": 0, "deaths": 0, "assists": 0, "maps": [],
+                    "team_id": team_id_for(side), "side": side,
+                    "kills": 0, "deaths": 0, "assists": 0, "maps": [], "acs_vals": [],
                 })
                 acc["kills"] += p.get("kills") or 0
                 acc["deaths"] += p.get("deaths") or 0
                 acc["assists"] += p.get("assists") or 0
+                if p.get("acs") is not None:
+                    acc["acs_vals"].append(p["acs"])
                 acc["maps"].append({"map": map_name, "acs": p.get("acs"), "agent": p.get("agent")})
 
         if not maps:
             return None
-        players = [
-            PlayerStat(
+        players = []
+        for name, a in player_acc.items():
+            acs_avg = round(sum(a["acs_vals"]) / len(a["acs_vals"])) if a["acs_vals"] else None
+            is_win = (a["side"] == winner_side) if winner_side in (1, 2) else None
+            extra = {"maps": a["maps"]}
+            if acs_avg is not None:
+                extra["acs_avg"] = acs_avg
+            players.append(PlayerStat(
                 player_name=name, team_id=a["team_id"],
                 kills=a["kills"], deaths=a["deaths"], assists=a["assists"],
-                extra={"maps": a["maps"]},
-            )
-            for name, a in player_acc.items()
-        ]
+                is_win=is_win, extra=extra,
+            ))
         return MapStatsResult(source=self.source_name, maps=maps, players=players)
 
 
@@ -624,10 +635,10 @@ class HybridStatsBackfiller:
                             """
                             INSERT INTO player_match_stats (
                                 player_id, match_id, team_id,
-                                kills, deaths, assists, headshots, hs_percentage,
+                                kills, deaths, assists, headshots, hs_percentage, is_win,
                                 stats, played_at, updated_at
                             )
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
                             ON CONFLICT (player_id, match_id)
                             DO UPDATE SET
                                 team_id       = EXCLUDED.team_id,
@@ -636,13 +647,14 @@ class HybridStatsBackfiller:
                                 assists       = COALESCE(EXCLUDED.assists, player_match_stats.assists),
                                 headshots     = COALESCE(EXCLUDED.headshots, player_match_stats.headshots),
                                 hs_percentage = COALESCE(EXCLUDED.hs_percentage, player_match_stats.hs_percentage),
+                                is_win        = COALESCE(EXCLUDED.is_win, player_match_stats.is_win),
                                 stats         = player_match_stats.stats || EXCLUDED.stats,
                                 updated_at    = now()
                             """,
                             (
                                 pid, ctx.match_id, ps.team_id,
                                 ps.kills, ps.deaths, ps.assists,
-                                ps.headshots, ps.hs_percentage,
+                                ps.headshots, ps.hs_percentage, ps.is_win,
                                 _json({'map_source': result.source, **(ps.extra or {})}),
                                 ctx.scheduled_at,
                             ),

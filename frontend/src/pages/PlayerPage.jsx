@@ -100,6 +100,7 @@ function buildProfessionalStats(individual, analytics) {
     kd: individual.kd,
     winRate,
     hsPct: individual.hsPct,
+    acs: individual.acs ?? null,
     avgKills: individual.totalKills / matches,
     avgAssists: individual.totalAssists / matches,
     avgDeaths: individual.totalDeaths / matches,
@@ -177,6 +178,8 @@ function ProfessionalStatsPanel({ stats, isMobile = false }) {
 
   const hsColor = stats.hsPct >= 50 ? '#4CAF50' : stats.hsPct >= 35 ? '#FFB800' : '#FF6A7F'
   const wrColor = stats.winRate >= 60 ? '#4CAF50' : stats.winRate >= 48 ? '#FFB800' : '#FF4655'
+  // Valorant'ta HS verisi yok → ACS (varsa) daha anlamlı. HS 0 & ACS varsa ACS göster.
+  const useAcs = (!stats.hsPct || stats.hsPct === 0) && stats.acs != null
   const kdaColor = stats.kda >= 1.4 ? '#4CAF50' : stats.kda >= 1.05 ? '#ff9f2f' : '#FF4655'
   const impactColor = stats.impact >= 70 ? '#4CAF50' : stats.impact >= 50 ? '#818cf8' : '#FF4655'
 
@@ -193,7 +196,9 @@ function ProfessionalStatsPanel({ stats, isMobile = false }) {
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,minmax(0,1fr))' : 'repeat(4,minmax(0,1fr))', gap: 10, marginBottom: 12 }}>
           <ProMetricCard label="KDA" value={stats.kda.toFixed(2)} sub={`K/D ${stats.kd.toFixed(2)}`} accent={kdaColor} />
           <ProMetricCard label="Win Rate" value={`${Math.round(stats.winRate)}%`} sub={`${stats.sampleMatches} sample match`} accent={wrColor} />
-          <ProMetricCard label="Headshot" value={`${Math.round(stats.hsPct)}%`} sub="Precision" accent={hsColor} />
+          {useAcs
+            ? <ProMetricCard label="ACS" value={stats.acs} sub="Combat Score" accent="#5eead4" />
+            : <ProMetricCard label="Headshot" value={`${Math.round(stats.hsPct)}%`} sub="Precision" accent={hsColor} />}
           <ProMetricCard label="Impact" value={Math.round(stats.impact)} sub="Scout Score" accent={impactColor} />
         </div>
 
@@ -206,7 +211,9 @@ function ProfessionalStatsPanel({ stats, isMobile = false }) {
           <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 10 }}>Round-by-round efficiency proxy</div>
           <ProgressBar pct={Math.min(100, stats.kda * 42)} color={kdaColor} label="KDA Pressure" value={stats.kda.toFixed(2)} />
           <ProgressBar pct={stats.winRate} color={wrColor} label="Win Rate" value={`${Math.round(stats.winRate)}%`} />
-          <ProgressBar pct={stats.hsPct} color={hsColor} label="Headshot %" value={`${Math.round(stats.hsPct)}%`} />
+          {useAcs
+            ? <ProgressBar pct={Math.min(100, (stats.acs / 350) * 100)} color="#5eead4" label="ACS" value={String(stats.acs)} />
+            : <ProgressBar pct={stats.hsPct} color={hsColor} label="Headshot %" value={`${Math.round(stats.hsPct)}%`} />}
           <ProgressBar pct={Math.min(100, stats.avgKills * 10)} color="#9ad8ff" label="Avg Kills / Match" value={stats.avgKills.toFixed(1)} />
           <ProgressBar pct={Math.min(100, stats.avgAssists * 12)} color="#cab0ff" label="Avg Assists / Match" value={stats.avgAssists.toFixed(1)} />
           <ProgressBar pct={Math.max(0, 100 - Math.min(100, stats.avgDeaths * 10))} color="#f1f1f1" label="Death Control" value={stats.avgDeaths.toFixed(1)} />
@@ -1144,12 +1151,18 @@ export default function PlayerPage() {
             <StatBox icon="⚔️" value={analytics.totalMatches}   label="Maç"        color="#fff"     />
             <StatBox icon="✅" value={analytics.wonMatches}     label="Galibiyet"  color="#4CAF50"  />
             <StatBox icon="❌" value={analytics.lostMatches}    label="Mağ."       color="#FF4655"  />
-            <StatBox
-              icon="📊"
-              value={`${Math.round(analytics.overallWinRate)}%`}
-              label="Win Rate"
-              color={analytics.overallWinRate >= 60 ? '#4CAF50' : analytics.overallWinRate >= 45 ? '#FFB800' : '#FF4655'}
-            />
+            {(() => {
+              // Gerçek per-player WR (is_win) varsa onu kullan; yoksa team-level analytics
+              const wr = individualStats?.winRate != null ? individualStats.winRate : analytics.overallWinRate
+              return (
+                <StatBox
+                  icon="📊"
+                  value={`${Math.round(wr)}%`}
+                  label="Win Rate"
+                  color={wr >= 60 ? '#4CAF50' : wr >= 45 ? '#FFB800' : '#FF4655'}
+                />
+              )
+            })()}
             <StatBox
               icon="🎯"
               value={Math.round(individualStats?.impact ?? analytics.impactScore)}

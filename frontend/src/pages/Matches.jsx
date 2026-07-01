@@ -801,7 +801,7 @@ function Matches() {
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                       <span style={{ fontSize: 11, fontWeight: 800, color: '#FF4655', letterSpacing: '2px', textShadow: isLive ? '0 0 8px rgba(255,70,85,.6)' : 'none' }}>VS</span>
                       <div style={{ width: 1, height: 24, background: '#2a2a2a' }} />
-                      {match.status === 'not_started' && <Countdown target={getMatchTimestamp(match)} />}
+                      {match.status === 'not_started' && <Countdown target={matchTimeIso(match)} />}
                     </div>
 
                     {/* Team B */}

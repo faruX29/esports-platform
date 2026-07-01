@@ -266,6 +266,11 @@ def main():
         resolved = syncer.resolve_orphans(all_live_ids, cap=40 if args.fix_orphans else 15)
         logger.info(f"🔍 Orphan resolution: {resolved} maç finished'a güncellendi")
 
+        # Stale not_started temizliği (planlı zamanı geçmiş hayalet maçlar) — cron
+        # zamanla temizler; --fix-orphans ile daha büyük batch
+        stale = syncer.resolve_stale_upcoming(hours_ago=6, cap=40 if args.fix_orphans else 20)
+        logger.info(f"🔍 Stale upcoming resolution: {stale} maç güncellendi")
+
         # Canlı maç istatistiklerini de güncelle (harita/KDA/tur skoru)
         ps = PlayerStatsSyncer()
         ps.ensure_schema()

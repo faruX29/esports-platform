@@ -557,6 +557,32 @@ function ST({ icon, label }) {
   )
 }
 
+/* ── Oyuncu KDA tablosu (hybrid v3 verisi — enriched maçlarda) ── */
+function KdaColumn({ rows, teamName, gc }) {
+  const sorted = [...rows].sort((a, b) => (b.kills || 0) - (a.kills || 0))
+  return (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ fontSize: 11, fontWeight: 800, color: gc, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{teamName}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {sorted.map((r, i) => {
+          const acs = r.stats?.acs_avg
+          const kd = r.deaths > 0 ? (r.kills / r.deaths) : r.kills
+          return (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#0d0d0d', border: '1px solid #191919', borderRadius: 8, padding: '6px 9px' }}>
+              <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: '#ddd', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.player?.nickname || '?'}</span>
+              {acs != null && <span title="ACS" style={{ fontSize: 10, color: '#5eead4', fontWeight: 700, minWidth: 30, textAlign: 'right' }}>{acs}</span>}
+              <span style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums', color: '#bbb', minWidth: 62, textAlign: 'right' }}>
+                {r.kills}<span style={{ color: '#444' }}>/</span>{r.deaths}<span style={{ color: '#444' }}>/</span>{r.assists}
+              </span>
+              <span style={{ fontSize: 11, fontWeight: 800, color: kd >= 1 ? '#4ade80' : '#ff6a7f', minWidth: 32, textAlign: 'right' }}>{kd.toFixed(2)}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function CommunityPredictionPool({ matchId, teamAName, teamBName, aiWin, isFinished }) {
   const voterIdRef = useRef(getVoterId())
   const [votes, setVotes] = useState({ teamA: 0, teamB: 0 })
@@ -1173,6 +1199,7 @@ export default function MatchDetail() {
   const [streams, setStreams]  = useState([])
   const [aiWin, setAiWin] = useState({ teamA: 50, teamB: 50, confidence: 50, samples: 0 })
   const [liveBoard, setLiveBoard] = useState({ teamA: [], teamB: [] })
+  const [matchPlayerStats, setMatchPlayerStats] = useState([])
 
   const [loadingMatch,   setLoadingMatch]   = useState(true)
   const [loadingDetails, setLoadingDetails] = useState(true)
@@ -1227,7 +1254,7 @@ export default function MatchDetail() {
         h2hQuery = h2hQuery.in('game_id', aliasGameIds)
       }
 
-      const [plA, plB, h2hRes, statsRes] = await Promise.all([
+      const [plA, plB, h2hRes, statsRes, pmsRes] = await Promise.all([
         supabase.from('players').select('id,nickname,real_name,role,image_url').eq('team_pandascore_id', aId).order('role'),
         supabase.from('players').select('id,nickname,real_name,role,image_url').eq('team_pandascore_id', bId).order('role'),
         h2hQuery,
@@ -1235,7 +1262,12 @@ export default function MatchDetail() {
           .select('team_id,stats')
           .in('team_id', [aId, bId])
           .limit(220),
+        // Hybrid v3 oyuncu KDA (bu maç için, varsa) → 5v5 tablo
+        supabase.from('player_match_stats')
+          .select('team_id,kills,deaths,assists,stats,player:players(nickname,image_url,role)')
+          .eq('match_id', parseInt(id, 10)),
       ])
+      setMatchPlayerStats(pmsRes.data || [])
       const rosters = { teamA:plA.data||[], teamB:plB.data||[] }
       setPlayers(rosters)
       const h = (h2hRes.data||[]).filter(x=>x.id!==parseInt(id, 10)).slice(0, 5)
@@ -1485,6 +1517,18 @@ export default function MatchDetail() {
               }
               <LiquipediaCredit compact />
             </div>
+
+            {/* Oyuncu KDA (hybrid v3 — enriched maçlarda) */}
+            {matchPlayerStats.length > 0 && (
+              <div style={{ background: '#111', borderRadius: 16, border: '1px solid #1a1a1a', padding: 18 }}>
+                <ST icon="🎯" label="Oyuncu Performansı (K/D/A)" />
+                <div style={{ display: 'flex', gap: 14 }}>
+                  <KdaColumn rows={matchPlayerStats.filter(r => Number(r.team_id) === Number(aId))} teamName={aName} gc="#4ade80" />
+                  <KdaColumn rows={matchPlayerStats.filter(r => Number(r.team_id) === Number(bId))} teamName={bName} gc="#60a5fa" />
+                </div>
+                <LiquipediaCredit compact />
+              </div>
+            )}
 
             {/* H2H */}
             <div style={{ background: '#111', borderRadius: 16, border: '1px solid #1a1a1a', padding: 18 }}>

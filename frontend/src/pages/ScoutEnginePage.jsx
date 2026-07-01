@@ -41,7 +41,52 @@ const SAMPLE_REPORTS = [
   },
 ]
 
-function SampleReportCard({ report, player }) {
+/* ── Gerçek player_match_stats'ten scouting raporu üret ── */
+function buildRealReports(rows) {
+  const acc = {}
+  for (const r of rows) {
+    const pid = r.player_id
+    if (!pid) continue
+    if (!acc[pid]) acc[pid] = {
+      nickname: r.player?.nickname, image_url: r.player?.image_url, role: r.player?.role,
+      k: 0, d: 0, a: 0, n: 0, wins: 0, wc: 0, acsSum: 0, acsN: 0,
+    }
+    const p = acc[pid]
+    p.k += Number(r.kills) || 0
+    p.d += Number(r.deaths) || 0
+    p.a += Number(r.assists) || 0
+    p.n += 1
+    if (r.is_win != null) { p.wc += 1; if (r.is_win) p.wins += 1 }
+    const acs = r.stats?.acs_avg
+    if (acs != null) { p.acsSum += Number(acs); p.acsN += 1 }
+  }
+  return Object.values(acc)
+    .filter(p => p.nickname && p.n >= 2)
+    .map(p => {
+      const kd = p.d > 0 ? p.k / p.d : p.k
+      const acs = p.acsN > 0 ? Math.round(p.acsSum / p.acsN) : null
+      const wr = p.wc > 0 ? Math.round((p.wins / p.wc) * 100) : null
+      const verdict = kd >= 1.15 ? 'Elit Fragcı' : kd >= 1.0 ? 'İstikrarlı Katkı' : 'Takım Oyuncusu'
+      const metrics = [['K/D', kd.toFixed(2)]]
+      if (acs != null) metrics.push(['ACS', String(acs)])
+      if (wr != null) metrics.push(['Win%', `%${wr}`])
+      const note = `Son ${p.n} maçta ${p.k}/${p.d}/${p.a} K/D/A`
+        + (acs != null ? `, ${acs} ort. ACS` : '')
+        + (wr != null ? `, %${wr} galibiyet` : '') + '. '
+        + (kd >= 1.15 ? 'Güçlü bireysel etki — kadro çekirdeği için birinci sınıf aday.'
+          : kd >= 1.0 ? 'Dengeli katkı — sistemli bir takımda güvenilir rol oyuncusu.'
+          : 'Takım odaklı profil — destek/oyun kurucu rolünde değer kazanır.')
+      return {
+        _kd: kd,
+        report: { role: p.role || 'Pro', game: '', verdict, note, metrics },
+        player: { nickname: p.nickname, image_url: p.image_url },
+      }
+    })
+    .sort((a, b) => b._kd - a._kd)
+    .slice(0, 3)
+}
+
+function SampleReportCard({ report, player, real = false }) {
   return (
     <div style={{
       background: 'linear-gradient(160deg, rgba(20,184,166,.06), #0d0d0f)',
@@ -59,7 +104,7 @@ function SampleReportCard({ report, player }) {
             {player?.nickname || 'Örnek Oyuncu'}
           </div>
           <div style={{ fontSize: 11, color: '#8bd9cd' }}>
-            {report.role} · {report.game}{player?.team_name ? ` · ${player.team_name}` : ''}
+            {report.role}{report.game ? ` · ${report.game}` : ''}{player?.team_name ? ` · ${player.team_name}` : ''}
           </div>
         </div>
         <span style={{
@@ -81,34 +126,35 @@ function SampleReportCard({ report, player }) {
 
       <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6, color: '#bdbdbd' }}>{report.note}</p>
 
-      <div style={{ marginTop: 'auto', fontSize: 9, color: '#4a4a4a', textTransform: 'uppercase', letterSpacing: '.6px' }}>
-        Örnek Scout Raporu · İllüstratif
+      <div style={{ marginTop: 'auto', fontSize: 9, color: '#4a4a4a', letterSpacing: '.6px' }}>
+        {real
+          ? <>GERÇEK MAÇ VERİSİ · Data powered by <a href="https://liquipedia.net" target="_blank" rel="noopener noreferrer" style={{ color: '#6a6a6a' }}>Liquipedia</a></>
+          : <span style={{ textTransform: 'uppercase' }}>Örnek Scout Raporu · İllüstratif</span>}
       </div>
     </div>
   )
 }
 
 export default function ScoutEnginePage() {
-  const [players, setPlayers] = useState([])
+  const [realReports, setRealReports] = useState([])
   const [email, setEmail] = useState('')
   const [org, setOrg] = useState('')
   const [role, setRole] = useState('agency')
   const [status, setStatus] = useState('idle')  // idle | sending | done | error
   const [errorMsg, setErrorMsg] = useState('')
 
-  // Örnek raporları gerçek oyuncu isimleriyle beslemek için birkaç oyuncu çek
+  // Örnek raporları GERÇEK player_match_stats (hybrid v3) verisinden üret
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       try {
         const { data } = await supabase
-          .from('players')
-          .select('id,nickname,image_url,role')
-          .not('nickname', 'is', null)
-          .not('image_url', 'is', null)
-          .limit(3)
-        if (!cancelled && data) setPlayers(data)
-      } catch { /* sessiz — fallback örnek isimler kullanılır */ }
+          .from('player_match_stats')
+          .select('player_id,kills,deaths,assists,is_win,stats,player:players(nickname,image_url,role)')
+          .not('kills', 'is', null)
+          .limit(1000)
+        if (!cancelled && data) setRealReports(buildRealReports(data))
+      } catch { /* sessiz — statik örnek raporlara düşer */ }
     })()
     return () => { cancelled = true }
   }, [])
@@ -185,16 +231,22 @@ export default function ScoutEnginePage() {
           ))}
         </section>
 
-        {/* Sample reports */}
+        {/* Sample reports — gerçek veri varsa ondan, yoksa statik */}
         <section style={{ marginBottom: 28 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 6 }}>
             <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>Örnek Scouting Raporları</h2>
-            <span style={{ fontSize: 12, color: '#6f6f6f' }}>Beta'da her oyuncu için otomatik üretilir</span>
+            <span style={{ fontSize: 12, color: '#6f6f6f' }}>
+              {realReports.length > 0 ? 'Gerçek maç verisinden otomatik üretildi' : "Beta'da her oyuncu için otomatik üretilir"}
+            </span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 14 }}>
-            {SAMPLE_REPORTS.map((rep, i) => (
-              <SampleReportCard key={rep.role} report={rep} player={players[i]} />
-            ))}
+            {realReports.length > 0
+              ? realReports.map((r, i) => (
+                  <SampleReportCard key={i} report={r.report} player={r.player} real />
+                ))
+              : SAMPLE_REPORTS.map((rep) => (
+                  <SampleReportCard key={rep.role} report={rep} player={null} />
+                ))}
           </div>
         </section>
 

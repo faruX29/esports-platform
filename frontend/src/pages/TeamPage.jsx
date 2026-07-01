@@ -455,6 +455,7 @@ export default function TeamPage() {
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState(null)
   const [activeTab, setActiveTab] = useState('roster')
+  const [gameFilter, setGameFilter] = useState('all')
 
   // ── Veri çekme ──────────────────────────────────────────────────
   const fetchTeamData = useCallback(async () => {
@@ -772,7 +773,7 @@ export default function TeamPage() {
               <TransferTimeline transfers={teamTransfers} />
 
               <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 10, background: '#0d0d0d', border: '1px solid #1a1a1a', fontSize: 12, color: '#383838', textAlign: 'center' }}>
-                ℹ️ Bireysel K/D/A istatistikleri PandaScore premium API erişimi gerektirir
+                ℹ️ Oyuncu K/D verisi Liquipedia kapsamındaki maçlardan hesaplanır; kadro büyüdükçe zenginleşir
               </div>
             </div>
           )
@@ -780,17 +781,40 @@ export default function TeamPage() {
 
         {/* ── UPCOMING & PAST ── */}
         {(activeTab === 'upcoming' || activeTab === 'past') && (() => {
-          const list = activeTab === 'upcoming' ? upcomingMatches : pastMatches
-          if (list.length === 0) return (
-            <div style={{ textAlign: 'center', padding: '60px', color: '#444' }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>{activeTab === 'upcoming' ? '📅' : '📋'}</div>
-              <div>{activeTab === 'upcoming' ? 'Planlanmış maç yok' : 'Geçmiş maç yok'}</div>
-            </div>
-          )
+          const source = activeTab === 'upcoming' ? upcomingMatches : pastMatches
+          // Çok-oyunlu org'lar için oyun filtresi (Valorant/CS2/LoL karışık gelir)
+          const games = [...new Set(source.map(m => m.game?.name).filter(Boolean))]
+          const list = gameFilter === 'all' ? source : source.filter(m => m.game?.name === gameFilter)
           return (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 }}>
-              {list.map(m => <MatchCard key={m.id} match={m} teamId={teamId} navigate={navigate} />)}
-            </div>
+            <>
+              {games.length > 1 && (
+                <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+                  {['all', ...games].map(g => {
+                    const active = gameFilter === g
+                    return (
+                      <button key={g} onClick={() => setGameFilter(g)} style={{
+                        padding: '6px 12px', borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                        border: active ? '1px solid #FF4655' : '1px solid #262626',
+                        background: active ? 'rgba(255,70,85,.15)' : '#0d0d0d',
+                        color: active ? '#FF4655' : '#888',
+                      }}>
+                        {g === 'all' ? `Tümü (${source.length})` : `${g} (${source.filter(m => m.game?.name === g).length})`}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+              {list.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px', color: '#444' }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>{activeTab === 'upcoming' ? '📅' : '📋'}</div>
+                  <div>{activeTab === 'upcoming' ? 'Planlanmış maç yok' : 'Geçmiş maç yok'}</div>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 }}>
+                  {list.map(m => <MatchCard key={m.id} match={m} teamId={teamId} navigate={navigate} />)}
+                </div>
+              )}
+            </>
           )
         })()}
       </div>

@@ -14,6 +14,7 @@ import json
 import logging
 import re
 import time
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -103,10 +104,17 @@ class FactSheetBuilder:
         return f"{int(seconds // 60)} dk"
 
     @staticmethod
-    def build_preview(match: dict) -> str:
+    def _fmt_form(name: str, form: Optional[dict]) -> Optional[str]:
+        """Takım form dict'ini tek satır metne çevirir. Veri yoksa None."""
+        if not form or not form.get("n"):
+            return None
+        return f"{name} son {form['n']} maç: {form['wins']}G-{form['losses']}M ({form['form']})"
+
+    @staticmethod
+    def build_preview(match: dict, form_a: Optional[dict] = None, form_b: Optional[dict] = None) -> str:
         """
         Yaklaşan (upcoming) maç için önizleme fact sheet'i — final skor yok;
-        tahmin, tier, takım ve zaman bağlamı kullanılır.
+        tahmin, tier, takım, zaman ve (varsa) son maç formu kullanılır.
         """
         team_a = match.get("team_a") or {}
         team_b = match.get("team_b") or {}
@@ -127,6 +135,11 @@ class FactSheetBuilder:
             f"Eşleşme: {a_name} vs {b_name}",
             f"Tarih: {when}",
         ]
+        # Hibrit veri derinliği: son maç formu (varsa)
+        for line in (FactSheetBuilder._fmt_form(a_name, form_a), FactSheetBuilder._fmt_form(b_name, form_b)):
+            if line:
+                lines.append(f"Form: {line}")
+
         pred_a = match.get("prediction_team_a")
         pred_b = match.get("prediction_team_b")
         if pred_a is not None and pred_b is not None:
@@ -173,10 +186,22 @@ class FactSheetBuilder:
         return "\n".join(lines)
 
     @staticmethod
+    def _dominant_agent(stats: Optional[dict]) -> Optional[str]:
+        """player_match_stats.stats jsonb'sindeki maps[].agent'lardan en çok oynananı."""
+        maps = (stats or {}).get("maps") if isinstance(stats, dict) else None
+        if not isinstance(maps, list):
+            return None
+        agents = [m.get("agent") for m in maps if isinstance(m, dict) and m.get("agent")]
+        if not agents:
+            return None
+        return Counter(agents).most_common(1)[0][0]
+
+    @staticmethod
     def _format_top_players(player_rows: list[dict]) -> Optional[str]:
         """
         En yüksek KDA'ya sahip oyuncuları tek satırlık öne-çıkanlar metni yapar.
-        player_rows: [{nickname, team_name, kills, deaths, assists}, ...]
+        Hibrit veri derinliği: mevcutsa agent (Valorant) ve HS% de eklenir.
+        player_rows: [{nickname, team_name, kills, deaths, assists, hs_percentage, stats}, ...]
         """
         if not player_rows:
             return None
@@ -190,7 +215,11 @@ class FactSheetBuilder:
             a = int(p.get("assists") or 0)
             team = p.get("team_name")
             team_tag = f" ({team})" if team else ""
-            parts.append(f"{nick}{team_tag} {k}/{d}/{a}")
+            agent = FactSheetBuilder._dominant_agent(p.get("stats"))
+            agent_tag = f" [{agent}]" if agent else ""
+            hs = p.get("hs_percentage")
+            hs_tag = f" HS%{int(hs)}" if hs not in (None, 0) else ""
+            parts.append(f"{nick}{team_tag}{agent_tag} {k}/{d}/{a}{hs_tag}")
         return " | ".join(parts) if parts else None
 
     @staticmethod
@@ -366,7 +395,8 @@ class NewsGenerator:
                     cur.execute(
                         """
                         SELECT p.nickname, t.name AS team_name,
-                               pms.kills, pms.deaths, pms.assists
+                               pms.kills, pms.deaths, pms.assists,
+                               pms.hs_percentage, pms.impact_score, pms.stats
                         FROM player_match_stats pms
                         JOIN players p ON p.id = pms.player_id
                         LEFT JOIN teams t ON t.id = pms.team_id
@@ -381,6 +411,39 @@ class NewsGenerator:
         except Exception as exc:
             logger.warning("⚠️  player_match_stats okunamadı (atlanıyor) match %s: %s", match_id, exc)
             return []
+
+    def _fetch_team_form(self, team_id, limit: int = 5) -> Optional[dict]:
+        """
+        Takımın son N bitmiş maçının W/L formu (önizleme fact sheet'ini derinleştirir).
+        Veri yoksa None döner — önizleme üretimini ASLA çökertmez.
+        Dönüş: {"n": int, "wins": int, "losses": int, "form": "WWLWL"}  (yeni→eski)
+        """
+        if not team_id:
+            return None
+        try:
+            with Database.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        SELECT winner_id
+                        FROM matches
+                        WHERE status = 'finished'
+                          AND (team_a_id = %s OR team_b_id = %s)
+                        ORDER BY scheduled_at DESC
+                        LIMIT %s
+                        """,
+                        (team_id, team_id, limit),
+                    )
+                    rows = cur.fetchall()
+        except Exception as exc:
+            logger.warning("⚠️  takım formu okunamadı (atlanıyor) team %s: %s", team_id, exc)
+            return None
+        if not rows:
+            return None
+        tid = str(team_id)
+        results = ["W" if str(w[0] or "") == tid else "L" for w in rows]
+        wins = results.count("W")
+        return {"n": len(results), "wins": wins, "losses": len(results) - wins, "form": "".join(results)}
 
     def _denormalize(self, row: dict) -> dict:
         """Map the flat JOIN row into the nested structure FactSheetBuilder expects."""
@@ -605,7 +668,9 @@ class NewsGenerator:
 
         for row in rows:
             match = self._denormalize(row)
-            fact_sheet = FactSheetBuilder.build_preview(match)
+            form_a = self._fetch_team_form(match["team_a"].get("id"))
+            form_b = self._fetch_team_form(match["team_b"].get("id"))
+            fact_sheet = FactSheetBuilder.build_preview(match, form_a=form_a, form_b=form_b)
             user_prompt = (
                 "Aşağıdaki yaklaşan maç önizleme raporunu kullanarak Türkçe maç önizlemesi üret:\n\n"
                 + fact_sheet
@@ -659,24 +724,36 @@ class NewsGenerator:
                 return [dict(zip(cols, row)) for row in cur.fetchall()]
 
     def _player_form_summary(self, player_id) -> Optional[str]:
-        """Oyuncunun son maç KDA ortalaması (player_match_stats varsa). Yoksa None."""
+        """
+        Oyuncunun son maç formu (player_match_stats varsa): ort. K/D/A, galibiyet
+        oranı ve (Valorant'ta) ağırlıklı oynanan agent. Yoksa None.
+        """
         try:
             with Database.get_connection() as conn:
                 with conn.cursor() as cur:
                     cur.execute(
                         """
-                        SELECT AVG(kills), AVG(deaths), AVG(assists), COUNT(*)
+                        SELECT kills, deaths, assists, is_win, stats
                         FROM player_match_stats
                         WHERE player_id = %s AND kills IS NOT NULL
+                        ORDER BY COALESCE(played_at, created_at) DESC
+                        LIMIT 10
                         """,
                         (player_id,),
                     )
-                    k, d, a, n = cur.fetchone()
-                    if not n:
-                        return None
-                    return f"son {n} maçta ort. {float(k):.1f}/{float(d):.1f}/{float(a):.1f} (K/D/A)"
+                    rows = cur.fetchall()
         except Exception:
             return None
+        if not rows:
+            return None
+        n = len(rows)
+        k = sum(r[0] or 0 for r in rows) / n
+        d = sum(r[1] or 0 for r in rows) / n
+        a = sum(r[2] or 0 for r in rows) / n
+        wr = round(100 * sum(1 for r in rows if r[3]) / n)
+        agents = [ag for r in rows if (ag := FactSheetBuilder._dominant_agent(r[4]))]
+        agent_txt = f", ağırlıklı {Counter(agents).most_common(1)[0][0]}" if agents else ""
+        return f"son {n} maçta ort. {k:.1f}/{d:.1f}/{a:.1f} (K/D/A), %{wr} galibiyet{agent_txt}"
 
     def _save_transfer(self, transfer: dict, article: dict) -> None:
         """Transfer makalesini news_articles'a yazar (content_type='transfer', match_id NULL)."""

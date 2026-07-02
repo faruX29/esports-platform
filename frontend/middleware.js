@@ -14,7 +14,9 @@ export const config = {
   matcher: ['/news/:path*', '/match/:path*'],
 }
 
-const BOT_RE = /(facebookexternalhit|Twitterbot|Discordbot|Slackbot|TelegramBot|WhatsApp|redditbot|LinkedInBot|Pinterest|Googlebot|bingbot|Applebot|SkypeUriPreview|vkShare|embedly|W3C_Validator)/i
+// Geniş kapsam: isimli crawler'lar + jenerik önizleme/araç token'ları. Gerçek
+// tarayıcı UA'ları (Mozilla/Chrome/Safari/Edg) bu token'ları içermez → etkilenmez.
+const BOT_RE = /(bot|crawler|spider|slurp|preview|unfurl|embed|opengraph|open graph|metadata|validator|facebookexternalhit|whatsapp|telegram|slack|discord|twitter|reddit|linkedin|pinterest|applebot|skype|vkshare|iframely|curl|wget|python-requests|axios|go-http|okhttp|headless)/i
 
 const GAME_META = {
   valorant: { label: 'VALORANT', accent: 'FF4655' },
@@ -142,10 +144,12 @@ async function buildForNews(ref, origin, url) {
 
 export default async function middleware(req) {
   const ua = req.headers.get('user-agent') || ''
-  if (!BOT_RE.test(ua)) return next() // gerçek kullanıcı → SPA
+  const url = new URL(req.url)
+  // ?__og=1 → tarayıcıda elle doğrulama için OG HTML'i zorla (bot olmasan da)
+  const force = url.searchParams.get('__og') === '1'
+  if (!force && !BOT_RE.test(ua)) return next() // gerçek kullanıcı → SPA
 
   try {
-    const url = new URL(req.url)
     const origin = url.origin
     const path = url.pathname
 

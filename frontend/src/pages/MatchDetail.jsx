@@ -10,6 +10,7 @@ import { isTurkishTeam }                           from '../constants'
 import { useUser }                                 from '../context/UserContext'
 import InitialsImage                               from '../components/InitialsImage'
 import LiquipediaCredit                            from '../components/LiquipediaCredit'
+import PredictionAccuracyBadge                     from '../components/PredictionAccuracyBadge'
 import { getBOFormat }                              from '../utils/matchFormat'
 
 /* ─── Voter fingerprint ─────────────────────────────────────────────────────── */
@@ -1432,6 +1433,9 @@ export default function MatchDetail() {
                   <span style={{ color: '#60a5fa' }}>{pctB}% :{bName}</span>
                 </div>
                 <div style={{ marginTop: 2, fontSize: 9, color: '#3b3b3b' }}>Confidence Score: %{aiWin.confidence} · sample: {aiWin.samples}</div>
+                <div style={{ marginTop: 6, display: 'flex', justifyContent: 'center' }}>
+                  <PredictionAccuracyBadge variant="inline" />
+                </div>
               </div>
             </div>
 

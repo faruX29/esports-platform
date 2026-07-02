@@ -16,6 +16,7 @@ import { memo }                             from 'react'
 import InitialsImage                        from '../components/InitialsImage'
 import { normalizeGameId }                  from '../utils/gameUtils'
 import { getBOFormat }                       from '../utils/matchFormat'
+import PredictionAccuracyBadge              from '../components/PredictionAccuracyBadge'
 
 const MVP_HIDE_DREAM_TEAM = true
 const MVP_HIDE_PREDICTIONS = false
@@ -2269,6 +2270,10 @@ export default function Dashboard() {
         >
           Tercihleri Duzenle
         </button>
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <PredictionAccuracyBadge variant="card" />
       </div>
 
       <div style={{

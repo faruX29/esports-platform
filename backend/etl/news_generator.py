@@ -33,32 +33,46 @@ logger = logging.getLogger(__name__)
 
 # ── Editor persona injected as system prompt ──────────────────────────────────
 SYSTEM_PROMPT = (
-    "Sen profesyonel bir espor editörüsün. Gelen maç verilerini ve istatistik "
-    "özetlerini kullanarak, espor jargonuna (ACS, clutch, eco round, anti-eco, "
-    "pistol round, veto, map draft, opening duel vb.) tamamen hakim, sürükleyici "
-    "ve tarafsız Türkçe haber bültenleri yazıyorsun.\n\n"
-    "Kurallar:\n"
-    "- Haber dili doğal, akıcı ve kısa cümlelerden oluşsun.\n"
-    "- Kesinlikle icat edilmiş bilgi veya oyuncu ismi ekleme; yalnızca fact "
-    "sheet'teki verileri kullan.\n"
-    "- Başlık (title) en fazla 12 kelime, özet (summary) 2-3 cümle olsun.\n"
-    "- Makale gövdesi 3-5 ayrı paragraf string'i içeren 'paragraphs' dizisi olarak gelsin.\n"
+    "Sen profesyonel bir espor editörüsün. Maç verilerinden ÖZGÜN, tarafsız Türkçe "
+    "haber bültenleri yazıyorsun.\n\n"
+    "ÖZGÜNLÜK (EN ÖNEMLİ KURAL):\n"
+    "- Her haber birbirinden farklı olmalı. ASLA kalıp/şablon cümle yapısı kullanma.\n"
+    "- Habere EN dikkat çekici gerçekle başla: sürpriz sonuç, tahmin farkı (örn. "
+    "'model %95 favori gösteriyordu'), skor, öne çıkan oyuncu ya da turnuva bağlamı. "
+    "Her haberi aynı 'X-Tier ... turnuvasında/çerçevesinde' kalıbıyla AÇMA.\n"
+    "- Şu dolgu ifadelerini KULLANMA: 'dengeli tempo', 'dar seri', 'geçit vermeyerek', "
+    "'sahnedeydi', 'heyecan dolu mücadele', 'nefes kesen', 'zafere ulaştı', "
+    "'büyük bir mücadeleye sahne oldu'.\n"
+    "- Veri sınırlıysa KISA yaz (2 kısa paragraf). Boş/klişe cümlelerle DOLDURMA.\n\n"
+    "İÇERİK KURALLARI:\n"
+    "- Yalnızca fact sheet'teki verileri kullan; oyuncu/istatistik/skor UYDURMA.\n"
+    "- Espor jargonuna hakimsin (ACS, clutch, eco, veto, opening duel) ama yalnızca "
+    "fact sheet destekliyorsa kullan.\n"
+    "- Başlık (title) en fazla 12 kelime, özet (summary) 2-3 cümle.\n"
+    "- Gövde 'paragraphs' dizisi: veri zenginse 3-4 paragraf, sınırlıysa 2 paragraf.\n"
     "- JSON string değerlerinin içinde KESİNLİKLE çift tırnak (\") kullanma; "
-    "terimleri vurgulamak için yalnızca tek tırnak (') kullan.\n"
+    "vurgu için yalnızca tek tırnak (') kullan.\n"
     "- Yanıtı yalnızca aşağıdaki JSON şemasında ver; başka hiçbir şey yazma:\n"
-    '{"title": "...", "summary": "...", "paragraphs": ["1. paragraf", "2. paragraf", "3. paragraf"]}'
+    '{"title": "...", "summary": "...", "paragraphs": ["1. paragraf", "2. paragraf"]}'
 )
 
 # ── Önizleme (upcoming) editör persona'sı ─────────────────────────────────────
 PREVIEW_SYSTEM_PROMPT = (
-    "Sen profesyonel bir espor editörüsün. Gelen YAKLAŞAN maç verilerini kullanarak "
-    "espor jargonuna hakim, merak uyandıran, tarafsız Türkçe maç ÖNİZLEMESİ yazıyorsun.\n\n"
-    "Kurallar:\n"
-    "- Maç henüz OYNANMADI; sonuç/skor uydurma. Beklenti, form ve favori analizi yaz.\n"
-    "- Model favorisi verildiyse ona değin ama kesin sonuç verme; 'kağıt üstünde favori' tonu kullan.\n"
-    "- Kesinlikle icat edilmiş istatistik veya oyuncu ismi ekleme; yalnızca fact sheet verisi.\n"
+    "Sen profesyonel bir espor editörüsün. YAKLAŞAN maç verilerinden ÖZGÜN, merak "
+    "uyandıran, tarafsız Türkçe maç ÖNİZLEMESİ yazıyorsun.\n\n"
+    "ÖZGÜNLÜK (EN ÖNEMLİ KURAL):\n"
+    "- Her önizleme farklı olmalı; kalıp/şablon YASAK.\n"
+    "- En ayırt edici gerçekle başla: takımların son maç formu (verildiyse), tahmin "
+    "farkı ya da turnuva önemi. Hep aynı kalıpla açma.\n"
+    "- Şu dolgu ifadelerini KULLANMA: 'dengeli tempo', 'nefes kesen', 'heyecan dolu', "
+    "'büyük bir mücadeleye sahne olacak'.\n"
+    "- Veri sınırlıysa KISA yaz (2 paragraf); klişeyle DOLDURMA.\n\n"
+    "İÇERİK KURALLARI:\n"
+    "- Maç henüz OYNANMADI; sonuç/skor uydurma. Form ve favori analizi yaz.\n"
+    "- Model favorisi verildiyse 'kağıt üstünde favori' tonuyla değin; kesin sonuç verme.\n"
+    "- Form verisi (son W/L) verildiyse habere doğal işle; UYDURMA yapma.\n"
     "- Başlık (title) en fazla 12 kelime, özet (summary) 2-3 cümle.\n"
-    "- Gövde 3-4 paragraf string'i içeren 'paragraphs' dizisi olsun.\n"
+    "- Gövde 2-3 paragraf string'i içeren 'paragraphs' dizisi olsun.\n"
     "- JSON string içinde çift tırnak (\") kullanma; vurgu için tek tırnak (').\n"
     "- Yanıtı yalnızca şu JSON şemasında ver:\n"
     '{"title": "...", "summary": "...", "paragraphs": ["1. paragraf", "2. paragraf"]}'
@@ -445,6 +459,34 @@ class NewsGenerator:
         wins = results.count("W")
         return {"n": len(results), "wins": wins, "losses": len(results) - wins, "form": "".join(results)}
 
+    @staticmethod
+    def _is_newsworthy(match: dict, player_rows: list) -> bool:
+        """
+        Kalite kapısı: benzersiz içerik üretilebilecek maçlar. Düşük-tier + tek
+        harita (Bo1) + oyuncu istatistiği yok + sürpriz değil = kaçınılmaz olarak
+        şablon/dolgu haber → ATLA (duplicate content SEO'ya zarar verir).
+        Haberlik sinyaller: yüksek tier (S/A) VEYA oyuncu-stat VEYA çok-harita VEYA upset.
+        """
+        tier = str((match.get("tournament") or {}).get("tier") or "C").upper()
+        if tier in ("S", "A"):
+            return True
+        if player_rows:
+            return True
+        a = int(match.get("team_a_score") or 0)
+        b = int(match.get("team_b_score") or 0)
+        if max(a, b) >= 2:   # çok haritalı seri (Bo3+)
+            return True
+        pa, pb = match.get("prediction_team_a"), match.get("prediction_team_b")
+        if pa is not None and pb is not None:
+            wid = str(match.get("winner_id") or "")
+            aid = str((match.get("team_a") or {}).get("id") or "")
+            bid = str((match.get("team_b") or {}).get("id") or "")
+            winner = aid if wid == aid else (bid if wid == bid else "")
+            fav = aid if float(pa) >= float(pb) else bid
+            if winner and winner != fav:   # sürpriz sonuç
+                return True
+        return False
+
     def _denormalize(self, row: dict) -> dict:
         """Map the flat JOIN row into the nested structure FactSheetBuilder expects."""
         return {
@@ -555,13 +597,19 @@ class NewsGenerator:
         """
         rows = self._fetch_unprocessed(hours_back=hours_back)
         logger.info("📰 Haber üretilecek maç: %d", len(rows))
-        stats = {"attempted": len(rows), "generated": 0, "failed": 0}
+        stats = {"attempted": len(rows), "generated": 0, "failed": 0, "skipped": 0}
 
         for row in rows:
             match = self._denormalize(row)
-            stats_rows = self._fetch_stats(match["id"])
             player_rows = self._fetch_player_stats(match["id"])
 
+            # Kalite kapısı: şablon/dolgu üretecek zayıf maçları atla
+            if not self._is_newsworthy(match, player_rows):
+                stats["skipped"] += 1
+                logger.info("⏭️  Atlandı (haberlik değil) match_id=%s", match["id"])
+                continue
+
+            stats_rows = self._fetch_stats(match["id"])
             fact_sheet = FactSheetBuilder.build(match, stats_rows, player_rows)
             user_prompt = (
                 "Aşağıdaki maç özet raporunu kullanarak Türkçe haber bülteni üret:\n\n"

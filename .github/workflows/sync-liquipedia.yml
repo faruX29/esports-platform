@@ -55,6 +55,26 @@ jobs:
           LIQUIPEDIA_API_KEY: ${{ secrets.LIQUIPEDIA_API_KEY }}
         run: python run.py --generate-transfers
 
+      # SEO sitemap: yeni maç/haber/takım sayfaları Google'a keşfettirilsin.
+      # SITE_URL secret'ı yoksa generator placeholder domain kullanır (Config.SITE_URL).
+      - name: Generate SEO sitemap
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: python run.py --generate-sitemap
+
+      # Deploy HENÜZ yok → sitemap'i şimdilik artifact olarak sakla (incelenebilir).
+      # ⚠️ Deploy kurulunca (Vercel/Netlify git-push): bu adımı sitemap'i repo'ya
+      # commit-back eden bir adımla değiştir; git-tetikli deploy dosyaları alır.
+      - name: Upload sitemap artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sitemap
+          path: frontend/public/sitemap*.xml
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Notify on failure
         if: failure()
         run: echo "❌ Liquipedia sync failed! Check logs above."

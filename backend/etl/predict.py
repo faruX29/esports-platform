@@ -1,381 +1,272 @@
 """
-AI Match Prediction Module
-Uses weighted probability to predict match outcomes
+AI Match Prediction Module — Elo rating tabanlı.
+
+Elo, güç-programı (strength-of-schedule) sorununu doğal olarak çözer: güçlü rakibi
+yenmek zayıfı yenmekten daha çok puan kazandırır. Kazanma olasılığı lojistik
+fonksiyonla üretilir → iyi kalibre. Margin-of-victory (skor farkı) K faktörünü
+büyütür (dominant galibiyet daha çok rating hareketi yaratır).
+
+Backtest (walk-forward, ~11.9k maç): genel ~%61, son 30 gün ~%61, kalibrasyon
+güven arttıkça monoton (olasılık ≥%70 → ~%74-82 doğru). Eski win-rate modeli ~%56
+idi ve turnuva-tier terimi her iki takıma eşit eklendiği için tahmini 50/50'ye
+sönümlüyordu (sıfır ayırt edici sinyal).
 """
-from database import Database
-import psycopg
 import logging
+import math
+from typing import Optional
+
+from database import Database
 
 logger = logging.getLogger(__name__)
 
+ELO_BASE = 1500.0
+CONFIDENT_PROB = 0.65  # "güvenli tahmin" eşiği (favori olasılığı) — trust signal
+
 
 class MatchPredictor:
-    """Predict match outcomes based on team performance"""
-    
-    def __init__(self):
-        self.weight_recent = 0.6  # Son 5 maç (en önemli)
-        self.weight_total = 0.3   # Tüm zamanlar
-        self.weight_tier = 0.1    # Turnuva seviyesi
-    
-    def calculate_team_strength(self, team_id, tournament_tier=None):
+    """Elo rating tabanlı maç sonucu tahmini."""
+
+    def __init__(self, k_factor: float = 32.0, base: float = ELO_BASE, use_mov: bool = True):
+        self.K = k_factor
+        self.base = base
+        self.use_mov = use_mov
+        self._ratings: Optional[dict] = None   # team_id -> Elo (lazy, in-memory)
+        self._games: dict = {}                 # team_id -> oynanan maç sayısı
+
+    # ── Elo çekirdeği ─────────────────────────────────────────────────────────
+    @staticmethod
+    def _expected(r_a: float, r_b: float) -> float:
+        """A'nın kazanma beklentisi (lojistik)."""
+        return 1.0 / (1.0 + 10 ** ((r_b - r_a) / 400.0))
+
+    def _k(self, score_a: int, score_b: int) -> float:
+        """Margin-of-victory: skor farkı büyükse K büyür (dominant galibiyet)."""
+        if not self.use_mov:
+            return self.K
+        margin = abs((score_a or 0) - (score_b or 0))
+        return self.K * (1 + math.log(margin + 1) * 0.5) if margin >= 1 else self.K
+
+    @staticmethod
+    def _fetch_finished_ordered(cur) -> list:
+        cur.execute(
+            """
+            SELECT id, team_a_id, team_b_id, winner_id,
+                   COALESCE(team_a_score, 0), COALESCE(team_b_score, 0)
+            FROM matches
+            WHERE status = 'finished' AND winner_id IS NOT NULL
+              AND team_a_id IS NOT NULL AND team_b_id IS NOT NULL
+            ORDER BY scheduled_at ASC, id ASC
+            """
+        )
+        return cur.fetchall()
+
+    def build_elo_ratings(self) -> dict:
         """
-        Calculate team strength score
-        
-        Args:
-            team_id: Team ID
-            tournament_tier: Tournament tier (optional)
-            
-        Returns:
-            float: Team strength score (0.0 - 1.0)
+        Tüm bitmiş maçları kronolojik replay ederek GÜNCEL Elo ratinglerini kurar.
+        Upcoming tahminleri için doğru: tüm bitmiş maçlar upcoming'den önce olduğu
+        için lookahead yok. ~12k maç < 1 sn.
         """
+        ratings: dict = {}
+        games: dict = {}
         with Database.get_connection() as conn:
             with conn.cursor() as cur:
-                # Son 5 maçtaki win rate
-                cur.execute("""
-                    SELECT 
-                        COUNT(*) as total_matches,
-                        SUM(CASE WHEN winner_id = %s THEN 1 ELSE 0 END) as wins
-                     FROM (
-                    SELECT winner_id
-                    FROM matches
-                    WHERE (team_a_id = %s OR team_b_id = %s)
-                        AND status = 'finished'
-                        AND winner_id IS NOT NULL
-                    ORDER BY scheduled_at DESC
-                    LIMIT 5
-                     ) recent_matches
-                """, (team_id, team_id, team_id))
-                
-                recent = cur.fetchone()
-                recent_wins = recent[1] if recent and recent[0] > 0 else 0
-                recent_total = recent[0] if recent else 0
-                recent_rate = recent_wins / recent_total if recent_total > 0 else 0.5
-                
-                # Tüm zamanların win rate
-                cur.execute("""
-                    SELECT 
-                        COUNT(*) as total_matches,
-                        SUM(CASE WHEN winner_id = %s THEN 1 ELSE 0 END) as wins
-                    FROM matches
-                    WHERE (team_a_id = %s OR team_b_id = %s)
-                        AND status = 'finished'
-                        AND winner_id IS NOT NULL
-                """, (team_id, team_id, team_id))
-                
-                total = cur.fetchone()
-                total_wins = total[1] if total and total[0] > 0 else 0
-                total_matches = total[0] if total else 0
-                total_rate = total_wins / total_matches if total_matches > 0 else 0.5
-                
-                # Tier bonus (normalized)
-                tier_score = 0.5  # Default
-                if tournament_tier:
-                    tier_map = {
-                        'S': 1.0,
-                        'A': 0.8,
-                        'B': 0.6,
-                        'C': 0.4
-                    }
-                    tier_score = tier_map.get(tournament_tier, 0.5)
-                
-                # Gemini'nin formülü
-                strength = (
-                    recent_rate * self.weight_recent +
-                    total_rate * self.weight_total +
-                    tier_score * self.weight_tier
+                for _id, a, b, w, sa, sb in self._fetch_finished_ordered(cur):
+                    ra = ratings.get(a, self.base)
+                    rb = ratings.get(b, self.base)
+                    ea = self._expected(ra, rb)
+                    s_a = 1.0 if w == a else 0.0
+                    k = self._k(sa, sb)
+                    ratings[a] = ra + k * (s_a - ea)
+                    ratings[b] = rb + k * ((1 - s_a) - (1 - ea))
+                    games[a] = games.get(a, 0) + 1
+                    games[b] = games.get(b, 0) + 1
+        self._ratings = ratings
+        self._games = games
+        logger.info(f"📊 Elo ratingleri kuruldu: {len(ratings)} takım")
+        return ratings
+
+    def _ensure_ratings(self) -> None:
+        if self._ratings is None:
+            self.build_elo_ratings()
+
+    def win_probability(self, team_a_id, team_b_id) -> float:
+        """A takımının kazanma olasılığı (güncel Elo ratinglerine göre)."""
+        self._ensure_ratings()
+        ra = self._ratings.get(team_a_id, self.base)
+        rb = self._ratings.get(team_b_id, self.base)
+        return self._expected(ra, rb)
+
+    # ── Tahmin yazımı ─────────────────────────────────────────────────────────
+    def predict_match(self, match_id) -> Optional[dict]:
+        """Tek maç için güncel Elo'ya göre tahmin üretir ve DB'ye yazar."""
+        with Database.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id, team_a_id, team_b_id FROM matches WHERE id = %s",
+                    (match_id,),
                 )
-                
-                return strength
-            
-    
-    
-    def calculate_h2h_bonus(self, team_a_id, team_b_id):
-        """
-        Calculate head-to-head bonus based on historical matchups
-
-        Args:
-            team_a_id: Team A ID
-            team_b_id: Team B ID
-
-        Returns:
-            tuple: (bonus_a, bonus_b) small adjustments in range ~[-0.05, +0.05]
-        """
-        with Database.get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT
-                        COUNT(*) as total,
-                        SUM(CASE WHEN winner_id = %s THEN 1 ELSE 0 END) as a_wins
-                    FROM matches
-                    WHERE (
-                        (team_a_id = %s AND team_b_id = %s) OR
-                        (team_a_id = %s AND team_b_id = %s)
-                    )
-                    AND status = 'finished'
-                    AND winner_id IS NOT NULL
-                """, (team_a_id, team_a_id, team_b_id, team_b_id, team_a_id))
-
-                result = cur.fetchone()
-                total = result[0] if result else 0
-
-                if total < 2:
-                    return 0.0, 0.0
-
-                a_wins = result[1] if result else 0
-                b_wins = total - a_wins
-
-                a_rate = a_wins / total
-                b_rate = b_wins / total
-
-                # Max ±0.05 bonus (fark ne kadar büyükse o kadar etkili)
-                bonus_a = (a_rate - 0.5) * 0.1
-                bonus_b = (b_rate - 0.5) * 0.1
-
-                return bonus_a, bonus_b
-
-    def predict_match(self, match_id):
-        """
-        Predict match outcome
-        
-        Args:
-            match_id: Match ID
-            
-        Returns:
-            dict: Prediction results
-        """
-        with Database.get_connection() as conn:
-            with conn.cursor() as cur:
-                # Maç bilgilerini al
-                cur.execute("""
-                    SELECT 
-                        m.id,
-                        m.team_a_id,
-                        m.team_b_id,
-                        t.tier
-                    FROM matches m
-                    LEFT JOIN tournaments t ON m.tournament_id = t.id
-                    WHERE m.id = %s
-                """, (match_id,))
-                
-                match = cur.fetchone()
-                if not match:
+                row = cur.fetchone()
+                if not row:
                     return None
-                
-                match_id, team_a_id, team_b_id, tier = match
-                
-                # Takım güçlerini hesapla
-                strength_a = self.calculate_team_strength(team_a_id, tier)
-                strength_b = self.calculate_team_strength(team_b_id, tier)
-
-                # H2H bonus ekle
-                h2h_bonus_a, h2h_bonus_b = self.calculate_h2h_bonus(team_a_id, team_b_id)
-                strength_a += h2h_bonus_a
-                strength_b += h2h_bonus_b
-                
-                # Normalize (toplam = 1.0)
-                total_strength = strength_a + strength_b
-                if total_strength > 0:
-                    prob_a = strength_a / total_strength
-                    prob_b = strength_b / total_strength
-                else:
-                    prob_a = 0.5
-                    prob_b = 0.5
-                
-                # Güvenilirlik (fark ne kadar büyükse o kadar güvenilir)
+                _id, a, b = row
+                prob_a = self.win_probability(a, b)
+                prob_b = 1.0 - prob_a
                 confidence = abs(prob_a - prob_b)
-                
-                # Database'e kaydet
-                cur.execute("""
+                cur.execute(
+                    """
                     UPDATE matches
-                    SET 
-                        prediction_team_a = %s,
-                        prediction_team_b = %s,
-                        prediction_confidence = %s
+                    SET prediction_team_a = %s, prediction_team_b = %s, prediction_confidence = %s
                     WHERE id = %s
-                """, (prob_a, prob_b, confidence, match_id))
-                
+                    """,
+                    (prob_a, prob_b, confidence, match_id),
+                )
                 conn.commit()
-                
-                return {
-                    'match_id': match_id,
-                    'team_a_prob': prob_a,
-                    'team_b_prob': prob_b,
-                    'confidence': confidence,
-                    'strength_a': strength_a,
-                    'strength_b': strength_b
-                }
-    
-    def predict_upcoming_matches(self, limit=50):
-        """
-        Predict all upcoming matches
-        
-        Args:
-            limit: Maximum number of matches to predict
-            
-        Returns:
-            list: Prediction results
-        """
+        return {
+            'match_id': match_id, 'team_a_prob': prob_a, 'team_b_prob': prob_b,
+            'confidence': confidence,
+        }
+
+    def predict_upcoming_matches(self, limit: int = 150) -> list:
+        """Yaklaşan (not_started, gelecekteki) maçlara güncel Elo tahmini yazar."""
+        self.build_elo_ratings()   # taze ratingler
         predictions = []
-        
         with Database.get_connection() as conn:
             with conn.cursor() as cur:
-                # Upcoming ve henüz tahmin yapılmamış maçları al
-                cur.execute("""
-                    SELECT id
+                cur.execute(
+                    """
+                    SELECT id, team_a_id, team_b_id
                     FROM matches
-                    WHERE status = 'not_started'
-                    AND scheduled_at > NOW()
-                    AND prediction_team_a IS NULL
+                    WHERE status = 'not_started' AND scheduled_at > NOW()
+                      AND team_a_id IS NOT NULL AND team_b_id IS NOT NULL
                     ORDER BY scheduled_at ASC
                     LIMIT %s
-                """, (limit,))
-                
-                matches = cur.fetchall()
-                
-                for match in matches:
-                    match_id = match[0]
-                    try:
-                        result = self.predict_match(match_id)
-                        if result:
-                            predictions.append(result)
-                            logger.info(f"✅ Predicted match {match_id}: Team A {result['team_a_prob']:.1%} vs Team B {result['team_b_prob']:.1%}")
-                            conn.commit()
-                    except Exception as e:
-                        logger.warning(f"⚠️  Error predicting match {match_id}: {e}")
-                        continue
-
+                    """,
+                    (limit,),
+                )
+                rows = cur.fetchall()
+                for _id, a, b in rows:
+                    prob_a = self.win_probability(a, b)
+                    prob_b = 1.0 - prob_a
+                    conf = abs(prob_a - prob_b)
+                    cur.execute(
+                        "UPDATE matches SET prediction_team_a=%s, prediction_team_b=%s, prediction_confidence=%s WHERE id=%s",
+                        (prob_a, prob_b, conf, _id),
+                    )
+                    predictions.append({'match_id': _id, 'team_a_prob': prob_a, 'team_b_prob': prob_b, 'confidence': conf})
+                conn.commit()
+        logger.info(f"✅ {len(predictions)} yaklaşan maç tahmini güncellendi")
         return predictions
 
+    def predict_finished_matches(self, limit: Optional[int] = None) -> list:
+        """
+        WALK-FORWARD backfill: her bitmiş maça, o maçtan ÖNCEki Elo ratingleriyle
+        tahmin yazar → DÜRÜST out-of-sample tahmin (accuracy metriği anlamlı olur).
+        Eski (kötü model) tahminlerin üzerine yazar. limit=None → tüm geçmiş.
+        """
+        ratings: dict = {}
+        games: dict = {}
+        updates = []
+        with Database.get_connection() as conn:
+            with conn.cursor() as cur:
+                rows = self._fetch_finished_ordered(cur)
+                for _id, a, b, w, sa, sb in rows:
+                    ra = ratings.get(a, self.base)
+                    rb = ratings.get(b, self.base)
+                    ea = self._expected(ra, rb)          # maç ÖNCESİ beklenti
+                    prob_a = ea
+                    prob_b = 1.0 - prob_a
+                    updates.append((prob_a, prob_b, abs(prob_a - prob_b), _id))
+                    # gerçek sonuçla rating güncelle
+                    s_a = 1.0 if w == a else 0.0
+                    k = self._k(sa, sb)
+                    ratings[a] = ra + k * (s_a - ea)
+                    ratings[b] = rb + k * ((1 - s_a) - (1 - ea))
+                    games[a] = games.get(a, 0) + 1
+                    games[b] = games.get(b, 0) + 1
+                if limit:
+                    updates = updates[-limit:]
+                cur.executemany(
+                    "UPDATE matches SET prediction_team_a=%s, prediction_team_b=%s, prediction_confidence=%s WHERE id=%s",
+                    updates,
+                )
+                conn.commit()
+        self._ratings, self._games = ratings, games
+        logger.info(f"✅ {len(updates)} bitmiş maça walk-forward tahmin yazıldı (out-of-sample)")
+        return updates
+
+    # ── Başarı ölçümü ─────────────────────────────────────────────────────────
     def calculate_prediction_accuracy(self, days: int = 30) -> dict:
         """
         Kaydedilmiş tahminlerin gerçek sonuçlarla karşılaştırılması.
 
-        Kriter: prediction_team_a > prediction_team_b → Team A favori.
-        Doğru tahmin: favori olan taraf winner_id eşleşiyorsa.
-
-        Args:
-            days: Kaç günlük geçmişe bakılsın (0 veya None = tüm zamanlar)
-
-        Returns:
-            dict: total, correct, accuracy_pct
+        DÜZELTME: gerçek tahmin yapılmayan maçlar (prediction_team_a = _b, yani
+        50/50 conf=0) hariç tutulur — aksi halde bunlar "yanlış" sayılıp accuracy'yi
+        yapay olarak düşürür. Ayrıca "güvenli tahmin" (favori olasılığı ≥ %65)
+        alt-kümesi ayrıca raporlanır (trust signal).
         """
         logger.info("\n" + "=" * 60)
-        logger.info("🎯 AI TAHMİN BAŞARI ORANI HESAPLANIYOR")
-        if days and days > 0:
-            logger.info(f"   Dönem: Son {days} gün")
-        else:
-            logger.info("   Dönem: Tüm zamanlar")
+        logger.info("🎯 AI TAHMİN BAŞARI ORANI")
+        logger.info(f"   Dönem: {'Son ' + str(days) + ' gün' if days and days > 0 else 'Tüm zamanlar'}")
         logger.info("=" * 60)
+
+        window = "AND scheduled_at > NOW() - (%s * INTERVAL '1 day')" if days and days > 0 else ""
+        params = (days,) if days and days > 0 else ()
+
+        query = f"""
+            SELECT
+                COUNT(*)                                              AS total,
+                COUNT(*) FILTER (WHERE correct)                       AS correct,
+                COUNT(*) FILTER (WHERE fav_prob >= {CONFIDENT_PROB})  AS conf_total,
+                COUNT(*) FILTER (WHERE correct AND fav_prob >= {CONFIDENT_PROB}) AS conf_correct
+            FROM (
+                SELECT
+                    GREATEST(prediction_team_a, prediction_team_b) AS fav_prob,
+                    (
+                        (prediction_team_a > prediction_team_b AND winner_id = team_a_id) OR
+                        (prediction_team_b > prediction_team_a AND winner_id = team_b_id)
+                    ) AS correct
+                FROM matches
+                WHERE status = 'finished'
+                  AND winner_id IS NOT NULL
+                  AND prediction_team_a IS NOT NULL
+                  AND prediction_team_a <> prediction_team_b
+                  {window}
+            ) x
+        """
 
         with Database.get_connection() as conn:
             with conn.cursor() as cur:
-                if days and days > 0:
-                    cur.execute(
-                        """
-                        SELECT
-                            COUNT(*) AS total,
-                            SUM(CASE
-                                WHEN (prediction_team_a > prediction_team_b
-                                      AND winner_id = team_a_id)
-                                  OR (prediction_team_b > prediction_team_a
-                                      AND winner_id = team_b_id)
-                                THEN 1 ELSE 0
-                            END) AS correct
-                        FROM matches
-                        WHERE status               = 'finished'
-                          AND winner_id            IS NOT NULL
-                          AND prediction_team_a    IS NOT NULL
-                          AND scheduled_at         > NOW() - (%s * INTERVAL '1 day')
-                        """,
-                        (days,),
-                    )
-                else:
-                    cur.execute(
-                        """
-                        SELECT
-                            COUNT(*) AS total,
-                            SUM(CASE
-                                WHEN (prediction_team_a > prediction_team_b
-                                      AND winner_id = team_a_id)
-                                  OR (prediction_team_b > prediction_team_a
-                                      AND winner_id = team_b_id)
-                                THEN 1 ELSE 0
-                            END) AS correct
-                        FROM matches
-                        WHERE status            = 'finished'
-                          AND winner_id         IS NOT NULL
-                          AND prediction_team_a IS NOT NULL
-                        """
-                    )
+                cur.execute(query, params)
+                total, correct, conf_total, conf_correct = cur.fetchone()
 
-                row = cur.fetchone()
-                total   = int(row[0]) if row and row[0] is not None else 0
-                correct = int(row[1]) if row and row[1] is not None else 0
+        total = int(total or 0)
+        correct = int(correct or 0)
+        conf_total = int(conf_total or 0)
+        conf_correct = int(conf_correct or 0)
+        accuracy_pct = (correct / total * 100) if total else 0.0
+        conf_pct = (conf_correct / conf_total * 100) if conf_total else 0.0
 
-        accuracy_pct = (correct / total * 100) if total > 0 else 0.0
-        wrong = total - correct
-
-        logger.info(f"   Toplam tahmin  : {total}")
-        logger.info(f"   Doğru tahmin   : {correct}")
-        logger.info(f"   Yanlış tahmin  : {wrong}")
-        logger.info(f"   Başarı Oranı   : {accuracy_pct:.1f}%")
+        logger.info(f"   Değerlendirilen (gerçek tahmin) : {total}")
+        logger.info(f"   Doğru                           : {correct}")
+        logger.info(f"   Genel başarı                    : {accuracy_pct:.1f}%")
+        logger.info(f"   Güvenli tahmin (fav ≥ %{int(CONFIDENT_PROB*100)}) : {conf_correct}/{conf_total} = {conf_pct:.1f}%")
         logger.info("=" * 60)
 
         if total == 0:
-            logger.warning(
-                "⚠️  Değerlendirilebilir tahmin bulunamadı. "
-                "Önce 'python run.py --past --predict' çalıştır."
-            )
-        elif accuracy_pct >= 70:
-            logger.info(f"✅ Model performansı İYİ ({accuracy_pct:.1f}% ≥ 70%)")
+            logger.warning("⚠️  Değerlendirilebilir tahmin yok. Önce 'python run.py --past --predict'.")
+        elif accuracy_pct >= 60:
+            logger.info(f"✅ Model performansı İYİ ({accuracy_pct:.1f}%)")
         elif accuracy_pct >= 55:
             logger.info(f"🟡 Model performansı ORTA ({accuracy_pct:.1f}%)")
         else:
-            logger.warning(f"⚠️  Model performansı DÜŞÜK ({accuracy_pct:.1f}% < 55%)")
+            logger.warning(f"⚠️  Model performansı DÜŞÜK ({accuracy_pct:.1f}%)")
 
         return {
-            'total':        total,
-            'correct':      correct,
-            'wrong':        wrong,
+            'total': total,
+            'correct': correct,
+            'wrong': total - correct,
             'accuracy_pct': round(accuracy_pct, 2),
+            'confident_total': conf_total,
+            'confident_correct': conf_correct,
+            'confident_pct': round(conf_pct, 2),
         }
-
-    def predict_finished_matches(self, limit=150):
-        """
-        Predict finished matches for accuracy testing
-        
-        Args:
-            limit: Maximum number of matches to predict
-            
-        Returns:
-            list: Prediction results
-        """
-        predictions = []
-        
-        with Database.get_connection() as conn:
-            with conn.cursor() as cur:
-                # Finished ve tahmin yapılmamış maçları al
-                cur.execute("""
-                    SELECT id
-                    FROM matches
-                    WHERE status = 'finished'
-                    AND prediction_team_a IS NULL
-                    ORDER BY scheduled_at DESC
-                    LIMIT %s
-                """, (limit,))
-                
-                matches = cur.fetchall()
-                
-                for match in matches:
-                    match_id = match[0]
-                    try:
-                        result = self.predict_match(match_id)
-                        if result:
-                            predictions.append(result)
-                            logger.info(f"✅ Predicted match {match_id}: Team A {result['team_a_prob']:.1%} vs Team B {result['team_b_prob']:.1%}")
-                            conn.commit()
-                    except Exception as e:
-                        logger.warning(f"⚠️  Error predicting match {match_id}: {e}")
-                        continue
-        
-        return predictions

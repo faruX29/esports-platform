@@ -54,7 +54,7 @@ export default function PredictionAccuracyBadge({ variant = 'card' }) {
   if (variant === 'inline') {
     return (
       <div
-        title={`Genel doğruluk %${overall} · ${(stats.total || 0).toLocaleString('tr-TR')} maçta test edildi`}
+        title={`Genel isabet %${overall} · ${(stats.total || 0).toLocaleString('tr-TR')} maçta ölçüldü`}
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
           fontSize: 11, fontWeight: 700, color: '#93f5ea',
@@ -62,7 +62,7 @@ export default function PredictionAccuracyBadge({ variant = 'card' }) {
           background: 'rgba(20,184,166,.12)', border: '1px solid rgba(94,234,212,.28)',
         }}
       >
-        🎯 Güvenli tahminlerde %{confPct} isabet
+        🎯 AI'nın en güvendiği maçlarda %{confPct} net isabet
       </div>
     )
   }
@@ -78,16 +78,16 @@ export default function PredictionAccuracyBadge({ variant = 'card' }) {
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <span style={{ fontSize: 32, fontWeight: 900, color: '#ddfffb', lineHeight: 1 }}>%{confPct}</span>
         <span style={{ fontSize: 10, color: '#93f5ea', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginTop: 4 }}>
-          Güvenli tahmin isabeti
+          Net isabet
         </span>
       </div>
       <div style={{ flex: 1, minWidth: 180 }}>
-        <div style={{ fontSize: 12, color: '#9dd8d0', fontWeight: 700, marginBottom: 4 }}>
-          🎯 AI Tahmin Motoru — Elo tabanlı
+        <div style={{ fontSize: 13, color: '#ddfffb', fontWeight: 800, marginBottom: 4 }}>
+          🎯 Yapay Zekanın En Güvendiği Maçlarda %{confPct} Net İsabet
         </div>
         <div style={{ fontSize: 12, color: '#c6c6c6', lineHeight: 1.5 }}>
-          Model favorisini güvenle seçtiğinde ({sample} maçta test edildi) <b style={{ color: '#ddfffb' }}>10 maçtan ~{Math.round(confPct / 10)}'ini</b> doğru biliyor.
-          Genel isabet %{overall}.
+          Elo tabanlı model, yüksek güvenli tahminlerinde ({sample} maçta ölçüldü) bu isabeti tutturuyor.
+          Genel isabet %{overall}. <span style={{ color: '#8f8f8f' }}>Her maçı değil — en emin olduklarını.</span>
         </div>
       </div>
     </div>

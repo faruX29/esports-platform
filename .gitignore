@@ -6,3 +6,7 @@ __pycache__/
 .DS_Store
 dist/
 build/
+
+# Üretilen SEO sitemap'leri (domain'e bağlı, büyük, yeniden üretilebilir build-artifact).
+# Deploy/cron'da `python run.py --generate-sitemap` ile üretilir. robots.txt de generator'ca yazılır.
+frontend/public/sitemap*.xml

@@ -22,6 +22,10 @@ class Config:
     
     # Database
     DATABASE_URL = os.getenv('DATABASE_URL')
+
+    # Public site URL — SEO sitemap/canonical URL üretimi için.
+    # Prod domain kesinleşince .env'de SITE_URL'i güncelle, sitemap'i yeniden üret.
+    SITE_URL = os.getenv('SITE_URL', 'https://esportshub.pro').rstrip('/')
     
     # ETL
     BATCH_SIZE = int(os.getenv('BATCH_SIZE', 50))

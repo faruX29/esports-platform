@@ -1,5 +1,4 @@
 User-agent: *
 Allow: /
 
-# Sitemap: production domain belli olunca eklenecek (dinamik makale sitemap'i
-# backend tarafından üretilmeli). Örn: Sitemap: https://<domain>/sitemap.xml
+Sitemap: https://esportshub.pro/sitemap.xml

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useUser } from '../context/UserContext'
@@ -619,6 +619,21 @@ export default function NewsPage() {
                   </button>
                 )
               })}
+            </div>
+
+            <div style={{ marginTop: 14 }}>
+              <Link
+                to="/news/archive"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  fontSize: 12, fontWeight: 700, letterSpacing: '.3px',
+                  color: '#e7e7e7', textDecoration: 'none',
+                  padding: '8px 14px', borderRadius: 999,
+                  border: '1px solid #2a2a2a', background: '#121212',
+                }}
+              >
+                📚 Tüm Haber Arşivi ›
+              </Link>
             </div>
           </div>
         </div>

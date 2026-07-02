@@ -109,6 +109,7 @@ class SitemapGenerator:
             ("/", "daily", "1.0"),
             ("/matches", "daily", "0.9"),
             ("/news", "daily", "0.9"),
+            ("/news/archive", "daily", "0.8"),
             ("/tournaments", "daily", "0.8"),
             ("/rankings", "weekly", "0.8"),
             ("/players", "weekly", "0.7"),

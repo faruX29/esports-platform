@@ -33,6 +33,7 @@ const ProfileSettings = lazy(() => import('./pages/ProfileSettings'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const RegisterPage = lazy(() => import('./pages/RegisterPage'))
 const NewsPage = lazy(() => import('./pages/NewsPage'))
+const NewsArchivePage = lazy(() => import('./pages/NewsArchivePage'))
 const NewsDetailPage = lazy(() => import('./pages/NewsDetailPage'))
 const TournamentsListPage = lazy(() => import('./pages/TournamentsListPage'))
 const ScoutEnginePage = lazy(() => import('./pages/ScoutEnginePage'))
@@ -534,6 +535,7 @@ function AppShell() {
           <Route path="/player/:id"               element={<PlayerPage />}     />
           <Route path="/search"                   element={<SearchPage />}     />
           <Route path="/news"                     element={<NewsPage />}       />
+          <Route path="/news/archive"             element={<NewsArchivePage />} />
           <Route path="/news/:newsId"             element={<NewsDetailPage />} />
           <Route path="/scout"                    element={<ScoutEnginePage />} />
           <Route path="/login"                    element={<LoginPage />}      />

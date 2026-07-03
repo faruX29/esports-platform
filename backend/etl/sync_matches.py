@@ -395,6 +395,18 @@ class MatchSyncer:
 
         return synced_count
 
+    def _upsert_with_retry(self, cleaned, attempts: int = 4):
+        """Lean upsert — geçici DB bağlantı düşmelerinde taze bağlantıyla retry."""
+        for a in range(1, attempts + 1):
+            try:
+                return self._upsert_matches(cleaned, lean=True)
+            except (psycopg.OperationalError, psycopg.InterfaceError) as e:
+                wait = 5 * a
+                logger.warning(f"⚠️  DB bağlantısı düştü (deneme {a}/{attempts}): {e}; {wait}s bekleniyor…")
+                time.sleep(wait)
+        logger.error("❌ Upsert kalıcı başarısız — bu batch atlandı")
+        return 0
+
     # ── Geçmiş backfill: büyük turnuvalar (tier A/S) ──────────────────────────
     def backfill_big_tournaments(self, games, since_iso, until_iso=None,
                                  tiers='s,a', per_page=100, pace=0.3) -> dict:
@@ -430,21 +442,26 @@ class MatchSyncer:
             total["tournaments"] += len(tour_ids)
 
             # 2) Her turnuvanın maçlarını çek → clean → lean upsert
+            #    Dayanıklı: bir turnuvadaki hata (API/DB kopması) tüm işi ÖLDÜRMEZ;
+            #    loglanıp atlanır. Upsert geçici bağlantı düşmesinde retry'lı (idempotent).
             for idx, tid in enumerate(tour_ids, 1):
-                batch, mpage = [], 1
-                while True:
-                    ms = self.client.get_matches_by_tournament(game, tid, page=mpage, per_page=per_page)
-                    if not ms:
-                        break
-                    batch.extend(ms)
-                    if len(ms) < per_page:
-                        break
-                    mpage += 1
-                    time.sleep(pace)
-                total["matches_fetched"] += len(batch)
-                cleaned = [c for c in (DataCleaner.clean_match_data(m) for m in batch) if c]
-                if cleaned:
-                    total["synced"] += self._upsert_matches(cleaned, lean=True)
+                try:
+                    batch, mpage = [], 1
+                    while True:
+                        ms = self.client.get_matches_by_tournament(game, tid, page=mpage, per_page=per_page)
+                        if not ms:
+                            break
+                        batch.extend(ms)
+                        if len(ms) < per_page:
+                            break
+                        mpage += 1
+                        time.sleep(pace)
+                    total["matches_fetched"] += len(batch)
+                    cleaned = [c for c in (DataCleaner.clean_match_data(m) for m in batch) if c]
+                    if cleaned:
+                        total["synced"] += self._upsert_with_retry(cleaned)
+                except Exception as exc:
+                    logger.warning(f"⚠️  {game} turnuva {tid} atlandı: {exc}")
                 if idx % 25 == 0 or idx == len(tour_ids):
                     logger.info(f"   {game}: {idx}/{len(tour_ids)} turnuva işlendi — toplam {total['synced']} maç")
                 time.sleep(pace)

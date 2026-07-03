@@ -153,12 +153,6 @@ def main():
     )
 
     parser.add_argument(
-        '--generate-sitemap',
-        action='store_true',
-        help='DB\'den dinamik SEO sitemap üret (frontend/public/sitemap.xml + alt-sitemap\'ler)',
-    )
-
-    parser.add_argument(
         '--hybrid-stats',
         action='store_true',
         help='PandaScore NULL bıraktığı harita/KDA verisini Hibrit Adapter (Liquipedia) ile doldur',
@@ -448,16 +442,6 @@ def main():
         logger.info("\n🧹 Bulk stale not_started temizliği (hayalet maçlar)...")
         total = syncer.resolve_stale_upcoming(hours_ago=6, bulk=True)
         logger.info(f"✅ Bulk stale cleanup tamamlandı — {total} maç güncellendi")
-
-    if args.generate_sitemap:
-        logger.info("\n🗺️  Dinamik SEO sitemap üretimi...")
-        from etl.sitemap_generator import SitemapGenerator
-        counts = SitemapGenerator().generate()
-        logger.info(
-            f"✅ Sitemap tamam — {counts['_total']} URL, {counts['_files']} dosya "
-            f"(news:{counts['news']} matches:{counts['matches']} teams:{counts['teams']} "
-            f"players:{counts['players']} tournaments:{counts['tournaments']})"
-        )
 
     if args.accuracy_check:
         logger.info("\n" + "=" * 60)

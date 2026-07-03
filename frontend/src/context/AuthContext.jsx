@@ -54,7 +54,7 @@ export function AuthProvider({ children }) {
 
 		const { data, error } = await supabase
 			.from('profiles')
-			.select('id, username, first_name, last_name, avatar_url, favorite_team_id, scout_score')
+			.select('id, username, first_name, last_name, avatar_url, favorite_team_id, scout_score, show_team_badge')
 			.eq('id', targetUser.id)
 			.maybeSingle()
 
@@ -70,6 +70,7 @@ export function AuthProvider({ children }) {
 				avatar_url: defaultAvatar,
 				favorite_team_id: null,
 				scout_score: 0,
+				show_team_badge: true,
 			}
 			setProfile(fallback)
 			setProfileLoading(false)
@@ -86,6 +87,7 @@ export function AuthProvider({ children }) {
 				avatar_url: defaultAvatar,
 				favorite_team_id: meta.favorite_team_id ?? null,
 				scout_score: 0,
+				show_team_badge: true,
 			}
 			const { error: upsertError } = await supabase.from('profiles').upsert(payload, { onConflict: 'id' })
 			if (upsertError) {
@@ -105,6 +107,7 @@ export function AuthProvider({ children }) {
 			avatar_url: data.avatar_url || defaultAvatar,
 			favorite_team_id: data.favorite_team_id ?? null,
 			scout_score: Number(data.scout_score || 0),
+			show_team_badge: data.show_team_badge !== false,
 		}
 		setProfile(normalized)
 		setProfileLoading(false)
@@ -247,6 +250,7 @@ export function AuthProvider({ children }) {
 			...(partial?.last_name !== undefined ? { last_name: partial.last_name || null } : {}),
 			...(partial?.avatar_url !== undefined ? { avatar_url: partial.avatar_url || null } : {}),
 			...(partial?.favorite_team_id !== undefined ? { favorite_team_id: partial.favorite_team_id } : {}),
+			...(partial?.show_team_badge !== undefined ? { show_team_badge: !!partial.show_team_badge } : {}),
 			...(partial?.scout_score !== undefined ? { scout_score: Number(partial.scout_score || 0) } : {}),
 		}
 		const { error } = await supabase.from('profiles').upsert(payload, { onConflict: 'id' })
@@ -259,6 +263,7 @@ export function AuthProvider({ children }) {
 			avatar_url: payload.avatar_url ?? profile?.avatar_url ?? null,
 			favorite_team_id: payload.favorite_team_id ?? profile?.favorite_team_id ?? null,
 			scout_score: payload.scout_score ?? profile?.scout_score ?? 0,
+			show_team_badge: payload.show_team_badge ?? profile?.show_team_badge ?? true,
 		}
 		setProfile(merged)
 		return merged

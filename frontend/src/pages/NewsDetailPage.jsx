@@ -21,6 +21,7 @@ import SeoHead from '../components/SeoHead'
 import NewsCover, { scoreFromHero } from '../components/NewsCover'
 import { cleanDisplayName } from '../utils/nameCleaner'
 import { buildNewsSlug, parseNewsRef } from '../utils/newsSlug'
+import { getEsportsName } from '../utils/esportsName'
 
 function isMissingTableError(error, tableName) {
   const code = error?.code || ''
@@ -428,7 +429,7 @@ export default function NewsDetailPage() {
       if (authorIds.length) {
         const { data: profileRows, error: profileError } = await supabase
           .from('profiles')
-          .select('id,username,scout_score,avatar_url')
+          .select('id,username,first_name,last_name,scout_score,avatar_url,favorite_team_id,show_team_badge')
           .in('id', authorIds)
 
         if (!profileError) {
@@ -436,16 +437,34 @@ export default function NewsDetailPage() {
         }
       }
 
+      // Rozet gösteren yazarların favori takım logolarını çek (tercih: show_team_badge)
+      const badgeTeamIds = [...new Set(
+        Array.from(profilesById.values())
+          .filter(p => p.show_team_badge !== false && p.favorite_team_id)
+          .map(p => p.favorite_team_id)
+      )]
+      let teamsById = new Map()
+      if (badgeTeamIds.length) {
+        const { data: teamRows } = await supabase.from('teams').select('id,name,logo_url').in('id', badgeTeamIds)
+        teamsById = new Map((teamRows || []).map(t => [t.id, t]))
+      }
+
       const enrichedComments = mappedComments.map(row => {
         const authorProfile = row.user_id ? profilesById.get(row.user_id) : null
-        const fallbackName = row.user_id === user?.id ? (profile?.username || 'Sen') : 'Topluluk'
-        const fallbackScore = row.user_id === user?.id ? normalizeScoutScore(profile?.scout_score) : 0
+        const isMe = row.user_id === user?.id
+        const fallbackName = isMe ? (getEsportsName(profile) || 'Sen') : 'Topluluk'
+        const fallbackScore = isMe ? normalizeScoutScore(profile?.scout_score) : 0
+        const badgeTeam = authorProfile && authorProfile.show_team_badge !== false && authorProfile.favorite_team_id
+          ? teamsById.get(authorProfile.favorite_team_id)
+          : null
 
         return {
           ...row,
-          author: authorProfile?.username || fallbackName,
+          author: authorProfile ? getEsportsName(authorProfile) : fallbackName,
           authorScoutScore: normalizeScoutScore(authorProfile?.scout_score ?? fallbackScore),
           authorAvatarUrl: authorProfile?.avatar_url ?? null,
+          authorTeamLogo: badgeTeam?.logo_url ?? null,
+          authorTeamName: badgeTeam?.name ?? null,
         }
       })
 
@@ -643,19 +662,25 @@ export default function NewsDetailPage() {
       let author = 'Topluluk'
       let authorScoutScore = 0
       let authorAvatarUrl = null
+      let authorTeamLogo = null
+      let authorTeamName = null
       if (row.user_id) {
         const { data: prof } = await supabase
           .from('profiles')
-          .select('username,scout_score,avatar_url')
+          .select('username,first_name,last_name,scout_score,avatar_url,favorite_team_id,show_team_badge')
           .eq('id', row.user_id)
           .maybeSingle()
         if (prof) {
-          author = prof.username || author
+          author = getEsportsName(prof) || author
           authorScoutScore = normalizeScoutScore(prof.scout_score)
           authorAvatarUrl = prof.avatar_url ?? null
+          if (prof.show_team_badge !== false && prof.favorite_team_id) {
+            const { data: team } = await supabase.from('teams').select('name,logo_url').eq('id', prof.favorite_team_id).maybeSingle()
+            if (team) { authorTeamLogo = team.logo_url ?? null; authorTeamName = team.name ?? null }
+          }
         }
       }
-      return { ...row, comment_text: row.content ?? '', author, authorScoutScore, authorAvatarUrl }
+      return { ...row, comment_text: row.content ?? '', author, authorScoutScore, authorAvatarUrl, authorTeamLogo, authorTeamName }
     }
 
     const unsubscribe = subscribeToNewsComments(story.id, {
@@ -773,7 +798,7 @@ export default function NewsDetailPage() {
       setComments(prev => [...prev, {
         id: `local_${Date.now()}`, news_id: story.id, user_id: user?.id || null,
         parent_id: parentId, comment_text: text, created_at: new Date().toISOString(),
-        author: profile?.username || 'Sen', authorScoutScore: normalizeScoutScore(profile?.scout_score),
+        author: getEsportsName(profile) || 'Sen', authorScoutScore: normalizeScoutScore(profile?.scout_score),
       }])
       setReplyTo(null); setReplyText('')
       return
@@ -788,7 +813,7 @@ export default function NewsDetailPage() {
       if (data) {
         setComments(prev => [...prev, {
           ...data, comment_text: data.content ?? text,
-          author: profile?.username || 'Sen', authorScoutScore: normalizeScoutScore(profile?.scout_score),
+          author: getEsportsName(profile) || 'Sen', authorScoutScore: normalizeScoutScore(profile?.scout_score),
         }])
       }
       setReplyTo(null); setReplyText('')
@@ -1178,6 +1203,10 @@ export default function NewsDetailPage() {
                           textScale={0.38}
                         />
                         <div style={{ fontSize: 12, color: '#d2d2d2', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{comment.author || 'Topluluk'}</div>
+                        {comment.authorTeamLogo && (
+                          <img src={comment.authorTeamLogo} alt={comment.authorTeamName || ''} title={comment.authorTeamName || ''}
+                            style={{ width: 16, height: 16, borderRadius: 4, objectFit: 'contain', flexShrink: 0 }} />
+                        )}
                         <ScoutRankBadge score={comment.authorScoutScore} />
                         {isTopComment && (
                           <span style={{ fontSize: 10, fontWeight: 800, color: '#ffd46b', border: '1px solid rgba(255,184,0,.45)', background: 'rgba(255,184,0,.12)', borderRadius: 999, padding: '2px 8px', letterSpacing: '.4px' }}>
@@ -1255,6 +1284,10 @@ export default function NewsDetailPage() {
                           <div key={reply.id} style={{ background: '#0d0d0d', border: '1px solid #1c1c1c', borderRadius: 9, padding: '7px 9px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                               <span style={{ fontSize: 11, fontWeight: 700, color: '#bdbdbd' }}>{reply.author || 'Topluluk'}</span>
+                              {reply.authorTeamLogo && (
+                                <img src={reply.authorTeamLogo} alt={reply.authorTeamName || ''} title={reply.authorTeamName || ''}
+                                  style={{ width: 14, height: 14, borderRadius: 3, objectFit: 'contain', flexShrink: 0 }} />
+                              )}
                               <ScoutRankBadge score={reply.authorScoutScore} />
                               <span style={{ fontSize: 10, color: '#666', marginLeft: 'auto' }}>{fmtDate(reply.created_at)}</span>
                               {user?.id && reply.user_id === user.id && (

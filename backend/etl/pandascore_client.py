@@ -191,3 +191,49 @@ class PandaScoreClient:
         except requests.exceptions.RequestException as e:
             logger.error(f"❌ API request failed: {e}")
         return []
+
+    # ── Geçmiş backfill: büyük turnuvalar (tier A/S) ──────────────────────────
+    def get_tournaments_by_tier(self, game_slug, tiers='s,a', page=1, per_page=100,
+                                since_iso=None, until_iso=None):
+        """
+        Tier A/S turnuvaları listeler (geçmiş backfill kapsamını tanımlamak için).
+        since_iso/until_iso verilirse begin_at aralığıyla filtreler.
+        """
+        url = f"{self.base_url}/{game_slug}/tournaments"
+        params = {
+            'token': self.api_token,
+            'per_page': per_page,
+            'page': page,
+            'sort': '-begin_at',
+            'filter[tier]': tiers,
+        }
+        if since_iso and until_iso:
+            params['range[begin_at]'] = f'{since_iso},{until_iso}'
+        try:
+            data = self._request_json_with_backoff(
+                url, params, f"{game_slug} tier={tiers} tournaments page {page}"
+            )
+            return data or []
+        except requests.exceptions.RequestException as e:
+            logger.error(f"❌ Tournaments fetch failed: {e}")
+            return []
+
+    def get_matches_by_tournament(self, game_slug, tournament_id, page=1, per_page=100):
+        """Bir turnuvanın FINISHED maçlarını (tam obje: opponents+results) çeker."""
+        url = f"{self.base_url}/{game_slug}/matches"
+        params = {
+            'token': self.api_token,
+            'per_page': per_page,
+            'page': page,
+            'sort': 'begin_at',
+            'filter[tournament_id]': tournament_id,
+            'filter[status]': 'finished',
+        }
+        try:
+            data = self._request_json_with_backoff(
+                url, params, f"{game_slug} tournament {tournament_id} matches page {page}"
+            )
+            return data or []
+        except requests.exceptions.RequestException as e:
+            logger.error(f"❌ Tournament matches fetch failed: {e}")
+            return []

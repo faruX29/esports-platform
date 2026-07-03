@@ -7,6 +7,7 @@ from etl.data_cleaner       import DataCleaner
 from etl.adapters import MultiSourceDataAggregator, RiotAdapter, SteamAdapter
 import psycopg
 import json
+import time
 from datetime import timezone, datetime
 import logging
 
@@ -233,7 +234,7 @@ class MatchSyncer:
             'synced': synced_count
         }
     
-    def _upsert_matches(self, matches):
+    def _upsert_matches(self, matches, lean: bool = False):
         """
         Upsert matches to database.
 
@@ -243,6 +244,9 @@ class MatchSyncer:
         - score sütunları güncelleniyor
         - raw_data her upsert'te yenileniyor (canlı veri için)
         - updated_at her zaman CURRENT_TIMESTAMP
+
+        lean=True (geçmiş backfill): ağır raw_data JSON blob'u SAKLANMAZ (boş '{}')
+        → maç başına ~1.5KB (5KB yerine). Storage tasarrufu; eski maçlar sonuç-only.
         """
         synced_count = 0
 
@@ -305,7 +309,13 @@ class MatchSyncer:
 
                         # ── Upsert — tüm mutable alanlar güncelleniyor ──
                         raw = match.get('raw_data') or {}
-                        stream_url = _extract_stream_url(raw.get('streams_list') or [])
+                        number_of_games = raw.get('number_of_games')
+                        if lean:
+                            stream_url = None
+                            stored_raw = '{}'
+                        else:
+                            stream_url = _extract_stream_url(raw.get('streams_list') or [])
+                            stored_raw = json.dumps(raw)
                         cur.execute(
                             """
                             INSERT INTO matches (
@@ -362,9 +372,9 @@ class MatchSyncer:
                                 match.get('team_a_score'),
                                 match.get('team_b_score'),
                                 match.get('round_info'),
-                                raw.get('number_of_games'),
+                                number_of_games,
                                 stream_url,
-                                json.dumps(raw),
+                                stored_raw,
                             ),
                         )
                         cur.execute(f'RELEASE SAVEPOINT "{savepoint_name}"')
@@ -384,7 +394,67 @@ class MatchSyncer:
                 conn.commit()
 
         return synced_count
-    
+
+    # ── Geçmiş backfill: büyük turnuvalar (tier A/S) ──────────────────────────
+    def backfill_big_tournaments(self, games, since_iso, until_iso=None,
+                                 tiers='s,a', per_page=100, pace=0.3) -> dict:
+        """
+        Tier A/S turnuvaların FINISHED maçlarını geçmişe dönük çeker ve LEAN upsert
+        eder (ağır JSON saklanmaz). Verimli akış: önce turnuvaları listele, sonra
+        her turnuvanın tam maçlarını (opponents+results) çek.
+
+        games: ['lol','csgo','valorant']; since_iso/until_iso: ISO tarih penceresi.
+        Idempotent (ON CONFLICT). Rate-limit: 429'da client backoff + pace saniye.
+        """
+        total = {"tournaments": 0, "matches_fetched": 0, "synced": 0}
+        for game in games:
+            # 1) Tier A/S turnuva id'lerini topla (paginate)
+            tour_ids, seen, page = [], set(), 1
+            while True:
+                tours = self.client.get_tournaments_by_tier(
+                    game, tiers=tiers, page=page, per_page=per_page,
+                    since_iso=since_iso, until_iso=until_iso,
+                )
+                if not tours:
+                    break
+                for t in tours:
+                    tid = t.get("id")
+                    if tid and tid not in seen:
+                        seen.add(tid)
+                        tour_ids.append(tid)
+                if len(tours) < per_page:
+                    break
+                page += 1
+                time.sleep(pace)
+            logger.info(f"🏆 {game}: {len(tour_ids)} adet tier '{tiers}' turnuva bulundu")
+            total["tournaments"] += len(tour_ids)
+
+            # 2) Her turnuvanın maçlarını çek → clean → lean upsert
+            for idx, tid in enumerate(tour_ids, 1):
+                batch, mpage = [], 1
+                while True:
+                    ms = self.client.get_matches_by_tournament(game, tid, page=mpage, per_page=per_page)
+                    if not ms:
+                        break
+                    batch.extend(ms)
+                    if len(ms) < per_page:
+                        break
+                    mpage += 1
+                    time.sleep(pace)
+                total["matches_fetched"] += len(batch)
+                cleaned = [c for c in (DataCleaner.clean_match_data(m) for m in batch) if c]
+                if cleaned:
+                    total["synced"] += self._upsert_matches(cleaned, lean=True)
+                if idx % 25 == 0 or idx == len(tour_ids):
+                    logger.info(f"   {game}: {idx}/{len(tour_ids)} turnuva işlendi — toplam {total['synced']} maç")
+                time.sleep(pace)
+
+        logger.info(
+            f"✅ Backfill tamam — {total['tournaments']} turnuva, "
+            f"{total['matches_fetched']} maç çekildi, {total['synced']} upsert (lean)"
+        )
+        return total
+
     def _get_or_create_game(self, cur, game_slug):
         """Get or create game in database"""
         if not game_slug:

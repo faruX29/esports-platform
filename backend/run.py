@@ -151,6 +151,23 @@ def main():
         action='store_true',
         help='Planlı zamanı geçmiş ama hâlâ not_started olan "hayalet" maçları toplu temizle (bulk)',
     )
+    parser.add_argument(
+        '--backfill-history',
+        action='store_true',
+        help='Geçmiş büyük turnuvaların (tier A/S) maçlarını çek + lean upsert (sonuç-only)',
+    )
+    parser.add_argument(
+        '--backfill-since-year',
+        type=int,
+        default=2014,
+        help='--backfill-history başlangıç yılı (varsayılan: 2014)',
+    )
+    parser.add_argument(
+        '--backfill-games',
+        type=str,
+        default='lol,csgo,valorant',
+        help='--backfill-history oyunları (virgüllü, varsayılan: lol,csgo,valorant)',
+    )
 
     parser.add_argument(
         '--hybrid-stats',
@@ -442,6 +459,15 @@ def main():
         logger.info("\n🧹 Bulk stale not_started temizliği (hayalet maçlar)...")
         total = syncer.resolve_stale_upcoming(hours_ago=6, bulk=True)
         logger.info(f"✅ Bulk stale cleanup tamamlandı — {total} maç güncellendi")
+
+    if args.backfill_history:
+        from datetime import datetime, timezone
+        since_iso = f"{args.backfill_since_year}-01-01T00:00:00Z"
+        until_iso = datetime.now(timezone.utc).isoformat()
+        games = [g.strip() for g in args.backfill_games.split(',') if g.strip()]
+        logger.info(f"\n📚 Geçmiş backfill (tier A/S, {args.backfill_since_year}→bugün) — {games}")
+        result = syncer.backfill_big_tournaments(games, since_iso=since_iso, until_iso=until_iso)
+        logger.info(f"✅ Backfill sonucu: {result}")
 
     if args.accuracy_check:
         logger.info("\n" + "=" * 60)

@@ -34,13 +34,14 @@ export default function RegisterPage() {
         email,
         password,
       })
-      // E-posta doğrulama KAPALI ise session döner → direkt giriş.
+      // Doğrulama AÇIK ise session gelmez → e-posta onayı iste.
+      // KAPALI ise session döner → direkt giriş.
       if (data?.session) {
         setSuccess('Kayıt tamamlandı! Yönlendiriliyorsun...')
         setTimeout(() => navigate('/', { replace: true }), 700)
       } else {
-        setSuccess('Kayıt tamamlandı. Giriş yapabilirsin.')
-        setTimeout(() => navigate('/login'), 900)
+        setSuccess('✅ Kayıt alındı! E-postana gönderdiğimiz doğrulama linkine tıkla, sonra giriş yap.')
+        setTimeout(() => navigate('/login'), 3500)
       }
     } catch (err) {
       setError(err.message || 'Kayıt başarısız.')

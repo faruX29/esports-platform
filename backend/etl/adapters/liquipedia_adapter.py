@@ -266,6 +266,14 @@ class LiquipediaAdapter(BaseDataAdapter):
                 diagnostics.append(f"Player skipped id={row.get('id')} name={lookup_name} | no matched profile/career rows")
                 if service.last_errors:
                     diagnostics.extend([f"  -> {item}" for item in service.last_errors[:2]])
+                # İşaretle: Liquipedia'da bulunamadı → sonraki çalıştırmalarda tekrar
+                # DENENMESIN (rate-limit'i boşa harcama). liquipedia key set edilir.
+                self._merge_extra_metadata(
+                    table_name="players",
+                    row_id=row["id"],
+                    source_payload={"profile_found": False},
+                    existing=row.get("extra_metadata"),
+                )
                 continue
 
             payload = {
@@ -394,6 +402,9 @@ class LiquipediaAdapter(BaseDataAdapter):
                         (targets, targets, targets, targets, limit),
                     )
                 else:
+                    # Zaten işlenmiş (başarılı VEYA "profile_found: false" işaretli)
+                    # oyuncuları ATLA → her çalıştırma yeni oyunculara ilerler.
+                    # Öncelik: takımı yakın maçlarda görünen (aktif) oyuncular.
                     cur.execute(
                         """
                         SELECT p.id,
@@ -410,7 +421,8 @@ class LiquipediaAdapter(BaseDataAdapter):
                             ORDER BY m.scheduled_at DESC NULLS LAST
                             LIMIT 1
                         ) meta ON TRUE
-                        ORDER BY p.id DESC
+                        WHERE (p.extra_metadata->'liquipedia') IS NULL
+                        ORDER BY (meta.game_slug IS NOT NULL) DESC, p.id DESC
                         LIMIT %s
                         """,
                         (limit,),

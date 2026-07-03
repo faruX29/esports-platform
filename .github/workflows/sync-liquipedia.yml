@@ -63,19 +63,12 @@ jobs:
           LIQUIPEDIA_API_KEY: ${{ secrets.LIQUIPEDIA_API_KEY }}
         run: python run.py --generate-previews --preview-hours 72
 
-      # Oyuncu kariyer/transfer geçmişi (Liquipedia) — GENTLE azar azar. Aktif
-      # oyunculara öncelikli, zaten-işlenenleri atlar. Rate-limit sıkı + 429 riski
-      # olduğundan best-effort: timeout/hata workflow'u KIRMAZ (continue-on-error),
-      # işlenen oyuncular per-satır commit'li → sonraki gün kaldığı yerden devam.
-      - name: Enrich player career history (gentle, ~12/gün)
-        continue-on-error: true
-        timeout-minutes: 12
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          LIQUIPEDIA_API_KEY: ${{ secrets.LIQUIPEDIA_API_KEY }}
-        run: python run.py --liquipedia-enrich --liquipedia-sections players --liquipedia-limit 12
+      # NOT: Bulk player-enrichment (Liquipedia player sayfaları) CRON'DAN ÇIKARILDI.
+      # Ölçüm: bulunamayan oyuncu ~16 dk (429 retry storm) → günde ~1 oyuncu +
+      # Liquipedia'yı yorma (compliance). "Takım geçmişi" ihtiyacı roster_changes
+      # (transfer verisi) ile zaten karşılanıyor. Belirli YILDIZLAR için hedefli:
+      # LIQUIPEDIA_PLAYER_TARGETS="faker,zeus,..." python run.py --liquipedia-enrich
+      #   --liquipedia-sections players (hedefli isimler hızlı çözülür).
 
       # NOT: SEO sitemap artık dinamik Vercel Edge route (frontend/api/sitemap.js,
       # Gemini #15) — statik dosya üretimi/commit'i kaldırıldı. Sitemap istek anında

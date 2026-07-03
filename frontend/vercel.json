@@ -4,6 +4,13 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
+    { "source": "/sitemap-static.xml", "destination": "/api/sitemap?type=static" },
+    { "source": "/sitemap-news.xml", "destination": "/api/sitemap?type=news" },
+    { "source": "/sitemap-matches.xml", "destination": "/api/sitemap?type=matches" },
+    { "source": "/sitemap-tournaments.xml", "destination": "/api/sitemap?type=tournaments" },
+    { "source": "/sitemap-teams.xml", "destination": "/api/sitemap?type=teams" },
+    { "source": "/sitemap-players.xml", "destination": "/api/sitemap?type=players" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

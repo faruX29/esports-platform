@@ -25,6 +25,19 @@ function q(params, key, fallback = '') {
   return v == null || v === '' ? fallback : v
 }
 
+// SSRF koruması: la/lb logo URL'leri server-side (satori) fetch edilir. Yalnızca
+// bilinen CDN host'larına + https'e izin ver; iç IP / metadata servisi / http engelli.
+const ALLOWED_LOGO_HOSTS = /(^|\.)(pandascore\.co|liquipedia\.net|supabase\.co)$/i
+function safeLogo(u) {
+  if (!u) return ''
+  try {
+    const x = new URL(u)
+    return x.protocol === 'https:' && ALLOWED_LOGO_HOSTS.test(x.hostname) ? u : ''
+  } catch {
+    return ''
+  }
+}
+
 function initials(name) {
   return String(name || '?')
     .split(/\s+/)
@@ -84,8 +97,8 @@ export default function handler(req) {
   const params = new URL(req.url).searchParams
   const a = q(params, 'a', 'Takım A')
   const b = q(params, 'b', 'Takım B')
-  const la = q(params, 'la')
-  const lb = q(params, 'lb')
+  const la = safeLogo(q(params, 'la'))
+  const lb = safeLogo(q(params, 'lb'))
   const score = q(params, 's')
   const game = q(params, 'g', 'ESPORTS')
   const tier = q(params, 't')

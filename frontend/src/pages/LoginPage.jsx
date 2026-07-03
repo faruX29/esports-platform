@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { DISCORD_ENABLED } from '../features'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -50,14 +51,18 @@ export default function LoginPage() {
             <Link to="/forgot-password" style={{ fontSize: 12, color: '#9db4ff', textDecoration: 'none' }}>Şifremi unuttum?</Link>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 0' }}>
-            <div style={{ flex: 1, height: 1, background: '#222' }} />
-            <span style={{ fontSize: 11, color: '#666' }}>veya</span>
-            <div style={{ flex: 1, height: 1, background: '#222' }} />
-          </div>
-          <button type="button" onClick={onDiscord} style={{ width: '100%', border: 'none', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#fff', fontWeight: 800, background: '#5865F2', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <span style={{ fontSize: 16 }}>🎮</span> Discord ile Giriş Yap
-          </button>
+          {DISCORD_ENABLED && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 0' }}>
+                <div style={{ flex: 1, height: 1, background: '#222' }} />
+                <span style={{ fontSize: 11, color: '#666' }}>veya</span>
+                <div style={{ flex: 1, height: 1, background: '#222' }} />
+              </div>
+              <button type="button" onClick={onDiscord} style={{ width: '100%', border: 'none', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#fff', fontWeight: 800, background: '#5865F2', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <span style={{ fontSize: 16 }}>🎮</span> Discord ile Giriş Yap
+              </button>
+            </>
+          )}
 
           <div style={{ marginTop: 14, fontSize: 12, color: '#777' }}>
             Hesabin yok mu? <Link to="/register" style={{ color: '#f2f2f2' }}>Kayit ol</Link>

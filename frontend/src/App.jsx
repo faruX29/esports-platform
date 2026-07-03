@@ -32,6 +32,8 @@ const SearchPage = lazy(() => import('./pages/SearchPage'))
 const ProfileSettings = lazy(() => import('./pages/ProfileSettings'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const RegisterPage = lazy(() => import('./pages/RegisterPage'))
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
 const NewsPage = lazy(() => import('./pages/NewsPage'))
 const NewsArchivePage = lazy(() => import('./pages/NewsArchivePage'))
 const NewsDetailPage = lazy(() => import('./pages/NewsDetailPage'))
@@ -540,6 +542,8 @@ function AppShell() {
           <Route path="/scout"                    element={<ScoutEnginePage />} />
           <Route path="/login"                    element={<LoginPage />}      />
           <Route path="/register"                 element={<RegisterPage />}   />
+          <Route path="/forgot-password"          element={<ForgotPasswordPage />} />
+          <Route path="/reset-password"           element={<ResetPasswordPage />} />
           <Route path="/settings"                 element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
         </Routes>
       </Suspense>

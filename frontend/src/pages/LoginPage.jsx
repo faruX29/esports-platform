@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { signIn } = useAuth()
+  const { signIn, signInWithDiscord } = useAuth()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -26,6 +26,11 @@ export default function LoginPage() {
     }
   }
 
+  async function onDiscord() {
+    setError('')
+    try { await signInWithDiscord() } catch (err) { setError(err.message || 'Discord girişi başarısız.') }
+  }
+
   return (
     <div style={{ minHeight: 'calc(100vh - 58px)', display: 'grid', placeItems: 'center', padding: 16, background: 'radial-gradient(ellipse at 20% 10%, rgba(200,16,46,.15), transparent 45%), radial-gradient(ellipse at 80% 90%, rgba(255,255,255,.06), transparent 45%), #0a0a0a' }}>
       <div style={{ width: 'min(460px, 100%)', borderRadius: 18, border: '1px solid #1c1c1c', background: 'linear-gradient(160deg,#111,#0d0d0d)', overflow: 'hidden', boxShadow: '0 18px 40px rgba(0,0,0,.5)' }}>
@@ -40,6 +45,19 @@ export default function LoginPage() {
             <button disabled={loading} style={{ marginTop: 4, border: 'none', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#fff', fontWeight: 800, background: 'linear-gradient(135deg,#C8102E,#ff4b63)', opacity: loading ? 0.6 : 1 }}>{loading ? 'Baglaniliyor...' : 'Giris Yap'}</button>
             {error && <div style={{ fontSize: 12, color: '#FF4655' }}>{error}</div>}
           </form>
+
+          <div style={{ marginTop: 10, textAlign: 'right' }}>
+            <Link to="/forgot-password" style={{ fontSize: 12, color: '#9db4ff', textDecoration: 'none' }}>Şifremi unuttum?</Link>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 0' }}>
+            <div style={{ flex: 1, height: 1, background: '#222' }} />
+            <span style={{ fontSize: 11, color: '#666' }}>veya</span>
+            <div style={{ flex: 1, height: 1, background: '#222' }} />
+          </div>
+          <button type="button" onClick={onDiscord} style={{ width: '100%', border: 'none', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#fff', fontWeight: 800, background: '#5865F2', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <span style={{ fontSize: 16 }}>🎮</span> Discord ile Giriş Yap
+          </button>
 
           <div style={{ marginTop: 14, fontSize: 12, color: '#777' }}>
             Hesabin yok mu? <Link to="/register" style={{ color: '#f2f2f2' }}>Kayit ol</Link>

@@ -54,15 +54,19 @@ export function AuthProvider({ children }) {
 
 		const { data, error } = await supabase
 			.from('profiles')
-			.select('id, username, avatar_url, favorite_team_id, scout_score')
+			.select('id, username, first_name, last_name, avatar_url, favorite_team_id, scout_score')
 			.eq('id', targetUser.id)
 			.maybeSingle()
+
+		const meta = targetUser.user_metadata || {}
 
 		if (error) {
 			console.warn('AuthContext profile fetch:', error.message)
 			const fallback = {
 				id: targetUser.id,
 				username: defaultUsername,
+				first_name: meta.first_name || null,
+				last_name: meta.last_name || null,
 				avatar_url: defaultAvatar,
 				favorite_team_id: null,
 				scout_score: 0,
@@ -77,8 +81,10 @@ export function AuthProvider({ children }) {
 			const payload = {
 				id: targetUser.id,
 				username: defaultUsername,
+				first_name: meta.first_name || null,
+				last_name: meta.last_name || null,
 				avatar_url: defaultAvatar,
-				favorite_team_id: null,
+				favorite_team_id: meta.favorite_team_id ?? null,
 				scout_score: 0,
 			}
 			const { error: upsertError } = await supabase.from('profiles').upsert(payload, { onConflict: 'id' })
@@ -94,6 +100,8 @@ export function AuthProvider({ children }) {
 		const normalized = {
 			id: data.id,
 			username: data.username || defaultUsername,
+			first_name: data.first_name || null,
+			last_name: data.last_name || null,
 			avatar_url: data.avatar_url || defaultAvatar,
 			favorite_team_id: data.favorite_team_id ?? null,
 			scout_score: Number(data.scout_score || 0),
@@ -158,15 +166,21 @@ export function AuthProvider({ children }) {
 		}
 	}, [refreshProfile])
 
-	async function signUp({ email, password, username }) {
+	async function signUp({ email, password, username, first_name, last_name, favorite_team_id }) {
 		const cleanUsername = String(username || '').trim()
 		const finalUsername = cleanUsername || email?.split('@')?.[0] || 'esports_fan'
+		const firstName = String(first_name || '').trim() || null
+		const lastName = String(last_name || '').trim() || null
+		const favTeam = favorite_team_id ?? null
 		const { data, error } = await supabase.auth.signUp({
 			email,
 			password,
 			options: {
 				data: {
 					username: finalUsername,
+					first_name: firstName,
+					last_name: lastName,
+					favorite_team_id: favTeam,
 				},
 			},
 		})
@@ -176,14 +190,37 @@ export function AuthProvider({ children }) {
 			await supabase.from('profiles').upsert({
 				id: data.user.id,
 				username: finalUsername,
+				first_name: firstName,
+				last_name: lastName,
 				avatar_url: data.user.user_metadata?.avatar_url || null,
-				favorite_team_id: null,
+				favorite_team_id: favTeam,
 				scout_score: 0,
 			}, { onConflict: 'id' })
 			await refreshProfile(data.user)
 		}
 
 		return data
+	}
+
+	// ── Şifre sıfırlama (Gemini launch-blocker) ────────────────────────────────
+	async function requestPasswordReset(email) {
+		const redirectTo = `${window.location.origin}/reset-password`
+		const { error } = await supabase.auth.resetPasswordForEmail(String(email || '').trim(), { redirectTo })
+		if (error) throw error
+	}
+
+	async function updatePassword(newPassword) {
+		const { error } = await supabase.auth.updateUser({ password: newPassword })
+		if (error) throw error
+	}
+
+	// ── Discord OAuth (espor kitlesi için tek-tık giriş) ───────────────────────
+	async function signInWithDiscord() {
+		const { error } = await supabase.auth.signInWithOAuth({
+			provider: 'discord',
+			options: { redirectTo: `${window.location.origin}/` },
+		})
+		if (error) throw error
 	}
 
 	async function signIn({ email, password }) {
@@ -206,6 +243,8 @@ export function AuthProvider({ children }) {
 		const payload = {
 			id: user.id,
 			...(partial?.username !== undefined ? { username: partial.username || buildUsername(user) } : {}),
+			...(partial?.first_name !== undefined ? { first_name: partial.first_name || null } : {}),
+			...(partial?.last_name !== undefined ? { last_name: partial.last_name || null } : {}),
 			...(partial?.avatar_url !== undefined ? { avatar_url: partial.avatar_url || null } : {}),
 			...(partial?.favorite_team_id !== undefined ? { favorite_team_id: partial.favorite_team_id } : {}),
 			...(partial?.scout_score !== undefined ? { scout_score: Number(partial.scout_score || 0) } : {}),
@@ -215,6 +254,8 @@ export function AuthProvider({ children }) {
 		const merged = {
 			id: user.id,
 			username: payload.username ?? profile?.username ?? buildUsername(user),
+			first_name: payload.first_name ?? profile?.first_name ?? null,
+			last_name: payload.last_name ?? profile?.last_name ?? null,
 			avatar_url: payload.avatar_url ?? profile?.avatar_url ?? null,
 			favorite_team_id: payload.favorite_team_id ?? profile?.favorite_team_id ?? null,
 			scout_score: payload.scout_score ?? profile?.scout_score ?? 0,
@@ -234,6 +275,9 @@ export function AuthProvider({ children }) {
 		signOut,
 		updateProfile,
 		refreshProfile,
+		requestPasswordReset,
+		updatePassword,
+		signInWithDiscord,
 		isAuthenticated: !!user,
 	}), [session, user, profile, loading, profileLoading, refreshProfile])
 

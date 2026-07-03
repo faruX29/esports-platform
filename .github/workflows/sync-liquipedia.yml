@@ -55,6 +55,14 @@ jobs:
           LIQUIPEDIA_API_KEY: ${{ secrets.LIQUIPEDIA_API_KEY }}
         run: python run.py --generate-transfers
 
+      - name: Generate match previews (yaklaşan S/A + B-tier büyük turnuva, 72s)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          LIQUIPEDIA_API_KEY: ${{ secrets.LIQUIPEDIA_API_KEY }}
+        run: python run.py --generate-previews --preview-hours 72
+
       # NOT: SEO sitemap artık dinamik Vercel Edge route (frontend/api/sitemap.js,
       # Gemini #15) — statik dosya üretimi/commit'i kaldırıldı. Sitemap istek anında
       # Supabase'den üretilir. Bu workflow'da sitemap adımı yok.

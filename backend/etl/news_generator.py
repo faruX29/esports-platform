@@ -125,10 +125,20 @@ class FactSheetBuilder:
         return f"{name} son {form['n']} maç: {form['wins']}G-{form['losses']}M ({form['form']})"
 
     @staticmethod
-    def build_preview(match: dict, form_a: Optional[dict] = None, form_b: Optional[dict] = None) -> str:
+    def _fmt_record(a_name: str, rec_a: Optional[dict], b_name: str, rec_b: Optional[dict]) -> Optional[str]:
+        """Turnuva içi W-L kayıtlarını tek satıra döker (turnuva sıralaması bağlamı)."""
+        parts = []
+        for name, rec in ((a_name, rec_a), (b_name, rec_b)):
+            if rec and (rec.get("w") or rec.get("l")):
+                parts.append(f"{name} {rec['w']}G-{rec['l']}M")
+        return " | ".join(parts) if parts else None
+
+    @staticmethod
+    def build_preview(match: dict, form_a: Optional[dict] = None, form_b: Optional[dict] = None,
+                      rec_a: Optional[dict] = None, rec_b: Optional[dict] = None) -> str:
         """
         Yaklaşan (upcoming) maç için önizleme fact sheet'i — final skor yok;
-        tahmin, tier, takım, zaman ve (varsa) son maç formu kullanılır.
+        tahmin, tier, takım, zaman, son maç formu ve turnuva içi kayıt kullanılır.
         """
         team_a = match.get("team_a") or {}
         team_b = match.get("team_b") or {}
@@ -153,6 +163,9 @@ class FactSheetBuilder:
         for line in (FactSheetBuilder._fmt_form(a_name, form_a), FactSheetBuilder._fmt_form(b_name, form_b)):
             if line:
                 lines.append(f"Form: {line}")
+        rec_line = FactSheetBuilder._fmt_record(a_name, rec_a, b_name, rec_b)
+        if rec_line:
+            lines.append(f"Turnuva içi kayıt: {rec_line}")
 
         pred_a = match.get("prediction_team_a")
         pred_b = match.get("prediction_team_b")
@@ -237,7 +250,8 @@ class FactSheetBuilder:
         return " | ".join(parts) if parts else None
 
     @staticmethod
-    def build(match: dict, stats_rows: list[dict], player_rows: Optional[list[dict]] = None) -> str:
+    def build(match: dict, stats_rows: list[dict], player_rows: Optional[list[dict]] = None,
+              rec_a: Optional[dict] = None, rec_b: Optional[dict] = None) -> str:
         team_a = match.get("team_a") or {}
         team_b = match.get("team_b") or {}
         tournament = match.get("tournament") or {}
@@ -321,6 +335,9 @@ class FactSheetBuilder:
         top_players = FactSheetBuilder._format_top_players(player_rows or [])
         if top_players:
             lines.append(f"Öne çıkan oyuncular (K/D/A): {top_players}")
+        rec_line = FactSheetBuilder._fmt_record(a_name, rec_a, b_name, rec_b)
+        if rec_line:
+            lines.append(f"Turnuva içi kayıt: {rec_line}")
         if pred_a is not None and pred_b is not None:
             lines.append(
                 f"Model tahmini: {a_name}={float(pred_a):.2f} / {b_name}={float(pred_b):.2f}"
@@ -459,16 +476,45 @@ class NewsGenerator:
         wins = results.count("W")
         return {"n": len(results), "wins": wins, "losses": len(results) - wins, "form": "".join(results)}
 
+    def _fetch_tournament_record(self, tournament_id, team_id) -> Optional[dict]:
+        """
+        Takımın BU turnuvadaki W-L kaydı (turnuva sıralaması bağlamı). Veri yoksa None.
+        Üretimi ASLA çökertmez.
+        """
+        if not tournament_id or not team_id:
+            return None
+        try:
+            with Database.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        SELECT
+                            COUNT(*) FILTER (WHERE winner_id = %s) AS wins,
+                            COUNT(*) FILTER (WHERE winner_id IS NOT NULL AND winner_id <> %s) AS losses
+                        FROM matches
+                        WHERE tournament_id = %s AND status = 'finished'
+                          AND (team_a_id = %s OR team_b_id = %s) AND winner_id IS NOT NULL
+                        """,
+                        (team_id, team_id, tournament_id, team_id, team_id),
+                    )
+                    w, l = cur.fetchone()
+        except Exception:
+            return None
+        w, l = int(w or 0), int(l or 0)
+        return {"w": w, "l": l} if (w or l) else None
+
     @staticmethod
     def _is_newsworthy(match: dict, player_rows: list) -> bool:
         """
         Kalite kapısı: benzersiz içerik üretilebilecek maçlar. Düşük-tier + tek
         harita (Bo1) + oyuncu istatistiği yok + sürpriz değil = kaçınılmaz olarak
         şablon/dolgu haber → ATLA (duplicate content SEO'ya zarar verir).
-        Haberlik sinyaller: yüksek tier (S/A) VEYA oyuncu-stat VEYA çok-harita VEYA upset.
+        Haberlik sinyaller: tier (S/A/B) VEYA oyuncu-stat VEYA çok-harita VEYA upset.
+        (Gemini #16b: içerik hacmi için B-tier de dahil; büyük-turnuva filtresi
+        _fetch_unprocessed'te değil, kapsam _fetch tarafında yönetiliyor.)
         """
         tier = str((match.get("tournament") or {}).get("tier") or "C").upper()
-        if tier in ("S", "A"):
+        if tier in ("S", "A", "B"):
             return True
         if player_rows:
             return True
@@ -610,7 +656,10 @@ class NewsGenerator:
                 continue
 
             stats_rows = self._fetch_stats(match["id"])
-            fact_sheet = FactSheetBuilder.build(match, stats_rows, player_rows)
+            tn_id = match["tournament"].get("id")
+            rec_a = self._fetch_tournament_record(tn_id, match["team_a"].get("id"))
+            rec_b = self._fetch_tournament_record(tn_id, match["team_b"].get("id"))
+            fact_sheet = FactSheetBuilder.build(match, stats_rows, player_rows, rec_a=rec_a, rec_b=rec_b)
             user_prompt = (
                 "Aşağıdaki maç özet raporunu kullanarak Türkçe haber bülteni üret:\n\n"
                 + fact_sheet
@@ -645,7 +694,11 @@ class NewsGenerator:
     # ── Önizleme (upcoming) üretimi ───────────────────────────────────────────
 
     def _fetch_upcoming_for_preview(self, hours_ahead: int = 48) -> list[dict]:
-        """Önümüzdeki X saatteki, makalesi olmayan yüksek tier (S/A) upcoming maçlar."""
+        """
+        Önümüzdeki X saatteki, makalesi olmayan upcoming maçlar.
+        Kapsam (Gemini #16b): yüksek tier (S/A) VEYA B-tier BÜYÜK turnuva (≥8 maç).
+        prize_pool DB'de boş olduğundan "büyük" = turnuva maç sayısı proxy'si.
+        """
         until = (datetime.now(timezone.utc) + timedelta(hours=hours_ahead)).isoformat()
         now = datetime.now(timezone.utc).isoformat()
         with Database.get_connection() as conn:
@@ -667,13 +720,21 @@ class NewsGenerator:
                     LEFT JOIN games       g   ON g.id   = m.game_id
                     WHERE m.status IN ('not_started', 'upcoming')
                       AND m.scheduled_at BETWEEN %s AND %s
-                      AND UPPER(COALESCE(tn.tier, 'C')) IN ('S', 'A')
+                      AND (
+                          UPPER(COALESCE(tn.tier, 'C')) IN ('S', 'A')
+                          OR (
+                              UPPER(COALESCE(tn.tier, 'C')) = 'B'
+                              AND (SELECT COUNT(*) FROM matches mm WHERE mm.tournament_id = tn.id) >= 8
+                          )
+                      )
                       AND t_a.name IS NOT NULL AND t_b.name IS NOT NULL
                       AND NOT EXISTS (
                           SELECT 1 FROM news_articles na WHERE na.match_id = m.id
                       )
-                    ORDER BY m.scheduled_at ASC
-                    LIMIT 10
+                    ORDER BY
+                      CASE UPPER(COALESCE(tn.tier, 'C')) WHEN 'S' THEN 0 WHEN 'A' THEN 1 ELSE 2 END,
+                      m.scheduled_at ASC
+                    LIMIT 12
                     """,
                     (now, until),
                 )
@@ -718,7 +779,10 @@ class NewsGenerator:
             match = self._denormalize(row)
             form_a = self._fetch_team_form(match["team_a"].get("id"))
             form_b = self._fetch_team_form(match["team_b"].get("id"))
-            fact_sheet = FactSheetBuilder.build_preview(match, form_a=form_a, form_b=form_b)
+            tn_id = match["tournament"].get("id")
+            rec_a = self._fetch_tournament_record(tn_id, match["team_a"].get("id"))
+            rec_b = self._fetch_tournament_record(tn_id, match["team_b"].get("id"))
+            fact_sheet = FactSheetBuilder.build_preview(match, form_a=form_a, form_b=form_b, rec_a=rec_a, rec_b=rec_b)
             user_prompt = (
                 "Aşağıdaki yaklaşan maç önizleme raporunu kullanarak Türkçe maç önizlemesi üret:\n\n"
                 + fact_sheet

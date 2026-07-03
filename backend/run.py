@@ -5,7 +5,7 @@ Usage: python run.py [options]
 import argparse
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from utils.logger import setup_logging
 from etl.sync_matches import MatchSyncer
 from etl.predict import MatchPredictor
@@ -461,7 +461,6 @@ def main():
         logger.info(f"✅ Bulk stale cleanup tamamlandı — {total} maç güncellendi")
 
     if args.backfill_history:
-        from datetime import datetime, timezone
         since_iso = f"{args.backfill_since_year}-01-01T00:00:00Z"
         until_iso = datetime.now(timezone.utc).isoformat()
         games = [g.strip() for g in args.backfill_games.split(',') if g.strip()]

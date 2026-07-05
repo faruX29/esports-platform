@@ -159,6 +159,10 @@ export default function RankingsPage() {
           `)
           .eq('status', 'finished')
           .not('winner_id', 'is', null)
+          // Power ranking GÜNCEL forma dayanmalı: son 180 gün + en yeniden sırala.
+          // (Geçmiş backfill 2014+ maç ekledi; ORDER'sız limit antik sonuç çekerdi.)
+          .gte('scheduled_at', new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString())
+          .order('scheduled_at', { ascending: false })
           .limit(9000)
 
         if (fetchErr) throw fetchErr

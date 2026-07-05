@@ -757,6 +757,9 @@ const FavoritesBar = memo(function FavoritesBar({ onMatchClick, showAllTournamen
       team_b:teams!matches_team_b_id_fkey(id,name,logo_url),
       tournament:tournaments(id,name,tier), game:games(id,name,slug)
     `).or(orFilter)
+      // Yaklaşan/canlı maçlar (son 24s + gelecek). now filtresi olmadan backfill
+      // sonrası en eski 2014 maçları gelirdi.
+      .gte('scheduled_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
       .order('scheduled_at', { ascending: true })
       .limit(20)
       .then(({ data }) => {

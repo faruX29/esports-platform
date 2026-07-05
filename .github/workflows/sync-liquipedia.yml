@@ -63,6 +63,15 @@ jobs:
           LIQUIPEDIA_API_KEY: ${{ secrets.LIQUIPEDIA_API_KEY }}
         run: python run.py --generate-previews --preview-hours 72
 
+      - name: Generate tournament recaps (biten tier S/A turnuva sonuç özetleri)
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          LIQUIPEDIA_API_KEY: ${{ secrets.LIQUIPEDIA_API_KEY }}
+        run: python run.py --generate-tournament-recaps
+
       # NOT: Bulk player-enrichment (Liquipedia player sayfaları) CRON'DAN ÇIKARILDI.
       # Ölçüm: bulunamayan oyuncu ~16 dk (429 retry storm) → günde ~1 oyuncu +
       # Liquipedia'yı yorma (compliance). "Takım geçmişi" ihtiyacı roster_changes

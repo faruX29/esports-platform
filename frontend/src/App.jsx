@@ -7,6 +7,7 @@ import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
 import toast, { Toaster } from 'react-hot-toast'
 import { UserProvider } from './context/UserContext'
 import { AuthProvider } from './context/AuthContext'
+import { Analytics } from '@vercel/analytics/react'
 import { useAuth } from './context/AuthContext'
 import {
   supabase,
@@ -559,6 +560,7 @@ export default function App() {
         <UserProvider>
           <GameProvider>
             <AppShell />
+            <Analytics />
           </GameProvider>
         </UserProvider>
       </AuthProvider>

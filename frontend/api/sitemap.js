@@ -36,6 +36,11 @@ function newsSlug(row) {
     const s = slugify(row.title)
     return s ? `${s}-${id}` : id
   }
+  if (row.content_type === 'tournament') {
+    const id = `tournament_${row.tournament_id}`
+    const s = slugify(row.title)
+    return s ? `${s}-${id}` : id
+  }
   const mid = row.match_id
   if (!mid) return `match_${row.id}`
   const s = slugify(row.title)
@@ -99,7 +104,7 @@ async function buildChild(type, base) {
     return urlset(pages.map(([p, cf, pr]) => ({ loc: base + p, lastmod: today, changefreq: cf, priority: pr })))
   }
   if (type === 'news') {
-    const rows = await fetchAll('news_articles', 'id,match_id,title,content_type,created_at')
+    const rows = await fetchAll('news_articles', 'id,match_id,tournament_id,title,content_type,created_at')
     return urlset(rows.map(r => ({ loc: `${base}/news/${newsSlug(r)}`, lastmod: lastmod(r), changefreq: 'weekly', priority: '0.8' })))
   }
   if (type === 'matches') {

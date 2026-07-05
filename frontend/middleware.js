@@ -48,6 +48,8 @@ function parseNewsRef(slug) {
   const s = String(slug || '')
   const tr = s.match(/transfer_([0-9a-fA-F-]{36})/)
   if (tr) return { type: 'transfer', id: tr[1] }
+  const tour = s.match(/tournament_(\d+)/) // maç sayısal fallback'ten ÖNCE
+  if (tour) return { type: 'tournament', id: tour[1] }
   const m = s.match(/(\d{3,})(?!.*\d)/) // slug sonundaki sayı = match_id
   if (m) return { type: 'match', id: m[1] }
   return null
@@ -129,9 +131,14 @@ async function buildForMatch(id, origin, url) {
 
 async function buildForNews(ref, origin, url) {
   const sel = 'title,summary,hero_score,game_slug,tier,tournament_name,team_a_name,team_b_name,team_a_logo,team_b_logo'
-  const query = ref.type === 'transfer'
-    ? `news_articles?id=eq.${encodeURIComponent(ref.id)}&select=${encodeURIComponent(sel)}&limit=1`
-    : `news_articles?match_id=eq.${encodeURIComponent(ref.id)}&variant=neq.preview&select=${encodeURIComponent(sel)}&order=created_at.desc&limit=1`
+  let query
+  if (ref.type === 'transfer') {
+    query = `news_articles?id=eq.${encodeURIComponent(ref.id)}&select=${encodeURIComponent(sel)}&limit=1`
+  } else if (ref.type === 'tournament') {
+    query = `news_articles?content_type=eq.tournament&tournament_id=eq.${encodeURIComponent(ref.id)}&select=${encodeURIComponent(sel)}&order=created_at.desc&limit=1`
+  } else {
+    query = `news_articles?match_id=eq.${encodeURIComponent(ref.id)}&variant=neq.preview&select=${encodeURIComponent(sel)}&order=created_at.desc&limit=1`
+  }
   const row = await sbFetch(query)
   if (!row) return null
   const gm = gameMeta(row.game_slug)

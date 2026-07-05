@@ -235,6 +235,11 @@ def main():
         help='roster_changes (news_generated=false) için LLM ile Türkçe transfer haberi üret',
     )
     parser.add_argument(
+        '--generate-tournament-recaps',
+        action='store_true',
+        help='Yakında biten tier S/A turnuvalar için LLM sonuç-özeti (recap) üret',
+    )
+    parser.add_argument(
         '--preview-hours',
         type=int,
         default=48,
@@ -536,6 +541,22 @@ def main():
             )
         except Exception as tr_err:
             logger.error(f"❌ Transfer haberi üretimi başlatılamadı: {tr_err}")
+        logger.info("=" * 60)
+
+    if args.generate_tournament_recaps:
+        logger.info("\n" + "=" * 60)
+        logger.info("🏆 LLM TOURNAMENT RECAP GENERATION (Gemini)")
+        logger.info("=" * 60)
+        try:
+            llm = GeminiAdapter()
+            generator = NewsGenerator(llm)
+            result = generator.generate_tournament_recaps(days_back=21, limit=8)
+            logger.info(
+                f"✅ Turnuva recap üretimi tamamlandı — "
+                f"deneme: {result['attempted']} | yazıldı: {result['generated']} | hata: {result['failed']}"
+            )
+        except Exception as tr_err:
+            logger.error(f"❌ Turnuva recap üretimi başlatılamadı: {tr_err}")
         logger.info("=" * 60)
 
     if args.generate_previews:

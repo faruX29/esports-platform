@@ -14,7 +14,7 @@ import json
 import logging
 import re
 import time
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -89,6 +89,25 @@ TRANSFER_SYSTEM_PROMPT = (
     "işle (örn. 'son dönemde X K/D ile öne çıkan oyuncu').\n"
     "- Başlık (title) en fazla 12 kelime, özet (summary) 2-3 cümle.\n"
     "- Gövde 2-4 paragraf string'i içeren 'paragraphs' dizisi olsun.\n"
+    "- JSON string içinde çift tırnak (\") kullanma; vurgu için tek tırnak (').\n"
+    "- Yanıtı yalnızca şu JSON şemasında ver:\n"
+    '{"title": "...", "summary": "...", "paragraphs": ["1. paragraf", "2. paragraf"]}'
+)
+
+# ── Turnuva sonuç özeti editör persona'sı ─────────────────────────────────────
+TOURNAMENT_SYSTEM_PROMPT = (
+    "Sen profesyonel bir espor editörüsün. Biten bir turnuvanın SONUÇ ÖZETİ "
+    "(recap) haberini, ÖZGÜN ve tarafsız Türkçe olarak yazıyorsun.\n\n"
+    "ÖZGÜNLÜK:\n"
+    "- Şampiyonla ve en çarpıcı gerçekle (final skoru, sürpriz, dominant kampanya) başla.\n"
+    "- Kalıp/şablon YASAK; klişe dolgu ('nefes kesen', 'unutulmaz') kullanma.\n\n"
+    "İÇERİK KURALLARI:\n"
+    "- Yalnızca fact sheet'teki veriyi kullan; şampiyon/skor/takım UYDURMA.\n"
+    "- 'Aşama tipi'ne SAYGI göster: eleme/final ise 'şampiyon' de; grup/lig aşamasıysa "
+    "'şampiyon' DEME, 'grubu/aşamayı lider tamamladı' de.\n"
+    "- Lider/şampiyon, rakip ve puan durumuna değin; öne çıkan sonuçları işle.\n"
+    "- Başlık (title) en fazla 12 kelime, özet (summary) 2-3 cümle.\n"
+    "- Gövde 3-4 paragraf string'i içeren 'paragraphs' dizisi olsun.\n"
     "- JSON string içinde çift tırnak (\") kullanma; vurgu için tek tırnak (').\n"
     "- Yanıtı yalnızca şu JSON şemasında ver:\n"
     '{"title": "...", "summary": "...", "paragraphs": ["1. paragraf", "2. paragraf"]}'
@@ -210,6 +229,50 @@ class FactSheetBuilder:
             lines.append(f"Transfer tipi: {ttype}")
         if player_form:
             lines.append(f"Oyuncu son dönem performansı: {player_form}")
+        return "\n".join(lines)
+
+    @staticmethod
+    def build_tournament(tournament: dict, ctx: dict) -> str:
+        """
+        Biten turnuva için sonuç-özeti fact sheet'i.
+        ctx: {champion, runner_up, final_score, standings:[{team,w,l}], total_matches,
+              notable:[str], upset_count}
+        """
+        tier = str(tournament.get("tier") or "C").upper()
+        tier_label = _TIER_LABELS.get(tier, "Bilinmeyen Tier")
+        t_name = tournament.get("name") or "Turnuva"
+        game = str(tournament.get("game_slug") or "esports").upper()
+
+        # PandaScore turnuvaları AŞAMA'dır (Playoffs/Group Stage). Yalnızca
+        # eleme/final aşamasında "şampiyon" gerçekçi; grup aşamasında "lider".
+        name_l = t_name.lower()
+        is_final = any(k in name_l for k in (
+            "playoff", "final", "knockout", "bracket", "grand", "elimination", "şampiyon", "champion"
+        ))
+
+        lines = [
+            "TURNUVA SONUÇ RAPORU",
+            f"Aşama: {t_name} [{tier_label}]",
+            f"Oyun: {game}",
+            f"Aşama tipi: {'Eleme/Final (gerçek şampiyon)' if is_final else 'Grup/lig aşaması (lider)'}",
+            f"Toplam maç: {ctx.get('total_matches', 0)}",
+        ]
+        if ctx.get("champion"):
+            role = "Şampiyon" if is_final else "Aşama lideri"
+            champ_line = f"{role}: {ctx['champion']}"
+            if ctx.get("runner_up"):
+                champ_line += f" | {'Finalist' if is_final else 'Rakip'}: {ctx['runner_up']}"
+            if ctx.get("final_score"):
+                champ_line += f" | {'Final' if is_final else 'Son maç'} skoru: {ctx['final_score']}"
+            lines.append(champ_line)
+        standings = ctx.get("standings") or []
+        if standings:
+            top = " | ".join(f"{s['team']} ({s['w']}-{s['l']})" for s in standings[:5])
+            lines.append(f"Puan durumu (ilk 5, G-M): {top}")
+        for note in (ctx.get("notable") or [])[:3]:
+            lines.append(f"Öne çıkan sonuç: {note}")
+        if ctx.get("upset_count"):
+            lines.append(f"Sürpriz sonuç sayısı: {ctx['upset_count']}")
         return "\n".join(lines)
 
     @staticmethod
@@ -926,6 +989,142 @@ class NewsGenerator:
                 stats["failed"] += 1
             time.sleep(4)
 
+        return stats
+
+    # ── Turnuva sonuç özeti üretimi ───────────────────────────────────────────
+
+    def _fetch_finished_tournaments(self, days_back: int = 21, limit: int = 8) -> list[dict]:
+        """Yakında biten, recap'i olmayan tier S/A turnuvalar (>=4 bitmiş maç)."""
+        since = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
+        with Database.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT tn.id, tn.name, tn.tier, g.slug AS game_slug,
+                           COUNT(m.id) AS finished_count, MAX(m.scheduled_at) AS last_match
+                    FROM tournaments tn
+                    JOIN games g ON g.id = tn.game_id
+                    JOIN matches m ON m.tournament_id = tn.id
+                    WHERE UPPER(COALESCE(tn.tier,'C')) IN ('S','A')
+                      AND m.status = 'finished' AND m.winner_id IS NOT NULL
+                      AND NOT EXISTS (
+                          SELECT 1 FROM news_articles na
+                          WHERE na.tournament_id = tn.id AND na.content_type = 'tournament'
+                      )
+                    GROUP BY tn.id, tn.name, tn.tier, g.slug
+                    HAVING COUNT(m.id) >= 4
+                       AND MAX(m.scheduled_at) >= %s AND MAX(m.scheduled_at) < NOW()
+                    ORDER BY last_match DESC
+                    LIMIT %s
+                    """,
+                    (since, limit),
+                )
+                cols = [d[0] for d in cur.description]
+                return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    def _fetch_tournament_context(self, tournament_id) -> dict:
+        """Bitmiş maçlardan şampiyon + puan durumu + öne çıkan sonuçları çıkarır."""
+        with Database.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT ta.name AS a_name, tb.name AS b_name,
+                           m.team_a_id, m.team_b_id, m.winner_id,
+                           COALESCE(m.team_a_score,0), COALESCE(m.team_b_score,0),
+                           m.prediction_team_a, m.prediction_team_b
+                    FROM matches m
+                    LEFT JOIN teams ta ON ta.id = m.team_a_id
+                    LEFT JOIN teams tb ON tb.id = m.team_b_id
+                    WHERE m.tournament_id = %s AND m.status='finished' AND m.winner_id IS NOT NULL
+                    ORDER BY m.scheduled_at ASC, m.id ASC
+                    """,
+                    (tournament_id,),
+                )
+                rows = cur.fetchall()
+        if not rows:
+            return {}
+        wl = defaultdict(lambda: [0, 0])  # name -> [w, l]
+        upset_count = 0
+        notable: list[str] = []
+        for a, b, aid, bid, wid, sa, sb, pa, pb in rows:
+            a = a or "Bilinmeyen"; b = b or "Bilinmeyen"
+            a_won = str(wid) == str(aid)
+            win_name, lose_name = (a, b) if a_won else (b, a)
+            wl[win_name][0] += 1
+            wl[lose_name][1] += 1
+            if pa is not None and pb is not None and float(pa) != float(pb):
+                fav = a if float(pa) > float(pb) else b
+                if fav == lose_name:
+                    upset_count += 1
+                    if len(notable) < 3:
+                        notable.append(f"{win_name}, favori {lose_name}'i {max(sa, sb)}-{min(sa, sb)} yendi")
+        last = rows[-1]
+        la, lb, laid, _lbid, lwid, lsa, lsb = last[0] or "Bilinmeyen", last[1] or "Bilinmeyen", last[2], last[3], last[4], last[5], last[6]
+        champ = la if str(lwid) == str(laid) else lb
+        runner = lb if champ == la else la
+        standings = sorted(
+            ({"team": n, "w": w, "l": l} for n, (w, l) in wl.items()),
+            key=lambda s: (s["w"] - s["l"], s["w"]), reverse=True,
+        )
+        return {
+            "champion": champ, "runner_up": runner,
+            "final_score": f"{max(lsa, lsb)}-{min(lsa, lsb)}",
+            "standings": standings, "total_matches": len(rows),
+            "notable": notable, "upset_count": upset_count,
+        }
+
+    def _save_tournament_recap(self, tournament: dict, ctx: dict, article: dict) -> None:
+        content = "\n\n".join(article["paragraphs"]) if isinstance(article.get("paragraphs"), list) else article.get("content", "")
+        champ = ctx.get("champion") or ""
+        runner = ctx.get("runner_up") or ""
+        with Database.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO news_articles (
+                        match_id, content_type, title, summary, content, variant,
+                        game_slug, tier, tournament_name, tournament_id,
+                        team_a_name, team_b_name, hero_score
+                    )
+                    VALUES (NULL, 'tournament', %s, %s, %s, 'tournament', %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        article.get("title", ""), article.get("summary", ""), content,
+                        tournament.get("game_slug"), str(tournament.get("tier") or "A").upper(),
+                        tournament.get("name") or "Turnuva", tournament["id"],
+                        champ, runner, f"🏆 {champ}",
+                    ),
+                )
+            conn.commit()
+
+    def generate_tournament_recaps(self, days_back: int = 21, limit: int = 8) -> dict:
+        """Yakında biten tier S/A turnuvalar için LLM sonuç-özeti üret."""
+        rows = self._fetch_finished_tournaments(days_back=days_back, limit=limit)
+        logger.info("🏆 Turnuva recap üretilecek: %d", len(rows))
+        stats = {"attempted": len(rows), "generated": 0, "failed": 0}
+        for t in rows:
+            ctx = self._fetch_tournament_context(t["id"])
+            if not ctx or not ctx.get("champion"):
+                stats["failed"] += 1
+                continue
+            fact_sheet = FactSheetBuilder.build_tournament(t, ctx)
+            user_prompt = "Aşağıdaki turnuva sonuç raporunu kullanarak Türkçe recap üret:\n\n" + fact_sheet
+            raw = self._generate_with_backoff(user_prompt, t["id"], system_prompt=TOURNAMENT_SYSTEM_PROMPT)
+            if raw is None:
+                stats["failed"] += 1
+                continue
+            article = self._parse_llm_json(raw)
+            if article is None:
+                stats["failed"] += 1
+                continue
+            try:
+                self._save_tournament_recap(t, ctx, article)
+                stats["generated"] += 1
+                logger.info("✅ Turnuva recap  %s  %s", t.get("name"), article.get("title", "")[:50])
+            except Exception as exc:
+                logger.warning("⚠️  Turnuva recap kayıt hatası %s: %s", t["id"], exc)
+                stats["failed"] += 1
+            time.sleep(4)
         return stats
 
     # "Please retry in 47 seconds." veya "retry in 47.3s" gibi API mesajlarını yakalar

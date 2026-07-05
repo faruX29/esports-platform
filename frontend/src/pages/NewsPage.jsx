@@ -75,6 +75,7 @@ function fmtDate(iso) {
 
 function getArticleStoryTag(variant) {
   if (variant === 'transfer') return 'Transfer'
+  if (variant === 'tournament') return 'Turnuva Özeti'
   if (variant === 'preview') return 'Önizleme'
   if (variant === 'upset') return 'Surpriz Sonuc'
   if (variant === 'stomp') return 'Skor Haberi'
@@ -87,21 +88,24 @@ function articleRowToStory(row) {
   const game = getGameMeta(gameId)
   const tier = normalizeTier(row.tier)
   const isTransfer = row.content_type === 'transfer'
+  const isTournament = row.content_type === 'tournament'
   const isPreview = row.variant === 'preview'
-  // Transfer'ın maçı yok → id uuid'den; match recap/preview → match_<id>
-  const storyId = isTransfer ? `transfer_${row.id}` : `match_${row.match_id}`
+  // Transfer → transfer_<uuid>; turnuva → tournament_<id>; maç → match_<id>
+  const storyId = isTransfer ? `transfer_${row.id}`
+    : isTournament ? `tournament_${row.tournament_id}`
+    : `match_${row.match_id}`
   return {
     id: storyId,
-    matchId: isTransfer ? null : row.match_id,
+    matchId: (isTransfer || isTournament) ? null : row.match_id,
     tournamentId: row.tournament_id,
-    status: isTransfer ? 'transfer' : (isPreview ? 'not_started' : 'finished'),
+    status: isTransfer ? 'transfer' : isTournament ? 'tournament' : (isPreview ? 'not_started' : 'finished'),
     variant: row.variant || 'close',
     publishedAt: row.created_at,
-    priority: (tierWeight(tier) * 100) + (isTransfer ? 30 : row.variant === 'upset' ? 35 : row.variant === 'stomp' ? 24 : 12),
+    priority: (tierWeight(tier) * 100) + (isTournament ? 40 : isTransfer ? 30 : row.variant === 'upset' ? 35 : row.variant === 'stomp' ? 24 : 12),
     title: row.title || '',
     summary: row.summary || '',
     content: row.content || '',
-    tag: getArticleStoryTag(isTransfer ? 'transfer' : row.variant),
+    tag: getArticleStoryTag(isTransfer ? 'transfer' : isTournament ? 'tournament' : row.variant),
     heroScore: row.hero_score || '',
     visuals: {
       gameId,
@@ -259,7 +263,7 @@ function NewsCard({ item, likes, liked, comments, onLike, canInteract, onOpenDet
         </div>
 
         <div style={{ marginBottom: 12 }}>
-          <NewsCover visuals={visuals} score={item.status === 'transfer' ? '➜' : scoreFromHero(item.heroScore)} height={isMobile ? 150 : 168} compact />
+          <NewsCover visuals={visuals} score={item.status === 'transfer' ? '➜' : item.status === 'tournament' ? '🏆' : scoreFromHero(item.heroScore)} height={isMobile ? 150 : 168} compact />
         </div>
 
         <div style={{ minWidth: 0, marginBottom: 8 }}>
@@ -669,7 +673,7 @@ export default function NewsPage() {
                 </div>
 
                 <div style={{ marginBottom: 14 }}>
-                  <NewsCover visuals={hero.visuals} score={hero.status === 'transfer' ? '➜' : scoreFromHero(hero.heroScore)} height={isMobile ? 190 : 230} />
+                  <NewsCover visuals={hero.visuals} score={hero.status === 'transfer' ? '➜' : hero.status === 'tournament' ? '🏆' : scoreFromHero(hero.heroScore)} height={isMobile ? 190 : 230} />
                 </div>
                 <div style={{ minWidth: 0, marginBottom: 12 }}>
                   <h2 style={{ margin: '0 0 8px', fontSize: isMobile ? 24 : 32, lineHeight: 1.1 }}>{hero.title}</h2>

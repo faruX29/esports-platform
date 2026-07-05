@@ -134,6 +134,32 @@ function mapTransferRowToStory(row) {
   }
 }
 
+/** news_articles turnuva-recap satırını detay sayfası story şekline çevirir. */
+function mapTournamentRowToStory(row) {
+  return {
+    id: `tournament_${row.tournament_id}`,
+    matchId: null,
+    status: 'tournament',
+    variant: 'tournament',
+    publishedAt: row.created_at,
+    title: row.title || '',
+    summary: row.summary || '',
+    content: row.content || '',
+    heroScore: row.hero_score || '',
+    visuals: {
+      gameId: row.game_slug || null,
+      gameLabel: (row.game_slug || 'ESPORTS').toUpperCase(),
+      gameColor: '#C8102E',
+      tier: normalizeTier(row.tier),
+      tournamentName: row.tournament_name || 'Turnuva',
+      turkish: false,
+      teamA: { name: row.team_a_name, logo_url: row.team_a_logo },
+      teamB: { name: row.team_b_name, logo_url: row.team_b_logo },
+    },
+    source: {},
+  }
+}
+
 function commentScore(voteState) {
   const up = Number(voteState?.up || 0)
   const down = Number(voteState?.down || 0)
@@ -554,6 +580,34 @@ export default function NewsDetailPage() {
           }
         } catch (err) {
           if (!cancelled) setError(err.message || 'Transfer haberi yuklenemedi.')
+        } finally {
+          if (!cancelled) setLoading(false)
+        }
+        return
+      }
+
+      // ── Turnuva recap: maç yok, news_articles'tan tournament_id ile yükle ──
+      if (ref.type === 'tournament') {
+        setLoading(true)
+        setError('')
+        try {
+          const { data: art, error: artErr } = await supabase
+            .from('news_articles')
+            .select('*')
+            .eq('content_type', 'tournament')
+            .eq('tournament_id', ref.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          if (artErr) throw artErr
+          if (!art) throw new Error('Turnuva özeti bulunamadı.')
+          const tournamentStory = mapTournamentRowToStory(art)
+          if (!cancelled) {
+            setStory(tournamentStory)
+            await loadForum(tournamentStory.id)
+          }
+        } catch (err) {
+          if (!cancelled) setError(err.message || 'Turnuva özeti yuklenemedi.')
         } finally {
           if (!cancelled) setLoading(false)
         }
@@ -991,7 +1045,7 @@ export default function NewsDetailPage() {
           </div>
 
           <div style={{ marginBottom: 14 }}>
-            <NewsCover visuals={story.visuals} score={story.status === 'transfer' ? '➜' : scoreFromHero(story.heroScore)} height={220} />
+            <NewsCover visuals={story.visuals} score={story.status === 'transfer' ? '➜' : story.status === 'tournament' ? '🏆' : scoreFromHero(story.heroScore)} height={220} />
           </div>
           <div style={{ marginBottom: 12 }}>
             <h1 style={{ margin: '0 0 8px', fontSize: 38, fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.3px', textAlign: 'left' }}>{story.title}</h1>

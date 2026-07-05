@@ -24,12 +24,15 @@ const GAME_TABS = [
 const TYPE_TABS = [
   { id: 'all', label: 'Tümü' },
   { id: 'match', label: 'Maç Haberleri' },
+  { id: 'tournament', label: 'Turnuva Özetleri' },
   { id: 'preview', label: 'Önizlemeler' },
   { id: 'transfer', label: 'Transferler' },
 ]
 
 function storyIdFor(row) {
-  return row.content_type === 'transfer' ? `transfer_${row.id}` : `match_${row.match_id}`
+  if (row.content_type === 'transfer') return `transfer_${row.id}`
+  if (row.content_type === 'tournament') return `tournament_${row.tournament_id}`
+  return `match_${row.match_id}`
 }
 
 function slugFor(row) {
@@ -38,6 +41,7 @@ function slugFor(row) {
 
 function typeTag(row) {
   if (row.content_type === 'transfer') return 'Transfer'
+  if (row.content_type === 'tournament') return 'Turnuva'
   if (row.variant === 'preview') return 'Önizleme'
   if (row.variant === 'upset') return 'Sürpriz'
   return 'Maç'
@@ -83,7 +87,7 @@ function ArchiveCard({ row, isMobile }) {
     >
       <NewsCover
         visuals={visuals}
-        score={row.content_type === 'transfer' ? '➜' : scoreFromHero(row.hero_score)}
+        score={row.content_type === 'transfer' ? '➜' : row.content_type === 'tournament' ? '🏆' : scoreFromHero(row.hero_score)}
         height={isMobile ? 128 : 138}
         compact
       />
@@ -146,6 +150,7 @@ export default function NewsArchivePage() {
       if (game !== 'all' && GAME_SLUGS[game]) q = q.in('game_slug', GAME_SLUGS[game])
       if (type === 'preview') q = q.eq('variant', 'preview')
       else if (type === 'transfer') q = q.eq('content_type', 'transfer')
+      else if (type === 'tournament') q = q.eq('content_type', 'tournament')
       else if (type === 'match') q = q.eq('content_type', 'match').neq('variant', 'preview')
 
       const from = (page - 1) * PAGE_SIZE

@@ -36,8 +36,15 @@ export default function TournamentsListPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [showAllTiers, setShowAllTiers] = useState(false)
   const [tournaments, setTournaments] = useState([])
+
+  // Arama debounce (server-side sorgu için)
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 350)
+    return () => clearTimeout(t)
+  }, [search])
 
   useEffect(() => {
     let cancelled = false
@@ -46,12 +53,15 @@ export default function TournamentsListPage() {
       setLoading(true)
       setError('')
       try {
-        const { data, error: queryError } = await supabase
+        // Arama varsa TÜM arşivde (2800 turnuva) ilike ile ara; yoksa son 300.
+        let q = supabase
           .from('tournaments')
           .select('id,name,tier,region,begin_at,end_at,game:games(id,name,slug)')
-          .order('begin_at', { ascending: false, nullsFirst: false })
-          .limit(300)
+        if (debouncedSearch) q = q.ilike('name', `%${debouncedSearch}%`)
+        q = q.order('begin_at', { ascending: false, nullsFirst: false })
+             .limit(debouncedSearch ? 150 : 300)
 
+        const { data, error: queryError } = await q
         if (queryError) throw queryError
         if (!cancelled) setTournaments(data || [])
       } catch (loadError) {
@@ -66,7 +76,7 @@ export default function TournamentsListPage() {
 
     loadTournaments()
     return () => { cancelled = true }
-  }, [])
+  }, [debouncedSearch])
 
   const searchedTournaments = useMemo(() => {
     const q = String(search || '').trim().toLowerCase()

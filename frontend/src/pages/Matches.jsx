@@ -145,6 +145,7 @@ function Matches() {
   const [loading, setLoading]                     = useState(true)
   const [error, setError]                         = useState(null)
   const [searchQuery, setSearchQuery]             = useState('')
+  const [debouncedSearch, setDebouncedSearch]     = useState('')   // server-side arama (350ms)
   const [sortBy, setSortBy]                       = useState('date-asc')
   const [activeTab, setActiveTab]                 = useState('upcoming')
   const [dateFrom, setDateFrom]                   = useState('')   // Past tab: tarih aralığı
@@ -168,10 +169,16 @@ function Matches() {
   const [h2hData, setH2hData]                         = useState(null)
   const [mapBreakdown, setMapBreakdown]               = useState([])
 
-  // Sekme / oyun / tarih değişince 1. sayfaya dön
+  // Arama girdisini debounce et (server-side sorgu için)
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 350)
+    return () => clearTimeout(t)
+  }, [searchQuery])
+
+  // Sekme / oyun / tarih / arama değişince 1. sayfaya dön
   useEffect(() => {
     setCurrentPage(1)
-  }, [activeGame, sortBy, activeTab, dateFrom, dateTo])
+  }, [activeGame, sortBy, activeTab, dateFrom, dateTo, debouncedSearch])
 
   useEffect(() => {
     setFavorites(getFavorites())
@@ -198,7 +205,7 @@ function Matches() {
 
   useEffect(() => {
     fetchMatches()
-  }, [activeGame, sortBy, activeTab, currentPage, gamesLoading, gameNames, dateFrom, dateTo])  // filtre değişince tekrar çek
+  }, [activeGame, sortBy, activeTab, currentPage, gamesLoading, gameNames, dateFrom, dateTo, debouncedSearch])  // filtre değişince tekrar çek
 
   useEffect(() => {
     applyFilters()
@@ -280,7 +287,7 @@ function Matches() {
       const from = (currentPage - 1) * PAGE_SIZE
       const to   = from + PAGE_SIZE - 1
 
-      const buildQuery = () => {
+      const buildQuery = async () => {
         let query = supabase
           .from('matches')
           .select(`
@@ -318,6 +325,25 @@ function Matches() {
           query = query.eq('game_id', gameId)
         }
 
+        // ── Server-side arama: takım/turnuva adını id'ye çözüp filtrele ──
+        // (Tüm 33k arşivde ara — client-side sadece açık sayfayı süzerdi.)
+        if (debouncedSearch) {
+          const like = `%${debouncedSearch}%`
+          const [teamsRes, toursRes] = await Promise.all([
+            supabase.from('teams').select('id').ilike('name', like).limit(80),
+            supabase.from('tournaments').select('id').ilike('name', like).limit(80),
+          ])
+          const teamIds = (teamsRes.data || []).map(t => t.id)
+          const tourIds = (toursRes.data || []).map(t => t.id)
+          const ors = []
+          if (teamIds.length) {
+            ors.push(`team_a_id.in.(${teamIds.join(',')})`)
+            ors.push(`team_b_id.in.(${teamIds.join(',')})`)
+          }
+          if (tourIds.length) ors.push(`tournament_id.in.(${tourIds.join(',')})`)
+          query = ors.length ? query.or(ors.join(',')) : query.eq('id', -1) // eşleşme yok → boş
+        }
+
         query = query.order('scheduled_at', {
           ascending: sortBy === 'date-asc',
         })
@@ -329,7 +355,8 @@ function Matches() {
         return query
       }
 
-      let { data, error: fetchError, count } = await buildQuery()
+      const preparedQuery = await buildQuery()
+      let { data, error: fetchError, count } = await preparedQuery
 
       if (fetchError) {
         console.error('Supabase error:', fetchError)

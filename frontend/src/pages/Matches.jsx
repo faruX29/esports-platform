@@ -4,7 +4,7 @@
  * Pagination: 50/sayfa, count:exact
  */
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate }                      from 'react-router-dom'
+import { useNavigate, useSearchParams }     from 'react-router-dom'
 import { supabase, subscribeToMatchesUpdates } from '../supabaseClient'
 import { useGame, GAMES }                   from '../context/GameContext'
 import { getFavorites, addFavorite, removeFavorite, isFavorite } from '../utils/favoritesHelper'
@@ -139,15 +139,19 @@ function Countdown({ target }) {
 function Matches() {
   const navigate = useNavigate()
   const { activeGame } = useGame()
+  const [searchParams] = useSearchParams()   // deep-link: /matches?q=Fnatic&tab=past
 
   const [matches, setMatches]                     = useState([])
   const [filteredMatches, setFilteredMatches]     = useState([])
   const [loading, setLoading]                     = useState(true)
   const [error, setError]                         = useState(null)
-  const [searchQuery, setSearchQuery]             = useState('')
-  const [debouncedSearch, setDebouncedSearch]     = useState('')   // server-side arama (350ms)
+  const [searchQuery, setSearchQuery]             = useState(() => searchParams.get('q') || '')
+  const [debouncedSearch, setDebouncedSearch]     = useState(() => (searchParams.get('q') || '').trim())
   const [sortBy, setSortBy]                       = useState('date-asc')
-  const [activeTab, setActiveTab]                 = useState('upcoming')
+  const [activeTab, setActiveTab]                 = useState(() => {
+    const t = searchParams.get('tab')
+    return ['live', 'upcoming', 'past'].includes(t) ? t : 'upcoming'
+  })
   const [dateFrom, setDateFrom]                   = useState('')   // Past tab: tarih aralığı
   const [dateTo, setDateTo]                       = useState('')
   const [favorites, setFavorites]                 = useState([])

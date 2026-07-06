@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, useNavigate }           from 'react-router-dom'
+import { useParams, useNavigate, Link }     from 'react-router-dom'
 import { supabase }                         from '../supabaseClient'
 import { getRoleBadge }                     from '../utils/roleHelper'
 import { isTurkishTeam }                   from '../constants'
@@ -802,6 +802,14 @@ export default function TeamPage() {
                       </button>
                     )
                   })}
+                </div>
+              )}
+              {activeTab === 'past' && team?.name && (
+                <div style={{ marginBottom: 12, fontSize: 12, color: '#777' }}>
+                  Son {source.length} maç gösteriliyor.{' '}
+                  <Link to={`/matches?q=${encodeURIComponent(team.name)}&tab=past`} style={{ color: '#9db4ff', textDecoration: 'none', fontWeight: 700 }}>
+                    📆 Tüm geçmişi (yıla göre) ara →
+                  </Link>
                 </div>
               )}
               {list.length === 0 ? (

@@ -147,6 +147,8 @@ function Matches() {
   const [searchQuery, setSearchQuery]             = useState('')
   const [sortBy, setSortBy]                       = useState('date-asc')
   const [activeTab, setActiveTab]                 = useState('upcoming')
+  const [dateFrom, setDateFrom]                   = useState('')   // Past tab: tarih aralığı
+  const [dateTo, setDateTo]                       = useState('')
   const [favorites, setFavorites]                 = useState([])
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
   const [lastUpdate, setLastUpdate]               = useState(new Date())
@@ -166,10 +168,10 @@ function Matches() {
   const [h2hData, setH2hData]                         = useState(null)
   const [mapBreakdown, setMapBreakdown]               = useState([])
 
-  // Sekme / oyun değişince 1. sayfaya dön
+  // Sekme / oyun / tarih değişince 1. sayfaya dön
   useEffect(() => {
     setCurrentPage(1)
-  }, [activeGame, sortBy, activeTab])
+  }, [activeGame, sortBy, activeTab, dateFrom, dateTo])
 
   useEffect(() => {
     setFavorites(getFavorites())
@@ -196,7 +198,7 @@ function Matches() {
 
   useEffect(() => {
     fetchMatches()
-  }, [activeGame, sortBy, activeTab, currentPage, gamesLoading, gameNames])  // activeGame değişince tekrar çek
+  }, [activeGame, sortBy, activeTab, currentPage, gamesLoading, gameNames, dateFrom, dateTo])  // filtre değişince tekrar çek
 
   useEffect(() => {
     applyFilters()
@@ -301,6 +303,9 @@ function Matches() {
             .gt('scheduled_at', nowIso)
         } else {
           query = query.eq('status', 'finished')
+          // Geçmiş arşivinde döneme atlama (33k maç — tarih aralığı filtresi)
+          if (dateFrom) query = query.gte('scheduled_at', new Date(dateFrom).toISOString())
+          if (dateTo) query = query.lte('scheduled_at', new Date(dateTo + 'T23:59:59.999Z').toISOString())
         }
 
         // ── Game filtresi SUNUCU tarafında ──
@@ -633,6 +638,20 @@ function Matches() {
           <option value="date-asc">📅 En Erken Önce</option>
           <option value="date-desc">📅 En Yeni Önce</option>
         </select>
+
+        {activeTab === 'past' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }} title="Geçmiş arşivinde döneme atla (örn. 2018 maçları)">
+            <span style={{ fontSize: 12, color: '#888', fontWeight: 600 }}>📆 Dönem:</span>
+            <input type="date" value={dateFrom} max={dateTo || undefined} onChange={e => setDateFrom(e.target.value)}
+              style={{ padding: '7px 8px', borderRadius: 8, border: '1px solid #2a2a2a', background: '#111', color: '#ccc', fontSize: 12, outline: 'none', colorScheme: 'dark' }} />
+            <span style={{ color: '#555', fontSize: 12 }}>–</span>
+            <input type="date" value={dateTo} min={dateFrom || undefined} onChange={e => setDateTo(e.target.value)}
+              style={{ padding: '7px 8px', borderRadius: 8, border: '1px solid #2a2a2a', background: '#111', color: '#ccc', fontSize: 12, outline: 'none', colorScheme: 'dark' }} />
+            {(dateFrom || dateTo) && (
+              <button onClick={() => { setDateFrom(''); setDateTo('') }} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: 15 }}>✕</button>
+            )}
+          </div>
+        )}
 
         <button onClick={() => setShowFavoritesOnly(v => !v)} disabled={favorites.length === 0} style={{ padding: '8px 14px', borderRadius: 8, border: showFavoritesOnly ? '1px solid #FFD700' : '1px solid #2a2a2a', background: showFavoritesOnly ? 'rgba(255,215,0,.15)' : '#111', color: showFavoritesOnly ? '#FFD700' : favorites.length === 0 ? '#444' : '#888', fontSize: 13, cursor: favorites.length === 0 ? 'not-allowed' : 'pointer' }}>
           ⭐ {showFavoritesOnly ? 'Tümü' : 'Favoriler'}

@@ -18,7 +18,9 @@ import { GAMES }                                     from '../context/GameContex
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 
 const SEARCH_DEBUG = false   // prod'da debug UI (🐛 buton + panel) gizli
-const YEARS     = [2024, 2025, 2026]
+// Dinamik: 2015 → bu yıl (en yeni önce). Geçmiş backfill (2014+) tüm yılları açtı.
+const _CUR_YEAR = new Date().getFullYear()
+const YEARS = Array.from({ length: _CUR_YEAR - 2015 + 1 }, (_, i) => _CUR_YEAR - i)
 const TIER_META = {
   S: { color: '#FFD700', bg: 'rgba(255,215,0,.15)',  label: 'S · Premier'  },
   A: { color: '#FF4655', bg: 'rgba(255,70,85,.15)',  label: 'A · Major'    },
@@ -350,9 +352,10 @@ function TournamentCard({ t, navigate, highlighted }) {
 
 function YearTimeline({ activeYear, onChange, counts }) {
   return (
+    <div style={{ overflowX: 'auto', marginBottom: 32, paddingBottom: 6 }}>
     <div style={{
-      position: 'relative', display: 'flex', alignItems: 'center', gap: 0,
-      marginBottom: 32, padding: '0 20px',
+      position: 'relative', display: 'flex', alignItems: 'center', gap: 4,
+      padding: '0 20px', minWidth: 'max-content',
     }}>
       {/* Connector line */}
       <div style={{
@@ -366,7 +369,7 @@ function YearTimeline({ activeYear, onChange, counts }) {
         const active = activeYear === y
         const cnt    = counts?.[y] ?? 0
         return (
-          <div key={y} style={{ flex: 1, display: 'flex',
+          <div key={y} style={{ minWidth: 62, display: 'flex',
             flexDirection: 'column', alignItems: 'center', zIndex: 1 }}>
             {/* Count label */}
             <div style={{
@@ -420,6 +423,7 @@ function YearTimeline({ activeYear, onChange, counts }) {
           </div>
         )
       })}
+    </div>
     </div>
   )
 }

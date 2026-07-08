@@ -169,7 +169,7 @@ export function AuthProvider({ children }) {
 		}
 	}, [refreshProfile])
 
-	async function signUp({ email, password, username, first_name, last_name, favorite_team_id }) {
+	async function signUp({ email, password, username, first_name, last_name, favorite_team_id, captchaToken }) {
 		const cleanUsername = String(username || '').trim()
 		const finalUsername = cleanUsername || email?.split('@')?.[0] || 'esports_fan'
 		const firstName = String(first_name || '').trim() || null
@@ -185,6 +185,7 @@ export function AuthProvider({ children }) {
 					last_name: lastName,
 					favorite_team_id: favTeam,
 				},
+				...(captchaToken ? { captchaToken } : {}),
 			},
 		})
 		if (error) throw error
@@ -206,9 +207,12 @@ export function AuthProvider({ children }) {
 	}
 
 	// ── Şifre sıfırlama (Gemini launch-blocker) ────────────────────────────────
-	async function requestPasswordReset(email) {
+	async function requestPasswordReset(email, captchaToken) {
 		const redirectTo = `${window.location.origin}/reset-password`
-		const { error } = await supabase.auth.resetPasswordForEmail(String(email || '').trim(), { redirectTo })
+		const { error } = await supabase.auth.resetPasswordForEmail(String(email || '').trim(), {
+			redirectTo,
+			...(captchaToken ? { captchaToken } : {}),
+		})
 		if (error) throw error
 	}
 
@@ -226,8 +230,12 @@ export function AuthProvider({ children }) {
 		if (error) throw error
 	}
 
-	async function signIn({ email, password }) {
-		const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+	async function signIn({ email, password, captchaToken }) {
+		const { data, error } = await supabase.auth.signInWithPassword({
+			email,
+			password,
+			...(captchaToken ? { options: { captchaToken } } : {}),
+		})
 		if (error) throw error
 		if (data.user) refreshProfile(data.user, { force: true })
 		return data

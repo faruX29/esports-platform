@@ -4,3 +4,18 @@
 // yalnızca Supabase'de Discord provider açıldıktan SONRA true yapılmalı — aksi
 // halde tıklanınca "provider not enabled" hatası verir. [[auth-onboarding]] B adımı.
 export const DISCORD_ENABLED = false
+
+// TURNSTILE — Cloudflare bot koruması (SMTP kotasını bot kayıt/reset saldırısından korur).
+// Site key PUBLIC'tir, Vercel env `VITE_TURNSTILE_SITE_KEY`'den okunur. Secret key
+// Supabase paneline girilir (Auth → Attack Protection → CAPTCHA).
+//
+// Davranış:
+//   • Key YOKSA → widget hiç render olmaz, formlar bugünkü gibi çalışır (dev/geçiş güvenli).
+//   • Key VARSA → widget render olur + captchaToken signUp/signIn/reset'e eklenir.
+//
+// ⚠️ ROLLOUT SIRASI: Supabase'de CAPTCHA'yı SADECE bu key canlı env'e girilip DEPLOY
+// edildikten SONRA aç. Aksi halde token göndermeyen istekler (eski cache'li sayfalar)
+// reddedilir. Supabase CAPTCHA toggle'ı GLOBAL'dir → signup + login + reset üçünü de
+// zorlar; bu yüzden Turnstile üç formda da var. [[auth-onboarding]]
+export const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || ''
+export const TURNSTILE_ENABLED = !!TURNSTILE_SITE_KEY

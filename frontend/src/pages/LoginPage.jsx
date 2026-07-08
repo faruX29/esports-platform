@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { DISCORD_ENABLED } from '../features'
+import Turnstile from '../components/Turnstile'
+import { DISCORD_ENABLED, TURNSTILE_ENABLED } from '../features'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -12,16 +13,24 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [captchaToken, setCaptchaToken] = useState('')
+  const captchaRef = useRef(null)
 
   async function onSubmit(e) {
     e.preventDefault()
+    if (TURNSTILE_ENABLED && !captchaToken) {
+      setError('Lütfen "robot değilim" doğrulamasını tamamla.')
+      return
+    }
     setLoading(true)
     setError('')
     try {
-      await signIn({ email, password })
+      await signIn({ email, password, captchaToken })
       navigate(location.state?.from || '/', { replace: true })
     } catch (err) {
       setError(err.message || 'Giris basarisiz.')
+      captchaRef.current?.reset()
+      setCaptchaToken('')
     } finally {
       setLoading(false)
     }
@@ -43,6 +52,7 @@ export default function LoginPage() {
           <form onSubmit={onSubmit} style={{ display: 'grid', gap: 10 }}>
             <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="E-posta" style={{ background: '#0c0c0c', border: '1px solid #232323', color: '#fff', borderRadius: 11, padding: '11px 12px' }} />
             <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="Sifre" style={{ background: '#0c0c0c', border: '1px solid #232323', color: '#fff', borderRadius: 11, padding: '11px 12px' }} />
+            <Turnstile ref={captchaRef} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken('')} />
             <button disabled={loading} style={{ marginTop: 4, border: 'none', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#fff', fontWeight: 800, background: 'linear-gradient(135deg,#C8102E,#ff4b63)', opacity: loading ? 0.6 : 1 }}>{loading ? 'Baglaniliyor...' : 'Giris Yap'}</button>
             {error && <div style={{ fontSize: 12, color: '#FF4655' }}>{error}</div>}
           </form>

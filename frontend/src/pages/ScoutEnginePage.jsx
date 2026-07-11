@@ -141,10 +141,16 @@ function SampleReportCard({ report, player, real = false }) {
   )
 }
 
-/* ── Canlı arşiv-derinliği kanıt şeridi (gerçek DB sayıları) ── */
+/* ── Canlı arşiv-derinliği kanıt şeridi (gerçek DB sayıları) ──
+   depth: null = yükleniyor (skeleton) · false = hata (gizle) · obj = veri.
+   Skeleton, gerçek kutularla aynı boyutta → layout shift (CLS) olmaz. */
+const DEPTH_LABELS = ['Analiz edilen maç', 'Turnuva', 'Takım profili', 'Oyuncu', 'Veri derinliği', 'AI net isabet']
+
 function DepthStrip({ depth }) {
-  if (!depth) return null
-  const tiles = [
+  if (depth === false) return null
+  const loading = depth == null
+
+  const tiles = loading ? [] : [
     { icon: '🎮', value: plusFloor(depth.matches, 1000),     label: 'Analiz edilen maç' },
     { icon: '🏆', value: plusFloor(depth.tournaments, 100),  label: 'Turnuva' },
     { icon: '🛡️', value: plusFloor(depth.teams, 100),        label: 'Takım profili' },
@@ -152,28 +158,40 @@ function DepthStrip({ depth }) {
     { icon: '📅', value: depth.earliestYear ? `${depth.earliestYear}→` : null, label: 'Veri derinliği' },
     { icon: '🎯', value: depth.confidentPct != null ? `%${Math.round(depth.confidentPct)}` : null, label: 'AI net isabet' },
   ].filter(t => t.value)
-  if (tiles.length === 0) return null
+
+  if (!loading && tiles.length === 0) return null
+
+  const tileBox = {
+    background: 'linear-gradient(160deg, rgba(20,184,166,.06), #0d0d0f)',
+    border: '1px solid rgba(94,234,212,.16)', borderRadius: 13, padding: '13px 12px', textAlign: 'center',
+  }
 
   return (
     <section style={{ marginBottom: 26 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <span style={{ width: 7, height: 7, borderRadius: '50%', background: ACCENT, boxShadow: `0 0 8px ${ACCENT}`, flexShrink: 0 }} />
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: ACCENT, boxShadow: `0 0 8px ${ACCENT}`, flexShrink: 0, animation: 'scoutPulse 1.6s ease-in-out infinite' }} />
         <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#8bd9cd' }}>
           Canlı arşiv — şu an bu derinlikte çalışıyor
         </span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 10 }}>
-        {tiles.map(t => (
-          <div key={t.label} style={{
-            background: 'linear-gradient(160deg, rgba(20,184,166,.06), #0d0d0f)',
-            border: '1px solid rgba(94,234,212,.16)', borderRadius: 13, padding: '13px 12px', textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 15, marginBottom: 5, opacity: .85 }}>{t.icon}</div>
-            <div style={{ fontSize: 22, fontWeight: 900, color: '#dffaf5', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{t.value}</div>
-            <div style={{ fontSize: 10, color: '#7a7a7a', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: 6 }}>{t.label}</div>
-          </div>
-        ))}
+        {loading
+          ? DEPTH_LABELS.map((lbl, i) => (
+              <div key={i} style={{ ...tileBox, animation: 'scoutPulse 1.6s ease-in-out infinite' }}>
+                <div style={{ height: 15, marginBottom: 5 }} />
+                <div style={{ height: 22, width: '62%', margin: '0 auto', borderRadius: 6, background: 'rgba(94,234,212,.10)' }} />
+                <div style={{ fontSize: 10, color: '#4a4a4a', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: 6 }}>{lbl}</div>
+              </div>
+            ))
+          : tiles.map(t => (
+              <div key={t.label} style={tileBox}>
+                <div style={{ fontSize: 15, marginBottom: 5, opacity: .85 }}>{t.icon}</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: '#dffaf5', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{t.value}</div>
+                <div style={{ fontSize: 10, color: '#7a7a7a', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: 6 }}>{t.label}</div>
+              </div>
+            ))}
       </div>
+      <style>{`@keyframes scoutPulse{0%,100%{opacity:1}50%{opacity:.45}}`}</style>
     </section>
   )
 }
@@ -186,6 +204,7 @@ export default function ScoutEnginePage() {
   const [role, setRole] = useState('agency')
   const [status, setStatus] = useState('idle')  // idle | sending | done | error
   const [errorMsg, setErrorMsg] = useState('')
+  const [doneMsg, setDoneMsg] = useState('')
 
   // Örnek raporları GERÇEK player_match_stats (hybrid v3) verisinden üret
   useEffect(() => {
@@ -222,15 +241,20 @@ export default function ScoutEnginePage() {
         const earliestYear = earliest.data?.[0]?.scheduled_at
           ? new Date(earliest.data[0].scheduled_at).getFullYear()
           : null
-        setDepth({
+        const next = {
           matches: mc.count ?? null,
           tournaments: tc.count ?? null,
           teams: tec.count ?? null,
           players: pc.count ?? null,
           earliestYear,
           confidentPct: acc.data?.confident_pct ?? null,
-        })
-      } catch { /* sessiz — şerit gizlenir */ }
+        }
+        // Hiç anlamlı sayı yoksa şeridi gizle (skeleton'da takılı kalma)
+        const hasAny = next.matches || next.tournaments || next.teams || next.players || next.earliestYear
+        setDepth(hasAny ? next : false)
+      } catch {
+        if (!cancelled) setDepth(false)  // sessiz — şerit gizlenir
+      }
     })()
     return () => { cancelled = true }
   }, [])
@@ -251,7 +275,11 @@ export default function ScoutEnginePage() {
         organization: org.trim() || null,
         role,
       })
-      if (error) throw error
+      // Aynı e-posta zaten kayıtlı (unique violation) → başarı gibi karşıla
+      if (error && error.code !== '23505') throw error
+      setDoneMsg(error?.code === '23505'
+        ? 'Zaten listedesin! Beta açıldığında ilk sen haberdar olacaksın.'
+        : 'Listeye eklendin! Beta açıldığında e-posta ile haber vereceğiz.')
       setStatus('done')
       setEmail(''); setOrg('')
     } catch (err) {
@@ -349,7 +377,7 @@ export default function ScoutEnginePage() {
 
           {status === 'done' ? (
             <div style={{ border: '1px solid #23442e', background: '#102117', color: '#9fe2b7', borderRadius: 12, padding: '14px 16px', fontSize: 14 }}>
-              ✅ Listeye eklendin! Beta açıldığında e-posta ile haber vereceğiz.
+              ✅ {doneMsg || 'Listeye eklendin! Beta açıldığında e-posta ile haber vereceğiz.'}
             </div>
           ) : (
             <form onSubmit={submitWaitlist} style={{ display: 'grid', gap: 10, maxWidth: 520 }}>

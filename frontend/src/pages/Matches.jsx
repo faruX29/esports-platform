@@ -729,7 +729,7 @@ function Matches() {
           )}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 16 }}>
           {(filteredMatches || []).map(match => {
             const statusBadge = getStatusBadge(match.status)
             const isLive      = match.status === 'running'

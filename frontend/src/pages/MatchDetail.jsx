@@ -11,6 +11,7 @@ import { useUser }                                 from '../context/UserContext'
 import InitialsImage                               from '../components/InitialsImage'
 import LiquipediaCredit                            from '../components/LiquipediaCredit'
 import PredictionAccuracyBadge                     from '../components/PredictionAccuracyBadge'
+import { DeepScoutBadge, StatsCoverageNotice }     from '../components/ScoutSignals'
 import { getBOFormat }                              from '../utils/matchFormat'
 
 /* ─── Voter fingerprint ─────────────────────────────────────────────────────── */
@@ -1477,7 +1478,8 @@ export default function MatchDetail() {
             <div style={{ background: '#111', borderRadius: 16, border: '1px solid #1a1a1a', padding: 18 }}>
               <ST icon="🗺️" label="Harita Skorları" />
               {loadingDetails ? <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>{[1,2,3].map(i => <Sk key={i} h="44px" r="10px" />)}</div>
-                : maps.length === 0 ? <div style={{ textAlign: 'center', padding: 20, color: '#282828', fontSize: 12 }}>Harita verisi yok</div>
+                : maps.length === 0 ? <StatsCoverageNotice compact message="Bu maç için harita bazlı skorlar ve tur detayları yalnızca Tier S/A kapsamındaki maçlarda mevcut." />
+
                 : (
                   <div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 10, marginBottom: 6, padding: '0 14px' }}>
@@ -1526,6 +1528,9 @@ export default function MatchDetail() {
             {matchPlayerStats.length > 0 && (
               <div style={{ background: '#111', borderRadius: 16, border: '1px solid #1a1a1a', padding: 18 }}>
                 <ST icon="🎯" label="Oyuncu Performansı (K/D/A)" />
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+                  <DeepScoutBadge />
+                </div>
                 <div style={{ display: 'flex', gap: 14 }}>
                   <KdaColumn rows={matchPlayerStats.filter(r => Number(r.team_id) === Number(aId))} teamName={aName} gc="#4ade80" />
                   <KdaColumn rows={matchPlayerStats.filter(r => Number(r.team_id) === Number(bId))} teamName={bName} gc="#60a5fa" />

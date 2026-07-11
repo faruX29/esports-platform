@@ -14,6 +14,7 @@ import { getRoleBadge, resolvePlayerRole }   from '../utils/roleHelper'
 import { normalizeGameId }                   from '../utils/gameUtils'
 import InitialsImage                         from '../components/InitialsImage'
 import LiquipediaCredit                       from '../components/LiquipediaCredit'
+import { DeepScoutBadge, StatsCoverageNotice } from '../components/ScoutSignals'
 import { isTurkishTeam } from '../constants'
 import { useUser } from '../context/UserContext'
 import { summarizePlayerMatchStats, metricBars } from '../utils/playerMetrics'
@@ -217,31 +218,6 @@ function ProfessionalStatsPanel({ stats, isMobile = false }) {
           <ProgressBar pct={Math.min(100, stats.avgKills * 10)} color="#9ad8ff" label="Avg Kills / Match" value={stats.avgKills.toFixed(1)} />
           <ProgressBar pct={Math.min(100, stats.avgAssists * 12)} color="#cab0ff" label="Avg Assists / Match" value={stats.avgAssists.toFixed(1)} />
           <ProgressBar pct={Math.max(0, 100 - Math.min(100, stats.avgDeaths * 10))} color="#f1f1f1" label="Death Control" value={stats.avgDeaths.toFixed(1)} />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function ScoutComingSoonCard() {
-  return (
-    <div style={{ marginBottom: 24 }}>
-      <SectionTitle icon="🛰️" label="Scout Engine" />
-      <div style={{
-        borderRadius: 14,
-        border: '1px dashed rgba(255,184,0,.5)',
-        background: 'linear-gradient(145deg, rgba(255,184,0,.08), rgba(0,0,0,.62))',
-        padding: '14px 16px',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-          <span style={{ fontSize: 20 }}>⏳</span>
-          <div style={{ fontSize: 13, fontWeight: 800, color: '#ffd78f', letterSpacing: '.3px' }}>Detailed Scout Metrics</div>
-        </div>
-        <div style={{ fontSize: 12, color: '#e5d1aa' }}>
-          Hesaplaniyor... Detayli veriler Scout Engine tarafindan isleniyor.
-        </div>
-        <div style={{ marginTop: 6, fontSize: 11, color: '#9f9f9f' }}>
-          KDA, Win Rate, Headshot ve match-detail sinyalleri birlestirilerek bu panel otomatik doldurulacak.
         </div>
       </div>
     </div>
@@ -1180,9 +1156,17 @@ export default function PlayerPage() {
       <div style={{ padding: isMobile ? '0 12px' : '0 20px' }}>
 
         {professionalStats ? (
-          <ProfessionalStatsPanel stats={professionalStats} isMobile={isMobile} />
+          <>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+              <DeepScoutBadge />
+            </div>
+            <ProfessionalStatsPanel stats={professionalStats} isMobile={isMobile} />
+          </>
         ) : (
-          <ScoutComingSoonCard />
+          <StatsCoverageNotice
+            message="Bu oyuncu için gelişmiş performans metrikleri (harita bazlı KDA, ACS, Impact) yalnızca Tier S/A kapsamındaki maçlardan otomatik üretilir."
+            style={{ marginBottom: 24 }}
+          />
         )}
 
         {/* Scout Analytics */}

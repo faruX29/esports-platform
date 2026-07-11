@@ -18,6 +18,7 @@ import { DeepScoutBadge, StatsCoverageNotice } from '../components/ScoutSignals'
 import { isTurkishTeam } from '../constants'
 import { useUser } from '../context/UserContext'
 import { summarizePlayerMatchStats, metricBars } from '../utils/playerMetrics'
+import { deriveWinnerTeamId } from '../utils/matchResult'
 
 // ─── Yardımcılar ────────────────────────────────────────────────────────────
 
@@ -271,6 +272,21 @@ function PlayerHeroAvatar({ src, name, size = 120, isTR }) {
 }
 
 // ─── Maç satırı ──────────────────────────────────────────────────────────────
+/* Takımın W/L/D kaydı — DOĞRU kaynak matches tablosu (match_stats.stats JSONB DEĞİL,
+   çünkü orada winner çoğu maçta yok → eskiden hepsi mağlubiyet sayılıyordu). */
+function computeRecordFromMatches(matchRows, teamId) {
+  let wonMatches = 0, lostMatches = 0, draws = 0
+  for (const m of matchRows) {
+    const w = deriveWinnerTeamId(m)
+    if (w == null) draws++
+    else if (w === Number(teamId)) wonMatches++
+    else lostMatches++
+  }
+  const decided = wonMatches + lostMatches
+  const overallWinRate = decided > 0 ? (wonMatches / decided) * 100 : 0
+  return { totalMatches: matchRows.length, wonMatches, lostMatches, draws, overallWinRate }
+}
+
 function MatchRow({ match, teamId, isMobile = false }) {
   const navigate = useNavigate()
   const isA      = match.team_a_id === teamId
@@ -278,8 +294,9 @@ function MatchRow({ match, teamId, isMobile = false }) {
   const opp      = isA ? match.team_b : match.team_a
   const myScore  = isA ? match.team_a_score  : match.team_b_score
   const oppScore = isA ? match.team_b_score  : match.team_a_score
-  const isWin    = match.winner_id && match.winner_id === teamId
-  const isLoss   = match.winner_id && match.winner_id !== teamId
+  const winnerTeam = deriveWinnerTeamId(match)
+  const isWin    = winnerTeam != null && winnerTeam === Number(teamId)
+  const isLoss   = winnerTeam != null && winnerTeam !== Number(teamId)
 
   return (
     <div
@@ -840,16 +857,32 @@ export default function PlayerPage() {
       if (pErr) throw pErr
       setPlayer(p)
 
-      // Paralel: takım + istatistikler + maçlar
-      const [teamRes, statsRes, playerStatsRes] = await Promise.all([
+      // Paralel: takım + harita-detay istatistikleri + takım maçları (W/L kaynağı) + oyuncu KDA
+      const [teamRes, statsRes, teamMatchesRes, playerStatsRes] = await Promise.all([
         p.team_pandascore_id
           ? supabase.from('teams').select('id, name, logo_url, acronym, location, game:games(id,name,slug)').eq('id', p.team_pandascore_id).single()
           : { data: null, error: null },
 
+        // match_stats: SADECE harita-bazlı detaylar (mapWinRates, süre) için — W/L kaynağı DEĞİL
         supabase.from('match_stats')
           .select('match_id, team_id, stats')
           .eq('team_id', p.team_pandascore_id)
-          .limit(60),
+          .limit(200),
+        // matches: W/L/D'nin DOĞRU kaynağı (winner_id + skor)
+        p.team_pandascore_id
+          ? supabase.from('matches')
+              .select(`
+                id, status, scheduled_at, winner_id,
+                team_a_id, team_b_id, team_a_score, team_b_score,
+                team_a:teams!matches_team_a_id_fkey(id, name, logo_url),
+                team_b:teams!matches_team_b_id_fkey(id, name, logo_url),
+                game:games(id, name)
+              `)
+              .or(`team_a_id.eq.${p.team_pandascore_id},team_b_id.eq.${p.team_pandascore_id}`)
+              .eq('status', 'finished')
+              .order('scheduled_at', { ascending: false })
+              .limit(500)
+          : { data: [], error: null },
         supabase
           .from('player_match_stats')
           .select('*')
@@ -859,27 +892,16 @@ export default function PlayerPage() {
 
       if (teamRes.data) setTeam(teamRes.data)
 
-      const rows = statsRes.data || []
-      if (rows.length > 0) {
-        setAnalytics(computeScoutAnalytics(rows, p.team_pandascore_id))
-
-        // Son 15 maçı çek
-        const matchIds = [...new Set(rows.map(r => r.match_id).filter(Boolean))].slice(0, 15)
-        if (matchIds.length > 0) {
-          const { data: mData } = await supabase
-            .from('matches')
-            .select(`
-              id, status, scheduled_at, winner_id,
-              team_a_id, team_b_id, team_a_score, team_b_score,
-              team_a:teams!matches_team_a_id_fkey(id, name, logo_url),
-              team_b:teams!matches_team_b_id_fkey(id, name, logo_url),
-              game:games(id, name)
-            `)
-            .in('id', matchIds)
-            .eq('status', 'finished')
-            .order('scheduled_at', { ascending: false })
-          setMatches(mData || [])
-        }
+      const statsRows   = statsRes.data || []
+      const teamMatches = teamMatchesRes.data || []
+      if (teamMatches.length > 0 || statsRows.length > 0) {
+        // Harita-detayları match_stats'ten; W/L/D ise matches'ten (doğru kaynak)
+        const mapDetails = computeScoutAnalytics(statsRows, p.team_pandascore_id)
+        const record     = computeRecordFromMatches(teamMatches, p.team_pandascore_id)
+        const winRate    = record.overallWinRate
+        const impactScore = winRate * 0.5 + Math.min(record.totalMatches, 100) * 0.3 + (mapDetails.mapWinRates[3]?.rate ?? winRate) * 0.2
+        setAnalytics({ ...mapDetails, ...record, impactScore })
+        setMatches(teamMatches.slice(0, 15))
       }
 
       if (!playerStatsRes.error) {
@@ -1127,6 +1149,9 @@ export default function PlayerPage() {
             <StatBox icon="⚔️" value={analytics.totalMatches}   label="Maç"        color="#fff"     />
             <StatBox icon="✅" value={analytics.wonMatches}     label="Galibiyet"  color="#4CAF50"  />
             <StatBox icon="❌" value={analytics.lostMatches}    label="Mağ."       color="#FF4655"  />
+            {analytics.draws > 0 && (
+              <StatBox icon="🤝" value={analytics.draws}       label="Beraberlik (Bo2)" color="#FFB800" />
+            )}
             {(() => {
               // Gerçek per-player WR (is_win) varsa onu kullan; yoksa team-level analytics
               const wr = individualStats?.winRate != null ? individualStats.winRate : analytics.overallWinRate

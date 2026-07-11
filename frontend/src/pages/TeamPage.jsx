@@ -6,6 +6,7 @@ import { isTurkishTeam }                   from '../constants'
 import { useUser }                          from '../context/UserContext'
 import InitialsImage                        from '../components/InitialsImage'
 import { getBOFormat }                       from '../utils/matchFormat'
+import { deriveWinnerTeamId, matchOutcome } from '../utils/matchResult'
 
 // ── Yardımcılar ───────────────────────────────────────────────────────────────
 function calcTeamRating(wins, total) {
@@ -323,8 +324,9 @@ function MatchCard({ match, teamId, navigate }) {
   const oppScore = isTeamA ? match.team_b_score  : match.team_a_score
   const isFin    = match.status === 'finished'
   const isLive   = match.status === 'running'
-  const isWin    = isFin && match.winner_id === tid
-  const isLoss   = isFin && match.winner_id && match.winner_id !== tid
+  const winnerTeam = isFin ? deriveWinnerTeamId(match) : null
+  const isWin    = winnerTeam != null && winnerTeam === Number(tid)
+  const isLoss   = winnerTeam != null && winnerTeam !== Number(tid)
   const hasPred  = match.prediction_team_a != null && match.prediction_team_b != null
   const myPred   = hasPred ? (isTeamA ? match.prediction_team_a : match.prediction_team_b) : null
   const oppPred  = hasPred ? (isTeamA ? match.prediction_team_b : match.prediction_team_a) : null
@@ -528,8 +530,10 @@ export default function TeamPage() {
   // ── Türevler ──────────────────────────────────────────────────
   const upcomingMatches = matches.filter(m => ['not_started', 'running'].includes(m.status))
   const pastMatches     = matches.filter(m => m.status === 'finished')
-  const wins            = pastMatches.filter(m => m.winner_id === parseInt(teamId)).length
-  const losses          = pastMatches.filter(m => m.winner_id && m.winner_id !== parseInt(teamId)).length
+  const tidNum          = parseInt(teamId)
+  const wins            = pastMatches.filter(m => deriveWinnerTeamId(m) === tidNum).length
+  const losses          = pastMatches.filter(m => { const w = deriveWinnerTeamId(m); return w != null && w !== tidNum }).length
+  const draws           = pastMatches.length - wins - losses
   const rating          = calcTeamRating(wins, wins + losses)
   const isTR            = isTurkishTeam(team?.name ?? '')
   const teamTransfers   = getTeamTransfers(team)
@@ -537,10 +541,7 @@ export default function TeamPage() {
   // Last 10 matches form
   const form = [...pastMatches]
     .slice(0, 10)
-    .map(m => {
-      if (!m.winner_id) return 'D'
-      return m.winner_id === parseInt(teamId) ? 'W' : 'L'
-    })
+    .map(m => matchOutcome(m, tidNum))
 
   // Streak
   const streak = (() => {
@@ -706,6 +707,7 @@ export default function TeamPage() {
           <StatBox icon="⚔️"  value={wins + losses}      label="Total Maç"   color="#fff"     />
           <StatBox icon="✅"  value={wins}               label="Galibiyet"   color="#4CAF50"  />
           <StatBox icon="❌"  value={losses}             label="Mağlubiyet" color="#FF4655"  />
+          {draws > 0 && <StatBox icon="🤝" value={draws} label="Beraberlik (Bo2)" color="#FFB800" />}
           <StatBox icon="⏳" value={upcomingMatches.length} label="Yaklaşan"  color="#FFB800" />
           <StatBox icon="👥" value={players.length}      label="Oyuncu"     color="#818cf8"  />
         </div>

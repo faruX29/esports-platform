@@ -13,6 +13,7 @@ import LiquipediaCredit                            from '../components/Liquipedi
 import PredictionAccuracyBadge                     from '../components/PredictionAccuracyBadge'
 import { DeepScoutBadge, StatsCoverageNotice }     from '../components/ScoutSignals'
 import { getBOFormat }                              from '../utils/matchFormat'
+import { deriveWinnerTeamId }                       from '../utils/matchResult'
 
 /* ─── Voter fingerprint ─────────────────────────────────────────────────────── */
 const VOTER_KEY = 'esports_voter_id'
@@ -1355,8 +1356,10 @@ export default function MatchDetail() {
   const hasTR = isTurkishTeam(aName) || isTurkishTeam(bName)
   const pctA  = aiWin.teamA
   const pctB  = aiWin.teamB
-  const aWon  = isFin && (match.winner_id === aId || match.winner_id === parseInt(aId))
-  const bWon  = isFin && !aWon && !!match.winner_id
+  // Seri kazananı SKOR ÖNCELİKLİ (winner_id ~%1.2 maçta skorla çelişiyor — matchResult.js)
+  const seriesWinner = isFin ? deriveWinnerTeamId(match) : null
+  const aWon  = seriesWinner != null && seriesWinner === Number(aId)
+  const bWon  = seriesWinner != null && seriesWinner === Number(bId)
   const favA  = isTeamFollowed(aId)
   const favB  = isTeamFollowed(bId)
   const boFormat = getBOFormat(match.team_a_score, match.team_b_score, match.number_of_games)

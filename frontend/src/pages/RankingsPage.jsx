@@ -54,14 +54,23 @@ function buildPowerRankings(matches, activeGame) {
 
       const entry = map.get(t.id)
       entry.total += 1
-      if (m?.winner_id && m.winner_id === t.id) entry.wins += 1
-      if (m?.winner_id && m.winner_id !== t.id) entry.losses += 1
+
+      // Sonuç SKOR ÖNCELİKLİ (winner_id ~%1.2 maçta skorla çelişiyor — bkz matchResult.js).
+      // Skorlar eşitse (Bo2 1:1 / 0:0) winner_id'ye düş; o da yoksa beraberlik → W/L sayılmaz.
+      let outcome = null
+      if (t.score != null && t.oppScore != null && t.score !== t.oppScore) {
+        outcome = t.score > t.oppScore ? 'W' : 'L'
+      } else if (m?.winner_id != null) {
+        outcome = Number(m.winner_id) === Number(t.id) ? 'W' : 'L'
+      }
+      if (outcome === 'W') entry.wins += 1
+      else if (outcome === 'L') entry.losses += 1
 
       if (t.score != null) entry.roundsFor += t.score
       if (t.oppScore != null) entry.roundsAgainst += t.oppScore
 
-      if (entry.recent.length < 10 && m?.winner_id) {
-        entry.recent.push(m.winner_id === t.id ? 1 : 0)
+      if (entry.recent.length < 10 && outcome) {
+        entry.recent.push(outcome === 'W' ? 1 : 0)
       }
     }
   }
@@ -69,7 +78,8 @@ function buildPowerRankings(matches, activeGame) {
   return [...map.values()]
     .filter(x => x.total >= 5)
     .map(x => {
-      const winRate = x.total > 0 ? (x.wins / x.total) * 100 : 0
+      const decided = x.wins + x.losses
+      const winRate = decided > 0 ? (x.wins / decided) * 100 : 0
       const netPerMatch = x.total > 0 ? (x.roundsFor - x.roundsAgainst) / x.total : 0
       const netNormalized = clamp(((netPerMatch + 6) / 12) * 100, 0, 100)
       const recentRate = x.recent.length > 0 ? (x.recent.reduce((a, b) => a + b, 0) / x.recent.length) * 100 : winRate

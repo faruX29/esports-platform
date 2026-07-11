@@ -7,6 +7,7 @@ import { useUser } from '../context/UserContext'
 import { summarizePlayerMatchStats, metricBars, pickRowTimestamp } from '../utils/playerMetrics'
 import InitialsImage from '../components/InitialsImage'
 import { normalizeGameId } from '../utils/gameUtils'
+import { DeepScoutBadge } from '../components/ScoutSignals'
 
 function toNum(v) {
   const n = Number(v)
@@ -575,7 +576,10 @@ export default function PlayersPage() {
       }} />
 
       <div style={{ position: 'relative', zIndex: 1 }}>
-        <h1 style={{ margin: 0, fontSize: 30, letterSpacing: '.5px' }}>Player Scout Engine</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <h1 style={{ margin: 0, fontSize: 30, letterSpacing: '.5px' }}>Player Scout Engine</h1>
+          {metricsSource === 'player_match_stats' && <DeepScoutBadge />}
+        </div>
         <p style={{ margin: '8px 0 16px', color: '#a8a8a8', fontSize: 13 }}>
           Seçili oyuna göre oyuncuları K/D, ACS ve Impact'e göre sıralayın.
           {metricsSource === 'player_match_stats'

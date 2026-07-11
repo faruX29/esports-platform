@@ -14,6 +14,7 @@ import { supabase }                                   from '../supabaseClient'
 import { isTurkishTeam }                              from '../constants'
 import { cleanDisplayName }                           from '../utils/nameCleaner'
 import { getBOFormat }                                from '../utils/matchFormat'
+import { DeepScoutBadge }                             from '../components/ScoutSignals'
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 
@@ -2138,7 +2139,10 @@ export default function TournamentPage() {
         {/* ── TOP PERFORMERS (hybrid v3 oyuncu KDA) ────────────────── */}
         {topPerformers.length > 0 && (
           <div style={{ marginBottom: 36 }}>
-            <ST icon="🎯" label="Öne Çıkan Oyuncular" />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+              <ST icon="🎯" label="Öne Çıkan Oyuncular" />
+              <DeepScoutBadge />
+            </div>
             <TopPerformers rows={topPerformers} navigate={navigate} />
           </div>
         )}

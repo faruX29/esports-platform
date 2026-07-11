@@ -13,7 +13,7 @@ import LiquipediaCredit                            from '../components/Liquipedi
 import PredictionAccuracyBadge                     from '../components/PredictionAccuracyBadge'
 import { DeepScoutBadge, StatsCoverageNotice }     from '../components/ScoutSignals'
 import { getBOFormat }                              from '../utils/matchFormat'
-import { deriveWinnerTeamId }                       from '../utils/matchResult'
+import { deriveWinnerTeamId, correctedScores }      from '../utils/matchResult'
 
 /* ─── Voter fingerprint ─────────────────────────────────────────────────────── */
 const VOTER_KEY = 'esports_voter_id'
@@ -1356,10 +1356,12 @@ export default function MatchDetail() {
   const hasTR = isTurkishTeam(aName) || isTurkishTeam(bName)
   const pctA  = aiWin.teamA
   const pctB  = aiWin.teamB
-  // Seri kazananı SKOR ÖNCELİKLİ (winner_id ~%1.2 maçta skorla çelişiyor — matchResult.js)
+  // Seri kazananı winner_id ÖNCELİKLİ (güvenilir alan); skorlar ~%1.2 maçta ters-atanmış.
   const seriesWinner = isFin ? deriveWinnerTeamId(match) : null
   const aWon  = seriesWinner != null && seriesWinner === Number(aId)
   const bWon  = seriesWinner != null && seriesWinner === Number(bId)
+  // Gösterim için skorları winner_id ile tutarlı hale getir
+  const dispScores = correctedScores(match)
   const favA  = isTeamFollowed(aId)
   const favB  = isTeamFollowed(bId)
   const boFormat = getBOFormat(match.team_a_score, match.team_b_score, match.number_of_games)
@@ -1421,7 +1423,7 @@ export default function MatchDetail() {
             {/* Skor */}
             <div style={{ textAlign: 'center', minWidth: 100, flexShrink: 0 }}>
               {(isLive || isFin)
-                ? <div style={{ fontSize: 36, fontWeight: 900, color: isLive ? '#FF4655' : '#aaa', letterSpacing: 4, fontVariantNumeric: 'tabular-nums', textShadow: isLive ? '0 0 20px rgba(255,70,85,.4)' : 'none' }}>{match.team_a_score ?? 0}:{match.team_b_score ?? 0}</div>
+                ? <div style={{ fontSize: 36, fontWeight: 900, color: isLive ? '#FF4655' : '#aaa', letterSpacing: 4, fontVariantNumeric: 'tabular-nums', textShadow: isLive ? '0 0 20px rgba(255,70,85,.4)' : 'none' }}>{dispScores.team_a_score ?? 0}:{dispScores.team_b_score ?? 0}</div>
                 : <div style={{ fontSize: 26, fontWeight: 900, color: '#FF4655', letterSpacing: 3 }}>VS</div>
               }
               <div style={{ fontSize: 12, fontWeight: 700, color: isLive ? '#FF4655' : '#4CAF50', marginTop: 4 }}>{isLive ? '● Canlı' : fmtTime(match.scheduled_at)}</div>
@@ -1494,9 +1496,9 @@ export default function MatchDetail() {
                       {maps.map((map, i) => <MapRow key={i} map={map} index={i} teamAId={aId} />)}
                     </div>
                     <div style={{ marginTop: 8, padding: '8px 14px', borderRadius: 9, background: '#0a0a0a', border: '1px solid #1a1a1a', display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 10 }}>
-                      <div style={{ textAlign: 'right', fontSize: 20, fontWeight: 900, color: aWon ? '#4CAF50' : '#2a2a2a', fontVariantNumeric: 'tabular-nums' }}>{match.team_a_score ?? '—'}</div>
+                      <div style={{ textAlign: 'right', fontSize: 20, fontWeight: 900, color: aWon ? '#4CAF50' : '#2a2a2a', fontVariantNumeric: 'tabular-nums' }}>{dispScores.team_a_score ?? '—'}</div>
                       <div style={{ textAlign: 'center', fontSize: 10, color: '#282828', minWidth: 50 }}>TOPLAM</div>
-                      <div style={{ fontSize: 20, fontWeight: 900, color: bWon ? '#4CAF50' : '#2a2a2a', fontVariantNumeric: 'tabular-nums' }}>{match.team_b_score ?? '—'}</div>
+                      <div style={{ fontSize: 20, fontWeight: 900, color: bWon ? '#4CAF50' : '#2a2a2a', fontVariantNumeric: 'tabular-nums' }}>{dispScores.team_b_score ?? '—'}</div>
                     </div>
                     {mapStats.length > 0 && (
                       <div style={{ marginTop: 12, background: '#0a0a0a', borderRadius: 10, border: '1px solid #191919', padding: 10 }}>

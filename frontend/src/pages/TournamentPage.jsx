@@ -15,6 +15,7 @@ import { isTurkishTeam }                              from '../constants'
 import { cleanDisplayName }                           from '../utils/nameCleaner'
 import { getBOFormat }                                from '../utils/matchFormat'
 import { DeepScoutBadge }                             from '../components/ScoutSignals'
+import { deriveWinnerTeamId }                         from '../utils/matchResult'
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 
@@ -749,9 +750,16 @@ function StandingsTable({ matches, navigate }) {
       if (m.status !== 'finished') continue
       ensure(m.team_a); ensure(m.team_b)
       if (!m.team_a?.id || !m.team_b?.id) continue
-      const aWon = m.winner_id === m.team_a.id || m.winner_id === m.team_a_id
-      if (aWon) { map[m.team_a.id].w++; map[m.team_b.id].l++ }
-      else      { map[m.team_b.id].w++; map[m.team_a.id].l++ }
+      // Skor-öncelikli kazanan (winner_id ~%1.2 maçta skorla çelişir). Beraberlik (Bo2 1:1)
+      // → W/L SAYMA (eski kod her 'aWon değil'i team_b galibiyeti sayıyordu = beraberlik bug'ı).
+      const winner = deriveWinnerTeamId(m)
+      if (winner != null) {
+        if (winner === Number(m.team_a.id) || winner === Number(m.team_a_id)) {
+          map[m.team_a.id].w++; map[m.team_b.id].l++
+        } else {
+          map[m.team_b.id].w++; map[m.team_a.id].l++
+        }
+      }
       // map scores
       if (m.team_a_score != null) map[m.team_a.id].mw += m.team_a_score
       if (m.team_b_score != null) map[m.team_a.id].ml += m.team_b_score

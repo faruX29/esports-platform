@@ -6,7 +6,7 @@ import { isTurkishTeam }                   from '../constants'
 import { useUser }                          from '../context/UserContext'
 import InitialsImage                        from '../components/InitialsImage'
 import { getBOFormat }                       from '../utils/matchFormat'
-import { deriveWinnerTeamId, matchOutcome } from '../utils/matchResult'
+import { deriveWinnerTeamId, matchOutcome, correctedScores } from '../utils/matchResult'
 
 // ── Yardımcılar ───────────────────────────────────────────────────────────────
 function calcTeamRating(wins, total) {
@@ -320,8 +320,9 @@ function MatchCard({ match, teamId, navigate }) {
   const isTeamA  = match.team_a?.id === tid
   const myTeam   = isTeamA ? match.team_a : match.team_b
   const opp      = isTeamA ? match.team_b : match.team_a
-  const myScore  = isTeamA ? match.team_a_score  : match.team_b_score
-  const oppScore = isTeamA ? match.team_b_score  : match.team_a_score
+  const cs       = correctedScores(match)
+  const myScore  = isTeamA ? cs.team_a_score  : cs.team_b_score
+  const oppScore = isTeamA ? cs.team_b_score  : cs.team_a_score
   const isFin    = match.status === 'finished'
   const isLive   = match.status === 'running'
   const winnerTeam = isFin ? deriveWinnerTeamId(match) : null

@@ -11,6 +11,7 @@ import { getFavorites, addFavorite, removeFavorite, isFavorite } from '../utils/
 import { isTurkishTeam }                   from '../constants'
 import { normalizeGameId }                  from '../utils/gameUtils'
 import { getBOFormat }                       from '../utils/matchFormat'
+import { correctedScores }                   from '../utils/matchResult'
 import InitialsImage                        from '../components/InitialsImage'
 
 const PAGE_SIZE = 50   // 20 → 50
@@ -732,6 +733,7 @@ function Matches() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 16 }}>
           {(filteredMatches || []).map(match => {
             const statusBadge = getStatusBadge(match.status)
+            const cs          = correctedScores(match)  // ters-atanmış skor quirk'ini düzelt
             const isLive      = match.status === 'running'
             const teamAFav    = isFavorite(match.team_a_id)
             const teamBFav    = isFavorite(match.team_b_id)
@@ -842,7 +844,7 @@ function Matches() {
                       </div>
                       {activeTab === 'past' && match.team_a_score != null && (
                         <div style={{ fontSize: 22, fontWeight: 800, color: match.winner_id === match.team_a_id ? '#4CAF50' : '#aaa', marginTop: 4 }}>
-                          {match.team_a_score}
+                          {cs.team_a_score}
                         </div>
                       )}
                     </div>
@@ -877,7 +879,7 @@ function Matches() {
                       </div>
                       {activeTab === 'past' && match.team_b_score != null && (
                         <div style={{ fontSize: 22, fontWeight: 800, color: match.winner_id === match.team_b_id ? '#4CAF50' : '#aaa', marginTop: 4 }}>
-                          {match.team_b_score}
+                          {cs.team_b_score}
                         </div>
                       )}
                     </div>

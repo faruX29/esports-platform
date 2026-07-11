@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useGame, gameMatchesFilter, GAMES } from '../context/GameContext'
 import { useUser } from '../context/UserContext'
+import { correctedScores } from '../utils/matchResult'
 
 function toNum(v) {
   const n = Number(v)
@@ -30,9 +31,14 @@ function buildPowerRankings(matches, activeGame) {
     const gameName = m?.game?.name || ''
     if (!gameMatchesFilter(gameName, activeGame)) continue
 
+    // Skorları winner_id ile tutarlı hale getir (ters-atanmış skor quirk'i)
+    const cs = correctedScores({
+      team_a_score: m?.team_a_score, team_b_score: m?.team_b_score,
+      team_a_id: m?.team_a?.id, team_b_id: m?.team_b?.id, winner_id: m?.winner_id,
+    })
     const teams = [
-      { id: m?.team_a?.id, data: m?.team_a, score: toNum(m?.team_a_score), oppScore: toNum(m?.team_b_score) },
-      { id: m?.team_b?.id, data: m?.team_b, score: toNum(m?.team_b_score), oppScore: toNum(m?.team_a_score) },
+      { id: m?.team_a?.id, data: m?.team_a, score: toNum(cs.team_a_score), oppScore: toNum(cs.team_b_score) },
+      { id: m?.team_b?.id, data: m?.team_b, score: toNum(cs.team_b_score), oppScore: toNum(cs.team_a_score) },
     ]
 
     for (const t of teams) {
@@ -55,13 +61,13 @@ function buildPowerRankings(matches, activeGame) {
       const entry = map.get(t.id)
       entry.total += 1
 
-      // Sonuç SKOR ÖNCELİKLİ (winner_id ~%1.2 maçta skorla çelişiyor — bkz matchResult.js).
-      // Skorlar eşitse (Bo2 1:1 / 0:0) winner_id'ye düş; o da yoksa beraberlik → W/L sayılmaz.
+      // Sonuç winner_id ÖNCELİKLİ (güvenilir alan). winner_id yoksa düzeltilmiş skordan.
+      // Skorlar eşitse (Bo2 1:1 / 0:0) beraberlik → W/L sayılmaz.
       let outcome = null
-      if (t.score != null && t.oppScore != null && t.score !== t.oppScore) {
-        outcome = t.score > t.oppScore ? 'W' : 'L'
-      } else if (m?.winner_id != null) {
+      if (m?.winner_id != null) {
         outcome = Number(m.winner_id) === Number(t.id) ? 'W' : 'L'
+      } else if (t.score != null && t.oppScore != null && t.score !== t.oppScore) {
+        outcome = t.score > t.oppScore ? 'W' : 'L'
       }
       if (outcome === 'W') entry.wins += 1
       else if (outcome === 'L') entry.losses += 1

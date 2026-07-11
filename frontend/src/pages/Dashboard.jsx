@@ -16,6 +16,7 @@ import { memo }                             from 'react'
 import InitialsImage                        from '../components/InitialsImage'
 import { normalizeGameId }                  from '../utils/gameUtils'
 import { getBOFormat }                       from '../utils/matchFormat'
+import { correctedScores }                   from '../utils/matchResult'
 import PredictionAccuracyBadge              from '../components/PredictionAccuracyBadge'
 
 const MVP_HIDE_DREAM_TEAM = true
@@ -825,6 +826,7 @@ const FavoritesBar = memo(function FavoritesBar({ onMatchClick, showAllTournamen
             const isFin  = m.status === 'finished'
             const aWon   = isFin && m.winner_id === (m.team_a_id || m.team_a?.id)
             const bWon   = isFin && m.winner_id === (m.team_b_id || m.team_b?.id)
+            const cs     = correctedScores(m)  // ters-atanmış skor quirk'ini düzelt
             const favA   = isTeamFollowed(m.team_a_id || m.team_a?.id)
             const favB   = isTeamFollowed(m.team_b_id || m.team_b?.id)
             return (
@@ -876,8 +878,8 @@ const FavoritesBar = memo(function FavoritesBar({ onMatchClick, showAllTournamen
 
                 {/* takımlar */}
                 {[
-                  { team: m.team_a, won: aWon, lost: bWon, fav: favA, score: m.team_a_score },
-                  { team: m.team_b, won: bWon, lost: aWon, fav: favB, score: m.team_b_score },
+                  { team: m.team_a, won: aWon, lost: bWon, fav: favA, score: cs.team_a_score },
+                  { team: m.team_b, won: bWon, lost: aWon, fav: favB, score: cs.team_b_score },
                 ].map((row, ri) => (
                   <div key={ri} style={{
                     display: 'flex', alignItems: 'center', gap: 6,

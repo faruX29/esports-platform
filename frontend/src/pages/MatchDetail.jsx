@@ -1473,6 +1473,27 @@ export default function MatchDetail() {
         {/* Twitch */}
         {twitchCh && isLive && <div style={{ marginTop: 20 }}><TwitchEmbed channel={twitchCh} /></div>}
 
+        {/* ── Turnuva bağlamı — bracket & tüm maçlara köprü ── */}
+        {match.tournament && (
+          <Link
+            to={`/tournament/${match.tournament.id}`}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12, marginTop: 18, padding: '12px 16px',
+              borderRadius: 14, background: 'linear-gradient(135deg, rgba(255,184,0,.08), #0e0e0e)',
+              border: '1px solid rgba(255,184,0,.25)', textDecoration: 'none',
+            }}
+          >
+            <span style={{ fontSize: 22, flexShrink: 0 }}>🏆</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#f0e0b0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {match.tournament.name}
+              </div>
+              <div style={{ fontSize: 11, color: '#8a8a8a' }}>Bracket, puan durumu &amp; turnuvanın tüm maçları</div>
+            </div>
+            <span style={{ fontSize: 13, color: '#FFB800', fontWeight: 700, flexShrink: 0 }}>Git →</span>
+          </Link>
+        )}
+
         {/* ── İçerik Grid ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 18, marginTop: 20 }}>
 

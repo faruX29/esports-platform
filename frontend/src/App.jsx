@@ -60,7 +60,7 @@ function NavSearch() {
   const location                  = useLocation()
   const [q,       setQ]           = useState('')
   const [focused, setFocused]     = useState(false)
-  const [results, setResults]     = useState({ teams: [], players: [] })
+  const [results, setResults]     = useState({ teams: [], players: [], tournaments: [] })
   const [loading, setLoading]     = useState(false)
   const inputRef                  = useRef(null)
   const dropdownRef               = useRef(null)
@@ -69,7 +69,7 @@ function NavSearch() {
   // route değişince kapat
   useEffect(() => {
     setQ('')
-    setResults({ teams: [], players: [] })
+    setResults({ teams: [], players: [], tournaments: [] })
     setFocused(false)
   }, [location.pathname])
 
@@ -103,12 +103,12 @@ function NavSearch() {
 
   async function fetchQuickResults(query) {
     if (query.trim().length < 2) {
-      setResults({ teams: [], players: [] })
+      setResults({ teams: [], players: [], tournaments: [] })
       return
     }
     setLoading(true)
     try {
-      const [teamRes, playerRes] = await Promise.all([
+      const [teamRes, playerRes, tourRes] = await Promise.all([
         supabase
           .from('teams')
           .select('id, name, logo_url')
@@ -119,10 +119,17 @@ function NavSearch() {
           .select('id, nickname, role, image_url')
           .ilike('nickname', `%${query}%`)
           .limit(4),
+        supabase
+          .from('tournaments')
+          .select('id, name, tier, game:games(name)')
+          .ilike('name', `%${query}%`)
+          .order('begin_at', { ascending: false, nullsFirst: false })
+          .limit(4),
       ])
       setResults({
-        teams:   teamRes.data   || [],
-        players: playerRes.data || [],
+        teams:       teamRes.data   || [],
+        players:     playerRes.data || [],
+        tournaments: tourRes.data   || [],
       })
     } catch (e) {
       console.error('NavSearch fetch:', e)
@@ -151,7 +158,7 @@ function NavSearch() {
     navigate(`/search?q=${encodeURIComponent(q.trim())}`)
   }
 
-  const hasResults = results.teams.length > 0 || results.players.length > 0
+  const hasResults = results.teams.length > 0 || results.players.length > 0 || results.tournaments.length > 0
   const showDrop   = focused && q.trim().length >= 2
 
   return (
@@ -193,7 +200,7 @@ function NavSearch() {
           {focused && q && (
             <button
               type="button"
-              onClick={() => { setQ(''); setResults({ teams: [], players: [] }); inputRef.current?.focus() }}
+              onClick={() => { setQ(''); setResults({ teams: [], players: [], tournaments: [] }); inputRef.current?.focus() }}
               style={{ background: 'none', border: 'none', color: '#555',
                 cursor: 'pointer', fontSize: 14, padding: 0, flexShrink: 0 }}
             >✕</button>
@@ -302,6 +309,41 @@ function NavSearch() {
                     <span style={{ marginLeft: 'auto', fontSize: 9, padding: '2px 6px',
                       borderRadius: 4, background: '#1a1a1a', color: '#555',
                       flexShrink: 0 }}>{p.role}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Tournaments */}
+          {results.tournaments.length > 0 && (
+            <div style={{ borderTop: (results.teams.length > 0 || results.players.length > 0) ? '1px solid #141414' : 'none' }}>
+              <div style={{ padding: '8px 14px 4px', fontSize: 9, color: '#444',
+                fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
+                🏆 Turnuvalar
+              </div>
+              {results.tournaments.map(t => (
+                <div
+                  key={t.id}
+                  onMouseDown={() => { setFocused(false); navigate(`/tournament/${t.id}`) }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '8px 14px', cursor: 'pointer', transition: 'background .12s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#141414'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <div style={{ width: 26, height: 26, borderRadius: 6, background: '#1e1e1e', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>🏆</div>
+                  <span style={{ fontSize: 13, color: '#ccc',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {t.name}
+                  </span>
+                  {t.tier && (
+                    <span style={{ marginLeft: 'auto', fontSize: 9, padding: '2px 6px',
+                      borderRadius: 4, background: '#1a1a1a', color: '#666', flexShrink: 0 }}>
+                      {String(t.tier).toUpperCase()}
+                    </span>
                   )}
                 </div>
               ))}

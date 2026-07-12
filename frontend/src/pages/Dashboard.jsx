@@ -1986,7 +1986,7 @@ export default function Dashboard() {
             .select(selectStr)
             .eq('status', 'finished')
             .order('scheduled_at', { ascending: false })
-            .limit(8),
+            .limit(12),
           supabase
             .from('matches')
             .select(selectStr)
@@ -2046,9 +2046,18 @@ export default function Dashboard() {
         if (!cancelled) {
           const prepared = lines.slice(0, 36)
           setTickerItems(prepared)
-          // Son Sonuçlar: hero-tier (S/A) önce gelsin (finished zaten tarih-desc, stable sort korunur)
+          // Son Sonuçlar sıralaması: FAVORİ takım maçları en üstte → sonra hero-tier (S/A)
+          // → sonra tarih (finished zaten tarih-desc, stable sort korunur).
+          const favSet = new Set((followedTeamIds || []).map(String))
+          const involvesFav = (m) =>
+            favSet.has(String(m?.team_a_id)) || favSet.has(String(m?.team_b_id)) ||
+            favSet.has(String(m?.team_a?.id)) || favSet.has(String(m?.team_b?.id))
           const orderedResults = [...finished]
-            .sort((a, b) => (isHeroTier(b?.tournament?.tier) ? 1 : 0) - (isHeroTier(a?.tournament?.tier) ? 1 : 0))
+            .sort((a, b) => {
+              const fav = (involvesFav(b) ? 1 : 0) - (involvesFav(a) ? 1 : 0)
+              if (fav !== 0) return fav
+              return (isHeroTier(b?.tournament?.tier) ? 1 : 0) - (isHeroTier(a?.tournament?.tier) ? 1 : 0)
+            })
             .slice(0, 8)
           setRecentResults(orderedResults)
 

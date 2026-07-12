@@ -554,6 +554,7 @@ function getRoundDisplayLabel(match) {
 }
 
 function StageListView({ matches, navigate, gc }) {
+  const [visibleDates, setVisibleDates] = useState(8)
   const grouped = useMemo(() => {
     const sorted = [...(matches || [])].sort((a, b) => {
       const ta = getMatchTimestamp(a) ? new Date(getMatchTimestamp(a)).getTime() : 0
@@ -586,9 +587,12 @@ function StageListView({ matches, navigate, gc }) {
     )
   }
 
+  const shownKeys = dateKeys.slice(0, visibleDates)
+  const remainingDays = dateKeys.length - shownKeys.length
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {dateKeys.map(dateKey => (
+      {shownKeys.map(dateKey => (
         <div key={dateKey} style={{ border: '1px solid #1b1b1b', borderRadius: 12, background: '#0c0c0c', padding: 12 }}>
           <div style={{ fontSize: 11, fontWeight: 800, color: gc, letterSpacing: '.9px', marginBottom: 8 }}>
             📅 {dateKey}
@@ -599,7 +603,7 @@ function StageListView({ matches, navigate, gc }) {
               <div style={{ fontSize: 10, color: '#7a7a7a', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.8px' }}>
                 {roundKey}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: 10 }}>
                 {list.map(m => (
                   <MatchListCard key={m.id} m={m} navigate={navigate} gc={gc} />
                 ))}
@@ -608,6 +612,19 @@ function StageListView({ matches, navigate, gc }) {
           ))}
         </div>
       ))}
+
+      {remainingDays > 0 && (
+        <button
+          onClick={() => setVisibleDates(v => v + 12)}
+          style={{
+            alignSelf: 'center', marginTop: 4, padding: '10px 20px', borderRadius: 10,
+            border: '1px solid #2a2a2a', background: '#141414', color: '#ccc',
+            fontSize: 13, fontWeight: 700, cursor: 'pointer',
+          }}
+        >
+          Daha fazla göster (+{remainingDays} gün)
+        </button>
+      )}
     </div>
   )
 }

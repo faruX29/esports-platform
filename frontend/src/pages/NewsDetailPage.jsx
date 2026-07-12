@@ -571,8 +571,9 @@ export default function NewsDetailPage() {
             .from('news_articles')
             .select('*')
             .eq('id', ref.id)
-            .single()
+            .maybeSingle()
           if (artErr) throw artErr
+          if (!art) throw new Error('Haber bulunamadı.')
           const transferStory = mapTransferRowToStory(art)
           if (!cancelled) {
             setStory(transferStory)
@@ -639,9 +640,10 @@ export default function NewsDetailPage() {
           .from('matches')
           .select(commonSelect)
           .eq('id', matchId)
-          .single()
+          .maybeSingle()
 
         if (matchErr) throw matchErr
+        if (!match) throw new Error('Haber bulunamadı.')
 
         const { data: statRows, error: statErr } = await supabase
           .from('match_stats')

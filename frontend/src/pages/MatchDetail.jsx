@@ -1494,8 +1494,8 @@ export default function MatchDetail() {
           </Link>
         )}
 
-        {/* ── İçerik Grid ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 18, marginTop: 20 }}>
+        {/* ── İçerik Grid — mobilde tek kolon (auto-fit + min(100%,340px)) ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: 18, marginTop: 20 }}>
 
           {/* Sol */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>

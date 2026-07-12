@@ -53,7 +53,7 @@ export default function ProfileSettings() {
     }
   }
 
-  const inputStyle = { background: '#0d0d0d', border: '1px solid #222', borderRadius: 10, color: '#fff', padding: '10px 12px' }
+  const inputStyle = { background: '#0d0d0d', border: '1px solid #222', borderRadius: 10, color: '#fff', padding: '10px 12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }
 
   return (
     <div style={{ maxWidth: 860, margin: '0 auto', padding: '28px 16px 48px' }}>

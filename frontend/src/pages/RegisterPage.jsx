@@ -67,10 +67,10 @@ export default function RegisterPage() {
     try { await signInWithDiscord() } catch (err) { setError(err.message || 'Discord girişi başarısız.') }
   }
 
-  const inputStyle = { background: '#0c0c0c', border: '1px solid #232323', color: '#fff', borderRadius: 11, padding: '11px 12px' }
+  const inputStyle = { background: '#0c0c0c', border: '1px solid #232323', color: '#fff', borderRadius: 11, padding: '11px 12px', minWidth: 0, width: '100%' }
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', display: 'grid', placeItems: 'center', padding: 16, background: 'radial-gradient(ellipse at 78% 12%, rgba(200,16,46,.16), transparent 45%), radial-gradient(ellipse at 20% 88%, rgba(255,255,255,.05), transparent 45%), #0a0a0a' }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'radial-gradient(ellipse at 78% 12%, rgba(200,16,46,.16), transparent 45%), radial-gradient(ellipse at 20% 88%, rgba(255,255,255,.05), transparent 45%), #0a0a0a' }}>
       <div style={{ width: 'min(500px, 100%)', borderRadius: 18, border: '1px solid #1c1c1c', background: 'linear-gradient(160deg,#111,#0d0d0d)', overflow: 'hidden', boxShadow: '0 18px 40px rgba(0,0,0,.5)' }}>
         <div style={{ background: 'linear-gradient(90deg,#f7f7f7,#C8102E 55%,#930d22)', padding: 9, textAlign: 'center', fontSize: 11, color: '#111', fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase' }}>New Account Registration</div>
         <div style={{ padding: 22 }}>

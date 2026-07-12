@@ -67,21 +67,44 @@ function buildRealReports(rows) {
     if (acs != null) { p.acsSum += Number(acs); p.acsN += 1 }
   }
   return Object.values(acc)
-    .filter(p => p.nickname && p.n >= 2)
+    .filter(p => p.nickname && p.n >= 3)   // ≥3 maç: güvenilir örneklem (thin 2-maç fluke'ları eleme)
     .map(p => {
       const kd = p.d > 0 ? p.k / p.d : p.k
       const acs = p.acsN > 0 ? Math.round(p.acsSum / p.acsN) : null
       const wr = p.wc > 0 ? Math.round((p.wins / p.wc) * 100) : null
-      const verdict = kd >= 1.15 ? 'Elit Fragcı' : kd >= 1.0 ? 'İstikrarlı Katkı' : 'Takım Oyuncusu'
+      const strong = kd >= 1.15
+      const goodWin = wr != null && wr >= 55
+      const lowWin = wr != null && wr < 40
+
+      // Bağlam-farkında verdict + içgörü — K/D ile galibiyeti birlikte değerlendirir
+      // (tekrar eden şablon yerine gerçek scout yorumu; "%0 win Elit Fragcı" çelişkisini çözer)
+      let verdict, insight
+      if (strong && goodWin) {
+        verdict = 'Elit Fragcı'
+        insight = 'Hem bireysel etki hem galibiyet üretimi yüksek — kadro çekirdeği için birinci sınıf aday.'
+      } else if (strong && lowWin) {
+        verdict = 'Yüksek Tavan'
+        insight = 'Yüksek bireysel tavan ama takım sonuçları zayıf — doğru sistemde patlama potansiyeli olan sığ-pazar fırsatı.'
+      } else if (strong) {
+        verdict = 'Elit Fragcı'
+        insight = 'Güçlü bireysel etki — kadro çekirdeği için güçlü aday.'
+      } else if (kd >= 1.0) {
+        verdict = 'İstikrarlı Katkı'
+        insight = goodWin
+          ? 'Dengeli katkı + kazanan takım profili — sistemli bir kadroda güvenilir rol oyuncusu.'
+          : 'Dengeli katkı — sistemli bir takımda güvenilir rol oyuncusu.'
+      } else {
+        verdict = 'Takım Oyuncusu'
+        insight = 'Takım odaklı profil — destek/oyun kurucu rolünde değer kazanır.'
+      }
+
       const metrics = [['K/D', kd.toFixed(2)]]
       if (acs != null) metrics.push(['ACS', String(acs)])
       if (wr != null) metrics.push(['Win%', `%${wr}`])
       const note = `Son ${p.n} maçta ${p.k}/${p.d}/${p.a} K/D/A`
         + (acs != null ? `, ${acs} ort. ACS` : '')
         + (wr != null ? `, %${wr} galibiyet` : '') + '. '
-        + (kd >= 1.15 ? 'Güçlü bireysel etki — kadro çekirdeği için birinci sınıf aday.'
-          : kd >= 1.0 ? 'Dengeli katkı — sistemli bir takımda güvenilir rol oyuncusu.'
-          : 'Takım odaklı profil — destek/oyun kurucu rolünde değer kazanır.')
+        + insight
       return {
         _kd: kd,
         report: { role: p.role || 'Pro', game: '', verdict, note, metrics },

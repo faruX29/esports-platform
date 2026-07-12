@@ -1343,6 +1343,68 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
   )
 })
 
+/* ── ResultRow — biten maç, skor odaklı (Son Sonuçlar) ────────────────────── */
+const ResultRow = memo(function ResultRow({ match: m, onMatchClick }) {
+  const cs   = correctedScores(m)
+  const aId  = Number(m.team_a_id || m.team_a?.id)
+  const bId  = Number(m.team_b_id || m.team_b?.id)
+  const aWon = m.winner_id != null && Number(m.winner_id) === aId
+  const bWon = m.winner_id != null && Number(m.winner_id) === bId
+  const turkA = isTurkishTeam(m.team_a?.name ?? '')
+  const turkB = isTurkishTeam(m.team_b?.name ?? '')
+  const tierLetter = String(m.tournament?.tier || '').toUpperCase().replace(/[^SABCDE]/g, '').charAt(0)
+  const isHero = tierLetter === 'S' || tierLetter === 'A'
+  return (
+    <div
+      onClick={() => onMatchClick(m.id)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '9px 12px', borderRadius: 12, cursor: 'pointer',
+        background: '#0e0e0e', border: '1px solid #181818', transition: 'all .15s',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = '#141414'; e.currentTarget.style.borderColor = '#2a2a2a' }}
+      onMouseLeave={e => { e.currentTarget.style.background = '#0e0e0e'; e.currentTarget.style.borderColor = '#181818' }}
+    >
+      <span style={{ fontSize: 8, padding: '2px 6px', borderRadius: 4, background: '#181818', color: '#444', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', flexShrink: 0 }}>
+        {m.game?.name?.slice(0, 3).toUpperCase() || '—'}
+      </span>
+
+      {/* Team A (sağa hizalı, merkeze doğru) */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, minWidth: 0 }}>
+        <span style={{ fontSize: 12, fontWeight: aWon ? 800 : 600, color: aWon ? '#eaeaea' : '#6f6f6f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130, textAlign: 'right' }}>
+          {m.team_a?.name || '?'}{turkA && ' 🇹🇷'}
+        </span>
+        <InitialsImage src={m.team_a?.logo_url} alt={m.team_a?.name || ''} name={m.team_a?.name} width={18} height={18} borderRadius={4} objectFit='contain' />
+      </div>
+
+      {/* Skor */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, fontVariantNumeric: 'tabular-nums', fontWeight: 900, fontSize: 15 }}>
+        <span style={{ color: aWon ? '#4CAF50' : '#666' }}>{cs.team_a_score ?? '–'}</span>
+        <span style={{ color: '#333', fontSize: 11 }}>:</span>
+        <span style={{ color: bWon ? '#4CAF50' : '#666' }}>{cs.team_b_score ?? '–'}</span>
+      </div>
+
+      {/* Team B */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+        <InitialsImage src={m.team_b?.logo_url} alt={m.team_b?.name || ''} name={m.team_b?.name} width={18} height={18} borderRadius={4} objectFit='contain' />
+        <span style={{ fontSize: 12, fontWeight: bWon ? 800 : 600, color: bWon ? '#eaeaea' : '#6f6f6f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130 }}>
+          {m.team_b?.name || '?'}{turkB && ' 🇹🇷'}
+        </span>
+      </div>
+
+      {/* Tier rozeti (S/A vurgusu) */}
+      {tierLetter && (
+        <span style={{
+          flexShrink: 0, fontSize: 9, fontWeight: 800, borderRadius: 5, padding: '2px 6px',
+          color: isHero ? '#f0c040' : '#555',
+          background: isHero ? 'rgba(240,192,64,.12)' : '#141414',
+          border: isHero ? '1px solid rgba(240,192,64,.35)' : '1px solid #222',
+        }}>{tierLetter}</span>
+      )}
+    </div>
+  )
+})
+
 /* ══════════════════════════════════════════════════════════════════════════════
    Dashboard — default export
 ══════════════════════════════════════════════════════════════════════════════ */
@@ -1369,6 +1431,7 @@ export default function Dashboard() {
   const [quickLoading, setQuickLoading] = useState(false)
   const [tickerItems, setTickerItems] = useState([])
   const [tickerLoading, setTickerLoading] = useState(false)
+  const [recentResults, setRecentResults] = useState([])  // Son Sonuçlar (biten maçlar, skorlu)
   const [dreamTeam, setDreamTeam] = useState([])
   const [dreamLoading, setDreamLoading] = useState(false)
   const [stats,           setStats]           = useState({ total: 0, live: 0, today: 0, teams: 0 })
@@ -1983,6 +2046,11 @@ export default function Dashboard() {
         if (!cancelled) {
           const prepared = lines.slice(0, 36)
           setTickerItems(prepared)
+          // Son Sonuçlar: hero-tier (S/A) önce gelsin (finished zaten tarih-desc, stable sort korunur)
+          const orderedResults = [...finished]
+            .sort((a, b) => (isHeroTier(b?.tournament?.tier) ? 1 : 0) - (isHeroTier(a?.tournament?.tier) ? 1 : 0))
+            .slice(0, 8)
+          setRecentResults(orderedResults)
 
           safeWriteCache(DASHBOARD_TICKER_CACHE_KEY, {
             scope: cacheScope,
@@ -2604,6 +2672,30 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* ── Son Sonuçlar (biten maçlar, skorlu — ana sayfada kalıcı) ───────── */}
+      {recentResults.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#f0c040', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
+              🏁 Son Sonuçlar
+            </span>
+            <span style={{ padding: '1px 7px', borderRadius: 8, background: 'rgba(240,192,64,.14)', color: '#f0c040', fontSize: 10, fontWeight: 700 }}>
+              {recentResults.length}
+            </span>
+            <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(240,192,64,.3),transparent)' }} />
+            <Link
+              to="/matches?tab=past"
+              style={{ fontSize: 10, color: '#383838', textDecoration: 'none', transition: 'color .15s' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#888'}
+              onMouseLeave={e => e.currentTarget.style.color = '#383838'}
+            >Tümü →</Link>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {recentResults.map(m => <ResultRow key={m.id} match={m} onMatchClick={handleMatchOpen} />)}
+          </div>
+        </div>
+      )}
 
       {/* ── Maç Programı ─────────────────────────────────────────────────── */}
       {(() => {

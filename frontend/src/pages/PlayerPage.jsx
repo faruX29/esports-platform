@@ -1154,8 +1154,11 @@ export default function PlayerPage() {
               <StatBox icon="🤝" value={analytics.draws}       label="Beraberlik (Bo2)" color="#FFB800" />
             )}
             {(() => {
-              // Gerçek per-player WR (is_win) varsa onu kullan; yoksa team-level analytics
-              const wr = individualStats?.winRate != null ? individualStats.winRate : analytics.overallWinRate
+              // Per-player WR (is_win) YALNIZCA örneklem anlamlıysa (≥3 maç); yoksa team-level
+              // analytics. Aksi halde 1-örnekli %0, yanındaki 11G/3M ile çelişiyordu.
+              const wr = (individualStats?.winRate != null && (individualStats?.sampleMatches ?? 0) >= 3)
+                ? individualStats.winRate
+                : analytics.overallWinRate
               return (
                 <StatBox
                   icon="📊"

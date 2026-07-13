@@ -88,5 +88,7 @@ export function resolvePlayerRole(player, gameId) {
 export function getRoleBadge(role) {
   if (!role) return null
   const key = String(role).toLowerCase()
-  return ROLE_STYLES[key] ?? null
+  // Bilinmeyen rol → null DÖNDÜRME (tüketiciler badge.bg okuyunca çöküyordu, örn.
+  // TeamPage bir standart-dışı rolde tüm sayfayı beyaz-ekran ediyordu). Nötr fallback:
+  return ROLE_STYLES[key] ?? { bg: 'rgba(148,163,184,.12)', border: '#3a4a63', color: '#9fb0c9', label: role }
 }

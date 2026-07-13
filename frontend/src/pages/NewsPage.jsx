@@ -317,7 +317,7 @@ function NewsCard({ item, likes, liked, comments, onLike, canInteract, onOpenDet
 export default function NewsPage() {
   const navigate = useNavigate()
   const { user, profile } = useAuth()
-  const { followedTeamIds } = useUser()
+  const { followedTeamIds, followedGames } = useUser()
   const [activeCategory, setActiveCategory] = useState('all')
 
   const [loading, setLoading] = useState(true)
@@ -479,10 +479,10 @@ export default function NewsPage() {
         }))
         .slice(0, NEWS_LIMIT)
 
-      const prioritized = prioritizeStoriesForYou(generated, followedTeamIds)
+      const prioritized = prioritizeStoriesForYou(generated, followedTeamIds, followedGames)
         .map(story => ({
           ...story,
-          isForYou: isStoryForYou(story, followedTeamIds),
+          isForYou: isStoryForYou(story, followedTeamIds, followedGames),
         }))
 
       setStories(prioritized)
@@ -493,7 +493,7 @@ export default function NewsPage() {
     } finally {
       setLoading(false)
     }
-  }, [followedTeamIds, hydrateInteractions])
+  }, [followedTeamIds, followedGames, hydrateInteractions])
 
   useEffect(() => {
     loadStories()
@@ -504,11 +504,11 @@ export default function NewsPage() {
       if (activeCategory === 'all') return true
       return normalizeStoryGameId(story?.visuals?.gameId) === normalizeStoryGameId(activeCategory)
     })
-    return prioritizeStoriesForYou(scoped, followedTeamIds).map(story => ({
+    return prioritizeStoriesForYou(scoped, followedTeamIds, followedGames).map(story => ({
       ...story,
-      isForYou: isStoryForYou(story, followedTeamIds),
+      isForYou: isStoryForYou(story, followedTeamIds, followedGames),
     }))
-  }, [activeCategory, followedTeamIds, stories])
+  }, [activeCategory, followedTeamIds, followedGames, stories])
 
   useEffect(() => {
     setPage(1)

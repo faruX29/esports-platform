@@ -649,10 +649,11 @@ export default function TeamPage() {
           </div>
 
           {/* Name + meta */}
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
               <h1 style={{
-                margin: 0, fontSize: 34, fontWeight: 900, lineHeight: 1.1,
+                margin: 0, fontSize: 'clamp(22px, 6vw, 34px)', fontWeight: 900, lineHeight: 1.1,
+                overflowWrap: 'anywhere', minWidth: 0,
                 background: isTR
                   ? 'linear-gradient(135deg,#fff,#ff6b7a)'
                   : 'linear-gradient(135deg,#fff,#888)',

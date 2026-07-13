@@ -2890,7 +2890,7 @@ export default function Dashboard() {
         {[
           { to: '/matches',  icon: '📅', label: 'Maç Takvimi', sub: 'Yaklaşan & Biten',  color: '#FF4655' },
           { to: '/tournaments', icon: '🏟️', label: 'Turnuvalar', sub: 'Aktif ve Geçmiş',  color: '#FFB800' },
-          { to: '/players',  icon: '🔍', label: 'Oyuncular',   sub: 'Scout Analytics',    color: '#6366f1' },
+          { to: '/scout',    icon: '🔬', label: 'Scout Engine', sub: 'B2B · Private Beta', color: '#5eead4' },
           { to: '/news',     icon: '📰', label: 'Haberler',    sub: 'Son gelişmeler',     color: '#4CAF50' },
         ].map(l => (
           <Link key={l.to} to={l.to} style={{ textDecoration: 'none' }}>

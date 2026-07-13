@@ -99,7 +99,7 @@ async function buildChild(type, base) {
     const pages = [
       ['/', 'daily', '1.0'], ['/matches', 'daily', '0.9'], ['/news', 'daily', '0.9'],
       ['/news/archive', 'daily', '0.8'], ['/tournaments', 'daily', '0.8'],
-      ['/rankings', 'weekly', '0.8'], ['/players', 'weekly', '0.7'], ['/scout', 'monthly', '0.6'],
+      ['/rankings', 'weekly', '0.8'], ['/scout', 'monthly', '0.6'],
     ]
     return urlset(pages.map(([p, cf, pr]) => ({ loc: base + p, lastmod: today, changefreq: cf, priority: pr })))
   }

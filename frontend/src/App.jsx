@@ -49,7 +49,9 @@ const NAV_LINKS = [
   { to: '/matches',  label: '📅 Matches',  end: false },
   { to: '/tournaments', label: '🏟️ Turnuvalar', end: false },
   { to: '/rankings', label: '🏆 Rankings', end: false },
-  { to: '/players',  label: '👤 Players',  end: false },
+  // NOT: '/players' listeleme sekmesi gizlendi — oyuncu istatistikleri seyrek olduğu
+  // için sıralama/compare boş duruyordu. Oyuncu DETAY sayfaları (/player/:id) arama +
+  // takım kadrosu + maç üzerinden erişilir kalır. İstatistik kapsamı büyüyünce geri açılır.
   { to: '/news',     label: '📰 News',     end: false },
   { to: '/scout',    label: '🔬 Scout',    end: false },
 ]

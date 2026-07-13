@@ -520,7 +520,8 @@ export default function TeamPage() {
         }
       }
     } catch (e) {
-      setError(e.message)
+      console.error('TeamPage fetch:', e?.message || e)
+      setError('Takım bulunamadı.')
     } finally {
       setLoading(false)
     }

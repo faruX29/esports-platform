@@ -1826,7 +1826,7 @@ export default function TournamentPage() {
       }
     } catch (e) {
       console.error('TournamentPage fetch error:', e)
-      setError(e.message)
+      setError('Turnuva bulunamadı.')
     } finally {
       setLoading(false)
     }

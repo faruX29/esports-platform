@@ -1222,7 +1222,7 @@ export default function MatchDetail() {
       if (e) throw e
       setMatch(data)
       setStreams((data?.raw_data?.streams_list||[]).filter(s=>s?.embed_url||s?.raw_url))
-    } catch (e) { setError(e.message) }
+    } catch (e) { console.error('MatchDetail fetch:', e?.message || e); setError('Maç bulunamadı.') }
     finally { setLoadingMatch(false) }
   }, [id])
 
@@ -1341,7 +1341,7 @@ export default function MatchDetail() {
   if (error || !match) return (
     <div style={{ textAlign: 'center', padding: '80px 20px', color: '#fff' }}>
       <div style={{ fontSize: 48, marginBottom: 16 }}>❌</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: '#666', marginBottom: 24 }}>Maç bulunamadı — {error}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: '#666', marginBottom: 24 }}>{error || 'Maç bulunamadı.'}</div>
       <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', background: '#FF4655', border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>← Geri</button>
     </div>
   )

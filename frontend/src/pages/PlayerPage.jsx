@@ -928,7 +928,8 @@ export default function PlayerPage() {
         }
       }
     } catch (e) {
-      setError(e.message)
+      console.error('PlayerPage fetch:', e?.message || e)
+      setError('Oyuncu bulunamadı.')
     } finally {
       setLoading(false)
     }

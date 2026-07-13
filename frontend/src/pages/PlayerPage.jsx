@@ -1032,6 +1032,7 @@ export default function PlayerPage() {
             {/* Handle */}
             <h1 style={{
               margin: '0 0 4px', fontSize: isMobile ? 28 : 32, fontWeight: 900, lineHeight: 1.1,
+              overflowWrap: 'anywhere',
               background: isTR
                 ? 'linear-gradient(135deg,#fff 40%,#ff8a8a)'
                 : 'linear-gradient(135deg,#fff,#777)',

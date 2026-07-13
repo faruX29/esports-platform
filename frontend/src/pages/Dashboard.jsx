@@ -10,6 +10,7 @@ import { isTurkishTeam }                   from '../constants'
 import { useUser }                          from '../context/UserContext'
 import { useAuth }                          from '../context/AuthContext'
 import BRANDING                             from '../branding.config'
+import { Radio, Flag, CalendarDays, Sparkles, Zap } from 'lucide-react'
 import { buildFinishedStory, buildUpcomingStory } from '../utils/newsStories'
 import { isStoryForYou, prioritizeStoriesForYou } from '../utils/newsPersonalization'
 import { calculatePredictionAccuracy, getMatchImpactLabel } from '../utils/accuracyTracker'
@@ -98,12 +99,12 @@ const TodaySchedule = memo(function TodaySchedule({ matches, liveMatches, onMatc
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '8px 12px', borderRadius: 10, cursor: 'pointer',
-                background: isLive ? 'rgba(255,70,85,.07)' : '#0d0d0d',
-                border: isLive ? '1px solid rgba(255,70,85,.3)' : '1px solid #181818',
+                background: isLive ? 'rgba(255,70,85,.07)' : '#131b2b',
+                border: isLive ? '1px solid rgba(255,70,85,.3)' : '1px solid #232f47',
                 transition: 'all .15s',
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = isLive ? 'rgba(255,70,85,.12)' : '#141414'; e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.5)' : '#2a2a2a' }}
-              onMouseLeave={e => { e.currentTarget.style.background = isLive ? 'rgba(255,70,85,.07)' : '#0d0d0d'; e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.3)' : '#181818' }}
+              onMouseEnter={e => { e.currentTarget.style.background = isLive ? 'rgba(255,70,85,.12)' : '#172032'; e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.5)' : '#2a2a2a' }}
+              onMouseLeave={e => { e.currentTarget.style.background = isLive ? 'rgba(255,70,85,.07)' : '#131b2b'; e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.3)' : '#232f47' }}
             >
               {/* Saat */}
               <span style={{ fontSize: 11, color: '#555', fontVariantNumeric: 'tabular-nums', flexShrink: 0, width: 38, textAlign: 'center' }}>
@@ -113,7 +114,7 @@ const TodaySchedule = memo(function TodaySchedule({ matches, liveMatches, onMatc
                 }
               </span>
               {/* Game */}
-              <span style={{ fontSize: 8, padding: '2px 5px', borderRadius: 4, background: '#181818', color: '#444', fontWeight: 700, letterSpacing: '.4px', flexShrink: 0 }}>
+              <span style={{ fontSize: 8, padding: '2px 5px', borderRadius: 4, background: '#232f47', color: '#444', fontWeight: 700, letterSpacing: '.4px', flexShrink: 0 }}>
                 {gameShort}
               </span>
               {/* Teams */}
@@ -137,7 +138,7 @@ function Sk({ w = '100%', h = '16px', r = '8px' }) {
   return (
     <div style={{
       width: w, height: h, borderRadius: r, flexShrink: 0,
-      background: 'linear-gradient(90deg,#0e0e0e 25%,#181818 50%,#0e0e0e 75%)',
+      background: 'linear-gradient(90deg,#131b2b 25%,#232f47 50%,#131b2b 75%)',
       backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite',
     }} />
   )
@@ -342,8 +343,8 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
         maxHeight: '85vh',
         overflowY: 'auto',
         borderRadius: 18,
-        border: '1px solid #222',
-        background: 'radial-gradient(circle at 14% 12%, rgba(255,70,85,.2), transparent 42%), #0f0f0f',
+        border: '1px solid #2b3a58',
+        background: 'radial-gradient(circle at 14% 12%, rgba(255,70,85,.2), transparent 42%), #131b2b',
         boxShadow: '0 28px 70px rgba(0,0,0,.55)',
       }}>
         <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid #202020' }}>
@@ -368,7 +369,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
                   style={{
                     borderRadius: 999,
                     border: `1px solid ${active ? game.color : '#2a2a2a'}`,
-                    background: active ? `${game.color}2b` : '#141414',
+                    background: active ? `${game.color}2b` : '#172032',
                     color: active ? '#fff' : '#cfcfcf',
                     fontSize: 12,
                     fontWeight: 700,
@@ -393,7 +394,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
                 width: '100%',
                 borderRadius: 9,
                 border: '1px solid #2a2a2a',
-                background: '#121212',
+                background: '#172032',
                 color: '#f1f1f1',
                 fontSize: 12,
                 padding: '8px 10px',
@@ -415,7 +416,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
                     textAlign: 'left',
                     borderRadius: 11,
                     border: `1px solid ${active ? '#ff6f7e' : '#262626'}`,
-                    background: active ? 'rgba(255,70,85,.18)' : '#121212',
+                    background: active ? 'rgba(255,70,85,.18)' : '#172032',
                     color: active ? '#ffd9de' : '#cdcdcd',
                     padding: '8px 10px',
                     display: 'flex',
@@ -466,7 +467,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
             style={{
               borderRadius: 10,
               border: '1px solid #2d2d2d',
-              background: '#141414',
+              background: '#172032',
               color: '#bbb',
               fontSize: 12,
               fontWeight: 700,
@@ -679,7 +680,7 @@ const QuickAccessBar = memo(function QuickAccessBar({ entries, loading, onOpen }
               flexShrink: 0,
               border: entry.isLive ? '1.5px solid rgba(255,70,85,.75)' : '1px solid #2a2a2a',
               boxShadow: entry.isLive ? '0 0 16px rgba(255,70,85,.42)' : 'none',
-              background: '#101010',
+              background: '#131b2b',
               cursor: 'pointer',
               padding: 0,
               position: 'relative',
@@ -839,7 +840,7 @@ const FavoritesBar = memo(function FavoritesBar({ onMatchClick, showAllTournamen
                   width: 200,
                   borderRadius: 14,
                   padding: '12px 12px 10px',
-                  background: '#111',
+                  background: '#131b2b',
                   cursor: 'pointer',
                   position: 'relative',
                   overflow: 'hidden',
@@ -945,11 +946,11 @@ function WinBar({ predA, predB, confidence }) {
   const isHot = confidence != null && confidence > 0.80
 
   return (
-    <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid #1a1a1a' }}>
+    <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid #232f47' }}>
       {/* İnce progress bar */}
       <div style={{
         display: 'flex', height: 3, borderRadius: 2,
-        overflow: 'hidden', background: '#1a1a1a',
+        overflow: 'hidden', background: '#232f47',
         marginBottom: 3,
       }}>
         <div style={{ width: `${pctA}%`, background: aFav ? '#a78bfa' : '#333', transition: 'width .5s' }} />
@@ -1027,14 +1028,14 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
         padding: hasTurkish ? '30px 16px 14px' : '14px 16px',
         background: aggressiveLiveMode
           ? 'linear-gradient(165deg, rgba(33,6,9,.96), rgba(15,15,15,.98) 44%, rgba(37,13,17,.95))'
-          : 'linear-gradient(160deg,#141414,#0e0e0e)',
+          : 'linear-gradient(160deg,#172032,#131b2b)',
         cursor: 'pointer',
         border: aggressiveLiveMode ? '1.5px solid rgba(255,70,85,.72)' : '1.5px solid rgba(255,70,85,.4)',
         boxShadow: aggressiveLiveMode
-          ? '0 0 0 1px rgba(255,70,85,.3), 0 0 26px rgba(255,70,85,.3), 0 0 56px rgba(255,70,85,.18)'
+          ? '0 0 0 1px rgba(255,70,85,.35), 0 8px 28px rgba(0,0,0,.4)'
           : isLive
-            ? '0 0 0 1px rgba(255,70,85,.18), 0 0 24px rgba(255,70,85,.16), 0 0 42px rgba(255,70,85,.09)'
-          : '0 0 16px rgba(255,70,85,.07)',
+            ? '0 0 0 1px rgba(255,70,85,.22), 0 6px 20px rgba(0,0,0,.32)'
+          : '0 4px 16px rgba(0,0,0,.28)',
         transition: 'all .18s',
         /* kart yüksekliği içerikle büyüsün, min sabit */
         minHeight: 0,
@@ -1258,18 +1259,18 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
       style={{
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '9px 14px', borderRadius: 12, cursor: 'pointer',
-        background: '#0e0e0e',
-        border: isLive ? '1px solid rgba(255,70,85,.52)' : '1px solid #181818',
+        background: '#131b2b',
+        border: isLive ? '1px solid rgba(255,70,85,.52)' : '1px solid #232f47',
         boxShadow: isLive ? '0 0 14px rgba(255,70,85,.18)' : 'none',
         transition: 'all .15s',
       }}
       onMouseEnter={e => {
-        e.currentTarget.style.background = '#141414'
+        e.currentTarget.style.background = '#172032'
         e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.8)' : '#2a2a2a'
       }}
       onMouseLeave={e => {
-        e.currentTarget.style.background = '#0e0e0e'
-        e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.52)' : '#181818'
+        e.currentTarget.style.background = '#131b2b'
+        e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.52)' : '#232f47'
       }}
     >
       {/* Saat */}
@@ -1278,7 +1279,7 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
       </div>
 
       {/* Oyun etiketi */}
-      <span style={{ fontSize: 8, padding: '2px 6px', borderRadius: 4, background: '#181818', color: '#444', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', flexShrink: 0 }}>
+      <span style={{ fontSize: 8, padding: '2px 6px', borderRadius: 4, background: '#232f47', color: '#444', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', flexShrink: 0 }}>
         {m.game?.name?.slice(0, 3).toUpperCase() || '—'}
       </span>
 
@@ -1361,12 +1362,12 @@ const ResultRow = memo(function ResultRow({ match: m, onMatchClick }) {
       style={{
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '9px 12px', borderRadius: 12, cursor: 'pointer',
-        background: '#0e0e0e', border: '1px solid #181818', transition: 'all .15s',
+        background: '#131b2b', border: '1px solid #232f47', transition: 'all .15s',
       }}
-      onMouseEnter={e => { e.currentTarget.style.background = '#141414'; e.currentTarget.style.borderColor = '#2a2a2a' }}
-      onMouseLeave={e => { e.currentTarget.style.background = '#0e0e0e'; e.currentTarget.style.borderColor = '#181818' }}
+      onMouseEnter={e => { e.currentTarget.style.background = '#172032'; e.currentTarget.style.borderColor = '#2a2a2a' }}
+      onMouseLeave={e => { e.currentTarget.style.background = '#131b2b'; e.currentTarget.style.borderColor = '#232f47' }}
     >
-      <span style={{ fontSize: 8, padding: '2px 6px', borderRadius: 4, background: '#181818', color: '#444', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', flexShrink: 0 }}>
+      <span style={{ fontSize: 8, padding: '2px 6px', borderRadius: 4, background: '#232f47', color: '#444', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', flexShrink: 0 }}>
         {m.game?.name?.slice(0, 3).toUpperCase() || '—'}
       </span>
 
@@ -1398,8 +1399,8 @@ const ResultRow = memo(function ResultRow({ match: m, onMatchClick }) {
         <span style={{
           flexShrink: 0, fontSize: 9, fontWeight: 800, borderRadius: 5, padding: '2px 6px',
           color: isHero ? '#f0c040' : '#555',
-          background: isHero ? 'rgba(240,192,64,.12)' : '#141414',
-          border: isHero ? '1px solid rgba(240,192,64,.35)' : '1px solid #222',
+          background: isHero ? 'rgba(240,192,64,.12)' : '#172032',
+          border: isHero ? '1px solid rgba(240,192,64,.35)' : '1px solid #2b3a58',
         }}>{tierLetter}</span>
       )}
     </div>
@@ -2304,6 +2305,7 @@ export default function Dashboard() {
   ], [loading, stats.live, stats.today, stats.total, stats.teams])
 
   return (
+    <div style={{ background: '#0b0f19', minHeight: 'calc(100vh - 58px)' }}>
     <div style={{ maxWidth: 1160, margin: '0 auto', padding: isMobile ? '14px 12px 44px' : '20px 18px 60px', color: 'white' }}>
 
       {globalError && (
@@ -2363,52 +2365,7 @@ export default function Dashboard() {
         </button>
       </div>
 
-      <div style={{ marginBottom: 12 }}>
-        <PredictionAccuracyBadge variant="card" />
-      </div>
-
-      <div style={{
-        marginBottom: 12,
-        padding: isMobile ? '12px 12px' : '14px 14px',
-        borderRadius: 14,
-        border: `1px solid ${confidenceTone.border}`,
-        background: confidenceTone.bg,
-        display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : '1.3fr 1fr',
-        gap: 12,
-        alignItems: 'center',
-      }}>
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 800, color: confidenceTone.accent, letterSpacing: '.9px', textTransform: 'uppercase' }}>
-            Trend Guven Endeksi
-          </div>
-          <div style={{ marginTop: 4, display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 24, fontWeight: 900, color: '#f5f5f5', lineHeight: 1 }}>
-              {accuracySummary.accuracyRate == null ? '--' : `%${accuracySummary.accuracyRate}`}
-            </span>
-            <span style={{ fontSize: 12, color: '#bebebe' }}>Son 30 Mac Tahmin Basarisi</span>
-            {accuracyLoading && <span style={{ fontSize: 10, color: '#8b8b8b' }}>guncelleniyor...</span>}
-          </div>
-          <div style={{ marginTop: 6, fontSize: 11, color: '#a8a8a8' }}>
-            {confidenceTone.text}
-          </div>
-        </div>
-
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-            <span style={{ fontSize: 10, color: '#8d8d8d' }}>Trend orneklem</span>
-            <span style={{ fontSize: 11, color: '#f2f2f2', fontWeight: 700 }}>
-              {accuracySummary.evaluatedCount}/{trendSampleSize}
-            </span>
-          </div>
-          <div style={{ height: 8, borderRadius: 999, overflow: 'hidden', background: 'rgba(0,0,0,.35)', border: '1px solid rgba(255,255,255,.08)' }}>
-            <div style={{ height: '100%', width: `${accuracySummary.accuracyRate ?? 0}%`, background: `linear-gradient(90deg, ${confidenceTone.accent}, #f5f5f5)`, transition: 'width .35s ease' }} />
-          </div>
-          <div style={{ marginTop: 6, fontSize: 10, color: '#8b8b8b' }}>
-            Dogru tahmin: {accuracySummary.correctCount}
-          </div>
-        </div>
-      </div>
+      {/* AI güven metrikleri birleştirildi ve aşağı alındı (bkz. AI Güven Paneli) */}
 
       <QuickAccessBar entries={quickAccess} loading={quickLoading} onOpen={handleQuickAccessOpen} />
       <LiveTicker items={tickerItems} loading={tickerLoading} onItemOpen={handleTickerItemOpen} />
@@ -2420,8 +2377,8 @@ export default function Dashboard() {
         marginBottom: 18,
         padding: '10px 12px',
         borderRadius: 12,
-        border: '1px solid #1f1f1f',
-        background: '#0d0d0d',
+        border: '1px solid #232f47',
+        background: '#131b2b',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -2440,7 +2397,7 @@ export default function Dashboard() {
           onClick={() => setShowAllTournamentTiers(prev => !prev)}
           style={{
             border: `1px solid ${showAllTournamentTiers ? '#4CAF50' : '#2f2f2f'}`,
-            background: showAllTournamentTiers ? 'rgba(76,175,80,.14)' : '#141414',
+            background: showAllTournamentTiers ? 'rgba(76,175,80,.14)' : '#172032',
             color: showAllTournamentTiers ? '#9ee6a3' : '#c9c9c9',
             borderRadius: 999,
             padding: '7px 14px',
@@ -2478,9 +2435,9 @@ export default function Dashboard() {
             <div style={{
               marginBottom: 12,
               padding: '10px 14px', borderRadius: 12,
-              background: 'radial-gradient(circle at 10% 50%, rgba(255,70,85,.25), rgba(255,70,85,.05) 45%, transparent 90%)',
-              border: '1px solid rgba(255,70,85,.45)',
-              boxShadow: '0 0 24px rgba(255,70,85,.25)',
+              background: 'rgba(255,70,85,.08)',
+              border: '1px solid rgba(255,70,85,.28)',
+              boxShadow: 'none',
               display: 'flex', alignItems: 'center', gap: 8,
             }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#FF4655', animation: 'livePulse 1.2s infinite' }} />
@@ -2493,7 +2450,7 @@ export default function Dashboard() {
           {myFeedMatches.length === 0 ? (
             <div style={{
               padding: '14px 16px', borderRadius: 12,
-              background: '#0e0e0e', border: '1px solid #181818',
+              background: '#131b2b', border: '1px solid #232f47',
               fontSize: 11, color: '#3a3a3a', textAlign: 'center',
             }}>
               Takip ettiğin takımlar/oyuncular için yakın tarihli maç yok.
@@ -2511,8 +2468,8 @@ export default function Dashboard() {
       {/* ── Weekly Dream Team Leaderboard ── */}
       {!MVP_HIDE_DREAM_TEAM && <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: '#ff9aa9', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-            🧬 Dream Team (Week)
+          <span style={{ fontSize: 11, fontWeight: 800, color: '#ff9aa9', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Sparkles size={13} /> Dream Team (Week)
           </span>
           <span style={{ fontSize: 10, color: '#9e9e9e', padding: '2px 8px', borderRadius: 999, border: '1px solid #2c2c2c' }}>
             Son 7 Gun • {dreamGameLabel}
@@ -2520,14 +2477,14 @@ export default function Dashboard() {
           <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(255,154,169,.3),transparent)' }} />
         </div>
 
-        <div style={{ border: '1px solid #222', borderRadius: 14, background: 'radial-gradient(circle at 8% 8%, rgba(200,16,46,.18), transparent 35%), #0f0f0f', overflow: 'hidden' }}>
+        <div style={{ border: '1px solid #2b3a58', borderRadius: 14, background: 'radial-gradient(circle at 8% 8%, rgba(200,16,46,.18), transparent 35%), #131b2b', overflow: 'hidden' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1fr .9fr .9fr .9fr', gap: 8, padding: '11px 14px', borderBottom: '1px solid #202020', fontSize: 10, color: '#8b8b8b', textTransform: 'uppercase', letterSpacing: '.6px' }}>
             <div>Rank</div><div>Player</div><div>Team</div><div>Matches</div><div>Avg Impact</div><div>Momentum</div>
           </div>
           {dreamLoading && <div style={{ padding: 14, color: '#777', fontSize: 12 }}>Dream Team hesaplanıyor...</div>}
           {!dreamLoading && dreamTeam.length === 0 && <div style={{ padding: 14, color: '#777', fontSize: 12 }}>Haftalık oyuncu verisi bulunamadı.</div>}
           {!dreamLoading && dreamTeam.map((p, idx) => (
-            <div key={p.id} onClick={() => navigate(`/player/${p.id}`)} style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1fr .9fr .9fr .9fr', gap: 8, alignItems: 'center', padding: '11px 14px', borderBottom: '1px solid #191919', cursor: 'pointer', background: idx === 0 ? 'linear-gradient(90deg, rgba(200,16,46,.22), transparent 62%)' : 'transparent' }}>
+            <div key={p.id} onClick={() => navigate(`/player/${p.id}`)} style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1fr .9fr .9fr .9fr', gap: 8, alignItems: 'center', padding: '11px 14px', borderBottom: '1px solid #232f47', cursor: 'pointer', background: idx === 0 ? 'linear-gradient(90deg, rgba(200,16,46,.22), transparent 62%)' : 'transparent' }}>
               <div style={{ fontWeight: 800, color: '#f4f4f4' }}>#{idx + 1}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                 <InitialsImage
@@ -2567,8 +2524,8 @@ export default function Dashboard() {
       {/* ── LIVE Section ─────────────────────────────────────────────────── */}
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: '#FF4655', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-            <span style={{ animation: 'livePulse 1.2s infinite', display: 'inline-block', marginRight: 4 }}>🔴</span>
+          <span style={{ fontSize: 11, fontWeight: 800, color: '#FF4655', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <Radio size={13} color="#FF4655" style={{ animation: 'livePulse 1.2s infinite' }} />
             Live Now
           </span>
           {!loading && liveMatches.length > 0 && (
@@ -2590,7 +2547,7 @@ export default function Dashboard() {
             {[1,2,3].map(i => <Sk key={i} h="150px" r="16px" />)}
           </div>
         ) : liveMatches.length === 0 ? (
-          <div style={{ padding: '20px', borderRadius: 16, background: '#0e0e0e', border: '1px solid #181818', textAlign: 'center' }}>
+          <div style={{ padding: '20px', borderRadius: 16, background: '#131b2b', border: '1px solid #232f47', textAlign: 'center' }}>
             <div style={{ fontSize: 22, marginBottom: 6 }}>😴</div>
             <div style={{ fontSize: 11, color: '#2a2a2a' }}>Şu an canlı maç yok</div>
           </div>
@@ -2614,8 +2571,8 @@ export default function Dashboard() {
       {recentResults.length > 0 && (
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-            <span style={{ fontSize: 11, fontWeight: 800, color: '#f0c040', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-              🏁 Son Sonuçlar
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#f0c040', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Flag size={13} /> Son Sonuçlar
             </span>
             <span style={{ padding: '1px 7px', borderRadius: 8, background: 'rgba(240,192,64,.14)', color: '#f0c040', fontSize: 10, fontWeight: 700 }}>
               {recentResults.length}
@@ -2673,8 +2630,8 @@ export default function Dashboard() {
         return (
           <div style={{ marginBottom: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-              <span style={{ fontSize: 11, fontWeight: 800, color: '#4CAF50', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-                📅 Maç Programı
+              <span style={{ fontSize: 11, fontWeight: 800, color: '#4CAF50', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <CalendarDays size={13} /> Maç Programı
               </span>
               {!loading && scheduled.length > 0 && (
                 <span style={{ padding: '1px 7px', borderRadius: 8, background: 'rgba(76,175,80,.15)', color: '#4CAF50', fontSize: 10, fontWeight: 700 }}>
@@ -2695,7 +2652,7 @@ export default function Dashboard() {
                 {[1,2,3,4,5].map(i => <Sk key={i} h="40px" r="12px" />)}
               </div>
             ) : groups.length === 0 ? (
-              <div style={{ padding: '16px', borderRadius: 14, background: '#0e0e0e', border: '1px solid #181818', textAlign: 'center', fontSize: 11, color: '#2a2a2a' }}>
+              <div style={{ padding: '16px', borderRadius: 14, background: '#131b2b', border: '1px solid #232f47', textAlign: 'center', fontSize: 11, color: '#2a2a2a' }}>
                 Yaklaşan maç bulunamadı
               </div>
             ) : (
@@ -2716,7 +2673,7 @@ export default function Dashboard() {
                       }}>
                         {g.label}
                       </span>
-                      <div style={{ flex: 1, height: 1, background: g.key === todayStr ? 'rgba(76,175,80,.15)' : '#181818' }} />
+                      <div style={{ flex: 1, height: 1, background: g.key === todayStr ? 'rgba(76,175,80,.15)' : '#232f47' }} />
                       <span style={{ fontSize: 9, color: '#2a2a2a', flexShrink: 0 }}>{g.matches.length} maç</span>
                     </div>
 
@@ -2734,12 +2691,12 @@ export default function Dashboard() {
                             <button
                               onClick={() => setExpandedScheduleGroups(prev => new Set([...prev, g.key]))}
                               style={{
-                                background: 'none', border: '1px solid #1e1e1e', borderRadius: 8,
+                                background: 'none', border: '1px solid #232f47', borderRadius: 8,
                                 color: '#3a3a3a', fontSize: 10, fontWeight: 600, cursor: 'pointer',
                                 padding: '7px 0', width: '100%', transition: 'all .15s',
                               }}
                               onMouseEnter={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#888' }}
-                              onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e1e1e'; e.currentTarget.style.color = '#3a3a3a' }}
+                              onMouseLeave={e => { e.currentTarget.style.borderColor = '#232f47'; e.currentTarget.style.color = '#3a3a3a' }}
                             >
                               +{hidden} maç daha göster
                             </button>
@@ -2748,12 +2705,12 @@ export default function Dashboard() {
                             <button
                               onClick={() => setExpandedScheduleGroups(prev => { const s = new Set(prev); s.delete(g.key); return s })}
                               style={{
-                                background: 'none', border: '1px solid #1e1e1e', borderRadius: 8,
+                                background: 'none', border: '1px solid #232f47', borderRadius: 8,
                                 color: '#3a3a3a', fontSize: 10, fontWeight: 600, cursor: 'pointer',
                                 padding: '7px 0', width: '100%', transition: 'all .15s',
                               }}
                               onMouseEnter={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#888' }}
-                              onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e1e1e'; e.currentTarget.style.color = '#3a3a3a' }}
+                              onMouseLeave={e => { e.currentTarget.style.borderColor = '#232f47'; e.currentTarget.style.color = '#3a3a3a' }}
                             >
                               Daralt ↑
                             </button>
@@ -2769,12 +2726,12 @@ export default function Dashboard() {
                     to="/matches"
                     style={{
                       display: 'block', textAlign: 'center', padding: '9px',
-                      borderRadius: 10, background: '#0a0a0a', border: '1px solid #181818',
+                      borderRadius: 10, background: '#0b0f19', border: '1px solid #232f47',
                       fontSize: 10, color: '#383838', textDecoration: 'none',
                       transition: 'all .15s', marginTop: 10,
                     }}
                     onMouseEnter={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#888' }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = '#181818'; e.currentTarget.style.color = '#383838' }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = '#232f47'; e.currentTarget.style.color = '#383838' }}
                   >
                     Tüm program →
                   </Link>
@@ -2787,11 +2744,11 @@ export default function Dashboard() {
                       <span style={{
                         fontSize: 9, fontWeight: 800, letterSpacing: '.6px', textTransform: 'uppercase',
                         color: '#3a3a3a', padding: '2px 8px', borderRadius: 6,
-                        border: '1px solid #222',
+                        border: '1px solid #2b3a58',
                       }}>
                         ⟳ Sonuç Bekleniyor
                       </span>
-                      <div style={{ flex: 1, height: 1, background: '#181818' }} />
+                      <div style={{ flex: 1, height: 1, background: '#232f47' }} />
                       <span style={{ fontSize: 9, color: '#252525' }}>veri gecikmesi</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 3, opacity: 0.45 }}>
@@ -2806,6 +2763,24 @@ export default function Dashboard() {
           </div>
         )
       })()}
+
+      {/* ── AI Güven Paneli — birleşik (net isabet + son-30 trend), tek satır ── */}
+      <div style={{
+        marginBottom: 24, padding: '12px 16px', borderRadius: 14,
+        border: '1px solid rgba(148,163,184,.1)', background: '#131b2b',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
+      }}>
+        <PredictionAccuracyBadge variant="inline" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 220, justifyContent: 'flex-end' }}>
+          <span style={{ fontSize: 11, color: '#8d8d8d', whiteSpace: 'nowrap' }}>Son 30 maç trend</span>
+          <div style={{ flex: 1, maxWidth: 160, height: 6, borderRadius: 999, overflow: 'hidden', background: 'rgba(0,0,0,.35)' }}>
+            <div style={{ height: '100%', width: `${accuracySummary.accuracyRate ?? 0}%`, background: confidenceTone.accent, transition: 'width .35s ease' }} />
+          </div>
+          <span style={{ fontSize: 15, fontWeight: 900, color: '#f5f5f5', fontVariantNumeric: 'tabular-nums', minWidth: 42, textAlign: 'right' }}>
+            {accuracySummary.accuracyRate == null ? '--' : `%${accuracySummary.accuracyRate}`}
+          </span>
+        </div>
+      </div>
 
       {/* ── Marka + Özet İstatistikler (Bento) — canlı içerik yukarıda, bu blok alta alındı ── */}
       <div style={{
@@ -2823,15 +2798,13 @@ export default function Dashboard() {
           gridRow: isMobile ? 'auto' : '1 / 3',
           padding: isMobile ? '20px 16px' : '28px 24px',
           borderRadius: 20,
-          background: 'linear-gradient(135deg,#141414,#0e0e0e)',
-          border: '1px solid #1e1e1e',
+          background: 'linear-gradient(135deg,#172032,#131b2b)',
+          border: '1px solid #232f47',
           display: 'flex', flexDirection: 'column', justifyContent: 'center',
         }}>
-          <div style={{ fontSize: 30, marginBottom: 6 }}>⚡</div>
+          <Zap size={28} color="#FF4655" style={{ marginBottom: 8 }} />
           <h1 style={{
-            margin: '0 0 8px', fontSize: 26, fontWeight: 900, letterSpacing: '-1px',
-            background: 'linear-gradient(135deg,#FF4655,#F0A500,#fff)',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+            margin: '0 0 8px', fontSize: 26, fontWeight: 900, letterSpacing: '-.5px', color: '#f3f5f8',
           }}>{BRANDING.shortName}</h1>
           <p style={{ margin: '0 0 16px', fontSize: 11, color: '#444', lineHeight: 1.6 }}>
             Canli sonuclar · PandaScore verileri
@@ -2863,7 +2836,7 @@ export default function Dashboard() {
             padding: '14px 12px',
             borderRadius: 16,
             textAlign: 'center',
-            background: 'linear-gradient(135deg,#121212,#0e0e0e)',
+            background: 'linear-gradient(135deg,#172032,#131b2b)',
             border: `1px solid ${s.color}1a`,
             display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
             transition: 'border-color .2s',
@@ -2893,7 +2866,7 @@ export default function Dashboard() {
           <Link key={l.to} to={l.to} style={{ textDecoration: 'none' }}>
             <div style={{
               padding: '16px 14px', borderRadius: 16,
-              background: 'linear-gradient(135deg,#121212,#0e0e0e)',
+              background: 'linear-gradient(135deg,#172032,#131b2b)',
               border: `1px solid ${l.color}18`,
               transition: 'all .18s', cursor: 'pointer',
             }}
@@ -2903,7 +2876,7 @@ export default function Dashboard() {
                 e.currentTarget.style.transform     = 'translateY(-3px)'
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.background    = 'linear-gradient(135deg,#121212,#0e0e0e)'
+                e.currentTarget.style.background    = 'linear-gradient(135deg,#172032,#131b2b)'
                 e.currentTarget.style.borderColor   = `${l.color}18`
                 e.currentTarget.style.transform     = 'translateY(0)'
               }}
@@ -2944,6 +2917,7 @@ export default function Dashboard() {
         popularTeams={popularTeams}
         loading={popularTeamsLoading}
       />
+    </div>
     </div>
   )
 }

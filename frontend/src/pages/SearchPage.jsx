@@ -1089,8 +1089,9 @@ export default function SearchPage() {
       </div>
 
       {/* ══ ANA İÇERİK ════════════════════════════════════════════ */}
-      <div style={{ maxWidth: 1200, margin: '0 auto',
-        padding: '0 24px 80px', display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+      {/* mobilde dikey stack + tam genişlik (Tailwind responsive; inline display:flex korunur) */}
+      <div className="flex-col items-stretch md:flex-row md:items-start" style={{ maxWidth: 1200, margin: '0 auto',
+        padding: '0 16px 80px', display: 'flex', gap: 20 }}>
 
         {/* Sidebar */}
         <Sidebar
@@ -1117,7 +1118,7 @@ export default function SearchPage() {
                 <div style={{ marginBottom: 28 }}>
                   <ST icon="🛡️" label="Takımlar" count={teams.length} />
                   <div style={{ display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))', gap: 10 }}>
                     {teams.map(t => <TeamCard key={t.id} team={t} navigate={navigate} />)}
                   </div>
                 </div>
@@ -1127,7 +1128,7 @@ export default function SearchPage() {
                 <div style={{ marginBottom: 28 }}>
                   <ST icon="👤" label="Oyuncular" count={players.length} />
                   <div style={{ display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))', gap: 10 }}>
                     {players.map(p => <PlayerCard key={p.id} player={p} navigate={navigate} />)}
                   </div>
                 </div>
@@ -1137,7 +1138,7 @@ export default function SearchPage() {
                 <div style={{ marginBottom: 28 }}>
                   <ST icon="🏆" label="Eşleşen Turnuvalar" count={visibleTournaments.length} />
                   <div style={{ display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 220px), 1fr))', gap: 12 }}>
                     {visibleTournaments.slice(0, 9).map(t => (
                       <TournamentCard key={t.id} t={t} navigate={navigate} highlighted />
                     ))}
@@ -1256,7 +1257,7 @@ export default function SearchPage() {
             {/* Turnuva grid */}
             {tourLoading ? (
               <div style={{ display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+                gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 220px), 1fr))', gap: 12 }}>
                 {[1, 2, 3, 4, 5, 6].map(i => <Sk key={i} h="180px" r="16px" />)}
               </div>
             ) : visibleTournaments.length === 0 ? (
@@ -1308,7 +1309,7 @@ export default function SearchPage() {
               </div>
             ) : (
               <div style={{ display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+                gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 220px), 1fr))', gap: 12 }}>
                 {visibleTournaments.map(t => (
                   <TournamentCard key={t.id} t={t} navigate={navigate} highlighted={false} />
                 ))}

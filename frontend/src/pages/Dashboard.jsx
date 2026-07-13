@@ -565,11 +565,11 @@ const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
   }
 
   return (
-    <div style={{ marginBottom: 14, borderRadius: 12, border: '1px solid rgba(255,70,85,.22)', background: 'linear-gradient(90deg, rgba(255,70,85,.12), rgba(12,12,12,.95))', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 10px', borderBottom: '1px solid rgba(255,70,85,.15)', background: 'rgba(0,0,0,.22)' }}>
-        <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff4655', boxShadow: '0 0 10px rgba(255,70,85,.8)', animation: 'liveNeonBlink 1.05s infinite' }} />
-        <span style={{ fontSize: 10, fontWeight: 800, color: '#ff95a0', textTransform: 'uppercase', letterSpacing: '.9px' }}>
-          Live Ticker {loading ? '· senkronize ediliyor' : ''}
+    <div style={{ marginBottom: 18, borderRadius: 14, border: '1px solid rgba(255,70,85,.22)', background: 'linear-gradient(90deg, rgba(255,70,85,.12), rgba(12,12,12,.95))', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 16px', borderBottom: '1px solid rgba(255,70,85,.15)', background: 'rgba(0,0,0,.22)' }}>
+        <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#ff4655', boxShadow: '0 0 10px rgba(255,70,85,.8)', animation: 'liveNeonBlink 1.05s infinite' }} />
+        <span style={{ fontSize: 12, fontWeight: 800, color: '#ff95a0', textTransform: 'uppercase', letterSpacing: '1px' }}>
+          Son Haberler &amp; Canlı Akış {loading ? '· senkronize ediliyor' : ''}
         </span>
       </div>
 
@@ -582,9 +582,10 @@ const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
               style={{
                 position: 'relative',
                 overflow: 'hidden',
-                fontSize: 12,
+                fontSize: 13.5,
+                fontWeight: 500,
                 color: line.href ? '#ffe8ea' : '#f5d6da',
-                padding: '9px 16px',
+                padding: '13px 20px',
                 borderRight: '1px solid rgba(255,255,255,.08)',
                 borderTop: 'none',
                 borderBottom: 'none',

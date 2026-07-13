@@ -406,23 +406,28 @@ function GameSelectorBar() {
               onClick={() => setActiveGame(g.id)}
               disabled={g.soon}
               style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '5px 12px', borderRadius: 8, border: 'none',
-                background: active ? `${g.color}22` : 'transparent',
-                color: active ? g.color : g.soon ? '#2a2a2a' : '#555',
-                fontSize: 12, fontWeight: active ? 700 : 400,
+                display: 'flex', alignItems: 'center', gap: 7,
+                padding: '8px 12px', border: 'none', background: 'transparent',
+                borderBottom: active ? `2px solid ${g.color}` : '2px solid transparent',
+                color: active ? '#fff' : g.soon ? '#333' : '#6b7280',
+                fontSize: 11, fontWeight: active ? 800 : 600,
+                letterSpacing: '.5px', textTransform: 'uppercase',
                 cursor: g.soon ? 'default' : 'pointer',
-                outline: active ? `1.5px solid ${g.color}55` : 'none',
                 transition: 'all .15s', whiteSpace: 'nowrap', flexShrink: 0,
               }}
               onMouseEnter={e => { if (!active && !g.soon) e.currentTarget.style.color = g.color }}
-              onMouseLeave={e => { if (!active && !g.soon) e.currentTarget.style.color = '#555' }}
+              onMouseLeave={e => { if (!active && !g.soon) e.currentTarget.style.color = '#6b7280' }}
             >
-              <span>{g.icon}</span>
+              {/* emoji yerine brand-renkli nokta — her oyunun kimliği, kurumsal */}
+              <span style={{
+                width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                background: g.soon ? '#333' : g.color,
+                boxShadow: active ? `0 0 6px ${g.color}` : 'none',
+              }} />
               <span>{g.shortLabel ?? g.label}</span>
               {g.soon && (
                 <span style={{ fontSize: 8, padding: '1px 4px', borderRadius: 4,
-                  background: '#1a1a1a', color: '#333' }}>soon</span>
+                  background: '#1a1a1a', color: '#444', letterSpacing: 0 }}>soon</span>
               )}
             </button>
           )

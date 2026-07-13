@@ -1,3 +1,22 @@
+/* ── Tailwind v4 — PREFLIGHT'SIZ (incremental adoption; mevcut inline stiller korunur) ──
+   Sadece theme + utilities import edilir; base/preflight KASITLI dışarıda bırakıldı ki
+   Tailwind'in global reset'i mevcut 255 inline-stilli görünümü bozmasın. */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* Marka token'ları (Sofascore-clean slate paleti) → bg-base, bg-surface, border-line, text-accent … */
+@theme {
+  --color-base:      #0b0f19;
+  --color-surface:   #131b2b;
+  --color-surface-2: #172032;
+  --color-line:      #26324a;
+  --color-accent:    #ff4655;
+  --color-gold:      #f0c040;
+  --color-teal:      #5eead4;
+  --color-good:      #4caf50;
+}
+
 /* Global reset + tema — EsportsHub Pro (dark, full-width, mobil-güvenli).
    NOT: Eski Vite şablon defaultları (body flex-center, h1 3.2em, mor linkler,
    light-mode flip) mobili bozuyordu; kaldırıldı. */

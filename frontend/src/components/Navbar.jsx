@@ -4,6 +4,40 @@ import { Menu, Trophy, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import BRANDING from '../branding.config'
 
+/* Nav öğesi — lucide ikon + hover state (emoji "AI havası"nı kaldırır) */
+function NavItem({ link, mobile = false }) {
+  const [hover, setHover] = useState(false)
+  const Icon = link.icon
+  return (
+    <NavLink
+      to={link.to}
+      end={link.end}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={({ isActive }) => (mobile
+        ? {
+            textDecoration: 'none', padding: '9px 12px', borderRadius: 10, fontSize: 13,
+            fontWeight: isActive ? 800 : 600,
+            color: isActive ? '#fff' : (hover ? '#fff' : '#c1c1c1'),
+            background: isActive ? 'linear-gradient(120deg, rgba(255,70,85,.24), rgba(255,184,0,.15))' : (hover ? '#1a1a1a' : '#111'),
+            border: isActive ? '1px solid rgba(255,120,130,.45)' : '1px solid #242424',
+            display: 'flex', alignItems: 'center', gap: 9, transition: 'all .15s',
+          }
+        : {
+            textDecoration: 'none', padding: '7px 11px', borderRadius: 8, fontSize: 12,
+            fontWeight: isActive ? 700 : 500,
+            color: isActive ? '#fff' : (hover ? '#cfcfcf' : '#555'),
+            background: isActive ? 'rgba(255,255,255,.08)' : (hover ? 'rgba(255,255,255,.05)' : 'transparent'),
+            transition: 'all .15s', whiteSpace: 'nowrap',
+            display: 'inline-flex', alignItems: 'center', gap: 7, height: 34,
+          })}
+    >
+      {Icon && <Icon size={mobile ? 16 : 15} strokeWidth={2} />}
+      {link.label}
+    </NavLink>
+  )
+}
+
 function AuthWidget() {
   const navigate = useNavigate()
   const { user, profile, profileLoading, signOut, isAuthenticated } = useAuth()
@@ -95,27 +129,7 @@ export default function Navbar({ navLinks, SearchComponent }) {
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, height: 34 }}>
               {navLinks.map(l => (
-                <NavLink
-                  key={l.to}
-                  to={l.to}
-                  end={l.end}
-                  style={({ isActive }) => ({
-                    textDecoration: 'none',
-                    padding: '7px 11px',
-                    borderRadius: 8,
-                    fontSize: 12,
-                    fontWeight: isActive ? 700 : 500,
-                    color: isActive ? '#fff' : '#555',
-                    background: isActive ? 'rgba(255,255,255,.07)' : 'transparent',
-                    transition: 'all .15s',
-                    whiteSpace: 'nowrap',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    height: 34,
-                  })}
-                >
-                  {l.label}
-                </NavLink>
+                <NavItem key={l.to} link={l} />
               ))}
             </div>
 
@@ -168,23 +182,7 @@ export default function Navbar({ navLinks, SearchComponent }) {
             ) : null}
 
             {navLinks.map(l => (
-              <NavLink
-                key={`mobile_${l.to}`}
-                to={l.to}
-                end={l.end}
-                style={({ isActive }) => ({
-                  textDecoration: 'none',
-                  padding: '9px 10px',
-                  borderRadius: 10,
-                  fontSize: 13,
-                  fontWeight: isActive ? 800 : 600,
-                  color: isActive ? '#fff' : '#c1c1c1',
-                  background: isActive ? 'linear-gradient(120deg, rgba(255,70,85,.24), rgba(255,184,0,.15))' : '#111',
-                  border: isActive ? '1px solid rgba(255,120,130,.45)' : '1px solid #242424',
-                })}
-              >
-                {l.label}
-              </NavLink>
+              <NavItem key={`mobile_${l.to}`} link={l} mobile />
             ))}
 
             <div style={{ marginTop: 6 }}>

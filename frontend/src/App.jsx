@@ -20,6 +20,7 @@ import {
 
 import ProtectedRoute from './components/ProtectedRoute'
 import NavbarComponent from './components/Navbar'
+import { Home, CalendarDays, Trophy, BarChart3, Newspaper, Radar } from 'lucide-react'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Matches = lazy(() => import('./pages/Matches'))
@@ -43,17 +44,17 @@ const ScoutEnginePage = lazy(() => import('./pages/ScoutEnginePage'))
 
 import './App.css'
 
-/* ─── Nav linkleri ──────────────────────────────────────────────────────────── */
+/* ─── Nav linkleri (emoji yerine lucide ikon → "AI havası" kalkar; Navbar hover ekler) ── */
 const NAV_LINKS = [
-  { to: '/',         label: '🏠 Home',     end: true  },
-  { to: '/matches',  label: '📅 Matches',  end: false },
-  { to: '/tournaments', label: '🏟️ Turnuvalar', end: false },
-  { to: '/rankings', label: '🏆 Rankings', end: false },
+  { to: '/',         label: 'Home',      end: true,  icon: Home },
+  { to: '/matches',  label: 'Matches',   end: false, icon: CalendarDays },
+  { to: '/tournaments', label: 'Turnuvalar', end: false, icon: Trophy },
+  { to: '/rankings', label: 'Rankings',  end: false, icon: BarChart3 },
   // NOT: '/players' listeleme sekmesi gizlendi — oyuncu istatistikleri seyrek olduğu
   // için sıralama/compare boş duruyordu. Oyuncu DETAY sayfaları (/player/:id) arama +
   // takım kadrosu + maç üzerinden erişilir kalır. İstatistik kapsamı büyüyünce geri açılır.
-  { to: '/news',     label: '📰 News',     end: false },
-  { to: '/scout',    label: '🔬 Scout',    end: false },
+  { to: '/news',     label: 'News',      end: false, icon: Newspaper },
+  { to: '/scout',    label: 'Scout',     end: false, icon: Radar },
 ]
 
 /* Klavye kısayol simgesi platforma göre (Mac ⌘ / diğer Ctrl) */

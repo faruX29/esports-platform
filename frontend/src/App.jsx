@@ -56,6 +56,9 @@ const NAV_LINKS = [
   { to: '/scout',    label: '🔬 Scout',    end: false },
 ]
 
+/* Klavye kısayol simgesi platforma göre (Mac ⌘ / diğer Ctrl) */
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || '')
+
 /* ─── NavSearch ─────────────────────────────────────────────────────────────── */
 function NavSearch() {
   const navigate                  = useNavigate()
@@ -190,13 +193,13 @@ function NavSearch() {
               color: '#fff', fontSize: 13, minWidth: 0,
             }}
           />
-          {/* Ctrl+K badge — sadece unfocused */}
+          {/* Kısayol rozeti — Mac'te ⌘K, diğerlerinde Ctrl K */}
           {!focused && (
             <span style={{
               fontSize: 9, padding: '2px 5px', borderRadius: 4,
               background: '#1a1a1a', border: '1px solid #2a2a2a',
-              color: '#444', flexShrink: 0, fontFamily: 'monospace',
-            }}>⌘K</span>
+              color: '#444', flexShrink: 0, fontFamily: 'monospace', whiteSpace: 'nowrap',
+            }}>{IS_MAC ? '⌘K' : 'Ctrl K'}</span>
           )}
           {/* Clear */}
           {focused && q && (

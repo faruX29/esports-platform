@@ -2339,7 +2339,9 @@ export default function Dashboard() {
             Takip Tercihleri
           </div>
           <div style={{ fontSize: 12, color: '#d6d6d6', marginTop: 3 }}>
-            Oyunlar: {preferredGameLabels.length ? preferredGameLabels.join(', ') : 'Secilmedi'} · Takimlar: {followedTeamIds.length}
+            {(preferredGameLabels.length > 0 || followedTeamIds.length > 0)
+              ? `Oyunlar: ${preferredGameLabels.length ? preferredGameLabels.join(', ') : '—'} · Takımlar: ${followedTeamIds.length}`
+              : 'Akışını kişiselleştir — favori oyun ve takımlarını seç, dashboard sana göre şekillensin.'}
           </div>
         </div>
         <button
@@ -2354,9 +2356,10 @@ export default function Dashboard() {
             letterSpacing: '.3px',
             padding: '7px 12px',
             cursor: 'pointer',
+            whiteSpace: 'nowrap',
           }}
         >
-          Tercihleri Duzenle
+          {(preferredGameLabels.length > 0 || followedTeamIds.length > 0) ? 'Tercihleri Düzenle' : 'Kişiselleştir'}
         </button>
       </div>
 
@@ -2504,87 +2507,6 @@ export default function Dashboard() {
           )}
         </div>
       )}
-
-      {/* ══════════════════════════════════════════════════════════════════
-          Bento Grid — Hero (sol 2 sütun) + 4 Stat tile (sağ 2 sütun)
-          Layout: [ Hero  | Stat1 | Stat2 ]  ← row-1
-                  [ Hero  | Stat3 | Stat4 ]  ← row-2
-          gridTemplateColumns: 2fr 1fr 1fr   (hero 2 birim, tile'lar 1'er birim)
-      ════════════════════════════════════════════════════════════════════ */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr 1fr',  /* ← 3 sütun: hero geniş, stat'lar dar */
-        gridTemplateRows: isMobile ? 'auto' : '1fr 1fr',
-        gap: 10,
-        marginBottom: 24,
-        minHeight: isMobile ? 'auto' : 160,
-      }}>
-
-        {/* ── Hero tile — 2 satır boyunca sol ── */}
-        <div style={{
-          gridColumn: '1 / 2',
-          gridRow: isMobile ? 'auto' : '1 / 3',          /* her iki satırı kap */
-          padding: isMobile ? '20px 16px' : '28px 24px',
-          borderRadius: 20,
-          background: 'linear-gradient(135deg,#141414,#0e0e0e)',
-          border: '1px solid #1e1e1e',
-          display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        }}>
-          <div style={{ fontSize: 30, marginBottom: 6 }}>⚡</div>
-          <h1 style={{
-            margin: '0 0 8px', fontSize: 26, fontWeight: 900, letterSpacing: '-1px',
-            background: 'linear-gradient(135deg,#FF4655,#F0A500,#fff)',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-          }}>{BRANDING.shortName}</h1>
-          <p style={{ margin: '0 0 16px', fontSize: 11, color: '#444', lineHeight: 1.6 }}>
-            Canli sonuclar · PandaScore verileri
-          </p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {[
-              { to: '/matches',  label: '📅 Takvim',      color: '#FF4655' },
-              { to: '/tournaments', label: '🏟️ Turnuvalar', color: '#FFB800' },
-            ].map(b => (
-              <Link key={b.to} to={b.to} style={{ textDecoration: 'none' }}>
-                <div style={{
-                  padding: '6px 13px', borderRadius: 10, fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                  background: `${b.color}18`, border: `1px solid ${b.color}44`, color: b.color,
-                  transition: 'all .15s',
-                }}
-                  onMouseEnter={e => { e.currentTarget.style.background = `${b.color}28`; e.currentTarget.style.borderColor = `${b.color}88` }}
-                  onMouseLeave={e => { e.currentTarget.style.background = `${b.color}18`; e.currentTarget.style.borderColor = `${b.color}44` }}
-                >{b.label}</div>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        {/* ── 4 Stat tile — sağdaki 2 sütuna 2×2 grid ── */}
-        {statTiles.map((s, i) => (
-          <div key={s.label} style={{
-            /* i=0→col2 row1 | i=1→col3 row1 | i=2→col2 row2 | i=3→col3 row2 */
-            gridColumn: isMobile ? '1 / 2' : ((i % 2 === 0) ? '2 / 3' : '3 / 4'),
-            gridRow:    isMobile ? 'auto' : ((i < 2) ? '1 / 2' : '2 / 3'),
-            padding: '14px 12px',
-            borderRadius: 16,
-            textAlign: 'center',
-            background: 'linear-gradient(135deg,#121212,#0e0e0e)',
-            border: `1px solid ${s.color}1a`,
-            display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
-            transition: 'border-color .2s',
-          }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = `${s.color}44`}
-            onMouseLeave={e => e.currentTarget.style.borderColor = `${s.color}1a`}
-          >
-            <div style={{ fontSize: 18, marginBottom: 4 }}>{s.icon}</div>
-            <div style={{ fontSize: 22, fontWeight: 900, color: s.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-              {s.value}
-            </div>
-            <div style={{ fontSize: 9, color: '#383838', textTransform: 'uppercase', letterSpacing: '.6px', marginTop: 4 }}>
-              {s.label}
-            </div>
-          </div>
-        ))}
-      </div>
 
       {/* ── Weekly Dream Team Leaderboard ── */}
       {!MVP_HIDE_DREAM_TEAM && <div style={{ marginBottom: 24 }}>
@@ -2884,6 +2806,81 @@ export default function Dashboard() {
           </div>
         )
       })()}
+
+      {/* ── Marka + Özet İstatistikler (Bento) — canlı içerik yukarıda, bu blok alta alındı ── */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr 1fr',
+        gridTemplateRows: isMobile ? 'auto' : '1fr 1fr',
+        gap: 10,
+        marginBottom: 24,
+        minHeight: isMobile ? 'auto' : 160,
+      }}>
+
+        {/* ── Hero tile — 2 satır boyunca sol ── */}
+        <div style={{
+          gridColumn: '1 / 2',
+          gridRow: isMobile ? 'auto' : '1 / 3',
+          padding: isMobile ? '20px 16px' : '28px 24px',
+          borderRadius: 20,
+          background: 'linear-gradient(135deg,#141414,#0e0e0e)',
+          border: '1px solid #1e1e1e',
+          display: 'flex', flexDirection: 'column', justifyContent: 'center',
+        }}>
+          <div style={{ fontSize: 30, marginBottom: 6 }}>⚡</div>
+          <h1 style={{
+            margin: '0 0 8px', fontSize: 26, fontWeight: 900, letterSpacing: '-1px',
+            background: 'linear-gradient(135deg,#FF4655,#F0A500,#fff)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          }}>{BRANDING.shortName}</h1>
+          <p style={{ margin: '0 0 16px', fontSize: 11, color: '#444', lineHeight: 1.6 }}>
+            Canli sonuclar · PandaScore verileri
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {[
+              { to: '/matches',  label: '📅 Takvim',      color: '#FF4655' },
+              { to: '/tournaments', label: '🏟️ Turnuvalar', color: '#FFB800' },
+            ].map(b => (
+              <Link key={b.to} to={b.to} style={{ textDecoration: 'none' }}>
+                <div style={{
+                  padding: '6px 13px', borderRadius: 10, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                  background: `${b.color}18`, border: `1px solid ${b.color}44`, color: b.color,
+                  transition: 'all .15s',
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.background = `${b.color}28`; e.currentTarget.style.borderColor = `${b.color}88` }}
+                  onMouseLeave={e => { e.currentTarget.style.background = `${b.color}18`; e.currentTarget.style.borderColor = `${b.color}44` }}
+                >{b.label}</div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* ── 4 Stat tile — sağdaki 2 sütuna 2×2 grid ── */}
+        {statTiles.map((s, i) => (
+          <div key={s.label} style={{
+            gridColumn: isMobile ? '1 / 2' : ((i % 2 === 0) ? '2 / 3' : '3 / 4'),
+            gridRow:    isMobile ? 'auto' : ((i < 2) ? '1 / 2' : '2 / 3'),
+            padding: '14px 12px',
+            borderRadius: 16,
+            textAlign: 'center',
+            background: 'linear-gradient(135deg,#121212,#0e0e0e)',
+            border: `1px solid ${s.color}1a`,
+            display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
+            transition: 'border-color .2s',
+          }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = `${s.color}44`}
+            onMouseLeave={e => e.currentTarget.style.borderColor = `${s.color}1a`}
+          >
+            <div style={{ fontSize: 18, marginBottom: 4 }}>{s.icon}</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: s.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+              {s.value}
+            </div>
+            <div style={{ fontSize: 9, color: '#383838', textTransform: 'uppercase', letterSpacing: '.6px', marginTop: 4 }}>
+              {s.label}
+            </div>
+          </div>
+        ))}
+      </div>
 
       {/* ── Hızlı Linkler — 4 Bento tile ────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,minmax(0,1fr))' : 'repeat(4,1fr)', gap: 10 }}>

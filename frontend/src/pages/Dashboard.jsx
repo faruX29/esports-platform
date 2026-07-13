@@ -8,6 +8,7 @@ import { supabase, subscribeToMatchesUpdates } from '../supabaseClient'
 import { useGame, gameMatchesFilter, GAMES } from '../context/GameContext'
 import { isTurkishTeam }                   from '../constants'
 import { useUser }                          from '../context/UserContext'
+import { useAuth }                          from '../context/AuthContext'
 import BRANDING                             from '../branding.config'
 import { buildFinishedStory, buildUpcomingStory } from '../utils/newsStories'
 import { isStoryForYou, prioritizeStoriesForYou } from '../utils/newsPersonalization'
@@ -1419,6 +1420,7 @@ export default function Dashboard() {
     setFollowedTeams,
     setFollowedGames,
   } = useUser()
+  const { isAuthenticated } = useAuth()
 
   const [liveMatches,     setLiveMatches]     = useState([])
   const [upcomingMatches, setUpcomingMatches] = useState([])
@@ -1468,9 +1470,13 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+    // Prompt'u SADECE giriş yapmış kullanıcıya aç (kayıt sonrası onboarding anı).
+    // Anonim ilk ziyaretçi bloke edilmez → içeriği hemen görür (bounce↓, kayıt teşviki↑).
+    // Anonim yine de üstteki "Tercihleri Düzenle" ile manuel açabilir.
+    if (!isAuthenticated) return
     const seen = window.localStorage.getItem(DASHBOARD_PREF_WIZARD_SEEN_KEY)
     if (!seen) setShowPreferenceWizard(true)
-  }, [])
+  }, [isAuthenticated])
 
   useEffect(() => {
     if (!showPreferenceWizard) return

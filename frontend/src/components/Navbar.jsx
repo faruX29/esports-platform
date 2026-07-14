@@ -98,7 +98,7 @@ export default function Navbar({ navLinks, SearchComponent }) {
       borderBottom: '1px solid rgba(38,50,74,.6)',
     }}>
       <div style={{
-        maxWidth: 1240,
+        maxWidth: 1440,
         margin: '0 auto',
         display: 'flex',
         alignItems: 'center',

@@ -321,7 +321,7 @@ export default function ScoutEnginePage() {
         description="Derin performans analitiği, form takibi ve erken yetenek tespiti. Espor ajansları ve scout'lar için kapalı beta — bekleme listesine katıl."
         type="website"
       />
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '28px 16px 60px' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 16px 60px' }}>
 
         {/* Hero */}
         <section style={{

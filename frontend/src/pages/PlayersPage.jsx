@@ -110,9 +110,11 @@ function GameFilterTabs({ activeGame, setActiveGame }) {
               fontWeight: 700,
               letterSpacing: '.2px',
               cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 7,
             }}
           >
-            {game.icon} {game.shortLabel || game.label}
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: game.color, flexShrink: 0 }} />
+            {game.shortLabel || game.label}
           </button>
         )
       })}
@@ -568,7 +570,7 @@ export default function PlayersPage() {
   const compareB = useMemo(() => visiblePlayers.find(p => String(p.id) === String(compareBId)) || null, [visiblePlayers, compareBId])
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 16px 80px', color: '#e2e8f0', position: 'relative' }}>
+    <div style={{ maxWidth: 1440, margin: '0 auto', padding: '24px 16px 80px', color: '#e2e8f0', position: 'relative' }}>
       <div style={{
         position: 'absolute',
         inset: 0,

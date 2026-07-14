@@ -1108,7 +1108,7 @@ export default function SearchPage() {
       </div>
 
       {/* ══ YEARLY TIMELINE ════════════════════════════════════════ */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 0' }}>
+      <div style={{ maxWidth: 1440, margin: '0 auto', padding: '32px 24px 0' }}>
         <ST Icon={CalendarDays} label="Yıl Filtresi" />
         <YearTimeline
           activeYear={activeYear}
@@ -1119,7 +1119,7 @@ export default function SearchPage() {
 
       {/* ══ ANA İÇERİK ════════════════════════════════════════════ */}
       {/* mobilde dikey stack + tam genişlik (Tailwind responsive; inline display:flex korunur) */}
-      <div className="flex-col items-stretch md:flex-row md:items-start" style={{ maxWidth: 1200, margin: '0 auto',
+      <div className="flex-col items-stretch md:flex-row md:items-start" style={{ maxWidth: 1440, margin: '0 auto',
         padding: '0 16px 80px', display: 'flex', gap: 20 }}>
 
         {/* Sidebar */}

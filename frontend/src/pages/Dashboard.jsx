@@ -2181,7 +2181,7 @@ export default function Dashboard() {
 
   return (
     <div style={{ background: '#0b0f19', minHeight: 'calc(100vh - 58px)' }}>
-    <div style={{ maxWidth: 1160, margin: '0 auto', padding: isMobile ? '14px 12px 44px' : '20px 18px 60px', color: 'white' }}>
+    <div style={{ maxWidth: 1440, margin: '0 auto', padding: isMobile ? '14px 12px 44px' : '20px 18px 60px', color: 'white' }}>
 
       {globalError && (
         <div style={{

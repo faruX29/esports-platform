@@ -278,7 +278,7 @@ export default function RankingsPage() {
 
   return (
     <div style={{
-      maxWidth: 1160,
+      maxWidth: 1440,
       margin: '0 auto',
       padding: '24px 16px 80px',
       color: '#e2e8f0',

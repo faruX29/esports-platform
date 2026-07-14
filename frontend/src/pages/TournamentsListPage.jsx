@@ -189,7 +189,7 @@ export default function TournamentsListPage() {
   }, [visibleTournaments, teamsByTournament])
 
   return (
-    <div style={{ maxWidth: 1180, margin: '0 auto', padding: '24px 16px 80px', color: '#f2f2f2' }}>
+    <div style={{ maxWidth: 1440, margin: '0 auto', padding: '24px 16px 80px', color: '#f2f2f2' }}>
       <h1 style={{ margin: '0 0 8px', fontSize: 30, letterSpacing: '.4px' }}>Turnuvalar</h1>
       <p style={{ margin: '0 0 14px', fontSize: 13, color: '#9c9c9c' }}>
         Aktif ve yaklaşan turnuvalar. Detay, bracket ve puan durumu için bir turnuvaya tıkla.

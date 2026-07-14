@@ -20,7 +20,7 @@ import {
 
 import ProtectedRoute from './components/ProtectedRoute'
 import NavbarComponent from './components/Navbar'
-import { Home, CalendarDays, Trophy, BarChart3, Newspaper, Radar } from 'lucide-react'
+import { Home, CalendarDays, Trophy, BarChart3, Newspaper, Radar, Search, X as XIcon, Shield, User, ArrowRight, CornerDownLeft } from 'lucide-react'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Matches = lazy(() => import('./pages/Matches'))
@@ -173,15 +173,15 @@ function NavSearch() {
       <form onSubmit={handleSubmit}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 6,
-          background: focused ? '#1a1a1a' : '#111',
-          border: `1.5px solid ${focused ? '#FF4655' : '#1e1e1e'}`,
+          background: focused ? '#172032' : '#131b2b',
+          border: `1.5px solid ${focused ? '#FF4655' : '#26324a'}`,
           borderRadius: 10, padding: '5px 10px',
           transition: 'all .2s',
           boxShadow: focused ? '0 0 0 3px rgba(255,70,85,.1)' : 'none',
           width: focused ? 'min(260px, 70vw)' : 180,
         }}>
-          <span style={{ fontSize: 12, color: focused ? '#FF4655' : '#444',
-            flexShrink: 0, transition: 'color .2s' }}>🔍</span>
+          <span style={{ color: focused ? '#FF4655' : '#64748b',
+            flexShrink: 0, transition: 'color .2s', display: 'inline-flex' }}><Search size={14} /></span>
           <input
             ref={inputRef}
             type="text"
@@ -198,8 +198,8 @@ function NavSearch() {
           {!focused && (
             <span style={{
               fontSize: 9, padding: '2px 5px', borderRadius: 4,
-              background: '#1a1a1a', border: '1px solid #2a2a2a',
-              color: '#444', flexShrink: 0, fontFamily: 'monospace', whiteSpace: 'nowrap',
+              background: '#172032', border: '1px solid #26324a',
+              color: '#64748b', flexShrink: 0, fontFamily: 'monospace', whiteSpace: 'nowrap',
             }}>{IS_MAC ? '⌘K' : 'Ctrl K'}</span>
           )}
           {/* Clear */}
@@ -207,9 +207,9 @@ function NavSearch() {
             <button
               type="button"
               onClick={() => { setQ(''); setResults({ teams: [], players: [], tournaments: [] }); inputRef.current?.focus() }}
-              style={{ background: 'none', border: 'none', color: '#555',
-                cursor: 'pointer', fontSize: 14, padding: 0, flexShrink: 0 }}
-            >✕</button>
+              style={{ background: 'none', border: 'none', color: '#64748b',
+                cursor: 'pointer', padding: 0, flexShrink: 0, display: 'inline-flex' }}
+            ><XIcon size={14} /></button>
           )}
           {/* Loading dot */}
           {loading && (
@@ -228,16 +228,16 @@ function NavSearch() {
           ref={dropdownRef}
           style={{
             position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-            width: 320, background: '#0d0d0d',
-            border: '1px solid #1e1e1e', borderRadius: 14,
-            boxShadow: '0 12px 40px rgba(0,0,0,.7)',
+            width: 320, background: '#131b2b',
+            border: '1px solid #26324a', borderRadius: 14,
+            boxShadow: '0 12px 40px rgba(0,0,0,.55)',
             overflow: 'hidden', zIndex: 9999,
             animation: 'fadeUp .15s ease',
           }}
         >
           {!hasResults && !loading && (
             <div style={{ padding: '20px', textAlign: 'center',
-              fontSize: 12, color: '#444' }}>
+              fontSize: 12, color: '#64748b' }}>
               "{q}" için sonuç yok
             </div>
           )}
@@ -245,9 +245,9 @@ function NavSearch() {
           {/* Teams */}
           {results.teams.length > 0 && (
             <div>
-              <div style={{ padding: '8px 14px 4px', fontSize: 9, color: '#444',
-                fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-                🛡️ Takımlar
+              <div style={{ padding: '8px 14px 4px', fontSize: 9, color: '#475569',
+                fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <Shield size={11} /> Takımlar
               </div>
               {results.teams.map(t => (
                 <div
@@ -258,22 +258,22 @@ function NavSearch() {
                     padding: '8px 14px', cursor: 'pointer',
                     transition: 'background .12s',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#141414'}
+                  onMouseEnter={e => e.currentTarget.style.background = '#172032'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
                   {t.logo_url
                     ? <img src={t.logo_url} alt={t.name}
                         style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0 }} />
                     : <div style={{ width: 26, height: 26, borderRadius: 6,
-                        background: '#1e1e1e', flexShrink: 0,
+                        background: '#172032', flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 12, color: '#444' }}>🛡️</div>
+                        color: '#475569' }}><Shield size={13} /></div>
                   }
-                  <span style={{ fontSize: 13, color: '#ccc',
+                  <span style={{ fontSize: 13, color: '#cbd5e1',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {t.name}
                   </span>
-                  <span style={{ marginLeft: 'auto', fontSize: 10, color: '#333' }}>→</span>
+                  <span style={{ marginLeft: 'auto', fontSize: 10, color: '#334155' }}>→</span>
                 </div>
               ))}
             </div>
@@ -281,10 +281,10 @@ function NavSearch() {
 
           {/* Players */}
           {results.players.length > 0 && (
-            <div style={{ borderTop: results.teams.length > 0 ? '1px solid #141414' : 'none' }}>
-              <div style={{ padding: '8px 14px 4px', fontSize: 9, color: '#444',
-                fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-                👤 Oyuncular
+            <div style={{ borderTop: results.teams.length > 0 ? '1px solid #26324a' : 'none' }}>
+              <div style={{ padding: '8px 14px 4px', fontSize: 9, color: '#475569',
+                fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <User size={11} /> Oyuncular
               </div>
               {results.players.map(p => (
                 <div
@@ -295,7 +295,7 @@ function NavSearch() {
                     padding: '8px 14px', cursor: 'pointer',
                     transition: 'background .12s',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#141414'}
+                  onMouseEnter={e => e.currentTarget.style.background = '#172032'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
                   {p.image_url
@@ -303,17 +303,17 @@ function NavSearch() {
                         style={{ width: 26, height: 26, objectFit: 'cover',
                           borderRadius: '50%', flexShrink: 0 }} />
                     : <div style={{ width: 26, height: 26, borderRadius: '50%',
-                        background: '#1e1e1e', flexShrink: 0,
+                        background: '#172032', flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 12, color: '#444' }}>👤</div>
+                        color: '#475569' }}><User size={13} /></div>
                   }
-                  <span style={{ fontSize: 13, color: '#ccc',
+                  <span style={{ fontSize: 13, color: '#cbd5e1',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {p.nickname}
                   </span>
                   {p.role && (
                     <span style={{ marginLeft: 'auto', fontSize: 9, padding: '2px 6px',
-                      borderRadius: 4, background: '#1a1a1a', color: '#555',
+                      borderRadius: 4, background: '#172032', color: '#64748b',
                       flexShrink: 0 }}>{p.role}</span>
                   )}
                 </div>
@@ -323,10 +323,10 @@ function NavSearch() {
 
           {/* Tournaments */}
           {results.tournaments.length > 0 && (
-            <div style={{ borderTop: (results.teams.length > 0 || results.players.length > 0) ? '1px solid #141414' : 'none' }}>
-              <div style={{ padding: '8px 14px 4px', fontSize: 9, color: '#444',
-                fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-                🏆 Turnuvalar
+            <div style={{ borderTop: (results.teams.length > 0 || results.players.length > 0) ? '1px solid #26324a' : 'none' }}>
+              <div style={{ padding: '8px 14px 4px', fontSize: 9, color: '#475569',
+                fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <Trophy size={11} /> Turnuvalar
               </div>
               {results.tournaments.map(t => (
                 <div
@@ -336,18 +336,18 @@ function NavSearch() {
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '8px 14px', cursor: 'pointer', transition: 'background .12s',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#141414'}
+                  onMouseEnter={e => e.currentTarget.style.background = '#172032'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
-                  <div style={{ width: 26, height: 26, borderRadius: 6, background: '#1e1e1e', flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>🏆</div>
-                  <span style={{ fontSize: 13, color: '#ccc',
+                  <div style={{ width: 26, height: 26, borderRadius: 6, background: '#172032', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}><Trophy size={13} /></div>
+                  <span style={{ fontSize: 13, color: '#cbd5e1',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {t.name}
                   </span>
                   {t.tier && (
                     <span style={{ marginLeft: 'auto', fontSize: 9, padding: '2px 6px',
-                      borderRadius: 4, background: '#1a1a1a', color: '#666', flexShrink: 0 }}>
+                      borderRadius: 4, background: '#172032', color: '#64748b', flexShrink: 0 }}>
                       {String(t.tier).toUpperCase()}
                     </span>
                   )}
@@ -361,18 +361,18 @@ function NavSearch() {
             onMouseDown={handleSubmit}
             style={{
               padding: '10px 14px',
-              borderTop: '1px solid #141414',
+              borderTop: '1px solid #26324a',
               display: 'flex', alignItems: 'center', gap: 8,
               cursor: 'pointer', transition: 'background .12s',
             }}
-            onMouseEnter={e => e.currentTarget.style.background = '#141414'}
+            onMouseEnter={e => e.currentTarget.style.background = '#172032'}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
           >
-            <span style={{ fontSize: 12, color: '#FF4655' }}>🔍</span>
-            <span style={{ fontSize: 12, color: '#888' }}>
+            <span style={{ color: '#FF4655', display: 'inline-flex' }}><Search size={13} /></span>
+            <span style={{ fontSize: 12, color: '#94a3b8' }}>
               "<span style={{ color: '#FF4655', fontWeight: 700 }}>{q}</span>" için tüm sonuçları gör
             </span>
-            <span style={{ marginLeft: 'auto', fontSize: 10, color: '#333' }}>Enter ↵</span>
+            <span style={{ marginLeft: 'auto', fontSize: 10, color: '#475569', display: 'inline-flex', alignItems: 'center', gap: 4 }}>Enter <CornerDownLeft size={11} /></span>
           </div>
         </div>
       )}
@@ -391,12 +391,12 @@ function GameSelectorBar() {
 
   return (
     <div style={{
-      background: '#0a0a0a', borderBottom: '1px solid #111',
+      background: '#0b0f19', borderBottom: '1px solid #26324a',
       overflowX: 'auto', scrollbarWidth: 'none',
     }}>
       <div style={{
         display: 'flex', gap: 4,
-        maxWidth: 1240, margin: '0 auto', padding: '6px 16px',
+        maxWidth: 1440, margin: '0 auto', padding: '6px 16px',
       }}>
         {GAMES.map(g => {
           const active = activeGame === g.id
@@ -409,25 +409,24 @@ function GameSelectorBar() {
                 display: 'flex', alignItems: 'center', gap: 7,
                 padding: '8px 12px', border: 'none', background: 'transparent',
                 borderBottom: active ? `2px solid ${g.color}` : '2px solid transparent',
-                color: active ? '#fff' : g.soon ? '#333' : '#6b7280',
+                color: active ? '#fff' : g.soon ? '#475569' : '#94a3b8',
                 fontSize: 11, fontWeight: active ? 800 : 600,
                 letterSpacing: '.5px', textTransform: 'uppercase',
                 cursor: g.soon ? 'default' : 'pointer',
                 transition: 'all .15s', whiteSpace: 'nowrap', flexShrink: 0,
               }}
               onMouseEnter={e => { if (!active && !g.soon) e.currentTarget.style.color = g.color }}
-              onMouseLeave={e => { if (!active && !g.soon) e.currentTarget.style.color = '#6b7280' }}
+              onMouseLeave={e => { if (!active && !g.soon) e.currentTarget.style.color = '#94a3b8' }}
             >
               {/* emoji yerine brand-renkli nokta — her oyunun kimliği, kurumsal */}
               <span style={{
                 width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-                background: g.soon ? '#333' : g.color,
-                boxShadow: active ? `0 0 6px ${g.color}` : 'none',
+                background: g.soon ? '#475569' : g.color,
               }} />
               <span>{g.shortLabel ?? g.label}</span>
               {g.soon && (
                 <span style={{ fontSize: 8, padding: '1px 4px', borderRadius: 4,
-                  background: '#1a1a1a', color: '#444', letterSpacing: 0 }}>soon</span>
+                  background: '#172032', color: '#64748b', letterSpacing: 0 }}>soon</span>
               )}
             </button>
           )
@@ -554,7 +553,7 @@ function RealtimeToastBridge() {
         toastOptions={{
           style: {
             background: 'rgba(18,18,18,.94)',
-            color: '#f2f2f2',
+            color: '#e2e8f0',
             border: '1px solid rgba(255,255,255,.12)',
             boxShadow: '0 10px 26px rgba(0,0,0,.35)',
             fontSize: 12,
@@ -568,14 +567,14 @@ function RealtimeToastBridge() {
 /* ─── AppShell ──────────────────────────────────────────────────────────────── */
 function AppShell() {
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0a', color: 'white' }}>
+    <div style={{ minHeight: '100vh', background: '#0b0f19', color: 'white' }}>
       <RealtimeToastBridge />
       <NavbarComponent navLinks={NAV_LINKS} SearchComponent={NavSearch} />
       <GameSelectorBar />
       <Suspense fallback={(
-        <div style={{ maxWidth: 1160, margin: '0 auto', padding: '18px 16px 26px' }}>
-          <div style={{ height: 12, width: 190, borderRadius: 999, background: '#181818', marginBottom: 14 }} />
-          <div style={{ height: 170, borderRadius: 14, background: 'linear-gradient(90deg,#0f0f0f 20%,#1a1a1a 50%,#0f0f0f 80%)', backgroundSize: '200% 100%', animation: 'appRouteLoad 1.3s ease-in-out infinite' }} />
+        <div style={{ maxWidth: 1440, margin: '0 auto', padding: '18px 16px 26px' }}>
+          <div style={{ height: 12, width: 190, borderRadius: 999, background: '#172032', marginBottom: 14 }} />
+          <div style={{ height: 170, borderRadius: 14, background: 'linear-gradient(90deg,#131b2b 20%,#172032 50%,#131b2b 80%)', backgroundSize: '200% 100%', animation: 'appRouteLoad 1.3s ease-in-out infinite' }} />
           <style>{`@keyframes appRouteLoad { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`}</style>
         </div>
       )}>

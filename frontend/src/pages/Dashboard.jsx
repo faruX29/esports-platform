@@ -631,10 +631,10 @@ const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
   }
 
   return (
-    <div style={{ marginBottom: 18, borderRadius: 14, border: '1px solid rgba(255,70,85,.22)', background: 'linear-gradient(90deg, rgba(255,70,85,.12), rgba(12,12,12,.95))', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 16px', borderBottom: '1px solid rgba(255,70,85,.15)', background: 'rgba(0,0,0,.22)' }}>
-        <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#ff4655', boxShadow: '0 0 10px rgba(255,70,85,.8)', animation: 'liveNeonBlink 1.05s infinite' }} />
-        <span style={{ fontSize: 12, fontWeight: 800, color: '#ff95a0', textTransform: 'uppercase', letterSpacing: '1px' }}>
+    <div style={{ marginBottom: 18, borderRadius: 12, border: '1px solid #26324a', background: '#131b2b', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 16px', borderBottom: '1px solid #26324a', background: 'rgba(255,255,255,.02)' }}>
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ff4655', animation: 'liveNeonBlink 1.05s infinite' }} />
+        <span style={{ fontSize: 12, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>
           Son Haberler &amp; Canlı Akış {loading ? '· senkronize ediliyor' : ''}
         </span>
       </div>
@@ -650,7 +650,7 @@ const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
                 overflow: 'hidden',
                 fontSize: 13.5,
                 fontWeight: 500,
-                color: line.href ? '#ffe8ea' : '#f5d6da',
+                color: line.href ? '#e2e8f0' : '#94a3b8',
                 padding: '13px 20px',
                 borderRight: '1px solid rgba(255,255,255,.08)',
                 borderTop: 'none',
@@ -664,13 +664,13 @@ const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
                 if (!line.href) return
                 e.currentTarget.style.background = 'rgba(255,255,255,.08)'
                 e.currentTarget.style.transform = 'translateY(-1px)'
-                e.currentTarget.style.color = '#fff4f6'
+                e.currentTarget.style.color = '#fff'
               }}
               onMouseLeave={e => {
                 if (!line.href) return
                 e.currentTarget.style.background = 'transparent'
                 e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.color = '#ffe8ea'
+                e.currentTarget.style.color = '#e2e8f0'
               }}
             >
               {line.text}
@@ -1093,28 +1093,22 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
         borderRadius: 16,
         /* TR banner varsa üstten 22px fazla boşluk */
         padding: hasTurkish ? '30px 16px 14px' : '14px 16px',
-        background: aggressiveLiveMode
-          ? 'linear-gradient(165deg, rgba(33,6,9,.96), rgba(15,15,15,.98) 44%, rgba(37,13,17,.95))'
-          : 'linear-gradient(160deg,#172032,#131b2b)',
+        background: 'linear-gradient(160deg,#172032,#131b2b)',
         cursor: 'pointer',
-        border: aggressiveLiveMode ? '1.5px solid rgba(255,70,85,.72)' : '1.5px solid rgba(255,70,85,.4)',
-        boxShadow: aggressiveLiveMode
-          ? '0 0 0 1px rgba(255,70,85,.35), 0 8px 28px rgba(0,0,0,.4)'
-          : isLive
-            ? '0 0 0 1px rgba(255,70,85,.22), 0 6px 20px rgba(0,0,0,.32)'
-          : '0 4px 16px rgba(0,0,0,.28)',
-        transition: 'all .18s',
+        border: '1px solid #26324a',
+        boxShadow: '0 8px 24px rgba(0,0,0,.35)',
+        transition: 'border-color .18s, transform .18s',
         /* kart yüksekliği içerikle büyüsün, min sabit */
         minHeight: 0,
       }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,70,85,.75)'; e.currentTarget.style.transform = 'translateY(-3px)' }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,70,85,.4)';  e.currentTarget.style.transform = 'translateY(0)' }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,70,85,.55)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = '#26324a';  e.currentTarget.style.transform = 'translateY(0)' }}
     >
-      {/* Üst kırmızı çizgi */}
+      {/* Üst ince kırmızı vurgu (canlı kimliği — glow yok) */}
       <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, height: 3,
-        background: 'linear-gradient(90deg,#FF4655,#ff7043,transparent)',
-        borderRadius: '14px 14px 0 0',
+        position: 'absolute', top: 0, left: 0, right: 0, height: 2,
+        background: 'linear-gradient(90deg,rgba(255,70,85,.9),rgba(255,70,85,.15),transparent)',
+        borderRadius: '16px 16px 0 0',
       }} />
 
       {/* TR banner */}
@@ -1150,7 +1144,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
           )}
         </div>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 800, color: '#ff7683' }}>
-          <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#FF4655', boxShadow: '0 0 10px rgba(255,70,85,.9)', animation: 'liveNeonBlink 1.05s infinite' }} />
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#FF4655', animation: 'liveNeonBlink 1.05s infinite' }} />
           LIVE
         </span>
       </div>
@@ -1158,18 +1152,18 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
       {aggressiveLiveMode && (
         <div style={{
           marginBottom: 8,
-          borderRadius: 9,
-          border: '1px solid rgba(255,70,85,.55)',
-          background: 'linear-gradient(120deg, rgba(255,70,85,.28), rgba(32,8,10,.95))',
-          color: '#ffd8dd',
+          borderRadius: 7,
+          borderLeft: '2px solid rgba(255,70,85,.6)',
+          background: 'rgba(255,70,85,.06)',
+          color: '#94a3b8',
           fontSize: 9,
-          fontWeight: 800,
-          letterSpacing: '.55px',
+          fontWeight: 700,
+          letterSpacing: '.5px',
           textTransform: 'uppercase',
-          padding: '4px 7px',
-          textAlign: 'center',
+          padding: '4px 9px',
+          textAlign: 'left',
         }}>
-          Agresif Canli Mod
+          Canlı takip
         </div>
       )}
 
@@ -1217,18 +1211,18 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
         <div style={{
           textAlign: 'center',
           flexShrink: 0,
-          padding: aggressiveLiveMode ? '6px 8px' : '0 4px',
-          borderRadius: aggressiveLiveMode ? 10 : 0,
-          border: aggressiveLiveMode ? '1px solid rgba(255,70,85,.42)' : 'none',
-          background: aggressiveLiveMode ? 'radial-gradient(circle at 50% 8%, rgba(255,70,85,.28), rgba(15,15,15,.96) 60%)' : 'transparent',
-          boxShadow: aggressiveLiveMode ? 'inset 0 0 16px rgba(255,70,85,.16)' : 'none',
+          padding: aggressiveLiveMode ? '5px 10px' : '0 4px',
+          borderRadius: aggressiveLiveMode ? 9 : 0,
+          border: aggressiveLiveMode ? '1px solid #26324a' : 'none',
+          background: aggressiveLiveMode ? 'rgba(255,255,255,.03)' : 'transparent',
+          boxShadow: 'none',
         }}>
           <div style={{
-            fontSize: aggressiveLiveMode ? 30 : 20,
+            fontSize: aggressiveLiveMode ? 28 : 20,
             fontWeight: 900,
-            color: aggressiveLiveMode ? '#ffe5e8' : '#fff',
+            color: '#fff',
             fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px', lineHeight: 1,
-            textShadow: aggressiveLiveMode ? '0 0 14px rgba(255,120,130,.35)' : 'none',
+            textShadow: 'none',
           }}>
             {m.team_a_score ?? 0}
             <span style={{ color: '#2a2a2a', margin: '0 3px' }}>:</span>

@@ -16,6 +16,8 @@ import { cleanDisplayName }                           from '../utils/nameCleaner
 import { getBOFormat }                                from '../utils/matchFormat'
 import { DeepScoutBadge }                             from '../components/ScoutSignals'
 import { deriveWinnerTeamId }                         from '../utils/matchResult'
+import { normalizeGameId }                            from '../utils/gameUtils'
+import { GAMES }                                      from '../context/GameContext'
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 
@@ -1921,6 +1923,8 @@ export default function TournamentPage() {
 
   // ── Stil değerleri ───────────────────────────────────────────
   const gName = tournament?.game?.name ?? ''
+  // Ham slug ("Cs-Go"/"League-Of-Legends") yerine temiz oyun adı.
+  const gLabel = GAMES.find(g => g.id === normalizeGameId(tournament?.game?.slug ?? gName))?.label || gName || 'Esports'
   const gc    = gameColor(gName)
   const gi    = gameIcon(gName)
   const tier  = getTierMeta(tournament?.tier)
@@ -2038,7 +2042,7 @@ export default function TournamentPage() {
             <span style={{
               padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700,
               background: `${gc}18`, border: `1px solid ${gc}44`, color: gc,
-            }}>{gi} {gName || 'Esports'}</span>
+            }}>{gi} {gLabel}</span>
 
             {tier && (
               <span style={{

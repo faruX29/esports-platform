@@ -1,6 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import { GAMES } from '../context/GameContext'
+import { normalizeGameId } from '../utils/gameUtils'
+import InitialsImage from '../components/InitialsImage'
+
+// Oyun etiketi normalize (DB'de "Cs-Go"/"League-Of-Legends" gibi çirkin slug'lar var).
+function gameMeta(game) {
+  const canonical = normalizeGameId(game?.slug ?? game?.name)
+  const g = GAMES.find(x => x.id === canonical)
+  return { label: g?.shortLabel || g?.label || game?.name || 'Esports', color: g?.color || '#8a8a8a' }
+}
+
+const TIER_COLORS = { S: '#F0A500', A: '#C0C7D0', B: '#7f8c9a', C: '#5c5c5c', D: '#454545' }
 
 function normalizeTierKey(value) {
   if (!value) return null
@@ -91,6 +103,41 @@ export default function TournamentsListPage() {
 
   const hiddenByTierCount = Math.max(0, searchedTournaments.length - visibleTournaments.length)
 
+  // Kartları ayırt edilebilir yapmak için katılan takım logolarını çek (isim sadece
+  // "Playoffs"/"Group A" olduğu için lig belli olmuyordu → logolar bağlam veriyor).
+  const [teamsByTournament, setTeamsByTournament] = useState({})
+  const visibleIdsKey = useMemo(
+    () => visibleTournaments.map(t => t.id).slice(0, 120).join(','),
+    [visibleTournaments],
+  )
+
+  useEffect(() => {
+    const ids = visibleIdsKey ? visibleIdsKey.split(',').map(Number) : []
+    if (!ids.length) { setTeamsByTournament({}); return }
+    let cancelled = false
+    ;(async () => {
+      const { data } = await supabase
+        .from('matches')
+        .select('tournament_id,team_a:teams!matches_team_a_id_fkey(id,name,logo_url),team_b:teams!matches_team_b_id_fkey(id,name,logo_url)')
+        .in('tournament_id', ids)
+        .limit(4000)
+      if (cancelled) return
+      const acc = {}
+      for (const m of (data || [])) {
+        const bucket = acc[m.tournament_id] || (acc[m.tournament_id] = { seen: new Set(), list: [] })
+        for (const t of [m.team_a, m.team_b]) {
+          if (t?.id && !bucket.seen.has(t.id) && bucket.list.length < 6) {
+            bucket.seen.add(t.id); bucket.list.push(t)
+          }
+        }
+      }
+      const out = {}
+      for (const key in acc) out[key] = acc[key].list
+      setTeamsByTournament(out)
+    })()
+    return () => { cancelled = true }
+  }, [visibleIdsKey])
+
   return (
     <div style={{ maxWidth: 1180, margin: '0 auto', padding: '24px 16px 80px', color: '#f2f2f2' }}>
       <h1 style={{ margin: '0 0 8px', fontSize: 30, letterSpacing: '.4px' }}>Turnuvalar</h1>
@@ -173,34 +220,61 @@ export default function TournamentsListPage() {
 
       {!loading && !error && visibleTournaments.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 10 }}>
-          {visibleTournaments.map(item => (
-            <button
-              key={item.id}
-              onClick={() => navigate(`/tournament/${item.id}`)}
-              style={{ textAlign: 'left', border: '1px solid #262626', background: '#101010', color: '#f0f0f0', borderRadius: 12, padding: 12, cursor: 'pointer' }}
-            >
-              <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 7 }}>{item.name || 'Tournament'}</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, fontSize: 11, color: '#9d9d9d' }}>
-                <span style={{ border: '1px solid #2d2d2d', borderRadius: 999, padding: '2px 8px', background: '#141414' }}>
-                  {item.game?.name || 'Esports'}
-                </span>
-                {item.tier && (
-                  <span style={{ border: '1px solid #2d2d2d', borderRadius: 999, padding: '2px 8px', background: '#141414' }}>
-                    Tier {item.tier}
+          {visibleTournaments.map(item => {
+            const gm = gameMeta(item.game)
+            const tierKey = normalizeTierKey(item.tier)
+            const tierColor = TIER_COLORS[tierKey] || '#454545'
+            const logos = teamsByTournament[item.id] || []
+            return (
+              <button
+                key={item.id}
+                onClick={() => navigate(`/tournament/${item.id}`)}
+                style={{
+                  position: 'relative', overflow: 'hidden', textAlign: 'left',
+                  border: '1px solid #232323', background: '#101010', color: '#f0f0f0',
+                  borderRadius: 12, padding: '12px 12px 12px 15px', cursor: 'pointer',
+                  transition: 'border-color .15s, transform .15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = `${gm.color}66`; e.currentTarget.style.transform = 'translateY(-2px)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = '#232323'; e.currentTarget.style.transform = 'translateY(0)' }}
+              >
+                {/* sol renk şeridi (oyun) */}
+                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: gm.color }} />
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {item.name || 'Tournament'}
+                  </div>
+                  {tierKey && (
+                    <span style={{ fontSize: 10, fontWeight: 900, color: '#0b0b0b', background: tierColor, borderRadius: 5, padding: '2px 6px', flexShrink: 0, letterSpacing: '.3px' }}>
+                      {tierKey}
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontSize: 11, color: '#8f8f8f' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: gm.color, fontWeight: 700 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: gm.color }} /> {gm.label}
                   </span>
+                  {item.region && <span>· {item.region}</span>}
+                </div>
+
+                {logos.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 9 }}>
+                    {logos.slice(0, 5).map(t => (
+                      <InitialsImage key={t.id} src={t.logo_url} name={t.name} width={20} height={20} borderRadius={5} objectFit='contain' />
+                    ))}
+                    {logos.length > 5 && <span style={{ fontSize: 10, color: '#666', marginLeft: 2 }}>+{logos.length - 5}</span>}
+                  </div>
                 )}
-                {item.region && (
-                  <span style={{ border: '1px solid #2d2d2d', borderRadius: 999, padding: '2px 8px', background: '#141414' }}>
-                    {item.region}
-                  </span>
-                )}
-              </div>
-              <div style={{ marginTop: 8, fontSize: 12, color: '#b5b5b5' }}>
-                {fmtDate(item.begin_at)}
-                {item.end_at ? ` - ${fmtDate(item.end_at)}` : ''}
-              </div>
-            </button>
-          ))}
+
+                <div style={{ marginTop: 9, fontSize: 11.5, color: '#8f8f8f' }}>
+                  {fmtDate(item.begin_at)}
+                  {item.end_at ? ` – ${fmtDate(item.end_at)}` : ''}
+                </div>
+              </button>
+            )
+          })}
         </div>
       )}
     </div>

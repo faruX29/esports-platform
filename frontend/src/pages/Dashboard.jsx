@@ -1,6 +1,6 @@
 /**
  * Dashboard.jsx — Bento Grid Layout
- * FavoritesBar → Stats Bento → Live Grid → Today List → Quick Links
+ * Ticker → Live Grid → Son Sonuçlar → Maç Programı → Takip Ettiklerim → Quick Links
  */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, Link }                from 'react-router-dom'
@@ -10,7 +10,7 @@ import { isTurkishTeam }                   from '../constants'
 import { useUser }                          from '../context/UserContext'
 import { useAuth }                          from '../context/AuthContext'
 import BRANDING                             from '../branding.config'
-import { Radio, Flag, CalendarDays, Sparkles, Zap, SlidersHorizontal, Clock, Gamepad2, Shield, Trophy, FlaskConical, Newspaper, Flame, Star, Rss } from 'lucide-react'
+import { Radio, Flag, CalendarDays, Sparkles, Zap, SlidersHorizontal, Clock, Gamepad2, Shield, Trophy, FlaskConical, Newspaper, Flame, Star } from 'lucide-react'
 import { buildFinishedStory, buildUpcomingStory } from '../utils/newsStories'
 import { isStoryFollowedTeam, prioritizeStoriesForYou } from '../utils/newsPersonalization'
 import { calculatePredictionAccuracy, getMatchImpactLabel } from '../utils/accuracyTracker'
@@ -806,204 +806,6 @@ const QuickAccessBar = memo(function QuickAccessBar({ entries, loading, onOpen }
   )
 })
 
-/* ── FavoritesBar ─────────────────────────────────────────────────────────── */
-const FavoritesBar = memo(function FavoritesBar({ onMatchClick, showAllTournamentTiers }) {
-  const { followedTeamIds, toggleTeamFollow, isTeamFollowed } = useUser()
-  const favTeamIds = followedTeamIds
-  const [matches,    setMatches]    = useState([])
-  const [loading,    setLoading]    = useState(false)
-
-  useEffect(() => {
-    if (!favTeamIds.length) { setMatches([]); return }
-    setLoading(true)
-    const orFilter = favTeamIds
-      .flatMap(id => [`team_a_id.eq.${id}`, `team_b_id.eq.${id}`])
-      .join(',')
-    supabase.from('matches').select(`
-      id, status, scheduled_at, team_a_id, team_b_id, winner_id,
-      team_a_score, team_b_score, number_of_games,
-      prediction_team_a, prediction_team_b, prediction_confidence,
-      team_a:teams!matches_team_a_id_fkey(id,name,logo_url),
-      team_b:teams!matches_team_b_id_fkey(id,name,logo_url),
-      tournament:tournaments(id,name,tier), game:games(id,name,slug)
-    `).or(orFilter)
-      // Yaklaşan/canlı maçlar (son 24s + gelecek). now filtresi olmadan backfill
-      // sonrası en eski 2014 maçları gelirdi.
-      .gte('scheduled_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-      .order('scheduled_at', { ascending: true })
-      .limit(20)
-      .then(({ data }) => {
-        const tierFiltered = filterMatchesByTournamentTier(data || [], showAllTournamentTiers)
-        setMatches(tierFiltered)
-        setLoading(false)
-      })
-  }, [favTeamIds, showAllTournamentTiers])
-
-  if (!favTeamIds.length) return null
-
-  return (
-    <div style={{ marginBottom: 24 }}>
-
-      {/* ── Başlık satırı ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          padding: '4px 12px', borderRadius: 20,
-          background: 'linear-gradient(135deg,rgba(255,215,0,.15),rgba(255,165,0,.07))',
-          border: '1px solid rgba(255,215,0,.4)',
-          flexShrink: 0,
-        }}>
-          <span style={{ fontSize: 9, fontWeight: 900, color: '#ffe19a', border: '1px solid rgba(255,215,0,.45)', borderRadius: 999, padding: '1px 6px', background: 'rgba(255,215,0,.14)', letterSpacing: '.5px' }}>FAV</span>
-          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '1px', color: '#FFD700', textTransform: 'uppercase' }}>
-            Favorites Grid
-          </span>
-          <span style={{ padding: '1px 6px', borderRadius: 8, background: 'rgba(255,215,0,.25)', color: '#FFD700', fontSize: 10, fontWeight: 700 }}>
-            {favTeamIds.length}
-          </span>
-        </div>
-        <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(255,215,0,.25),transparent)' }} />
-      </div>
-
-      {/* ── Yatay kart şeridi ── */}
-      {loading ? (
-        /* iskelet */
-        <div style={{ display: 'flex', gap: 10, overflow: 'hidden' }}>
-          {[1,2,3].map(i => <Sk key={i} w="200px" h="104px" r="14px" />)}
-        </div>
-      ) : matches.length === 0 ? (
-        <div style={{
-          padding: '14px 18px', borderRadius: 12,
-          background: 'rgba(255,215,0,.04)', border: '1px dashed rgba(255,215,0,.18)',
-          fontSize: 11, color: '#3a3a2a', textAlign: 'center',
-        }}>
-          Takip ettiğin takımların yaklaşan maçı yok
-        </div>
-      ) : (
-        /* ← YATAY SCROLL — overflowX:auto + scrollbarWidth:none */
-        <div style={{
-          display: 'flex',
-          gap: 10,
-          overflowX: 'auto',      /* yatay scroll aktif */
-          overflowY: 'hidden',    /* dikey taşmayı kes   */
-          paddingBottom: 6,
-          scrollbarWidth: 'none', /* Firefox             */
-          msOverflowStyle: 'none',/* IE / Edge           */
-          WebkitOverflowScrolling: 'touch', /* iOS momentum */
-        }}>
-          {matches.map(m => {
-            const isLive = m.status === 'running'
-            const isFin  = m.status === 'finished'
-            const aWon   = isFin && m.winner_id === (m.team_a_id || m.team_a?.id)
-            const bWon   = isFin && m.winner_id === (m.team_b_id || m.team_b?.id)
-            const cs     = correctedScores(m)  // ters-atanmış skor quirk'ini düzelt
-            const favA   = isTeamFollowed(m.team_a_id || m.team_a?.id)
-            const favB   = isTeamFollowed(m.team_b_id || m.team_b?.id)
-            return (
-              <div
-                key={m.id}
-                onClick={() => onMatchClick(m.id)}
-                style={{
-                  flexShrink: 0,          /* kartlar küçülmesin */
-                  width: 200,
-                  borderRadius: 14,
-                  padding: '12px 12px 10px',
-                  background: '#131b2b',
-                  cursor: 'pointer',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  border: isLive
-                    ? '1.5px solid rgba(255,70,85,.35)'
-                    : '1.5px solid rgba(255,215,0,.15)',
-                  transition: 'transform .15s',
-                }}
-                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-              >
-                {/* üst renk çizgisi */}
-                <div style={{
-                  position: 'absolute', top: 0, left: 0, right: 0, height: 2,
-                  background: isLive
-                    ? 'linear-gradient(90deg,#FF4655,#ff7043)'
-                    : 'linear-gradient(90deg,#FFD700,#FF8C00)',
-                }} />
-
-                {/* oyun + durum */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                    <span style={{ fontSize: 9, color: '#444', textTransform: 'uppercase', letterSpacing: '.4px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {m.game?.name || '—'}
-                    </span>
-                    <MatchImpactPill match={m} compact />
-                    {getBOFormat(m.team_a_score, m.team_b_score, m.number_of_games) && (
-                      <span style={{ fontSize: 8, fontWeight: 700, color: '#555', background: 'rgba(255,255,255,.05)', border: '1px solid #2a2a2a', borderRadius: 4, padding: '1px 5px' }}>
-                        {getBOFormat(m.team_a_score, m.team_b_score, m.number_of_games)}
-                      </span>
-                    )}
-                  </div>
-                  {isLive  && <span style={{ fontSize: 9, fontWeight: 800, color: '#FF4655', animation: 'livePulse 1.2s infinite' }}>● LIVE</span>}
-                  {!isLive && !isFin && <span style={{ fontSize: 9, color: '#444', flexShrink: 0 }}>{fmtWhen(m.scheduled_at)}</span>}
-                  {isFin   && <span style={{ fontSize: 9, color: '#2a2a2a' }}>Bitti</span>}
-                </div>
-
-                {/* takımlar */}
-                {[
-                  { team: m.team_a, won: aWon, lost: bWon, fav: favA, score: cs.team_a_score },
-                  { team: m.team_b, won: bWon, lost: aWon, fav: favB, score: cs.team_b_score },
-                ].map((row, ri) => (
-                  <div key={ri} style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    marginBottom: ri === 0 ? 4 : 0,
-                    opacity: isFin && row.lost ? 0.4 : 1,
-                  }}>
-                    <InitialsImage
-                      src={row.team?.logo_url}
-                      alt={row.team?.name || ''}
-                      name={row.team?.name}
-                      width={20}
-                      height={20}
-                      borderRadius={4}
-                      objectFit='contain'
-                    />
-                    <span style={{
-                      fontSize: 11, fontWeight: row.won ? 700 : 500,
-                      color: row.won ? '#4CAF50' : row.fav ? '#FFD700' : '#ccc',
-                      flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    }}>
-                      {row.fav ? '◆ ' : ''}
-                      {row.team?.name || '?'}
-                    </span>
-                    {(isLive || isFin) && (
-                      <span style={{ fontSize: 12, fontWeight: 900, color: row.won ? '#4CAF50' : '#444', fontVariantNumeric: 'tabular-nums' }}>
-                        {row.score ?? 0}
-                      </span>
-                    )}
-                  </div>
-                ))}
-
-                {/* turnuva */}
-                <div style={{ marginTop: 7, fontSize: 9, color: '#2a2a2a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {m.tournament?.name || ''}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* webkit scrollbar gizle */}
-      <style>{`
-        .fav-scroll::-webkit-scrollbar { display: none }
-        @keyframes livePulse { 0%,100%{opacity:1} 50%{opacity:.35} }
-      `}</style>
-    </div>
-  )
-})
-/*
- * Kartı şişirmemek için:
- *  - Yükseklik minimal (bar 3px, yazılar 8px)
- *  - marginTop 6px (eski 8px → 6px)
- *  - Hot Pick badge kaldırıldı (badge Dashboard card'da değil UpcomingMatches'ta uygun)
- */
 function WinBar({ predA, predB, confidence }) {
   if (predA == null || predB == null) return null
   const total = (predA + predB) || 1
@@ -1098,17 +900,20 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
         border: '1px solid #26324a',
         boxShadow: '0 8px 24px rgba(0,0,0,.35)',
         transition: 'border-color .18s, transform .18s',
+        /* üst vurgu şeridi köşe yarıçapına göre kırpılsın (sol-üst kayma fix) */
+        overflow: 'hidden',
         /* kart yüksekliği içerikle büyüsün, min sabit */
         minHeight: 0,
       }}
       onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,70,85,.55)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
       onMouseLeave={e => { e.currentTarget.style.borderColor = '#26324a';  e.currentTarget.style.transform = 'translateY(0)' }}
     >
-      {/* Üst ince kırmızı vurgu (canlı kimliği — glow yok) */}
+      {/* Üst ince kırmızı vurgu — yavaş süzülen soft hareket (glow yok) */}
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0, height: 2,
-        background: 'linear-gradient(90deg,rgba(255,70,85,.9),rgba(255,70,85,.15),transparent)',
-        borderRadius: '16px 16px 0 0',
+        background: 'linear-gradient(90deg, transparent, rgba(255,70,85,.85) 30%, rgba(255,70,85,.35) 55%, transparent)',
+        backgroundSize: '220% 100%',
+        animation: 'liveAccentDrift 5.5s ease-in-out infinite alternate',
       }} />
 
       {/* TR banner */}
@@ -1305,7 +1110,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
 })
 
 /* ── UpcomingRow ──────────────────────────────────────────────────────────── */
-const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForms }) {
+const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForms, showDate }) {
   const badge = getStatusBadge(m.status)
   const isLive = m.status === 'running'
   const turkA = isTurkishTeam(m.team_a?.name ?? '')
@@ -1321,22 +1126,22 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '9px 14px', borderRadius: 12, cursor: 'pointer',
         background: '#131b2b',
-        border: isLive ? '1px solid rgba(255,70,85,.52)' : '1px solid #232f47',
-        boxShadow: isLive ? '0 0 14px rgba(255,70,85,.18)' : 'none',
-        transition: 'all .15s',
+        border: isLive ? '1px solid rgba(255,70,85,.5)' : '1px solid #26324a',
+        boxShadow: 'none',
+        transition: 'background .15s, border-color .15s',
       }}
       onMouseEnter={e => {
         e.currentTarget.style.background = '#172032'
-        e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.8)' : '#2a2a2a'
+        e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.7)' : '#33415d'
       }}
       onMouseLeave={e => {
         e.currentTarget.style.background = '#131b2b'
-        e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.52)' : '#232f47'
+        e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.5)' : '#26324a'
       }}
     >
-      {/* Saat */}
-      <div style={{ fontSize: 10, color: '#555', flexShrink: 0, width: 36, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
-        {fmtTime(m.scheduled_at)}
+      {/* Saat (My Feed'de tarih de görünsün — grup başlığı yok) */}
+      <div style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0, width: showDate ? 66 : 36, textAlign: 'center', fontVariantNumeric: 'tabular-nums', lineHeight: 1.25 }}>
+        {showDate ? fmtWhen(m.scheduled_at) : fmtTime(m.scheduled_at)}
       </div>
 
       {/* Oyun etiketi */}
@@ -1346,11 +1151,10 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
 
       {isLive && (
         <span style={{
-          width: 8,
-          height: 8,
+          width: 7,
+          height: 7,
           borderRadius: '50%',
           background: '#ff4655',
-          boxShadow: '0 0 10px rgba(255,70,85,.95)',
           animation: 'liveNeonBlink 1.05s infinite',
           flexShrink: 0,
         }} />
@@ -2420,9 +2224,6 @@ export default function Dashboard() {
       <QuickAccessBar entries={quickAccess} loading={quickLoading} onOpen={handleQuickAccessOpen} />
       <LiveTicker items={tickerItems} loading={tickerLoading} onItemOpen={handleTickerItemOpen} />
 
-      {/* ── Favorites Bar ── */}
-      <FavoritesBar onMatchClick={handleMatchOpen} showAllTournamentTiers={showAllTournamentTiers} />
-
       <div style={{
         marginBottom: 18,
         padding: '10px 12px',
@@ -2461,25 +2262,25 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* ── My Feed / Notification ── */}
+      {/* ── Takip Ettiklerim (takip edilen takım/oyuncu maçları) ── */}
       {(followedTeamIds.length > 0 || followedPlayerIds.length > 0) && (
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <span style={{
-              fontSize: 11, fontWeight: 800, color: '#ff6b7a',
+              fontSize: 11, fontWeight: 800, color: '#f0c040',
               letterSpacing: '1.5px', textTransform: 'uppercase',
               display: 'inline-flex', alignItems: 'center', gap: 6,
             }}>
-              <Rss size={13} strokeWidth={2.4} /> My Feed
+              <Star size={13} strokeWidth={2.2} fill="#f0c040" /> Takip Ettiklerim
             </span>
             <span style={{
               padding: '1px 8px', borderRadius: 8,
-              background: 'rgba(255,107,122,.12)', color: '#ff6b7a',
+              background: 'rgba(240,192,64,.12)', color: '#f0c040',
               fontSize: 10, fontWeight: 700,
             }}>
               {myFeedMatches.length}
             </span>
-            <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(255,107,122,.3),transparent)' }} />
+            <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(240,192,64,.3),transparent)' }} />
           </div>
 
           {liveFavCount > 0 && (
@@ -2509,7 +2310,7 @@ export default function Dashboard() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               {myFeedMatches.slice(0, 8).map(m => (
-                <UpcomingRow key={m.id} match={m} onMatchClick={handleMatchOpen} teamForms={teamFormMap} />
+                <UpcomingRow key={m.id} match={m} onMatchClick={handleMatchOpen} teamForms={teamFormMap} showDate />
               ))}
             </div>
           )}
@@ -2944,8 +2745,14 @@ export default function Dashboard() {
         @keyframes shimmer   { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
         @keyframes livePulse { 0%,100%{opacity:1} 50%{opacity:.35} }
         @keyframes liveNeonBlink {
-          0%, 100% { opacity: 1; box-shadow: 0 0 7px rgba(255,70,85,.7), 0 0 14px rgba(255,70,85,.35); }
-          50% { opacity: .45; box-shadow: 0 0 2px rgba(255,70,85,.55), 0 0 4px rgba(255,70,85,.2); }
+          0%, 100% { opacity: 1; box-shadow: 0 0 4px rgba(255,70,85,.55); }
+          50% { opacity: .5; box-shadow: 0 0 1px rgba(255,70,85,.4); }
+        }
+        /* Canlı kart üst vurgusu — kırmızı yavaş & soft sağa-sola süzülür */
+        @keyframes liveAccentDrift {
+          0%   { background-position: 0% 0;   opacity: .8; }
+          50%  { opacity: 1; }
+          100% { background-position: 100% 0; opacity: .8; }
         }
         @keyframes tickerScroll {
           from { transform: translateX(0); }

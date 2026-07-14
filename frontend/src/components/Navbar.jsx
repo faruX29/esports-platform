@@ -18,15 +18,15 @@ function NavItem({ link, mobile = false }) {
         ? {
             textDecoration: 'none', padding: '9px 12px', borderRadius: 10, fontSize: 13,
             fontWeight: isActive ? 800 : 600,
-            color: isActive ? '#fff' : (hover ? '#fff' : '#c1c1c1'),
-            background: isActive ? 'linear-gradient(120deg, rgba(255,70,85,.24), rgba(255,184,0,.15))' : (hover ? '#1a1a1a' : '#111'),
-            border: isActive ? '1px solid rgba(255,120,130,.45)' : '1px solid #242424',
+            color: isActive ? '#fff' : (hover ? '#fff' : '#cbd5e1'),
+            background: isActive ? 'linear-gradient(120deg, rgba(255,70,85,.2), rgba(255,184,0,.12))' : (hover ? '#172032' : '#131b2b'),
+            border: isActive ? '1px solid rgba(255,120,130,.4)' : '1px solid #26324a',
             display: 'flex', alignItems: 'center', gap: 9, transition: 'all .15s',
           }
         : {
             textDecoration: 'none', padding: '7px 11px', borderRadius: 8, fontSize: 12,
             fontWeight: isActive ? 700 : 500,
-            color: isActive ? '#fff' : (hover ? '#cfcfcf' : '#555'),
+            color: isActive ? '#fff' : (hover ? '#e2e8f0' : '#94a3b8'),
             background: isActive ? 'rgba(255,255,255,.08)' : (hover ? 'rgba(255,255,255,.05)' : 'transparent'),
             transition: 'all .15s', whiteSpace: 'nowrap',
             display: 'inline-flex', alignItems: 'center', gap: 7, height: 34,
@@ -50,19 +50,19 @@ function AuthWidget() {
     <>
       {!isAuthenticated ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, height: 34 }}>
-          <button onClick={() => navigate('/login')} style={{ background: 'linear-gradient(135deg,#C8102E,#001f6d)', border: '1px solid rgba(255,255,255,.15)', borderRadius: 10, color: '#fff', fontSize: 12, fontWeight: 800, padding: '8px 12px', cursor: 'pointer', boxShadow: '0 0 16px rgba(200,16,46,.18)', whiteSpace: 'nowrap', height: 34, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>Giris Yap</button>
-          <button onClick={() => navigate('/register')} style={{ background: '#121212', border: '1px solid #2d2d2d', borderRadius: 10, color: '#ddd', fontSize: 12, fontWeight: 700, padding: '8px 12px', cursor: 'pointer', whiteSpace: 'nowrap', height: 34, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>Kayit Ol</button>
+          <button onClick={() => navigate('/login')} style={{ background: 'linear-gradient(135deg,#FF4655,#e63a48)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 9, color: '#fff', fontSize: 12, fontWeight: 800, padding: '8px 13px', cursor: 'pointer', whiteSpace: 'nowrap', height: 34, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>Giris Yap</button>
+          <button onClick={() => navigate('/register')} style={{ background: '#172032', border: '1px solid #26324a', borderRadius: 9, color: '#cbd5e1', fontSize: 12, fontWeight: 700, padding: '8px 13px', cursor: 'pointer', whiteSpace: 'nowrap', height: 34, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>Kayit Ol</button>
         </div>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, height: 34 }}>
-          <button onClick={() => navigate('/settings')} style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#101010', border: '1px solid #252525', borderRadius: 20, padding: '5px 9px', cursor: 'pointer', height: 34 }}>
+          <button onClick={() => navigate('/settings')} style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#131b2b', border: '1px solid #26324a', borderRadius: 20, padding: '5px 9px', cursor: 'pointer', height: 34 }}>
             {avatar
-              ? <img src={avatar} alt={username} style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', border: '1px solid #333' }} />
-              : <div style={{ width: 22, height: 22, borderRadius: '50%', display: 'grid', placeItems: 'center', background: '#1d1d1d', color: '#ddd', fontSize: 10, fontWeight: 800 }}>{username.slice(0, 2).toUpperCase()}</div>
+              ? <img src={avatar} alt={username} style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', border: '1px solid #33415d' }} />
+              : <div style={{ width: 22, height: 22, borderRadius: '50%', display: 'grid', placeItems: 'center', background: '#26324a', color: '#e2e8f0', fontSize: 10, fontWeight: 800 }}>{username.slice(0, 2).toUpperCase()}</div>
             }
-            <span style={{ fontSize: 12, color: '#ddd', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{username}</span>
+            <span style={{ fontSize: 12, color: '#cbd5e1', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{username}</span>
           </button>
-          <button onClick={signOut} style={{ background: '#0f0f0f', border: '1px solid #2a2a2a', borderRadius: 8, color: '#777', padding: '6px 9px', fontSize: 11, cursor: 'pointer', height: 34 }}>Cikis</button>
+          <button onClick={signOut} style={{ background: '#131b2b', border: '1px solid #26324a', borderRadius: 8, color: '#94a3b8', padding: '6px 9px', fontSize: 11, cursor: 'pointer', height: 34 }}>Cikis</button>
         </div>
       )}
 
@@ -93,9 +93,9 @@ export default function Navbar({ navLinks, SearchComponent }) {
   return (
     <nav style={{
       position: 'sticky', top: 0, zIndex: 1000,
-      background: 'rgba(10,10,10,.92)',
-      backdropFilter: 'blur(12px)',
-      borderBottom: '1px solid #141414',
+      background: 'rgba(11,15,25,.82)',
+      backdropFilter: 'blur(14px)',
+      borderBottom: '1px solid rgba(38,50,74,.6)',
     }}>
       <div style={{
         maxWidth: 1240,
@@ -149,9 +149,9 @@ export default function Navbar({ navLinks, SearchComponent }) {
               width: 36,
               height: 36,
               borderRadius: 10,
-              border: '1px solid #2a2a2a',
-              background: '#121212',
-              color: '#e6e6e6',
+              border: '1px solid #26324a',
+              background: '#172032',
+              color: '#e2e8f0',
               display: 'grid',
               placeItems: 'center',
               cursor: 'pointer',
@@ -164,8 +164,8 @@ export default function Navbar({ navLinks, SearchComponent }) {
 
       {isMobile && (
         <div style={{
-          borderTop: '1px solid #161616',
-          background: 'rgba(8,8,8,.95)',
+          borderTop: '1px solid #26324a',
+          background: 'rgba(11,15,25,.97)',
           overflow: 'hidden',
           maxHeight: menuOpen ? 420 : 0,
           opacity: menuOpen ? 1 : 0,

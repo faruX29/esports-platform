@@ -5,6 +5,7 @@ import { useGame, GAMES } from '../context/GameContext'
 import { useUser } from '../context/UserContext'
 import { correctedScores } from '../utils/matchResult'
 import { normalizeGameId } from '../utils/gameUtils'
+import { Medal, Star } from 'lucide-react'
 
 function toNum(v) {
   const n = Number(v)
@@ -138,16 +139,18 @@ function GameFilterTabs({ activeGame, setActiveGame }) {
             style={{
               padding: '8px 14px',
               borderRadius: 999,
-              border: active ? `1px solid ${game.color}` : '1px solid #2a2a2a',
-              background: active ? `${game.color}22` : '#121212',
-              color: active ? '#ffffff' : '#9e9e9e',
+              border: active ? `1px solid ${game.color}` : '1px solid #26324a',
+              background: active ? `${game.color}22` : '#131b2b',
+              color: active ? '#ffffff' : '#94a3b8',
               fontSize: 12,
               fontWeight: 700,
               letterSpacing: '.2px',
               cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 7,
             }}
           >
-            {game.icon} {game.shortLabel || game.label}
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: game.color, flexShrink: 0 }} />
+            {game.shortLabel || game.label}
           </button>
         )
       })}
@@ -278,7 +281,7 @@ export default function RankingsPage() {
       maxWidth: 1160,
       margin: '0 auto',
       padding: '24px 16px 80px',
-      color: '#f5f5f5',
+      color: '#e2e8f0',
       position: 'relative',
     }}>
       <div style={{
@@ -291,10 +294,10 @@ export default function RankingsPage() {
       <div style={{ position: 'relative', zIndex: 1 }}>
         <div style={{ marginBottom: 18 }}>
           <h1 style={{ margin: 0, fontSize: 30, letterSpacing: '.5px' }}>Global Power Rankings</h1>
-          <p style={{ margin: '8px 0 0', color: '#a8a8a8', fontSize: 13 }}>
+          <p style={{ margin: '8px 0 0', color: '#cbd5e1', fontSize: 13 }}>
             Son 6 ayin maclari; turnuva tier'i ve guncellik agirlikli guc siralamasi.
           </p>
-          <p style={{ margin: '6px 0 0', color: '#7f7f7f', fontSize: 12 }}>
+          <p style={{ margin: '6px 0 0', color: '#64748b', fontSize: 12 }}>
             Tier tavani belirler: dusuk tier bir takim yuksek tier bir sampiyonu gecemez. Siralama tek oyuna gore.
           </p>
         </div>
@@ -305,20 +308,20 @@ export default function RankingsPage() {
           gap: 12,
           marginBottom: 16,
         }}>
-          <div style={{ background: '#111111d9', border: '1px solid #2a2a2a', borderRadius: 14, padding: 14 }}>
-            <div style={{ fontSize: 11, color: '#9a9a9a' }}>Lider</div>
+          <div style={{ background: '#111111d9', border: '1px solid #26324a', borderRadius: 14, padding: 14 }}>
+            <div style={{ fontSize: 11, color: '#94a3b8' }}>Lider</div>
             <div style={{ marginTop: 4, fontWeight: 800, fontSize: 18 }}>{top?.team?.name || '—'}</div>
             <div style={{ marginTop: 2, fontSize: 12, color: '#d74a61' }}>{top ? `${top.rating} Puan` : 'Veri bekleniyor'}</div>
           </div>
-          <div style={{ background: '#111111d9', border: '1px solid #2a2a2a', borderRadius: 14, padding: 14 }}>
-            <div style={{ fontSize: 11, color: '#9a9a9a' }}>Listelenen Takim</div>
+          <div style={{ background: '#111111d9', border: '1px solid #26324a', borderRadius: 14, padding: 14 }}>
+            <div style={{ fontSize: 11, color: '#94a3b8' }}>Listelenen Takim</div>
             <div style={{ marginTop: 4, fontWeight: 800, fontSize: 22 }}>{filtered.length}</div>
-            <div style={{ marginTop: 2, fontSize: 12, color: '#d0d0d0' }}>Min. 6 mac · gercek turnuva</div>
+            <div style={{ marginTop: 2, fontSize: 12, color: '#e2e8f0' }}>Min. 6 mac · gercek turnuva</div>
           </div>
-          <div style={{ background: '#111111d9', border: '1px solid #2a2a2a', borderRadius: 14, padding: 14 }}>
-            <div style={{ fontSize: 11, color: '#9a9a9a' }}>Model</div>
+          <div style={{ background: '#111111d9', border: '1px solid #26324a', borderRadius: 14, padding: 14 }}>
+            <div style={{ fontSize: 11, color: '#94a3b8' }}>Model</div>
             <div style={{ marginTop: 4, fontWeight: 800, fontSize: 16 }}>Power = Form × Tier × Güncellik</div>
-            <div style={{ marginTop: 2, fontSize: 12, color: '#d0d0d0' }}>Kalite: karşılaşılan tier (güncellik ağırlıklı)</div>
+            <div style={{ marginTop: 2, fontSize: 12, color: '#e2e8f0' }}>Kalite: karşılaşılan tier (güncellik ağırlıklı)</div>
           </div>
         </div>
 
@@ -341,8 +344,8 @@ export default function RankingsPage() {
                 height: 34,
                 minWidth: 180,
                 borderRadius: 10,
-                border: '1px solid #343434',
-                background: '#121212',
+                border: '1px solid #334155',
+                background: '#131b2b',
                 color: '#fff',
                 padding: '0 12px',
                 fontSize: 12,
@@ -363,9 +366,9 @@ export default function RankingsPage() {
                   style={{
                     height: 34,
                     borderRadius: 10,
-                    border: active ? '1px solid #c8102e' : '1px solid #2b2b2b',
-                    background: active ? 'rgba(200,16,46,.2)' : '#101010',
-                    color: active ? '#ffffff' : '#a4a4a4',
+                    border: active ? '1px solid #c8102e' : '1px solid #26324a',
+                    background: active ? 'rgba(200,16,46,.2)' : '#131b2b',
+                    color: active ? '#ffffff' : '#cbd5e1',
                     fontSize: 12,
                     fontWeight: 700,
                     padding: '0 12px',
@@ -381,10 +384,10 @@ export default function RankingsPage() {
 
         <div style={{ overflowX: 'auto' }}>
           <div style={{
-            border: '1px solid #2b2b2b',
+            border: '1px solid #26324a',
             borderRadius: 14,
             overflow: 'hidden',
-            background: '#0f0f0f',
+            background: '#131b2b',
             minWidth: 860,
           }}>
             <div style={{
@@ -392,9 +395,9 @@ export default function RankingsPage() {
             gridTemplateColumns: '70px 1.6fr 1fr .9fr .9fr .9fr .8fr',
             gap: 8,
             padding: '12px 14px',
-            borderBottom: '1px solid #232323',
+            borderBottom: '1px solid #26324a',
             fontSize: 11,
-            color: '#8f8f8f',
+            color: '#94a3b8',
             textTransform: 'uppercase',
             letterSpacing: '.5px',
           }}>
@@ -408,7 +411,7 @@ export default function RankingsPage() {
           </div>
 
             {loading && (
-              <div style={{ padding: 18, color: '#8f8f8f', fontSize: 13 }}>Siralama verileri yukleniyor...</div>
+              <div style={{ padding: 18, color: '#94a3b8', fontSize: 13 }}>Siralama verileri yukleniyor...</div>
             )}
 
             {!loading && error && (
@@ -416,12 +419,12 @@ export default function RankingsPage() {
             )}
 
             {!loading && !error && filtered.length === 0 && (
-              <div style={{ padding: 18, color: '#8f8f8f', fontSize: 13 }}>Filtreye uygun takim bulunamadi.</div>
+              <div style={{ padding: 18, color: '#94a3b8', fontSize: 13 }}>Filtreye uygun takim bulunamadi.</div>
             )}
 
             {!loading && !error && filtered.map((row, idx) => {
             const followed = isTeamFollowed(row.teamId)
-            const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : ''
+            const medalColor = idx === 0 ? '#f0c040' : idx === 1 ? '#cbd5e1' : idx === 2 ? '#cd7f32' : null
 
             return (
               <div
@@ -433,32 +436,32 @@ export default function RankingsPage() {
                   gap: 8,
                   alignItems: 'center',
                   padding: '12px 14px',
-                  borderBottom: '1px solid #1d1d1d',
+                  borderBottom: '1px solid #172032',
                   cursor: 'pointer',
                   background: idx < 3 ? 'linear-gradient(90deg, rgba(200,16,46,.12), transparent 55%)' : 'transparent',
                 }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,.03)' }}
                 onMouseLeave={e => { e.currentTarget.style.background = idx < 3 ? 'linear-gradient(90deg, rgba(200,16,46,.12), transparent 55%)' : 'transparent' }}
               >
-                <div style={{ fontWeight: 800, fontSize: 14 }}>
-                  {medal} #{idx + 1}
+                <div style={{ fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {medalColor && <Medal size={16} color={medalColor} strokeWidth={2.2} />} #{idx + 1}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                   {row.team?.logo_url ? (
                     <img src={row.team.logo_url} alt={row.team?.name || ''} style={{ width: 30, height: 30, objectFit: 'contain' }} />
                   ) : (
-                    <div style={{ width: 30, height: 30, borderRadius: 8, background: '#1f1f1f' }} />
+                    <div style={{ width: 30, height: 30, borderRadius: 8, background: '#172032' }} />
                   )}
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.team?.name || 'Unknown Team'}</div>
-                    <div style={{ fontSize: 11, color: '#8b8b8b' }}>{row.gameName || 'Global'}</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8' }}>{row.gameName || 'Global'}</div>
                   </div>
                 </div>
 
                 <div style={{ fontSize: 13 }}>
                   <span style={{ color: '#6dde90', fontWeight: 700 }}>{row.wins}W</span>
-                  <span style={{ color: '#6a6a6a' }}> / </span>
+                  <span style={{ color: '#64748b' }}> / </span>
                   <span style={{ color: '#ef6a77', fontWeight: 700 }}>{row.losses}L</span>
                 </div>
 
@@ -476,14 +479,15 @@ export default function RankingsPage() {
                       height: 30,
                       width: 30,
                       borderRadius: 8,
-                      border: followed ? '1px solid #c8102e' : '1px solid #343434',
-                      background: followed ? 'rgba(200,16,46,.2)' : '#111',
-                      color: followed ? '#fff' : '#a2a2a2',
+                      border: followed ? '1px solid #FF4655' : '1px solid #26324a',
+                      background: followed ? 'rgba(255,70,85,.16)' : '#131b2b',
+                      color: followed ? '#fff' : '#94a3b8',
                       cursor: 'pointer',
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     }}
                     title={followed ? 'Takibi birak' : 'Takip et'}
                   >
-                    {followed ? '★' : '☆'}
+                    <Star size={15} fill={followed ? '#FFD700' : 'none'} color={followed ? '#FFD700' : '#94a3b8'} />
                   </button>
                 </div>
               </div>

@@ -57,3 +57,7 @@ a { color: inherit; text-decoration: inherit; }
 img, svg, video { max-width: 100%; }
 
 button { font-family: inherit; }
+
+/* Global yardımcı animasyonlar (lucide spinner + canlı nabız) */
+@keyframes spin  { to { transform: rotate(360deg); } }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }

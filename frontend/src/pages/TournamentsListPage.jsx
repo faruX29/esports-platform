@@ -1,9 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { GAMES } from '../context/GameContext'
+import { GAMES, useGame } from '../context/GameContext'
 import { normalizeGameId } from '../utils/gameUtils'
 import InitialsImage from '../components/InitialsImage'
+
+// Kanonik oyuna ait TÜM game_id'ler (mükerrer kayıtlar dahil: CS2 2/8, LoL 3/9).
+function resolveGameIds(activeGame, games) {
+  if (!activeGame || activeGame === 'all') return []
+  const canonical = normalizeGameId(activeGame) ?? String(activeGame).toLowerCase()
+  return [...new Set((games || [])
+    .filter(g => normalizeGameId(g?.slug ?? g?.name) === canonical)
+    .map(g => g?.id)
+    .filter(id => id != null))]
+}
 
 // Oyun etiketi normalize (DB'de "Cs-Go"/"League-Of-Legends" gibi çirkin slug'lar var).
 function gameMeta(game) {
@@ -45,12 +55,24 @@ function fmtDate(iso) {
 
 export default function TournamentsListPage() {
   const navigate = useNavigate()
+  const { activeGame } = useGame()
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [showAllTiers, setShowAllTiers] = useState(false)
   const [tournaments, setTournaments] = useState([])
+  const [games, setGames] = useState([])
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+
+  const PAGE_SIZE = 120
+
+  // Oyun listesini bir kez çek (aktif oyun → game_id çözümü için).
+  useEffect(() => {
+    supabase.from('games').select('id,name,slug').then(({ data }) => setGames(data || []))
+  }, [])
 
   // Arama debounce (server-side sorgu için)
   useEffect(() => {
@@ -58,37 +80,46 @@ export default function TournamentsListPage() {
     return () => clearTimeout(t)
   }, [search])
 
+  // Filtre (arama / oyun) değişince başa dön.
+  useEffect(() => { setPage(0) }, [debouncedSearch, activeGame])
+
   useEffect(() => {
     let cancelled = false
+    // Belirli oyun seçiliyken games henüz gelmediyse bekle (yanlışlıkla "hepsini" göstermemek için).
+    if (activeGame && activeGame !== 'all' && games.length === 0) return
 
     async function loadTournaments() {
-      setLoading(true)
+      page === 0 ? setLoading(true) : setLoadingMore(true)
       setError('')
       try {
-        // Arama varsa TÜM arşivde (2800 turnuva) ilike ile ara; yoksa son 300.
+        const gameIds = resolveGameIds(activeGame, games)
         let q = supabase
           .from('tournaments')
           .select('id,name,tier,region,begin_at,end_at,game:games(id,name,slug)')
         if (debouncedSearch) q = q.ilike('name', `%${debouncedSearch}%`)
+        if (gameIds.length) q = q.in('game_id', gameIds)
+        // begin_at DESC + sayfalama → eski turnuvalara "Daha fazla" ile inilebilir.
         q = q.order('begin_at', { ascending: false, nullsFirst: false })
-             .limit(debouncedSearch ? 150 : 300)
+             .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
 
         const { data, error: queryError } = await q
         if (queryError) throw queryError
-        if (!cancelled) setTournaments(data || [])
+        if (cancelled) return
+        setHasMore((data || []).length === PAGE_SIZE)
+        setTournaments(prev => (page === 0 ? (data || []) : [...prev, ...(data || [])]))
       } catch (loadError) {
         if (!cancelled) {
           setError(loadError?.message || 'Turnuvalar yuklenemedi.')
-          setTournaments([])
+          if (page === 0) setTournaments([])
         }
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) { setLoading(false); setLoadingMore(false) }
       }
     }
 
     loadTournaments()
     return () => { cancelled = true }
-  }, [debouncedSearch])
+  }, [debouncedSearch, activeGame, page, games])
 
   const searchedTournaments = useMemo(() => {
     const q = String(search || '').trim().toLowerCase()
@@ -275,6 +306,22 @@ export default function TournamentsListPage() {
               </button>
             )
           })}
+        </div>
+      )}
+
+      {!loading && !error && hasMore && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 18 }}>
+          <button
+            onClick={() => setPage(p => p + 1)}
+            disabled={loadingMore}
+            style={{
+              borderRadius: 10, border: '1px solid #2f2f2f', background: '#141414',
+              color: loadingMore ? '#666' : '#ddd', fontSize: 12, fontWeight: 700,
+              padding: '10px 20px', cursor: loadingMore ? 'default' : 'pointer',
+            }}
+          >
+            {loadingMore ? 'Yükleniyor...' : 'Daha fazla göster (eski turnuvalar)'}
+          </button>
         </div>
       )}
     </div>

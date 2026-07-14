@@ -605,7 +605,7 @@ function StageListView({ matches, navigate, gc }) {
               <div style={{ fontSize: 10, color: '#7a7a7a', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.8px' }}>
                 {roundKey}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 10 }}>
                 {list.map(m => (
                   <MatchListCard key={m.id} m={m} navigate={navigate} gc={gc} />
                 ))}
@@ -2353,7 +2353,7 @@ export default function TournamentPage() {
             </div>
           ) : (
             <div style={{ display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }}>
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 12 }}>
               {(activeTab === 'upcoming' ? upcomingMatches : pastMatches).map(m => (
                 <MatchListCard key={m.id} m={m} navigate={navigate} gc={gc} />
               ))}

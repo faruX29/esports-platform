@@ -386,7 +386,7 @@ function GameSelectorBar() {
   const location = useLocation()
 
   // Sadece belirli sayfalarda göster
-  const showOn = ['/', '/matches', '/rankings']
+  const showOn = ['/', '/matches', '/rankings', '/tournaments']
   if (!showOn.includes(location.pathname)) return null
 
   return (

@@ -45,33 +45,32 @@ function resolveGameIds(activeGame, games) {
   return [...new Set(ids)]
 }
 
-function buildPowerRankings(matches) {
+function buildPowerRankings(matches, gameLabel = 'Global') {
   const map = new Map()
   const nowMs = Date.now()
 
   for (const m of (matches || [])) {
-    const gameName = m?.game?.name || ''
     const tier = tierKey(m?.tournament?.tier)
     const tierStr = TIER_STRENGTH[tier]
     const recW = recencyWeight(m?.scheduled_at, nowMs)
     const matchW = tierStr * recW // maç ağırlığı: hem tier hem güncellik
 
-    // Skorları winner_id ile tutarlı hale getir (ters-atanmış skor quirk'i)
+    // Hafif sorgu: takım objesi yerine id'ler geliyor (hız için).
     const cs = correctedScores({
       team_a_score: m?.team_a_score, team_b_score: m?.team_b_score,
-      team_a_id: m?.team_a?.id, team_b_id: m?.team_b?.id, winner_id: m?.winner_id,
+      team_a_id: m?.team_a_id, team_b_id: m?.team_b_id, winner_id: m?.winner_id,
     })
     const teams = [
-      { id: m?.team_a?.id, data: m?.team_a, score: toNum(cs.team_a_score), oppScore: toNum(cs.team_b_score) },
-      { id: m?.team_b?.id, data: m?.team_b, score: toNum(cs.team_b_score), oppScore: toNum(cs.team_a_score) },
+      { id: m?.team_a_id, score: toNum(cs.team_a_score), oppScore: toNum(cs.team_b_score) },
+      { id: m?.team_b_id, score: toNum(cs.team_b_score), oppScore: toNum(cs.team_a_score) },
     ]
 
     for (const t of teams) {
-      if (!t.id || !t.data) continue
+      if (!t.id) continue
 
       if (!map.has(t.id)) {
         map.set(t.id, {
-          teamId: t.id, team: t.data, gameName,
+          teamId: t.id, gameName: gameLabel,
           wins: 0, losses: 0, total: 0,
           sumW: 0, sumWinW: 0, strNum: 0, strDen: 0,
           recent: [],
@@ -104,7 +103,6 @@ function buildPowerRankings(matches) {
   }
 
   return [...map.values()]
-    .filter(x => x.total >= 5)
     .map(x => {
       const decided = x.wins + x.losses
       const winRate = decided > 0 ? (x.wins / decided) * 100 : 0
@@ -113,12 +111,16 @@ function buildPowerRankings(matches) {
       const recentRate = x.recent.length > 0 ? (x.recent.reduce((a, b) => a + b, 0) / x.recent.length) * 100 : winRate
 
       // ÇARPIMSAL model: tier güç TAVANINI belirler. Bir takım ancak yüksek tier'da
-      // kazanarak yükselebilir → B-tier bir takım (tavan ~62) bir S-tier şampiyonu (70+) ASLA geçemez.
+      // kazanarak yükselebilir → düşük-tier bir takım yüksek-tier şampiyonu ASLA geçemez.
       const powerScore = clamp(100 * weightedWinRate * (0.35 + 0.65 * scheduleStrength), 0, 100)
-      const impactScore = clamp(scheduleStrength * 100, 0, 100) // "Kalite" sütunu: program gücü
+      const impactScore = clamp(scheduleStrength * 100, 0, 100) // "Kalite": program gücü (0..100)
+      const rating = Math.round(powerScore * 10)               // 0..1000 puan (yüzde değil)
 
-      return { ...x, winRate, recentRate, impactScore, scheduleStrength, powerScore }
+      return { ...x, winRate, recentRate, impactScore, scheduleStrength, powerScore, rating }
     })
+    // İnternet-kafe / tek-turnuva çok alt-tier takımları listeye ALMA:
+    // yeterli maç (≥6) + ortalama en az ~C seviyesi rekabet (sadece unranked/D → elenir).
+    .filter(x => x.total >= 6 && x.scheduleStrength >= 0.21)
     .sort((a, b) => b.powerScore - a.powerScore)
 }
 
@@ -184,45 +186,60 @@ export default function RankingsPage() {
         // Valorant/LoL'ü "aç bırakıyordu" (maç sayısı artmıyor hissi). Artık her oyun kendi penceresini alır.
         const { data: games } = await supabase.from('games').select('id,name,slug')
         const gameIds = resolveGameIds(activeGame, games)
+        const gameLabel = GAMES.find(g => g.id === activeGame)?.label || activeGame
         const since = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString()
 
-        // PostgREST max-rows=1000 → .limit(9000) 1000'e kırpılıyordu (ranking son ~1000 maça
-        // bakıyordu, 6 ayın tamamına değil). Bütün pencereyi SAYFALAYARAK çekiyoruz.
-        const PAGE = 1000
-        const MAX_ROWS = 12000
-        let allMatches = []
-        for (let from = 0; from < MAX_ROWS; from += PAGE) {
-          let query = supabase
-            .from('matches')
-            .select(`
-              id,
-              scheduled_at,
-              status,
-              winner_id,
-              team_a_score,
-              team_b_score,
-              team_a:teams!matches_team_a_id_fkey(id,name,logo_url,acronym),
-              team_b:teams!matches_team_b_id_fkey(id,name,logo_url,acronym),
-              game:games(name),
-              tournament:tournaments(tier)
-            `)
-            .eq('status', 'finished')
-            .not('winner_id', 'is', null)
-            .gte('scheduled_at', since)
-            .order('scheduled_at', { ascending: false })
-            .range(from, from + PAGE - 1)
-
-          if (gameIds.length) query = query.in('game_id', gameIds)
-
-          const { data: page, error: fetchErr } = await query
-          if (fetchErr) throw fetchErr
-          if (cancelled) return
-
-          allMatches = allMatches.concat(page || [])
-          if (!page || page.length < PAGE) break
+        const applyFilters = (q) => {
+          let out = q.eq('status', 'finished').not('winner_id', 'is', null).gte('scheduled_at', since)
+          if (gameIds.length) out = out.in('game_id', gameIds)
+          return out
         }
 
-        const computed = buildPowerRankings(allMatches)
+        // Kaç sayfa gerektiğini öğren (PostgREST max-rows=1000 → tek istekle hepsini alamayız).
+        const { count } = await applyFilters(
+          supabase.from('matches').select('id', { count: 'exact', head: true })
+        )
+        const PAGE = 1000
+        const MAX_ROWS = 12000
+        const total = Math.min(count || 0, MAX_ROWS)
+        const pageCount = Math.max(1, Math.ceil(total / PAGE))
+
+        // HAFİF sorgu (takım embed'i YOK, sadece id'ler + tier) + PARALEL sayfalar → hız.
+        const pageReqs = []
+        for (let i = 0; i < pageCount; i++) {
+          pageReqs.push(
+            applyFilters(
+              supabase
+                .from('matches')
+                .select('team_a_id,team_b_id,winner_id,team_a_score,team_b_score,scheduled_at,tournament:tournaments(tier)')
+            )
+              .order('scheduled_at', { ascending: false })
+              .range(i * PAGE, i * PAGE + PAGE - 1)
+          )
+        }
+        const pageResults = await Promise.all(pageReqs)
+        if (cancelled) return
+        const firstErr = pageResults.find(r => r.error)
+        if (firstErr) throw firstErr.error
+        const allMatches = pageResults.flatMap(r => r.data || [])
+
+        const ranked = buildPowerRankings(allMatches, gameLabel)
+
+        // Takım isim/logosunu SADECE listeye girenler için çek (paralel, 200'lük parçalar).
+        const ids = ranked.map(r => r.teamId)
+        const teamById = new Map()
+        const chunks = []
+        for (let i = 0; i < ids.length; i += 200) chunks.push(ids.slice(i, i + 200))
+        const teamResults = await Promise.all(
+          chunks.map(chunk => supabase.from('teams').select('id,name,logo_url,acronym').in('id', chunk))
+        )
+        if (cancelled) return
+        for (const res of teamResults) for (const t of (res.data || [])) teamById.set(t.id, t)
+
+        const computed = ranked.map(r => ({
+          ...r,
+          team: teamById.get(r.teamId) || { name: 'Unknown Team', logo_url: null },
+        }))
         setRows(computed)
       } catch (e) {
         if (!cancelled) {
@@ -291,12 +308,12 @@ export default function RankingsPage() {
           <div style={{ background: '#111111d9', border: '1px solid #2a2a2a', borderRadius: 14, padding: 14 }}>
             <div style={{ fontSize: 11, color: '#9a9a9a' }}>Lider</div>
             <div style={{ marginTop: 4, fontWeight: 800, fontSize: 18 }}>{top?.team?.name || '—'}</div>
-            <div style={{ marginTop: 2, fontSize: 12, color: '#d74a61' }}>{top ? `${formatPercent(top.powerScore)} Power` : 'Veri bekleniyor'}</div>
+            <div style={{ marginTop: 2, fontSize: 12, color: '#d74a61' }}>{top ? `${top.rating} Puan` : 'Veri bekleniyor'}</div>
           </div>
           <div style={{ background: '#111111d9', border: '1px solid #2a2a2a', borderRadius: 14, padding: 14 }}>
             <div style={{ fontSize: 11, color: '#9a9a9a' }}>Listelenen Takim</div>
             <div style={{ marginTop: 4, fontWeight: 800, fontSize: 22 }}>{filtered.length}</div>
-            <div style={{ marginTop: 2, fontSize: 12, color: '#d0d0d0' }}>Min. 5 tamamlanmis mac</div>
+            <div style={{ marginTop: 2, fontSize: 12, color: '#d0d0d0' }}>Min. 6 mac · gercek turnuva</div>
           </div>
           <div style={{ background: '#111111d9', border: '1px solid #2a2a2a', borderRadius: 14, padding: 14 }}>
             <div style={{ fontSize: 11, color: '#9a9a9a' }}>Model</div>
@@ -446,8 +463,8 @@ export default function RankingsPage() {
                 </div>
 
                 <div style={{ fontWeight: 700 }}>{formatPercent(row.winRate)}</div>
-                <div style={{ color: '#ff9aa9', fontWeight: 700 }}>{formatPercent(row.impactScore)}</div>
-                <div style={{ color: '#ffffff', fontWeight: 800 }}>{formatPercent(row.powerScore)}</div>
+                <div style={{ color: '#ff9aa9', fontWeight: 700 }}>{Math.round(row.impactScore)}</div>
+                <div style={{ color: '#ffffff', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{row.rating}</div>
 
                 <div>
                   <button

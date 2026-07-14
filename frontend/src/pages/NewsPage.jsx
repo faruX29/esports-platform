@@ -14,7 +14,7 @@ import {
   getGameMeta,
   tierWeight,
 } from '../utils/newsStories'
-import { isStoryForYou, prioritizeStoriesForYou } from '../utils/newsPersonalization'
+import { isStoryFollowedTeam, prioritizeStoriesForYou } from '../utils/newsPersonalization'
 import ShareButton from '../components/ShareButton'
 import SeoHead from '../components/SeoHead'
 import NewsCover, { scoreFromHero } from '../components/NewsCover'
@@ -482,7 +482,7 @@ export default function NewsPage() {
       const prioritized = prioritizeStoriesForYou(generated, followedTeamIds, followedGames)
         .map(story => ({
           ...story,
-          isForYou: isStoryForYou(story, followedTeamIds, followedGames),
+          isForYou: isStoryFollowedTeam(story, followedTeamIds),
         }))
 
       setStories(prioritized)
@@ -506,7 +506,7 @@ export default function NewsPage() {
     })
     return prioritizeStoriesForYou(scoped, followedTeamIds, followedGames).map(story => ({
       ...story,
-      isForYou: isStoryForYou(story, followedTeamIds, followedGames),
+      isForYou: isStoryFollowedTeam(story, followedTeamIds),
     }))
   }, [activeCategory, followedTeamIds, followedGames, stories])
 

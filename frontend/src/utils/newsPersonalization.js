@@ -20,6 +20,17 @@ function isStoryGamePreferred(story, followedGameIds = []) {
     .some(game => preferredGames.has(game))
 }
 
+// "For You" ROZETİ için: yalnızca takip edilen bir TAKIM geçtiğinde true.
+// (Takip edilen oyun eşleşmesi rozet basmaz — yoksa o oyundaki her haberde çıkar
+// ve rozet anlamını yitirir. Oyun tercihi yalnızca sıralamayı etkiler.)
+export function isStoryFollowedTeam(story, followedTeamIds = []) {
+  if (!story || !Array.isArray(followedTeamIds) || followedTeamIds.length === 0) return false
+  const followed = new Set(followedTeamIds.map(id => String(id)))
+  const teamAId = story?.visuals?.teamA?.id != null ? String(story.visuals.teamA.id) : null
+  const teamBId = story?.visuals?.teamB?.id != null ? String(story.visuals.teamB.id) : null
+  return Boolean((teamAId && followed.has(teamAId)) || (teamBId && followed.has(teamBId)))
+}
+
 export function isStoryForYou(story, followedTeamIds = [], followedGameIds = []) {
   if (!story) return false
 

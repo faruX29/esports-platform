@@ -991,12 +991,17 @@ function H2HRow({ match, refTeamAId }) {
   const isALeft = idEq(match.team_a_id, refTeamAId)
   const aScore  = isALeft ? match.team_a_score : match.team_b_score
   const bScore  = isALeft ? match.team_b_score : match.team_a_score
-  const leftWon = idEq(match.winner_id, refTeamAId)
-  const rightWon= match.winner_id !== null && !leftWon
-  const badge = getH2HBadge(match, refTeamAId)
+  const isDraw   = match.winner_id == null
+  const leftWon  = !isDraw && idEq(match.winner_id, refTeamAId)
+  const rightWon = !isDraw && !leftWon
+  // W/L rozeti kaldırıldı (referans takıma göreydi, hangi taraftan girdiğine göre
+  // kafa karıştırıyordu). Bunun yerine kazananın adı yeşil, kaybedenin kırmızı.
+  const WIN = '#4CAF50', LOSE = '#ff6b72', DRAW = '#888'
+  const leftColor  = isDraw ? DRAW : (leftWon ? WIN : LOSE)
+  const rightColor = isDraw ? DRAW : (rightWon ? WIN : LOSE)
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr auto', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: '#0a0a0a', border: '1px solid #161616', fontSize: 11 }}>
-      <div style={{ textAlign: 'right', fontWeight: leftWon ? 700 : 400, color: leftWon ? '#4CAF50' : '#444', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: '#0a0a0a', border: '1px solid #161616', fontSize: 11 }}>
+      <div style={{ textAlign: 'right', fontWeight: leftWon ? 800 : 600, color: leftColor, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {isALeft ? (match.team_a?.name || '?') : (match.team_b?.name || '?')}
       </div>
       <div style={{ textAlign: 'center', minWidth: 52, fontWeight: 800, color: '#666', fontVariantNumeric: 'tabular-nums' }}>
@@ -1005,27 +1010,9 @@ function H2HRow({ match, refTeamAId }) {
           {new Date(match.scheduled_at).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: '2-digit' })}
         </div>
       </div>
-      <div style={{ fontWeight: rightWon ? 700 : 400, color: rightWon ? '#4CAF50' : '#444', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <div style={{ fontWeight: rightWon ? 800 : 600, color: rightColor, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {isALeft ? (match.team_b?.name || '?') : (match.team_a?.name || '?')}
       </div>
-      <span
-        title={badge.label}
-        style={{
-          justifySelf: 'end',
-          minWidth: 22,
-          textAlign: 'center',
-          borderRadius: 999,
-          border: `1px solid ${badge.border}`,
-          background: badge.bg,
-          color: badge.color,
-          fontSize: 10,
-          fontWeight: 900,
-          padding: '2px 6px',
-          letterSpacing: '.6px',
-        }}
-      >
-        {badge.text}
-      </span>
     </div>
   )
 }

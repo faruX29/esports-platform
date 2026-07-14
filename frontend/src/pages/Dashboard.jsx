@@ -10,9 +10,9 @@ import { isTurkishTeam }                   from '../constants'
 import { useUser }                          from '../context/UserContext'
 import { useAuth }                          from '../context/AuthContext'
 import BRANDING                             from '../branding.config'
-import { Radio, Flag, CalendarDays, Sparkles, Zap } from 'lucide-react'
+import { Radio, Flag, CalendarDays, Sparkles, Zap, SlidersHorizontal } from 'lucide-react'
 import { buildFinishedStory, buildUpcomingStory } from '../utils/newsStories'
-import { isStoryForYou, prioritizeStoriesForYou } from '../utils/newsPersonalization'
+import { isStoryFollowedTeam, prioritizeStoriesForYou } from '../utils/newsPersonalization'
 import { calculatePredictionAccuracy, getMatchImpactLabel } from '../utils/accuracyTracker'
 import { memo }                             from 'react'
 import InitialsImage                        from '../components/InitialsImage'
@@ -150,6 +150,20 @@ function fmtTime(iso) {
   return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
 }
 
+// Upcoming maçlar günler sonra olabildiği için sadece saat kafa karıştırıyordu.
+// Bugün → saat; yarın → "Yarın HH:MM"; sonrası → "14 Tem HH:MM".
+function fmtWhen(iso) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  const now = new Date()
+  const dayStart = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
+  const dayDiff = Math.round((dayStart(d) - dayStart(now)) / 86400000)
+  const time = d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+  if (dayDiff === 0) return time
+  if (dayDiff === 1) return `Yarın ${time}`
+  return `${d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} ${time}`
+}
+
 function normalizeMatchStatus(status) {
   const normalized = String(status || '').trim().toLowerCase()
   if (normalized === 'upcoming') return 'not_started'
@@ -264,7 +278,7 @@ function buildTickerLines(running, finishedStories, upcomingStories, followedTea
     })
   })
   ;orderedFinished.forEach(story => {
-    const forYou = isStoryForYou(story, followedTeamIds, followedGameIds)
+    const forYou = isStoryFollowedTeam(story, followedTeamIds)
     lines.push({
       id: `finished_${story.id}`,
       text: `${forYou ? '⭐ FOR YOU' : '📰'} ${story.title}`,
@@ -274,7 +288,7 @@ function buildTickerLines(running, finishedStories, upcomingStories, followedTea
     if (scout) lines.push({ id: `finished_scout_${story.id}`, text: scout, href: null })
   })
   ;orderedUpcoming.forEach(story => {
-    const forYou = isStoryForYou(story, followedTeamIds, followedGameIds)
+    const forYou = isStoryFollowedTeam(story, followedTeamIds)
     lines.push({
       id: `upcoming_${story.id}`,
       text: `${forYou ? '⭐ FOR YOU' : '⏳'} ${story.title}`,
@@ -298,23 +312,65 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
   const [selectedGames, setSelectedGames] = useState(gameIds || [])
   const [selectedTeams, setSelectedTeams] = useState(teamIds || [])
   const [teamSearch, setTeamSearch] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [searching, setSearching] = useState(false)
+  // Görülen tüm takım objelerini sakla (arama temizlense de seçili takım görünür/kaydedilebilir kalsın).
+  const [seenTeams, setSeenTeams] = useState({})
+  const searchDebounceRef = useRef(null)
 
   useEffect(() => {
     if (!open) return
     setSelectedGames(gameIds || [])
     setSelectedTeams(teamIds || [])
     setTeamSearch('')
+    setSearchResults([])
   }, [open, gameIds, teamIds])
+
+  // Popüler takımları "görülenler"e ekle.
+  useEffect(() => {
+    if (!open) return
+    setSeenTeams(prev => {
+      const next = { ...prev }
+      for (const team of (popularTeams || [])) if (team?.id != null) next[team.id] = team
+      return next
+    })
+  }, [open, popularTeams])
+
+  // Canlı Supabase araması — tüm takımlar (yalnızca popülerler değil) takip edilebilsin.
+  useEffect(() => {
+    if (!open) return
+    const q = String(teamSearch || '').trim()
+    if (q.length < 2) { setSearchResults([]); setSearching(false); return }
+    setSearching(true)
+    clearTimeout(searchDebounceRef.current)
+    searchDebounceRef.current = setTimeout(async () => {
+      const { data } = await supabase
+        .from('teams')
+        .select('id,name,logo_url,game_id,game:games(id,name,slug)')
+        .ilike('name', `%${q}%`)
+        .order('name', { ascending: true })
+        .limit(14)
+      setSearchResults(data || [])
+      setSeenTeams(prev => {
+        const next = { ...prev }
+        for (const team of (data || [])) if (team?.id != null) next[team.id] = team
+        return next
+      })
+      setSearching(false)
+    }, 250)
+    return () => clearTimeout(searchDebounceRef.current)
+  }, [teamSearch, open])
 
   if (!open) return null
 
-  const normalizedQuery = String(teamSearch || '').trim().toLocaleLowerCase('tr')
-  const filteredTeams = (popularTeams || []).filter(team => {
-    if (!normalizedQuery) return true
-    const teamName = String(team?.name || '').toLocaleLowerCase('tr')
-    const gameName = String(team?.game?.name || team?.game?.slug || '').toLocaleLowerCase('tr')
-    return teamName.includes(normalizedQuery) || gameName.includes(normalizedQuery)
-  })
+  const searchActive = String(teamSearch || '').trim().length >= 2
+  const baseList = searchActive ? searchResults : (popularTeams || [])
+  // Seçili olup listede olmayan takımları da başa ekle (arama temizlense bile görünsün).
+  const selectedNotInList = selectedTeams
+    .filter(id => !baseList.some(team => team.id === id))
+    .map(id => seenTeams[id])
+    .filter(Boolean)
+  const displayedTeams = [...selectedNotInList, ...baseList]
 
   const toggleGame = gameId => {
     setSelectedGames(prev => prev.includes(gameId)
@@ -322,7 +378,10 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
       : [...prev, gameId])
   }
 
-  const toggleTeam = teamId => {
+  const toggleTeam = team => {
+    const teamId = team?.id
+    if (teamId == null) return
+    setSeenTeams(prev => ({ ...prev, [teamId]: team }))
     setSelectedTeams(prev => prev.includes(teamId)
       ? prev.filter(id => id !== teamId)
       : [...prev, teamId])
@@ -384,12 +443,14 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
             })}
           </div>
 
-          <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 8 }}>Populer Takimlar</div>
+          <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 8 }}>
+            {searchActive ? 'Arama Sonuclari' : 'Populer Takimlar'}
+          </div>
           <div style={{ marginBottom: 10 }}>
             <input
               value={teamSearch}
               onChange={event => setTeamSearch(event.target.value)}
-              placeholder='Takim ara...'
+              placeholder='Tum takimlarda ara... (min 2 harf)'
               style={{
                 width: '100%',
                 borderRadius: 9,
@@ -403,14 +464,14 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
             />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 8 }}>
-            {filteredTeams.map(team => {
+            {displayedTeams.map(team => {
               const active = selectedTeams.includes(team.id)
               const teamGameId = normalizeGameId(team?.game?.slug ?? team?.game?.name ?? team?.game_id)
               const gameMeta = PREFERENCE_GAMES.find(game => game.id === teamGameId)
               return (
                 <button
                   key={team.id}
-                  onClick={() => toggleTeam(team.id)}
+                  onClick={() => toggleTeam(team)}
                   style={{
                     width: '100%',
                     textAlign: 'left',
@@ -443,17 +504,22 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
                 </button>
               )
             })}
-            {!loading && (!popularTeams || popularTeams.length === 0) && (
-              <div style={{ gridColumn: '1 / -1', fontSize: 12, color: '#777', border: '1px dashed #262626', borderRadius: 10, padding: '12px 10px', textAlign: 'center' }}>
-                Takim onerileri yuklenemedi. Daha sonra tekrar deneyebilirsin.
+            {searchActive && searching && displayedTeams.length === 0 && (
+              <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 8 }}>
+                {[1, 2, 3].map(i => <Sk key={i} h="36px" r="10px" />)}
               </div>
             )}
-            {!loading && Boolean(popularTeams?.length) && filteredTeams.length === 0 && (
+            {searchActive && !searching && displayedTeams.length === 0 && (
               <div style={{ gridColumn: '1 / -1', fontSize: 12, color: '#777', border: '1px dashed #262626', borderRadius: 10, padding: '12px 10px', textAlign: 'center' }}>
-                Arama sonucunda takim bulunamadi.
+                "{teamSearch.trim()}" icin takim bulunamadi.
               </div>
             )}
-            {loading && (
+            {!searchActive && !loading && (!popularTeams || popularTeams.length === 0) && (
+              <div style={{ gridColumn: '1 / -1', fontSize: 12, color: '#777', border: '1px dashed #262626', borderRadius: 10, padding: '12px 10px', textAlign: 'center' }}>
+                Takim onerileri yuklenemedi. Yukaridan arayarak takim ekleyebilirsin.
+              </div>
+            )}
+            {!searchActive && loading && (
               <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 8 }}>
                 {[1, 2, 3, 4, 5, 6].map(i => <Sk key={i} h="36px" r="10px" />)}
               </div>
@@ -480,10 +546,10 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
           <button
             onClick={() => {
               const teamGameMap = {}
-              for (const team of (popularTeams || [])) {
-                if (!selectedTeams.includes(team.id)) continue
+              for (const teamId of selectedTeams) {
+                const team = seenTeams[teamId]
                 const gameId = normalizeGameId(team?.game?.slug ?? team?.game?.name ?? team?.game_id)
-                if (gameId) teamGameMap[String(team.id)] = gameId
+                if (gameId) teamGameMap[String(teamId)] = gameId
               }
 
               const mergedGameIds = [...new Set([
@@ -875,7 +941,7 @@ const FavoritesBar = memo(function FavoritesBar({ onMatchClick, showAllTournamen
                     )}
                   </div>
                   {isLive  && <span style={{ fontSize: 9, fontWeight: 800, color: '#FF4655', animation: 'livePulse 1.2s infinite' }}>● LIVE</span>}
-                  {!isLive && !isFin && <span style={{ fontSize: 9, color: '#444' }}>{fmtTime(m.scheduled_at)}</span>}
+                  {!isLive && !isFin && <span style={{ fontSize: 9, color: '#444', flexShrink: 0 }}>{fmtWhen(m.scheduled_at)}</span>}
                   {isFin   && <span style={{ fontSize: 9, color: '#2a2a2a' }}>Bitti</span>}
                 </div>
 
@@ -2325,44 +2391,33 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div style={{
-        marginBottom: 12,
-        padding: '10px 12px',
-        borderRadius: 12,
-        border: '1px solid rgba(255,70,85,.26)',
-        background: 'linear-gradient(120deg, rgba(255,70,85,.1), rgba(15,15,15,.95))',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 10,
-        flexWrap: 'wrap',
-      }}>
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 800, color: '#ff9aa5', letterSpacing: '.8px', textTransform: 'uppercase' }}>
-            Takip Tercihleri
-          </div>
-          <div style={{ fontSize: 12, color: '#d6d6d6', marginTop: 3 }}>
-            {(preferredGameLabels.length > 0 || followedTeamIds.length > 0)
-              ? `Oyunlar: ${preferredGameLabels.length ? preferredGameLabels.join(', ') : '—'} · Takımlar: ${followedTeamIds.length}`
-              : 'Akışını kişiselleştir — favori oyun ve takımlarını seç, dashboard sana göre şekillensin.'}
-          </div>
-        </div>
+      {/* Kompakt tercih butonu — eskiden tam satır kaplayan banttı; sağ üste alındı. */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
         <button
           onClick={() => setShowPreferenceWizard(true)}
+          title="Akışını kişiselleştir — favori oyun ve takımlarını seç"
           style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 7,
             borderRadius: 999,
-            border: '1px solid rgba(255,70,85,.55)',
-            background: 'rgba(255,70,85,.18)',
-            color: '#ffe3e7',
+            border: '1px solid rgba(255,70,85,.4)',
+            background: 'rgba(255,70,85,.1)',
+            color: '#ffd7dc',
             fontSize: 11,
-            fontWeight: 800,
-            letterSpacing: '.3px',
-            padding: '7px 12px',
+            fontWeight: 700,
+            letterSpacing: '.2px',
+            padding: '6px 12px',
             cursor: 'pointer',
             whiteSpace: 'nowrap',
           }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,70,85,.18)'; e.currentTarget.style.borderColor = 'rgba(255,70,85,.6)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,70,85,.1)'; e.currentTarget.style.borderColor = 'rgba(255,70,85,.4)' }}
         >
-          {(preferredGameLabels.length > 0 || followedTeamIds.length > 0) ? 'Tercihleri Düzenle' : 'Kişiselleştir'}
+          <SlidersHorizontal size={13} strokeWidth={2.2} />
+          {(preferredGameLabels.length > 0 || followedTeamIds.length > 0)
+            ? `Tercihlerin · ${followedTeamIds.length} takım`
+            : 'Kişiselleştir'}
         </button>
       </div>
 

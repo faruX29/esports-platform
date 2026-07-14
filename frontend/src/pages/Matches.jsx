@@ -51,6 +51,22 @@ function resolveGameId(activeGame, gameNames) {
   return dbGame?.id ?? FALLBACK_GAME_IDS[normalized] ?? null
 }
 
+// DB'de aynı oyun için MÜKERRER kayıtlar var (ör. "Counter-Strike 2" id=2 VE
+// "Cs-Go" id=8; "League of Legends" id=3 VE "League-Of-Legends" id=9). Maçlar
+// bu id'ler arasında bölünmüş — tek id'ye .eq atınca upcoming boş görünüyordu.
+// Bu yüzden kanonik oyuna ait TÜM game_id'leri toplayıp .in ile filtreliyoruz.
+function resolveGameIds(activeGame, gameNames) {
+  if (!activeGame || activeGame === 'all') return []
+  const canonical = normalizeGameId(activeGame) ?? String(activeGame).toLowerCase()
+  const ids = (gameNames || [])
+    .filter(g => normalizeGameId(g?.slug ?? g?.name) === canonical)
+    .map(g => g?.id)
+    .filter(id => id != null)
+  if (ids.length) return [...new Set(ids)]
+  const fallback = FALLBACK_GAME_IDS[canonical]
+  return fallback != null ? [fallback] : []
+}
+
 function matchTimeIso(match) {
   return match?.scheduled_at ?? match?.begin_at ?? match?.created_at ?? null
 }
@@ -320,14 +336,14 @@ function Matches() {
           if (dateTo) query = query.lte('scheduled_at', new Date(dateTo + 'T23:59:59.999Z').toISOString())
         }
 
-        // ── Game filtresi SUNUCU tarafında ──
+        // ── Game filtresi SUNUCU tarafında (mükerrer oyun kayıtları dahil) ──
         if (activeGame && activeGame !== 'all') {
-          const gameId = resolveGameId(activeGame, gameNames)
-          if (!gameId) {
+          const gameIds = resolveGameIds(activeGame, gameNames)
+          if (!gameIds.length) {
             throw new Error(`Game filter id bulunamadi: ${activeGame}`)
           }
 
-          query = query.eq('game_id', gameId)
+          query = query.in('game_id', gameIds)
         }
 
         // ── Server-side arama: takım/turnuva adını id'ye çözüp filtrele ──

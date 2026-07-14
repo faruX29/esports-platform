@@ -1,8 +1,85 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useUser } from '../context/UserContext'
+import { supabase } from '../supabaseClient'
 import TeamPicker from '../components/TeamPicker'
+import InitialsImage from '../components/InitialsImage'
 import { getEsportsName } from '../utils/esportsName'
+import { normalizeGameId } from '../utils/gameUtils'
+
+const GAME_SHORT = { valorant: 'VAL', cs2: 'CS2', lol: 'LOL', dota2: 'DOTA2' }
+const GAME_COLOR = { valorant: '#FF4655', cs2: '#F0A500', lol: '#C89B3C', dota2: '#9d2226' }
+
+// Takip ettiğim takımlar — listele, çıkar, ara & ekle. (Takipler follows tablosuna
+// UserContext üzerinden yazılır; oyun ataması bir sonraki yüklemede takımdan türetilir.)
+function FollowedTeamsManager() {
+  const { followedTeamIds, followTeam, unfollowTeam, isTeamFollowed } = useUser()
+  const [teams, setTeams] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [pickerKey, setPickerKey] = useState(0)
+
+  useEffect(() => {
+    let alive = true
+    async function load() {
+      if (!followedTeamIds.length) { setTeams([]); return }
+      setLoading(true)
+      const { data } = await supabase
+        .from('teams')
+        .select('id,name,logo_url,game:games(id,name,slug)')
+        .in('id', followedTeamIds)
+      if (!alive) return
+      const byId = new Map((data || []).map(t => [t.id, t]))
+      setTeams(followedTeamIds.map(id => byId.get(id)).filter(Boolean))
+      setLoading(false)
+    }
+    load()
+    return () => { alive = false }
+  }, [followedTeamIds])
+
+  function handleAdd(id) {
+    if (!id) return
+    if (!isTeamFollowed(id)) followTeam(id)
+    setPickerKey(k => k + 1)
+  }
+
+  return (
+    <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid #1c1c1c' }}>
+      <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 4 }}>Takip Ettiğim Takımlar ({followedTeamIds.length})</div>
+      <div style={{ fontSize: 11, color: '#777', marginBottom: 12 }}>Buradaki takımların maçları ve haberleri akışında öne çıkar.</div>
+
+      {followedTeamIds.length === 0 && !loading && (
+        <div style={{ fontSize: 12, color: '#666', border: '1px dashed #262626', borderRadius: 10, padding: 12, textAlign: 'center', marginBottom: 12 }}>
+          Henüz takım takip etmiyorsun. Aşağıdan arayıp ekleyebilirsin.
+        </div>
+      )}
+
+      {teams.length > 0 && (
+        <div style={{ display: 'grid', gap: 8, marginBottom: 14 }}>
+          {teams.map(team => {
+            const g = normalizeGameId(team?.game?.slug ?? team?.game?.name)
+            const color = GAME_COLOR[g] || '#888'
+            return (
+              <div key={team.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#0d0d0d', border: '1px solid #202020', borderRadius: 11, padding: '8px 12px' }}>
+                <InitialsImage src={team.logo_url} name={team.name} width={26} height={26} borderRadius={6} objectFit="contain" />
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#eee', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.name}</span>
+                {g && (
+                  <span style={{ fontSize: 9, fontWeight: 800, color, background: `${color}1f`, border: `1px solid ${color}55`, borderRadius: 5, padding: '2px 6px', flexShrink: 0 }}>
+                    {GAME_SHORT[g] || g.toUpperCase()}
+                  </span>
+                )}
+                <button type="button" onClick={() => unfollowTeam(team.id)} title="Takibi bırak" style={{ background: 'transparent', border: '1px solid #333', color: '#999', borderRadius: 8, width: 26, height: 26, cursor: 'pointer', flexShrink: 0, fontSize: 15, lineHeight: 1 }}>×</button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <span style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 6 }}>Takım ekle</span>
+      <TeamPicker key={pickerKey} value={null} onChange={id => handleAdd(id)} placeholder="Takip etmek için takım ara..." />
+    </div>
+  )
+}
 
 export default function ProfileSettings() {
   const navigate = useNavigate()
@@ -121,6 +198,8 @@ export default function ProfileSettings() {
             {msg && <span style={{ fontSize: 12, color: msg.startsWith('Hata') ? '#FF4655' : '#4ade80' }}>{msg}</span>}
           </div>
         </form>
+
+        <FollowedTeamsManager />
       </div>
     </div>
   )

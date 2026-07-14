@@ -151,26 +151,44 @@ export function UserProvider({ children }) {
         ...mappedGameIds,
       ])]
 
-      const rows = [
-        ...teamIds.map(id => ({ user_id: user.id, target_type: 'team', target_id: String(id) })),
-        ...playerIds.map(id => ({ user_id: user.id, target_type: 'player', target_id: String(id) })),
-        ...persistedGameIds.map(id => ({ user_id: user.id, target_type: 'game', target_id: String(id) })),
-      ]
+      // Hedef durumu anahtar->satir haritasi olarak kur.
+      const desired = new Map()
+      for (const id of teamIds) desired.set(`team:${String(id)}`, { user_id: user.id, target_type: 'team', target_id: String(id) })
+      for (const id of playerIds) desired.set(`player:${String(id)}`, { user_id: user.id, target_type: 'player', target_id: String(id) })
+      for (const id of persistedGameIds) desired.set(`game:${String(id)}`, { user_id: user.id, target_type: 'game', target_id: String(id) })
 
-      const { error: delError } = await supabase.from('follows').delete().eq('user_id', user.id)
-      if (delError) {
-        console.warn('UserContext follows delete:', delError.message)
+      // Mevcut satirlari oku, sadece FARKI uygula. Destructive "hepsini sil"
+      // yok — boylece kismi bir hata tum takipleri ucurmaz (F5 bug'inin ikinci savunmasi).
+      const { data: existing, error: readError } = await supabase
+        .from('follows')
+        .select('id,target_type,target_id')
+        .eq('user_id', user.id)
+
+      if (readError) {
+        console.warn('UserContext follows read:', readError.message)
         setSyncing(false)
         return
       }
 
-      if (rows.length) {
-        const { error: insError } = await supabase.from('follows').insert(rows)
+      const existingByKey = new Map()
+      for (const row of existing || []) existingByKey.set(`${row.target_type}:${String(row.target_id)}`, row.id)
+
+      const toInsert = [...desired].filter(([key]) => !existingByKey.has(key)).map(([, row]) => row)
+      const toDeleteIds = [...existingByKey].filter(([key]) => !desired.has(key)).map(([, id]) => id)
+
+      // Once ekle (veri kaybi riski yok), sonra fazlalari sil.
+      if (toInsert.length) {
+        const { error: insError } = await supabase.from('follows').insert(toInsert)
         if (insError) {
           console.warn('UserContext follows insert:', insError.message)
           setSyncing(false)
           return
         }
+      }
+
+      if (toDeleteIds.length) {
+        const { error: delError } = await supabase.from('follows').delete().in('id', toDeleteIds)
+        if (delError) console.warn('UserContext follows delete:', delError.message)
       }
 
       if (!cancelled && typeof updateProfile === 'function') {

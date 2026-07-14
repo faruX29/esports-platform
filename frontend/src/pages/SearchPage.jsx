@@ -14,6 +14,26 @@ import { supabase }                                  from '../supabaseClient'
 import { getRoleBadge }                              from '../utils/roleHelper'
 import { isTurkishTeam }                             from '../constants'
 import { GAMES }                                     from '../context/GameContext'
+import { normalizeGameId }                           from '../utils/gameUtils'
+
+// Arama sonucunda takım/oyuncunun HANGİ oyun olduğu görünmeli (yoksa aynı isimli
+// farklı oyun takımları karışıyor). Küçük renkli oyun etiketi.
+function GameChip({ game }) {
+  const canonical = normalizeGameId(game?.slug ?? game?.name)
+  if (!canonical) return null
+  const meta = GAMES.find(g => g.id === canonical)
+  const label = meta?.shortLabel || meta?.label || game?.name
+  const color = meta?.color || '#888'
+  return (
+    <span style={{
+      fontSize: 9, fontWeight: 800, letterSpacing: '.4px', textTransform: 'uppercase',
+      color, background: `${color}1f`, border: `1px solid ${color}55`,
+      borderRadius: 5, padding: '2px 6px', flexShrink: 0,
+    }}>
+      {label}
+    </span>
+  )
+}
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 
@@ -186,9 +206,10 @@ function TeamCard({ team, navigate }) {
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {team.name}{isTR && ' 🇹🇷'}
         </div>
-        <div style={{ fontSize: 11, color: '#444', marginTop: 2 }}>
-          {team.acronym && <span style={{ marginRight: 6 }}>({team.acronym})</span>}
-          {team.location && `📍 ${team.location}`}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#444', marginTop: 3 }}>
+          <GameChip game={team.game} />
+          {team.acronym && <span>({team.acronym})</span>}
+          {team.location && <span>📍 {team.location}</span>}
         </div>
       </div>
       <span style={{ fontSize: 11, color: '#333' }}>→</span>
@@ -227,7 +248,7 @@ function PlayerCard({ player, navigate }) {
           {player.nickname}
         </div>
         {player.real_name && (
-          <div style={{ fontSize: 11, color: '#555',
+          <div style={{ fontSize: 11, color: '#555', marginTop: 2,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {player.real_name}
           </div>
@@ -878,7 +899,7 @@ export default function SearchPage() {
       const [teamRes, playerRes] = await Promise.all([
         supabase
           .from('teams')
-          .select('id, name, acronym, logo_url, location')
+          .select('id, name, acronym, logo_url, location, game:games(id, name, slug)')
           .ilike('name', `%${q}%`)
           .limit(12),
         supabase
@@ -898,7 +919,7 @@ export default function SearchPage() {
           const [teamFallback, playerFallback] = await Promise.all([
             supabase
               .from('teams')
-              .select('id, name, acronym, logo_url')
+              .select('id, name, acronym, logo_url, game:games(id, name, slug)')
               .ilike('name', `%${q}%`)
               .limit(12),
             supabase

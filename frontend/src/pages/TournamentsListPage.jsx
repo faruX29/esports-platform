@@ -66,8 +66,9 @@ export default function TournamentsListPage() {
   const [games, setGames] = useState([])
   const [page, setPage] = useState(0)
   const [hasMore, setHasMore] = useState(false)
+  const [teamsByTournament, setTeamsByTournament] = useState({})
 
-  const PAGE_SIZE = 120
+  const PAGE_SIZE = 30
 
   // Oyun listesini bir kez çek (aktif oyun → game_id çözümü için).
   useEffect(() => {
@@ -80,8 +81,8 @@ export default function TournamentsListPage() {
     return () => clearTimeout(t)
   }, [search])
 
-  // Filtre (arama / oyun / tier) değişince başa dön.
-  useEffect(() => { setPage(0) }, [debouncedSearch, activeGame, showAllTiers])
+  // Filtre (arama / oyun / tier) değişince başa dön + logo önbelleğini temizle.
+  useEffect(() => { setPage(0); setTeamsByTournament({}) }, [debouncedSearch, activeGame, showAllTiers])
 
   useEffect(() => {
     let cancelled = false
@@ -154,26 +155,24 @@ export default function TournamentsListPage() {
   }, [searchedTournaments, showAllTiers])
 
 
-  // Kartları ayırt edilebilir yapmak için katılan takım logolarını çek (isim sadece
-  // "Playoffs"/"Group A" olduğu için lig belli olmuyordu → logolar bağlam veriyor).
-  const [teamsByTournament, setTeamsByTournament] = useState({})
-  const visibleIdsKey = useMemo(
-    () => visibleTournaments.map(t => t.id).slice(0, 120).join(','),
-    [visibleTournaments],
-  )
-
+  // Kartlara katılan takım logolarını çek (isim sadece "Playoffs"/"Group A" → logolar bağlam verir).
+  // ARTIMLI: sadece henüz logosu ÇEKİLMEMİŞ turnuvaları sorgula (60'lık parça). Böylece "Daha
+  // fazla" ile liste büyüdükçe üstteki turnuvalar truncate'e takılmaz, her turnuva kapsanır.
   useEffect(() => {
-    const ids = visibleIdsKey ? visibleIdsKey.split(',').map(Number) : []
-    if (!ids.length) { setTeamsByTournament({}); return }
+    const missing = visibleTournaments.map(t => t.id).filter(id => !(id in teamsByTournament))
+    if (!missing.length) return
     let cancelled = false
     ;(async () => {
+      const chunk = missing.slice(0, 60)
       const { data } = await supabase
         .from('matches')
         .select('tournament_id,team_a:teams!matches_team_a_id_fkey(id,name,logo_url),team_b:teams!matches_team_b_id_fkey(id,name,logo_url)')
-        .in('tournament_id', ids)
-        .limit(4000)
+        .in('tournament_id', chunk)
+        .limit(3000)
       if (cancelled) return
+      // Sorgulanan her turnuvaya anahtar ver (maçsız olsa da) → tekrar sorgulanmaz, döngü olmaz.
       const acc = {}
+      for (const id of chunk) acc[id] = { seen: new Set(), list: [] }
       for (const m of (data || [])) {
         const bucket = acc[m.tournament_id] || (acc[m.tournament_id] = { seen: new Set(), list: [] })
         for (const t of [m.team_a, m.team_b]) {
@@ -184,10 +183,10 @@ export default function TournamentsListPage() {
       }
       const out = {}
       for (const key in acc) out[key] = acc[key].list
-      setTeamsByTournament(out)
+      setTeamsByTournament(prev => ({ ...prev, ...out }))
     })()
     return () => { cancelled = true }
-  }, [visibleIdsKey])
+  }, [visibleTournaments, teamsByTournament])
 
   return (
     <div style={{ maxWidth: 1180, margin: '0 auto', padding: '24px 16px 80px', color: '#f2f2f2' }}>

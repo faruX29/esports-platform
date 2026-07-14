@@ -80,8 +80,8 @@ export default function TournamentsListPage() {
     return () => clearTimeout(t)
   }, [search])
 
-  // Filtre (arama / oyun) değişince başa dön.
-  useEffect(() => { setPage(0) }, [debouncedSearch, activeGame])
+  // Filtre (arama / oyun / tier) değişince başa dön.
+  useEffect(() => { setPage(0) }, [debouncedSearch, activeGame, showAllTiers])
 
   useEffect(() => {
     let cancelled = false
@@ -98,6 +98,9 @@ export default function TournamentsListPage() {
           .select('id,name,tier,region,begin_at,end_at,game:games(id,name,slug)')
         if (debouncedSearch) q = q.ilike('name', `%${debouncedSearch}%`)
         if (gameIds.length) q = q.in('game_id', gameIds)
+        // Tier filtresi SUNUCU-taraflı: eskiden client-side'dı → 120'lik sayfa çoğu
+        // alt-tier olunca S/A az kalıyor, sayfa dolmuyordu. Artık sayfa dolu S/A gelir.
+        if (!showAllTiers) q = q.in('tier', ['S', 's', 'A', 'a'])
         // begin_at DESC + sayfalama → eski turnuvalara "Daha fazla" ile inilebilir.
         q = q.order('begin_at', { ascending: false, nullsFirst: false })
              .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
@@ -119,7 +122,25 @@ export default function TournamentsListPage() {
 
     loadTournaments()
     return () => { cancelled = true }
-  }, [debouncedSearch, activeGame, page, games])
+  }, [debouncedSearch, activeGame, page, games, showAllTiers])
+
+  // Gizlenen alt-tier sayısı (S/A modunda) — server-side filtre kullandığımız için ayrı sayım.
+  const [hiddenCount, setHiddenCount] = useState(0)
+  useEffect(() => {
+    if (showAllTiers) { setHiddenCount(0); return }
+    if (activeGame && activeGame !== 'all' && games.length === 0) return
+    let cancelled = false
+    ;(async () => {
+      const gameIds = resolveGameIds(activeGame, games)
+      let q = supabase.from('tournaments').select('id', { count: 'exact', head: true })
+        .or('tier.is.null,tier.not.in.(S,s,A,a)')
+      if (debouncedSearch) q = q.ilike('name', `%${debouncedSearch}%`)
+      if (gameIds.length) q = q.in('game_id', gameIds)
+      const { count } = await q
+      if (!cancelled) setHiddenCount(count || 0)
+    })()
+    return () => { cancelled = true }
+  }, [debouncedSearch, activeGame, games, showAllTiers])
 
   const searchedTournaments = useMemo(() => {
     const q = String(search || '').trim().toLowerCase()
@@ -132,7 +153,6 @@ export default function TournamentsListPage() {
     return searchedTournaments.filter(item => isHeroTier(item?.tier))
   }, [searchedTournaments, showAllTiers])
 
-  const hiddenByTierCount = Math.max(0, searchedTournaments.length - visibleTournaments.length)
 
   // Kartları ayırt edilebilir yapmak için katılan takım logolarını çek (isim sadece
   // "Playoffs"/"Group A" olduğu için lig belli olmuyordu → logolar bağlam veriyor).
@@ -233,9 +253,9 @@ export default function TournamentsListPage() {
             Tumu
           </button>
         </div>
-        {!showAllTiers && hiddenByTierCount > 0 && (
+        {!showAllTiers && hiddenCount > 0 && (
           <span style={{ fontSize: 11, color: '#787878' }}>
-            {hiddenByTierCount} alt-tier turnuva gizlendi
+            {hiddenCount} alt-tier turnuva gizli
           </span>
         )}
       </div>

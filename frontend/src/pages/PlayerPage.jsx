@@ -19,6 +19,11 @@ import { isTurkishTeam } from '../constants'
 import { useUser } from '../context/UserContext'
 import { summarizePlayerMatchStats, metricBars } from '../utils/playerMetrics'
 import { deriveWinnerTeamId, correctedScores } from '../utils/matchResult'
+import {
+  Brain, ClipboardList, Target, Swords, Skull, Handshake, Crosshair, Map as MapIcon,
+  Compass, Sparkles, TriangleAlert, Star, MapPin, CircleCheck, X as XIcon, BarChart3,
+  Zap, Flame, Trophy, Inbox, Video, AtSign, Globe, Music, Gamepad2, Link as LinkIcon,
+} from 'lucide-react'
 
 // ─── Yardımcılar ────────────────────────────────────────────────────────────
 
@@ -42,7 +47,7 @@ function Sk({ w = '100%', h = '16px', r = '8px' }) {
   return (
     <div style={{
       width: w, height: h, borderRadius: r, flexShrink: 0,
-      background: 'linear-gradient(90deg,#111 25%,#1c1c1c 50%,#111 75%)',
+      background: 'linear-gradient(90deg,#131b2b 25%,#172032 50%,#131b2b 75%)',
       backgroundSize: '200% 100%',
       animation: 'shimmer 1.4s infinite',
     }} />
@@ -50,20 +55,20 @@ function Sk({ w = '100%', h = '16px', r = '8px' }) {
 }
 
 // ─── Stat kutucuğu ───────────────────────────────────────────────────────────
-function StatBox({ icon, value, label, color = '#fff', sub }) {
+function StatBox({ Icon, value, label, color = '#fff', sub }) {
   return (
     <div style={{
       textAlign: 'center', padding: '14px 18px', minWidth: 90,
-      background: '#0d0d0d', borderRadius: 14,
-      border: '1px solid #1e1e1e', flex: '1 1 90px',
+      background: '#131b2b', borderRadius: 14,
+      border: '1px solid #172032', flex: '1 1 90px',
     }}>
-      <div style={{ fontSize: 20, marginBottom: 3 }}>{icon}</div>
+      <div style={{ marginBottom: 4, display: 'flex', justifyContent: 'center' }}>{Icon && <Icon size={18} color={color} />}</div>
       <div style={{
         fontSize: 24, fontWeight: 900, color, lineHeight: 1,
         fontVariantNumeric: 'tabular-nums',
       }}>{value}</div>
-      <div style={{ fontSize: 10, color: '#444', marginTop: 4 }}>{label}</div>
-      {sub && <div style={{ fontSize: 10, color: '#333', marginTop: 2 }}>{sub}</div>}
+      <div style={{ fontSize: 10, color: '#475569', marginTop: 4 }}>{label}</div>
+      {sub && <div style={{ fontSize: 10, color: '#334155', marginTop: 2 }}>{sub}</div>}
     </div>
   )
 }
@@ -73,10 +78,10 @@ function ProgressBar({ pct, color = '#FF4655', label, value }) {
   return (
     <div style={{ marginBottom: 10 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4 }}>
-        <span style={{ color: '#555' }}>{label}</span>
+        <span style={{ color: '#64748b' }}>{label}</span>
         <span style={{ color, fontWeight: 800 }}>{value}</span>
       </div>
-      <div style={{ height: 5, borderRadius: 3, background: '#111', overflow: 'hidden' }}>
+      <div style={{ height: 5, borderRadius: 3, background: '#131b2b', overflow: 'hidden' }}>
         <div style={{
           width: `${Math.min(100, Math.max(0, pct))}%`, height: '100%',
           background: `linear-gradient(90deg,${color}88,${color})`,
@@ -168,9 +173,9 @@ function ProMetricCard({ label, value, sub, accent = '#ff6a7f' }) {
       background: 'linear-gradient(160deg, rgba(255,255,255,.03), rgba(255,255,255,.01))',
       padding: '11px 12px',
     }}>
-      <div style={{ fontSize: 10, color: '#8e8e8e', letterSpacing: '.8px', textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ fontSize: 10, color: '#94a3b8', letterSpacing: '.8px', textTransform: 'uppercase' }}>{label}</div>
       <div style={{ marginTop: 5, fontSize: 22, fontWeight: 900, color: accent, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
-      {sub ? <div style={{ marginTop: 4, fontSize: 11, color: '#b9b9b9' }}>{sub}</div> : null}
+      {sub ? <div style={{ marginTop: 4, fontSize: 11, color: '#cbd5e1' }}>{sub}</div> : null}
     </div>
   )
 }
@@ -187,7 +192,7 @@ function ProfessionalStatsPanel({ stats, isMobile = false }) {
 
   return (
     <div style={{ marginBottom: 24 }}>
-      <SectionTitle icon="🧠" label="Professional Stats Panel" />
+      <SectionTitle Icon={Brain} label="Professional Stats Panel" />
 
       <div style={{
         borderRadius: 14,
@@ -206,11 +211,11 @@ function ProfessionalStatsPanel({ stats, isMobile = false }) {
 
         <div style={{
           borderRadius: 12,
-          border: '1px solid #242424',
+          border: '1px solid #26324a',
           background: 'rgba(0,0,0,.32)',
           padding: '10px 10px 8px',
         }}>
-          <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 10 }}>Round-by-round efficiency proxy</div>
+          <div style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 10 }}>Round-by-round efficiency proxy</div>
           <ProgressBar pct={Math.min(100, stats.kda * 42)} color={kdaColor} label="KDA Pressure" value={stats.kda.toFixed(2)} />
           <ProgressBar pct={stats.winRate} color={wrColor} label="Win Rate" value={`${Math.round(stats.winRate)}%`} />
           {useAcs
@@ -218,7 +223,7 @@ function ProfessionalStatsPanel({ stats, isMobile = false }) {
             : <ProgressBar pct={stats.hsPct} color={hsColor} label="Headshot %" value={`${Math.round(stats.hsPct)}%`} />}
           <ProgressBar pct={Math.min(100, stats.avgKills * 10)} color="#9ad8ff" label="Avg Kills / Match" value={stats.avgKills.toFixed(1)} />
           <ProgressBar pct={Math.min(100, stats.avgAssists * 12)} color="#cab0ff" label="Avg Assists / Match" value={stats.avgAssists.toFixed(1)} />
-          <ProgressBar pct={Math.max(0, 100 - Math.min(100, stats.avgDeaths * 10))} color="#f1f1f1" label="Death Control" value={stats.avgDeaths.toFixed(1)} />
+          <ProgressBar pct={Math.max(0, 100 - Math.min(100, stats.avgDeaths * 10))} color="#e2e8f0" label="Death Control" value={stats.avgDeaths.toFixed(1)} />
         </div>
       </div>
     </div>
@@ -256,11 +261,11 @@ function PlayerHeroAvatar({ src, name, size = 120, isTR }) {
     <div style={{ position: 'relative', flexShrink: 0 }}>
       <div style={{
         width: size, height: size, borderRadius: '50%',
-        background: 'linear-gradient(135deg,#1a1a1a,#2a2a2a)',
+        background: 'linear-gradient(135deg,#172032,#26324a)',
         border: `3px solid ${borderColor}`,
         boxShadow: `0 0 28px ${borderColor}44`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: size * 0.28, fontWeight: 900, color: '#444',
+        fontSize: size * 0.28, fontWeight: 900, color: '#475569',
       }}>
         {initials}
       </div>
@@ -307,21 +312,21 @@ function MatchRow({ match, teamId, isMobile = false }) {
         gridTemplateColumns: isMobile ? '32px 1fr auto' : '36px 1fr auto auto auto',
         gap: 10, alignItems: 'center',
         padding: '10px 14px', borderRadius: 10,
-        background: '#0d0d0d', border: '1px solid #181818',
+        background: '#131b2b', border: '1px solid #172032',
         cursor: 'pointer', transition: 'border-color .15s, background .15s',
         marginBottom: 6,
       }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.background = '#111' }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = '#181818'; e.currentTarget.style.background = '#0d0d0d' }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = '#334155'; e.currentTarget.style.background = '#131b2b' }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = '#172032'; e.currentTarget.style.background = '#131b2b' }}
     >
       {/* W/L */}
       <div style={{
         width: 28, height: 28, borderRadius: 8, display: 'flex',
         alignItems: 'center', justifyContent: 'center',
         fontSize: 11, fontWeight: 900,
-        background: isWin  ? 'rgba(76,175,80,.2)'  : isLoss ? 'rgba(255,70,85,.2)'  : '#1e1e1e',
-        border:     isWin  ? '1.5px solid #4CAF50' : isLoss ? '1.5px solid #FF4655' : '1.5px solid #333',
-        color:      isWin  ? '#4CAF50'             : isLoss ? '#FF4655'             : '#555',
+        background: isWin  ? 'rgba(76,175,80,.2)'  : isLoss ? 'rgba(255,70,85,.2)'  : '#172032',
+        border:     isWin  ? '1.5px solid #4CAF50' : isLoss ? '1.5px solid #FF4655' : '1.5px solid #334155',
+        color:      isWin  ? '#4CAF50'             : isLoss ? '#FF4655'             : '#64748b',
       }}>
         {isWin ? 'W' : isLoss ? 'L' : '—'}
       </div>
@@ -330,21 +335,21 @@ function MatchRow({ match, teamId, isMobile = false }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
         {opp?.logo_url
           ? <img src={opp.logo_url} alt="" style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0 }} />
-          : <div style={{ width: 22, height: 22, background: '#1e1e1e', borderRadius: 4, flexShrink: 0 }} />
+          : <div style={{ width: 22, height: 22, background: '#172032', borderRadius: 4, flexShrink: 0 }} />
         }
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           vs {opp?.name ?? '?'}
         </span>
       </div>
 
       {/* Score */}
-      <div style={{ fontSize: 14, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: '#eee', whiteSpace: 'nowrap' }}>
+      <div style={{ fontSize: 14, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: '#e2e8f0', whiteSpace: 'nowrap' }}>
         {myScore ?? '–'} : {oppScore ?? '–'}
       </div>
 
       {/* Game */}
       {!isMobile && (
-        <div style={{ fontSize: 10, color: '#444', whiteSpace: 'nowrap', textAlign: 'right' }}>
+        <div style={{ fontSize: 10, color: '#475569', whiteSpace: 'nowrap', textAlign: 'right' }}>
           {match.game?.name === 'Counter-Strike 2' ? 'CS2'
             : match.game?.name === 'League of Legends' ? 'LoL'
             : match.game?.name?.toLowerCase?.().includes('valorant') ? 'VAL'
@@ -354,7 +359,7 @@ function MatchRow({ match, teamId, isMobile = false }) {
 
       {/* Date */}
       {!isMobile && (
-        <div style={{ fontSize: 10, color: '#383838', whiteSpace: 'nowrap', textAlign: 'right' }}>
+        <div style={{ fontSize: 10, color: '#334155', whiteSpace: 'nowrap', textAlign: 'right' }}>
           {new Date(match.scheduled_at).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' })}
         </div>
       )}
@@ -377,17 +382,17 @@ function ScoutPanel({ analytics, individual }) {
 
   return (
     <div style={{ marginBottom: 24 }}>
-      <SectionTitle icon="📋" label="Scout Analytics" />
+      <SectionTitle Icon={ClipboardList} label="Scout Analytics" />
 
       {/* Impact + W/L */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         {/* Impact gauge */}
         <div style={{
-          flex: '1 1 130px', background: '#0d0d0d', borderRadius: 14,
+          flex: '1 1 130px', background: '#131b2b', borderRadius: 14,
           border: `1px solid ${impactColor}33`, padding: '14px 16px',
           display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center',
         }}>
-          <div style={{ fontSize: 11, color: '#444', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
+          <div style={{ fontSize: 11, color: '#475569', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
             Impact Score
           </div>
           <div style={{
@@ -396,7 +401,7 @@ function ScoutPanel({ analytics, individual }) {
           }}>
             {Math.round(impactScore)}
           </div>
-          <div style={{ width: '100%', height: 4, borderRadius: 2, background: '#1a1a1a', overflow: 'hidden' }}>
+          <div style={{ width: '100%', height: 4, borderRadius: 2, background: '#172032', overflow: 'hidden' }}>
             <div style={{
               width: `${impactScore}%`, height: '100%',
               background: `linear-gradient(90deg,${impactColor}77,${impactColor})`,
@@ -406,17 +411,17 @@ function ScoutPanel({ analytics, individual }) {
         </div>
 
         {/* W/L record */}
-        <div style={{ flex: '1 1 130px', background: '#0d0d0d', borderRadius: 14, border: '1px solid #1e1e1e', padding: '14px 16px' }}>
-          <div style={{ fontSize: 11, color: '#444', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10 }}>Record</div>
+        <div style={{ flex: '1 1 130px', background: '#131b2b', borderRadius: 14, border: '1px solid #172032', padding: '14px 16px' }}>
+          <div style={{ fontSize: 11, color: '#475569', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10 }}>Record</div>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 22, fontWeight: 900, color: '#4CAF50' }}>{wonMatches}</div>
-              <div style={{ fontSize: 10, color: '#444' }}>W</div>
+              <div style={{ fontSize: 10, color: '#475569' }}>W</div>
             </div>
-            <div style={{ fontSize: 20, color: '#2a2a2a', alignSelf: 'center' }}>/</div>
+            <div style={{ fontSize: 20, color: '#26324a', alignSelf: 'center' }}>/</div>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 22, fontWeight: 900, color: '#FF4655' }}>{lostMatches}</div>
-              <div style={{ fontSize: 10, color: '#444' }}>L</div>
+              <div style={{ fontSize: 10, color: '#475569' }}>L</div>
             </div>
           </div>
           <ProgressBar
@@ -428,33 +433,33 @@ function ScoutPanel({ analytics, individual }) {
       </div>
 
       {individual && (
-        <div style={{ background: '#0d0d0d', borderRadius: 14, border: '1px solid #1e1e1e', padding: '14px 16px', marginBottom: 10 }}>
-          <div style={{ fontSize: 11, color: '#444', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 12 }}>
-            🎯 Individual Performance (Player Match Stats)
+        <div style={{ background: '#131b2b', borderRadius: 14, border: '1px solid #172032', padding: '14px 16px', marginBottom: 10 }}>
+          <div style={{ fontSize: 11, color: '#475569', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Target size={13} /> Individual Performance (Player Match Stats)
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(100px,1fr))', gap: 10, marginBottom: 12 }}>
-            <StatBox icon="⚔️" value={individual.totalKills} label="Kills" color="#ff6a7f" />
-            <StatBox icon="☠️" value={individual.totalDeaths} label="Deaths" color="#f3f3f3" />
-            <StatBox icon="🤝" value={individual.totalAssists} label="Assists" color="#93c5fd" />
-            <StatBox icon="📌" value={`${Math.round(individual.hsPct)}%`} label="HS%" color="#fff" />
+            <StatBox Icon={Swords} value={individual.totalKills} label="Kills" color="#ff6a7f" />
+            <StatBox Icon={Skull} value={individual.totalDeaths} label="Deaths" color="#e2e8f0" />
+            <StatBox Icon={Handshake} value={individual.totalAssists} label="Assists" color="#93c5fd" />
+            <StatBox Icon={Crosshair} value={`${Math.round(individual.hsPct)}%`} label="HS%" color="#fff" />
           </div>
           <ProgressBar pct={individualBars.kdBar} color="#ff6a7f" label="K/D Ratio" value={individual.kd.toFixed(2)} />
-          <ProgressBar pct={individualBars.hsBar} color="#f1f1f1" label="Headshot Rate" value={`${Math.round(individual.hsPct)}%`} />
+          <ProgressBar pct={individualBars.hsBar} color="#e2e8f0" label="Headshot Rate" value={`${Math.round(individual.hsPct)}%`} />
           <ProgressBar pct={individualBars.winBar} color="#4CAF50" label="Win Rate" value={`${Math.round(individual.winRate)}%`} />
           <ProgressBar pct={individualBars.impactBar} color="#ff9aa9" label="Impact Score" value={`${Math.round(individual.impact)}`} />
         </div>
       )}
 
       {/* Map win rates */}
-      <div style={{ background: '#0d0d0d', borderRadius: 14, border: '1px solid #1e1e1e', padding: '14px 16px', marginBottom: 10 }}>
-        <div style={{ fontSize: 11, color: '#444', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 12 }}>
-          🗺️ Oyun Bazı Performans
+      <div style={{ background: '#131b2b', borderRadius: 14, border: '1px solid #172032', padding: '14px 16px', marginBottom: 10 }}>
+        <div style={{ fontSize: 11, color: '#475569', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <MapIcon size={13} /> Oyun Bazı Performans
         </div>
         {[1, 2, 3].map(pos => {
           const d = mapWinRates[pos]
           if (!d || d.total === 0) return (
             <div key={pos} style={{ marginBottom: 10 }}>
-              <ProgressBar pct={0} color="#2a2a2a" label={mapLabels[pos]} value="—" />
+              <ProgressBar pct={0} color="#26324a" label={mapLabels[pos]} value="—" />
             </div>
           )
           return (
@@ -472,14 +477,14 @@ function ScoutPanel({ analytics, individual }) {
       {(avgWinLen || avgLossLen) && (
         <div style={{ display: 'flex', gap: 10 }}>
           {avgWinLen && (
-            <div style={{ flex: 1, background: '#0d0d0d', borderRadius: 10, border: '1px solid rgba(76,175,80,.2)', padding: '10px 14px', textAlign: 'center' }}>
-              <div style={{ fontSize: 10, color: '#444', marginBottom: 4 }}>⏱ Ortalama Galibiyet</div>
+            <div style={{ flex: 1, background: '#131b2b', borderRadius: 10, border: '1px solid rgba(76,175,80,.2)', padding: '10px 14px', textAlign: 'center' }}>
+              <div style={{ fontSize: 10, color: '#475569', marginBottom: 4 }}>⏱ Ortalama Galibiyet</div>
               <div style={{ fontSize: 16, fontWeight: 800, color: '#4CAF50' }}>{fmtDuration(Math.round(avgWinLen))}</div>
             </div>
           )}
           {avgLossLen && (
-            <div style={{ flex: 1, background: '#0d0d0d', borderRadius: 10, border: '1px solid rgba(255,70,85,.2)', padding: '10px 14px', textAlign: 'center' }}>
-              <div style={{ fontSize: 10, color: '#444', marginBottom: 4 }}>⏱ Ortalama Mağlubiyet</div>
+            <div style={{ flex: 1, background: '#131b2b', borderRadius: 10, border: '1px solid rgba(255,70,85,.2)', padding: '10px 14px', textAlign: 'center' }}>
+              <div style={{ fontSize: 10, color: '#475569', marginBottom: 4 }}>⏱ Ortalama Mağlubiyet</div>
               <div style={{ fontSize: 16, fontWeight: 800, color: '#FF4655' }}>{fmtDuration(Math.round(avgLossLen))}</div>
             </div>
           )}
@@ -487,7 +492,7 @@ function ScoutPanel({ analytics, individual }) {
       )}
 
       {!individual && (
-        <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, background: 'rgba(255,184,0,.05)', border: '1px solid rgba(255,184,0,.15)', fontSize: 11, color: '#555' }}>
+        <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, background: 'rgba(255,184,0,.05)', border: '1px solid rgba(255,184,0,.15)', fontSize: 11, color: '#64748b' }}>
           ℹ️ Bireysel oyuncu satiri bulunamadi; takim bazli scout verisi gosteriliyor.
         </div>
       )}
@@ -496,14 +501,14 @@ function ScoutPanel({ analytics, individual }) {
 }
 
 // ─── Bölüm başlığı ───────────────────────────────────────────────────────────
-function SectionTitle({ icon, label }) {
+function SectionTitle({ Icon, label }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-      <span style={{ fontSize: 14 }}>{icon}</span>
-      <span style={{ fontSize: 11, fontWeight: 700, color: '#555', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
+      {Icon && <Icon size={15} color="#94a3b8" />}
+      <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
         {label}
       </span>
-      <div style={{ flex: 1, height: 1, background: '#1a1a1a' }} />
+      <div style={{ flex: 1, height: 1, background: '#172032' }} />
     </div>
   )
 }
@@ -557,13 +562,13 @@ const NAT_FLAGS = {
 }
 
 const SOCIAL_ICON_MAP = {
-  x: { icon: '𝕏', label: 'X/Twitter', short: 'X' },
-  twitter: { icon: '𝕏', label: 'X/Twitter' },
-  twitch: { icon: '🎮', label: 'Twitch', short: 'TW' },
-  youtube: { icon: '▶', label: 'YouTube', short: 'YT' },
-  instagram: { icon: '◎', label: 'Instagram', short: 'IG' },
-  tiktok: { icon: '♪', label: 'TikTok', short: 'TT' },
-  steam: { icon: 'S', label: 'Steam', short: 'ST' },
+  x: { Icon: AtSign, label: 'X/Twitter', short: 'X' },
+  twitter: { Icon: AtSign, label: 'X/Twitter' },
+  twitch: { Icon: Video, label: 'Twitch', short: 'TW' },
+  youtube: { Icon: Video, label: 'YouTube', short: 'YT' },
+  instagram: { Icon: Globe, label: 'Instagram', short: 'IG' },
+  tiktok: { Icon: Music, label: 'TikTok', short: 'TT' },
+  steam: { Icon: Gamepad2, label: 'Steam', short: 'ST' },
 }
 
 function fmtCareerDate(value) {
@@ -636,7 +641,7 @@ function CareerTimeline({ entries }) {
 
   return (
     <div style={{ marginBottom: 24 }}>
-      <SectionTitle icon="🧭" label="Career Timeline" />
+      <SectionTitle Icon={Compass} label="Career Timeline" />
       <div style={{
         position: 'relative',
         paddingLeft: 18,
@@ -669,12 +674,12 @@ function CareerTimeline({ entries }) {
                 width: 10,
                 height: 10,
                 borderRadius: '50%',
-                background: item.current ? '#ff6b7a' : '#888',
+                background: item.current ? '#ff6b7a' : '#94a3b8',
                 boxShadow: item.current ? '0 0 12px rgba(255,107,122,.55)' : 'none',
               }} />
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: '#f5f5f5' }}>{item.team}</div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#e2e8f0' }}>{item.team}</div>
                 <div style={{ fontSize: 10, color: '#ffb7c0', letterSpacing: '.3px' }}>{dateLabel}</div>
               </div>
 
@@ -685,7 +690,7 @@ function CareerTimeline({ entries }) {
               )}
 
               {item.note && (
-                <div style={{ marginTop: 4, fontSize: 11, color: '#bdbdbd' }}>
+                <div style={{ marginTop: 4, fontSize: 11, color: '#cbd5e1' }}>
                   {item.note}
                 </div>
               )}
@@ -706,13 +711,13 @@ function parseSignatureEntries(raw, fallbackType = 'Hero') {
     if (typeof item === 'string') {
       const name = item.trim()
       if (!name) return null
-      return { name, type: fallbackType, count: 0, icon: fallbackType === 'Weapon' ? '🔫' : '🧿', image: null }
+      return { name, type: fallbackType, count: 0, icon: null, image: null }
     }
 
     if (typeof item === 'number') {
       const hint = String(nameHint || '').trim()
       if (!hint) return null
-      return { name: hint, type: fallbackType, count: Number.isFinite(item) ? item : 0, icon: fallbackType === 'Weapon' ? '🔫' : '🧿', image: null }
+      return { name: hint, type: fallbackType, count: Number.isFinite(item) ? item : 0, icon: null, image: null }
     }
 
     if (typeof item !== 'object') return null
@@ -730,7 +735,7 @@ function parseSignatureEntries(raw, fallbackType = 'Hero') {
       name,
       type,
       count: Number.isFinite(count) ? count : 0,
-      icon: item.icon || item.emoji || (type === 'Weapon' ? '🔫' : '🧿'),
+      icon: item.icon || item.emoji || null,
       image: item.image_url || item.icon_url || item.image || null,
     }
   }
@@ -799,18 +804,18 @@ function PlayerSignatureElements({ items = [] }) {
 
   return (
     <div style={{ marginBottom: 24 }}>
-      <SectionTitle icon="✨" label="Player Signature" />
+      <SectionTitle Icon={Sparkles} label="Player Signature" />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 10 }}>
         {items.map((item, idx) => (
           <div key={`${item.type}_${item.name}_${idx}`} style={{ borderRadius: 12, border: '1px solid rgba(255,70,85,.22)', background: 'linear-gradient(130deg, rgba(255,70,85,.1), rgba(10,10,10,.92))', padding: '10px 11px', display: 'flex', alignItems: 'center', gap: 9 }}>
             {item.image
-              ? <img src={item.image} alt={item.name} style={{ width: 30, height: 30, objectFit: 'contain', borderRadius: 8, background: '#101010', border: '1px solid #232323' }} />
-              : <div style={{ width: 30, height: 30, borderRadius: 8, background: '#151515', border: '1px solid #232323', display: 'grid', placeItems: 'center', fontSize: 16 }}>{item.icon || (item.type === 'Weapon' ? '🔫' : '🧿')}</div>}
+              ? <img src={item.image} alt={item.name} style={{ width: 30, height: 30, objectFit: 'contain', borderRadius: 8, background: '#131b2b', border: '1px solid #26324a' }} />
+              : <div style={{ width: 30, height: 30, borderRadius: 8, background: '#131b2b', border: '1px solid #26324a', display: 'grid', placeItems: 'center' }}>{item.type === 'Weapon' ? <Crosshair size={16} color="#ffd089" /> : <Sparkles size={16} color="#9fe7ff" />}</div>}
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: '#f3f3f3', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
               <div style={{ marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontSize: 9, color: item.type === 'Weapon' ? '#ffd089' : '#9fe7ff', border: `1px solid ${item.type === 'Weapon' ? 'rgba(255,184,0,.35)' : 'rgba(90,200,255,.35)'}`, borderRadius: 999, padding: '1px 6px', background: item.type === 'Weapon' ? 'rgba(255,184,0,.12)' : 'rgba(90,200,255,.12)' }}>{item.type}</span>
-                {(item.count || 0) > 0 && <span style={{ fontSize: 10, color: '#b4b4b4' }}>x{Math.round(item.count)}</span>}
+                {(item.count || 0) > 0 && <span style={{ fontSize: 10, color: '#cbd5e1' }}>x{Math.round(item.count)}</span>}
               </div>
             </div>
           </div>
@@ -958,7 +963,7 @@ export default function PlayerPage() {
 
   if (error || !player) return (
     <div style={{ textAlign: 'center', padding: 80, color: '#FF4655' }}>
-      <div style={{ fontSize: 44, marginBottom: 16 }}>❌</div>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><TriangleAlert size={42} color="#FF4655" /></div>
       <div style={{ fontSize: 16, marginBottom: 20 }}>{error ?? 'Oyuncu bulunamadı'}</div>
       <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', background: '#FF4655', border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
         ← Geri
@@ -991,8 +996,8 @@ export default function PlayerPage() {
       {/* ══ HEADER KAPAK ══════════════════════════════════════════ */}
       <div style={{
         position: 'relative', overflow: 'hidden',
-        background: 'linear-gradient(160deg,#0d0d0d 0%,#111 100%)',
-        borderBottom: isTR ? '1px solid rgba(200,16,46,.4)' : '1px solid #1a1a1a',
+        background: 'linear-gradient(160deg,#131b2b 0%,#131b2b 100%)',
+        borderBottom: isTR ? '1px solid rgba(200,16,46,.4)' : '1px solid #172032',
         padding: isMobile ? '20px 14px 16px' : '36px 28px 28px',
         marginBottom: 28,
       }}>
@@ -1008,20 +1013,21 @@ export default function PlayerPage() {
         <div style={{ position: 'absolute', top: isMobile ? 10 : 16, left: isMobile ? 12 : 20, right: isMobile ? 12 : 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
           <button
             onClick={() => navigate(-1)}
-            style={{ background: 'rgba(255,255,255,.06)', border: '1px solid #222', borderRadius: 8, color: '#888', padding: '6px 12px', fontSize: 12, cursor: 'pointer', transition: 'color .15s' }}
+            style={{ background: 'rgba(255,255,255,.06)', border: '1px solid #26324a', borderRadius: 8, color: '#94a3b8', padding: '6px 12px', fontSize: 12, cursor: 'pointer', transition: 'color .15s' }}
             onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-            onMouseLeave={e => e.currentTarget.style.color = '#888'}
+            onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}
           >← Geri</button>
 
           <button
             onClick={handleToggleFollow}
             style={{
               background: followed ? 'rgba(255,215,0,.15)' : 'rgba(255,255,255,.06)',
-              border: followed ? '1px solid rgba(255,215,0,.5)' : '1px solid #222',
-              borderRadius: 8, color: followed ? '#FFD700' : '#777',
+              border: followed ? '1px solid rgba(255,215,0,.5)' : '1px solid #26324a',
+              borderRadius: 8, color: followed ? '#FFD700' : '#64748b',
               padding: '6px 14px', fontSize: 13, cursor: 'pointer', transition: 'all .15s', fontWeight: followed ? 700 : 400,
+              display: 'inline-flex', alignItems: 'center', gap: 6,
             }}
-          >{followed ? '⭐ Takip Ediliyor' : '☆ Takip Et'}</button>
+          ><Star size={14} fill={followed ? '#FFD700' : 'none'} color={followed ? '#FFD700' : 'currentColor'} /> {followed ? 'Takip Ediliyor' : 'Takip Et'}</button>
         </div>
 
         {/* Oyuncu kimliği */}
@@ -1035,13 +1041,13 @@ export default function PlayerPage() {
               overflowWrap: 'anywhere',
               background: isTR
                 ? 'linear-gradient(135deg,#fff 40%,#ff8a8a)'
-                : 'linear-gradient(135deg,#fff,#777)',
+                : 'linear-gradient(135deg,#fff,#64748b)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             }}>{player.nickname}</h1>
 
             {/* Gerçek isim */}
             {player.real_name && (
-              <div style={{ fontSize: 14, color: '#555', marginBottom: 8 }}>{player.real_name}</div>
+              <div style={{ fontSize: 14, color: '#64748b', marginBottom: 8 }}>{player.real_name}</div>
             )}
 
             {/* Badge satırı */}
@@ -1054,7 +1060,7 @@ export default function PlayerPage() {
                 }}>{badge.label}</span>
               )}
               {flag && (
-                <span style={{ padding: '4px 10px', borderRadius: 8, fontSize: 12, fontWeight: 700, background: '#1e1e1e', border: '1px solid #2a2a2a', color: '#888' }}>
+                <span style={{ padding: '4px 10px', borderRadius: 8, fontSize: 12, fontWeight: 700, background: '#172032', border: '1px solid #26324a', color: '#94a3b8' }}>
                   {flag} {player.nationality}
                 </span>
               )}
@@ -1072,38 +1078,38 @@ export default function PlayerPage() {
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 10,
                   padding: '8px 14px', borderRadius: 12, cursor: 'pointer',
-                  background: '#111', border: '1.5px solid #222',
+                  background: '#131b2b', border: '1.5px solid #26324a',
                   transition: 'border-color .15s', maxWidth: 280,
                 }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = '#FF4655'}
-                onMouseLeave={e => e.currentTarget.style.borderColor = '#222'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = '#26324a'}
               >
                 <InitialsImage src={team.logo_url} name={team.name} width={28} height={28} borderRadius={6} />
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#ddd' }}>{team.name}</div>
-                  {team.location && <div style={{ fontSize: 10, color: '#555' }}>📍 {team.location}</div>}
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#e2e8f0' }}>{team.name}</div>
+                  {team.location && <div style={{ fontSize: 10, color: '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={10} /> {team.location}</div>}
                 </div>
-                <span style={{ fontSize: 11, color: '#444', marginLeft: 'auto' }}>→</span>
+                <span style={{ fontSize: 11, color: '#475569', marginLeft: 'auto' }}>→</span>
               </div>
             ) : (
-              <div style={{ fontSize: 12, color: '#383838', fontStyle: 'italic' }}>Takım bilgisi yok (Free Agent?)</div>
+              <div style={{ fontSize: 12, color: '#334155', fontStyle: 'italic' }}>Takım bilgisi yok (Free Agent?)</div>
             )}
 
             {formerTeams.length > 0 && (
               <div style={{ marginTop: 8, padding: '5px 10px', borderRadius: 8, background: 'rgba(255,184,0,.06)', border: '1px solid rgba(255,184,0,.18)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 10 }}>⚠️</span>
-                <span style={{ fontSize: 10, color: '#888' }}>Transfer geçmişi mevcut — kadro verisi eski olabilir</span>
+                <TriangleAlert size={12} color="#FFB800" />
+                <span style={{ fontSize: 10, color: '#94a3b8' }}>Transfer geçmişi mevcut — kadro verisi eski olabilir</span>
               </div>
             )}
 
             {socials.length > 0 && (
               <div style={{ marginTop: 12 }}>
-                <div style={{ fontSize: 10, color: '#666', marginBottom: 6, letterSpacing: '.8px', textTransform: 'uppercase' }}>
+                <div style={{ fontSize: 10, color: '#64748b', marginBottom: 6, letterSpacing: '.8px', textTransform: 'uppercase' }}>
                   Social Links
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {socials.map(([network, href]) => {
-                    const meta = SOCIAL_ICON_MAP[network] || { icon: '●', label: network, short: String(network || '?').slice(0, 2).toUpperCase() }
+                    const meta = SOCIAL_ICON_MAP[network] || { Icon: LinkIcon, label: network, short: String(network || '?').slice(0, 2).toUpperCase() }
                     return (
                       <a
                         key={network}
@@ -1126,7 +1132,7 @@ export default function PlayerPage() {
                           fontWeight: 800,
                         }}
                       >
-                        <span aria-hidden>{meta.icon || meta.short}</span>
+                        <span aria-hidden style={{ display: 'inline-flex' }}>{meta.Icon ? <meta.Icon size={13} /> : meta.short}</span>
                       </a>
                     )
                   })}
@@ -1149,11 +1155,11 @@ export default function PlayerPage() {
         {/* Hızlı istatistikler */}
         {analytics && (
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,minmax(0,1fr))' : 'repeat(4,minmax(0,1fr))', gap: 10, marginTop: 22 }}>
-            <StatBox icon="⚔️" value={analytics.totalMatches}   label="Maç"        color="#fff"     />
-            <StatBox icon="✅" value={analytics.wonMatches}     label="Galibiyet"  color="#4CAF50"  />
-            <StatBox icon="❌" value={analytics.lostMatches}    label="Mağ."       color="#FF4655"  />
+            <StatBox Icon={Swords} value={analytics.totalMatches}   label="Maç"        color="#fff"     />
+            <StatBox Icon={CircleCheck} value={analytics.wonMatches}     label="Galibiyet"  color="#4CAF50"  />
+            <StatBox Icon={XIcon} value={analytics.lostMatches}    label="Mağ."       color="#FF4655"  />
             {analytics.draws > 0 && (
-              <StatBox icon="🤝" value={analytics.draws}       label="Beraberlik (Bo2)" color="#FFB800" />
+              <StatBox Icon={Handshake} value={analytics.draws}       label="Beraberlik (Bo2)" color="#FFB800" />
             )}
             {(() => {
               // Per-player WR (is_win) YALNIZCA örneklem anlamlıysa (≥3 maç); yoksa team-level
@@ -1163,7 +1169,7 @@ export default function PlayerPage() {
                 : analytics.overallWinRate
               return (
                 <StatBox
-                  icon="📊"
+                  Icon={BarChart3}
                   value={`${Math.round(wr)}%`}
                   label="Win Rate"
                   color={wr >= 60 ? '#4CAF50' : wr >= 45 ? '#FFB800' : '#FF4655'}
@@ -1171,14 +1177,14 @@ export default function PlayerPage() {
               )
             })()}
             <StatBox
-              icon="🎯"
+              Icon={Target}
               value={Math.round(individualStats?.impact ?? analytics.impactScore)}
               label="Impact"
               color={(individualStats?.impact ?? analytics.impactScore) >= 70 ? '#4CAF50' : (individualStats?.impact ?? analytics.impactScore) >= 45 ? '#818cf8' : '#FF4655'}
             />
-            {individualStats && <StatBox icon="⚡" value={individualStats.kd.toFixed(2)} label="K/D" color="#ff6a7f" />}
-            {individualStats?.acs != null && <StatBox icon="🔥" value={individualStats.acs} label="ACS" color="#5eead4" />}
-            {individualStats && individualStats.hsPct > 0 && <StatBox icon="📌" value={`${Math.round(individualStats.hsPct)}%`} label="HS%" color="#f4f4f4" />}
+            {individualStats && <StatBox Icon={Zap} value={individualStats.kd.toFixed(2)} label="K/D" color="#ff6a7f" />}
+            {individualStats?.acs != null && <StatBox Icon={Flame} value={individualStats.acs} label="ACS" color="#5eead4" />}
+            {individualStats && individualStats.hsPct > 0 && <StatBox Icon={Crosshair} value={`${Math.round(individualStats.hsPct)}%`} label="HS%" color="#e2e8f0" />}
           </div>
         )}
       </div>
@@ -1211,7 +1217,7 @@ export default function PlayerPage() {
         {/* Maç geçmişi */}
         {matches.length > 0 && (
           <div>
-            <SectionTitle icon="🏆" label={`Son ${matches.length} Maç`} />
+            <SectionTitle Icon={Trophy} label={`Son ${matches.length} Maç`} />
             {matches.map(m => (
               <MatchRow
                 key={m.id} match={m}
@@ -1224,10 +1230,10 @@ export default function PlayerPage() {
 
         {/* Hiç veri yoksa */}
         {!analytics && matches.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '48px 20px', color: '#383838' }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+          <div style={{ textAlign: 'center', padding: '48px 20px', color: '#334155' }}>
+            <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><Inbox size={38} color="#334155" /></div>
             <div style={{ fontSize: 14 }}>Bu oyuncu için henüz istatistik verisi yok</div>
-            <div style={{ fontSize: 12, marginTop: 6, color: '#2a2a2a' }}>
+            <div style={{ fontSize: 12, marginTop: 6, color: '#26324a' }}>
               Maç istatistikleri ETL sonrası güncellenir
             </div>
           </div>

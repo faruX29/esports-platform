@@ -119,7 +119,7 @@ function buildRealReports(rows) {
 function SampleReportCard({ report, player, real = false }) {
   return (
     <div style={{
-      background: 'linear-gradient(160deg, rgba(20,184,166,.06), #0d0d0f)',
+      background: 'linear-gradient(160deg, rgba(20,184,166,.06), #131b2b)',
       border: '1px solid rgba(94,234,212,.18)', borderRadius: 16, padding: 16,
       display: 'flex', flexDirection: 'column', gap: 10,
     }}>
@@ -147,7 +147,7 @@ function SampleReportCard({ report, player, real = false }) {
 
       <div style={{ display: 'flex', gap: 8 }}>
         {report.metrics.map(([label, val]) => (
-          <div key={label} style={{ flex: 1, background: 'rgba(255,255,255,.03)', border: '1px solid #1e1e22', borderRadius: 9, padding: '7px 8px', textAlign: 'center' }}>
+          <div key={label} style={{ flex: 1, background: 'rgba(255,255,255,.03)', border: '1px solid #26324a', borderRadius: 9, padding: '7px 8px', textAlign: 'center' }}>
             <div style={{ fontSize: 15, fontWeight: 900, color: '#dffaf5', fontVariantNumeric: 'tabular-nums' }}>{val}</div>
             <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.4px' }}>{label}</div>
           </div>
@@ -186,7 +186,7 @@ function DepthStrip({ depth }) {
   if (!loading && tiles.length === 0) return null
 
   const tileBox = {
-    background: 'linear-gradient(160deg, rgba(20,184,166,.06), #0d0d0f)',
+    background: 'linear-gradient(160deg, rgba(20,184,166,.06), #131b2b)',
     border: '1px solid rgba(94,234,212,.16)', borderRadius: 13, padding: '13px 12px', textAlign: 'center',
   }
 
@@ -315,7 +315,7 @@ export default function ScoutEnginePage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#08090a', color: '#e2e8f0' }}>
+    <div style={{ minHeight: '100vh', background: '#0b0f19', color: '#e2e8f0' }}>
       <SeoHead
         title="Scout Engine — Ajanslar için Espor Scouting (Private Beta)"
         description="Derin performans analitiği, form takibi ve erken yetenek tespiti. Espor ajansları ve scout'lar için kapalı beta — bekleme listesine katıl."
@@ -326,7 +326,7 @@ export default function ScoutEnginePage() {
         {/* Hero */}
         <section style={{
           borderRadius: 20, border: '1px solid rgba(94,234,212,.2)', overflow: 'hidden',
-          background: `radial-gradient(circle at 85% 10%, rgba(20,184,166,.16), transparent 40%), linear-gradient(160deg,#0d1413,#0a0a0b)`,
+          background: `radial-gradient(circle at 85% 10%, rgba(20,184,166,.16), transparent 40%), linear-gradient(160deg,#131b2b,#0b0f19)`,
           padding: '34px 24px', marginBottom: 22,
         }}>
           <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase', color: ACCENT, border: `1px solid ${ACCENT}55`, borderRadius: 999, padding: '4px 12px' }}>
@@ -354,7 +354,7 @@ export default function ScoutEnginePage() {
         {/* Features */}
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(230px,1fr))', gap: 12, marginBottom: 26 }}>
           {FEATURES.map(f => (
-            <div key={f.title} style={{ background: '#0d0d0f', border: '1px solid #1c1c20', borderRadius: 14, padding: 16 }}>
+            <div key={f.title} style={{ background: '#131b2b', border: '1px solid #26324a', borderRadius: 14, padding: 16 }}>
               <div style={{ marginBottom: 10, display: 'flex' }}>{f.Icon && <f.Icon size={22} color={ACCENT} />}</div>
               <div style={{ fontSize: 14, fontWeight: 800, color: '#e2e8f0', marginBottom: 5 }}>{f.title}</div>
               <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6, color: '#94a3b8' }}>{f.desc}</p>
@@ -391,7 +391,7 @@ export default function ScoutEnginePage() {
         {/* Waitlist form */}
         <section id="waitlist" style={{
           borderRadius: 18, border: `1px solid ${ACCENT}33`, padding: 24,
-          background: 'linear-gradient(160deg, rgba(20,184,166,.07), #0b0b0c)',
+          background: 'linear-gradient(160deg, rgba(20,184,166,.07), #131b2b)',
         }}>
           <h2 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 900 }}>Kapalı Beta'ya Erken Erişim</h2>
           <p style={{ margin: '0 0 18px', fontSize: 13.5, color: '#cbd5e1', maxWidth: 560 }}>
@@ -408,16 +408,16 @@ export default function ScoutEnginePage() {
               <input
                 type="email" value={email} onChange={e => { setEmail(e.target.value); if (status === 'error') setStatus('idle') }}
                 placeholder="E-posta adresin *"
-                style={{ background: '#121214', border: '1px solid #2a2a2e', borderRadius: 10, color: '#e2e8f0', padding: '11px 13px', fontSize: 14 }}
+                style={{ background: '#172032', border: '1px solid #26324a', borderRadius: 10, color: '#e2e8f0', padding: '11px 13px', fontSize: 14 }}
               />
               <input
                 type="text" value={org} onChange={e => setOrg(e.target.value)}
                 placeholder="Organizasyon / takım (opsiyonel)"
-                style={{ background: '#121214', border: '1px solid #2a2a2e', borderRadius: 10, color: '#e2e8f0', padding: '11px 13px', fontSize: 14 }}
+                style={{ background: '#172032', border: '1px solid #26324a', borderRadius: 10, color: '#e2e8f0', padding: '11px 13px', fontSize: 14 }}
               />
               <select
                 value={role} onChange={e => setRole(e.target.value)}
-                style={{ background: '#121214', border: '1px solid #2a2a2e', borderRadius: 10, color: '#e2e8f0', padding: '11px 13px', fontSize: 14 }}
+                style={{ background: '#172032', border: '1px solid #26324a', borderRadius: 10, color: '#e2e8f0', padding: '11px 13px', fontSize: 14 }}
               >
                 <option value="agency">Ajans / Menajerlik</option>
                 <option value="team">Takım / Org</option>

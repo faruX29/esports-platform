@@ -770,8 +770,8 @@ function Matches() {
                 onClick={() => navigate(`/match/${match.id}`)}
                 style={{
                   position: 'relative', borderRadius: 18,
-                  padding: hasTurkish ? '0 0 14px' : '18px 18px 14px',
-                  overflow: hasTurkish ? 'hidden' : 'visible',
+                  padding: '18px 18px 14px',
+                  overflow: 'visible',
                   background: '#131b2b',
                   border: isLive
                     ? '1.5px solid rgba(255,70,85,.6)'
@@ -801,21 +801,19 @@ function Matches() {
                   e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.6)' : isHotPick ? 'rgba(255,100,50,.5)' : hasTurkish ? 'rgba(212,175,55,.5)' : '#26324a'
                 }}
               >
-                {/* Turkish banner */}
-                {hasTurkish && (
-                  <div style={{ background: 'linear-gradient(90deg,#C8102E,#a00d25 40%,#001f6d)', padding: '5px 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 14 }}>
-                    <span>🇹🇷</span>
-                    <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '1.5px', color: '#fff', textTransform: 'uppercase' }}>Turkish Pride</span>
-                    <span>🇹🇷</span>
-                  </div>
-                )}
-
-                <div style={{ padding: hasTurkish ? '0 18px' : 0 }}>
+                <div style={{ padding: 0 }}>
                   {/* Top row */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                    <span style={{ padding: '2px 9px', borderRadius: 6, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', background: '#172032', border: '1px solid #26324a', color: '#64748b' }}>
-                      {gameDisplayName(match.game)}
-                    </span>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', minWidth: 0 }}>
+                      <span style={{ padding: '2px 9px', borderRadius: 6, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', background: '#172032', border: '1px solid #26324a', color: '#64748b' }}>
+                        {gameDisplayName(match.game)}
+                      </span>
+                      {hasTurkish && (
+                        <span style={{ padding: '2px 7px', borderRadius: 6, fontSize: 9, fontWeight: 800, letterSpacing: '.5px', background: 'rgba(212,175,55,.14)', border: '1px solid rgba(212,175,55,.45)', color: '#e8c766', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                          🇹🇷 TR
+                        </span>
+                      )}
+                    </div>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                       {/* Bo Format */}
                       {getBOFormat(match.team_a_score, match.team_b_score, match.number_of_games) && (

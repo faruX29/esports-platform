@@ -19,10 +19,10 @@ function resolveGameIds(activeGame, games) {
 function gameMeta(game) {
   const canonical = normalizeGameId(game?.slug ?? game?.name)
   const g = GAMES.find(x => x.id === canonical)
-  return { label: g?.shortLabel || g?.label || game?.name || 'Esports', color: g?.color || '#8a8a8a' }
+  return { label: g?.shortLabel || g?.label || game?.name || 'Esports', color: g?.color || '#94a3b8' }
 }
 
-const TIER_COLORS = { S: '#F0A500', A: '#C0C7D0', B: '#7f8c9a', C: '#5c5c5c', D: '#454545' }
+const TIER_COLORS = { S: '#F0A500', A: '#C0C7D0', B: '#7f8c9a', C: '#64748b', D: '#475569' }
 
 function normalizeTierKey(value) {
   if (!value) return null
@@ -189,9 +189,9 @@ export default function TournamentsListPage() {
   }, [visibleTournaments, teamsByTournament])
 
   return (
-    <div style={{ maxWidth: 1440, margin: '0 auto', padding: '24px 16px 80px', color: '#f2f2f2' }}>
+    <div style={{ maxWidth: 1440, margin: '0 auto', padding: '24px 16px 80px', color: '#e2e8f0' }}>
       <h1 style={{ margin: '0 0 8px', fontSize: 30, letterSpacing: '.4px' }}>Turnuvalar</h1>
-      <p style={{ margin: '0 0 14px', fontSize: 13, color: '#9c9c9c' }}>
+      <p style={{ margin: '0 0 14px', fontSize: 13, color: '#94a3b8' }}>
         Aktif ve yaklaşan turnuvalar. Detay, bracket ve puan durumu için bir turnuvaya tıkla.
       </p>
 
@@ -200,12 +200,12 @@ export default function TournamentsListPage() {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder='Turnuva ara...'
-          style={{ height: 40, width: '100%', maxWidth: 420, borderRadius: 10, border: '1px solid #2f2f2f', background: '#111', color: '#f3f3f3', padding: '0 12px', outline: 'none' }}
+          style={{ height: 40, width: '100%', maxWidth: 420, borderRadius: 10, border: '1px solid #26324a', background: '#131b2b', color: '#e2e8f0', padding: '0 12px', outline: 'none' }}
         />
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 11, color: '#a1a1a1', letterSpacing: '.4px' }}>
+        <span style={{ fontSize: 11, color: '#94a3b8', letterSpacing: '.4px' }}>
           Varsayilan filtre: S-Tier + A-Tier
         </span>
         <div style={{
@@ -222,7 +222,7 @@ export default function TournamentsListPage() {
             style={{
               border: '1px solid transparent',
               background: showAllTiers ? 'transparent' : 'linear-gradient(135deg, rgba(255,70,85,.2), rgba(255,120,80,.18))',
-              color: showAllTiers ? '#b6b6b6' : '#ffd3d9',
+              color: showAllTiers ? '#cbd5e1' : '#ffd3d9',
               borderRadius: 999,
               fontSize: 11,
               fontWeight: 800,
@@ -239,7 +239,7 @@ export default function TournamentsListPage() {
             style={{
               border: '1px solid transparent',
               background: showAllTiers ? 'linear-gradient(135deg, rgba(76,175,80,.24), rgba(40,120,220,.22))' : 'transparent',
-              color: showAllTiers ? '#d6f6d8' : '#b6b6b6',
+              color: showAllTiers ? '#d6f6d8' : '#cbd5e1',
               borderRadius: 999,
               fontSize: 11,
               fontWeight: 800,
@@ -253,17 +253,17 @@ export default function TournamentsListPage() {
           </button>
         </div>
         {!showAllTiers && hiddenCount > 0 && (
-          <span style={{ fontSize: 11, color: '#787878' }}>
+          <span style={{ fontSize: 11, color: '#64748b' }}>
             {hiddenCount} alt-tier turnuva gizli
           </span>
         )}
       </div>
 
-      {loading && <div style={{ fontSize: 13, color: '#8a8a8a' }}>Turnuvalar yukleniyor...</div>}
+      {loading && <div style={{ fontSize: 13, color: '#94a3b8' }}>Turnuvalar yukleniyor...</div>}
       {!loading && error && <div style={{ fontSize: 13, color: '#ff7d91' }}>{error}</div>}
 
       {!loading && !error && visibleTournaments.length === 0 && (
-        <div style={{ border: '1px dashed #2d2d2d', borderRadius: 12, padding: 16, color: '#888', fontSize: 13 }}>
+        <div style={{ border: '1px dashed #26324a', borderRadius: 12, padding: 16, color: '#94a3b8', fontSize: 13 }}>
           Eslesen turnuva bulunamadi.
         </div>
       )}
@@ -273,7 +273,7 @@ export default function TournamentsListPage() {
           {visibleTournaments.map(item => {
             const gm = gameMeta(item.game)
             const tierKey = normalizeTierKey(item.tier)
-            const tierColor = TIER_COLORS[tierKey] || '#454545'
+            const tierColor = TIER_COLORS[tierKey] || '#475569'
             const logos = teamsByTournament[item.id] || []
             return (
               <button
@@ -281,12 +281,12 @@ export default function TournamentsListPage() {
                 onClick={() => navigate(`/tournament/${item.id}`)}
                 style={{
                   position: 'relative', overflow: 'hidden', textAlign: 'left',
-                  border: '1px solid #232323', background: '#101010', color: '#f0f0f0',
+                  border: '1px solid #26324a', background: '#131b2b', color: '#e2e8f0',
                   borderRadius: 12, padding: '12px 12px 12px 15px', cursor: 'pointer',
                   transition: 'border-color .15s, transform .15s',
                 }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = `${gm.color}66`; e.currentTarget.style.transform = 'translateY(-2px)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = '#232323'; e.currentTarget.style.transform = 'translateY(0)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = '#26324a'; e.currentTarget.style.transform = 'translateY(0)' }}
               >
                 {/* sol renk şeridi (oyun) */}
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: gm.color }} />
@@ -296,13 +296,13 @@ export default function TournamentsListPage() {
                     {item.name || 'Tournament'}
                   </div>
                   {tierKey && (
-                    <span style={{ fontSize: 10, fontWeight: 900, color: '#0b0b0b', background: tierColor, borderRadius: 5, padding: '2px 6px', flexShrink: 0, letterSpacing: '.3px' }}>
+                    <span style={{ fontSize: 10, fontWeight: 900, color: '#0b0f19', background: tierColor, borderRadius: 5, padding: '2px 6px', flexShrink: 0, letterSpacing: '.3px' }}>
                       {tierKey}
                     </span>
                   )}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontSize: 11, color: '#8f8f8f' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontSize: 11, color: '#94a3b8' }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: gm.color, fontWeight: 700 }}>
                     <span style={{ width: 6, height: 6, borderRadius: '50%', background: gm.color }} /> {gm.label}
                   </span>
@@ -314,11 +314,11 @@ export default function TournamentsListPage() {
                     {logos.slice(0, 5).map(t => (
                       <InitialsImage key={t.id} src={t.logo_url} name={t.name} width={20} height={20} borderRadius={5} objectFit='contain' />
                     ))}
-                    {logos.length > 5 && <span style={{ fontSize: 10, color: '#666', marginLeft: 2 }}>+{logos.length - 5}</span>}
+                    {logos.length > 5 && <span style={{ fontSize: 10, color: '#64748b', marginLeft: 2 }}>+{logos.length - 5}</span>}
                   </div>
                 )}
 
-                <div style={{ marginTop: 9, fontSize: 11.5, color: '#8f8f8f' }}>
+                <div style={{ marginTop: 9, fontSize: 11.5, color: '#94a3b8' }}>
                   {fmtDate(item.begin_at)}
                   {item.end_at ? ` – ${fmtDate(item.end_at)}` : ''}
                 </div>
@@ -334,8 +334,8 @@ export default function TournamentsListPage() {
             onClick={() => setPage(p => p + 1)}
             disabled={loadingMore}
             style={{
-              borderRadius: 10, border: '1px solid #2f2f2f', background: '#141414',
-              color: loadingMore ? '#666' : '#ddd', fontSize: 12, fontWeight: 700,
+              borderRadius: 10, border: '1px solid #26324a', background: '#131b2b',
+              color: loadingMore ? '#64748b' : '#e2e8f0', fontSize: 12, fontWeight: 700,
               padding: '10px 20px', cursor: loadingMore ? 'default' : 'pointer',
             }}
           >

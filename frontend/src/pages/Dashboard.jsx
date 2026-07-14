@@ -10,7 +10,7 @@ import { isTurkishTeam }                   from '../constants'
 import { useUser }                          from '../context/UserContext'
 import { useAuth }                          from '../context/AuthContext'
 import BRANDING                             from '../branding.config'
-import { Radio, Flag, CalendarDays, Sparkles, Zap, SlidersHorizontal } from 'lucide-react'
+import { Radio, Flag, CalendarDays, Sparkles, Zap, SlidersHorizontal, Clock, Gamepad2, Shield, Trophy, FlaskConical, Newspaper, Flame, Star, Rss } from 'lucide-react'
 import { buildFinishedStory, buildUpcomingStory } from '../utils/newsStories'
 import { isStoryFollowedTeam, prioritizeStoriesForYou } from '../utils/newsPersonalization'
 import { calculatePredictionAccuracy, getMatchImpactLabel } from '../utils/accuracyTracker'
@@ -1029,8 +1029,8 @@ function WinBar({ predA, predB, confidence }) {
         <span style={{ fontSize: 8, color: aFav ? '#a78bfa' : '#383838', fontWeight: aFav ? 700 : 400 }}>
           {pctA}%
         </span>
-        <span style={{ fontSize: 8, color: isHot ? '#ff8c42' : '#2a2a2a', fontWeight: isHot ? 700 : 400 }}>
-          {isHot ? '🔥 AI' : 'AI'}
+        <span style={{ fontSize: 8, color: isHot ? '#ff8c42' : '#2a2a2a', fontWeight: isHot ? 700 : 400, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+          {isHot && <Flame size={9} strokeWidth={2.5} />}AI
         </span>
         <span style={{ fontSize: 8, color: !aFav ? '#a78bfa' : '#383838', fontWeight: !aFav ? 700 : 400 }}>
           {pctB}%
@@ -1182,7 +1182,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
         marginBottom: 4,   /* WinBar için küçük boşluk */
       }}>
         {/* Team A */}
-        <div style={{ textAlign: 'center', opacity: isFin && bWon ? 0.45 : 1 }}>
+        <div style={{ textAlign: 'center', minWidth: 0, opacity: isFin && bWon ? 0.45 : 1 }}>
           <InitialsImage
             src={m.team_a?.logo_url}
             alt={m.team_a?.name || ''}
@@ -1208,8 +1208,8 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
           {favA && (
             <button
               onClick={e => { e.stopPropagation(); onToggleFav(aId) }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: '#FFD700', padding: '1px 0', display: 'block', margin: '0 auto' }}
-            >⭐</button>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#FFD700', padding: '1px 0', display: 'flex', justifyContent: 'center', margin: '0 auto' }}
+            ><Star size={11} strokeWidth={2} fill="#FFD700" /></button>
           )}
         </div>
 
@@ -1243,7 +1243,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
         </div>
 
         {/* Team B */}
-        <div style={{ textAlign: 'center', opacity: isFin && aWon ? 0.45 : 1 }}>
+        <div style={{ textAlign: 'center', minWidth: 0, opacity: isFin && aWon ? 0.45 : 1 }}>
           <InitialsImage
             src={m.team_b?.logo_url}
             alt={m.team_b?.name || ''}
@@ -1269,8 +1269,8 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
           {favB && (
             <button
               onClick={e => { e.stopPropagation(); onToggleFav(bId) }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: '#FFD700', padding: '1px 0', display: 'block', margin: '0 auto' }}
-            >⭐</button>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#FFD700', padding: '1px 0', display: 'flex', justifyContent: 'center', margin: '0 auto' }}
+            ><Star size={11} strokeWidth={2} fill="#FFD700" /></button>
           )}
         </div>
       </div>
@@ -2365,10 +2365,10 @@ export default function Dashboard() {
 
   /* ── Stat tile tanımları ── */
   const statTiles = useMemo(() => [
-    { icon: '🔴', value: loading ? '…' : stats.live,  label: 'Canli',    color: '#FF4655' },
-    { icon: '⏳', value: loading ? '…' : stats.today, label: 'Bugun',    color: '#FFB800' },
-    { icon: '🎮', value: loading ? '…' : stats.total, label: 'Toplam',   color: '#6366f1' },
-    { icon: '🛡️', value: loading ? '…' : stats.teams, label: 'Takimlar', color: '#4CAF50' },
+    { Icon: Radio,    value: loading ? '…' : stats.live,  label: 'Canli',    color: '#FF4655' },
+    { Icon: Clock,    value: loading ? '…' : stats.today, label: 'Bugun',    color: '#FFB800' },
+    { Icon: Gamepad2, value: loading ? '…' : stats.total, label: 'Toplam',   color: '#6366f1' },
+    { Icon: Shield,   value: loading ? '…' : stats.teams, label: 'Takimlar', color: '#4CAF50' },
   ], [loading, stats.live, stats.today, stats.total, stats.teams])
 
   return (
@@ -2474,8 +2474,9 @@ export default function Dashboard() {
             <span style={{
               fontSize: 11, fontWeight: 800, color: '#ff6b7a',
               letterSpacing: '1.5px', textTransform: 'uppercase',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
             }}>
-              🧠 My Feed
+              <Rss size={13} strokeWidth={2.4} /> My Feed
             </span>
             <span style={{
               padding: '1px 8px', borderRadius: 8,
@@ -2867,18 +2868,18 @@ export default function Dashboard() {
           </p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {[
-              { to: '/matches',  label: '📅 Takvim',      color: '#FF4655' },
-              { to: '/tournaments', label: '🏟️ Turnuvalar', color: '#FFB800' },
+              { to: '/matches',  Icon: CalendarDays, label: 'Takvim',      color: '#FF4655' },
+              { to: '/tournaments', Icon: Trophy, label: 'Turnuvalar', color: '#FFB800' },
             ].map(b => (
               <Link key={b.to} to={b.to} style={{ textDecoration: 'none' }}>
                 <div style={{
                   padding: '6px 13px', borderRadius: 10, fontSize: 11, fontWeight: 700, cursor: 'pointer',
                   background: `${b.color}18`, border: `1px solid ${b.color}44`, color: b.color,
-                  transition: 'all .15s',
+                  transition: 'all .15s', display: 'inline-flex', alignItems: 'center', gap: 6,
                 }}
                   onMouseEnter={e => { e.currentTarget.style.background = `${b.color}28`; e.currentTarget.style.borderColor = `${b.color}88` }}
                   onMouseLeave={e => { e.currentTarget.style.background = `${b.color}18`; e.currentTarget.style.borderColor = `${b.color}44` }}
-                >{b.label}</div>
+                ><b.Icon size={13} strokeWidth={2.2} />{b.label}</div>
               </Link>
             ))}
           </div>
@@ -2900,7 +2901,7 @@ export default function Dashboard() {
             onMouseEnter={e => e.currentTarget.style.borderColor = `${s.color}44`}
             onMouseLeave={e => e.currentTarget.style.borderColor = `${s.color}1a`}
           >
-            <div style={{ fontSize: 18, marginBottom: 4 }}>{s.icon}</div>
+            <s.Icon size={18} strokeWidth={2} color={s.color} style={{ marginBottom: 6 }} />
             <div style={{ fontSize: 22, fontWeight: 900, color: s.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
               {s.value}
             </div>
@@ -2914,10 +2915,10 @@ export default function Dashboard() {
       {/* ── Hızlı Linkler — 4 Bento tile ────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,minmax(0,1fr))' : 'repeat(4,1fr)', gap: 10 }}>
         {[
-          { to: '/matches',  icon: '📅', label: 'Maç Takvimi', sub: 'Yaklaşan & Biten',  color: '#FF4655' },
-          { to: '/tournaments', icon: '🏟️', label: 'Turnuvalar', sub: 'Aktif ve Geçmiş',  color: '#FFB800' },
-          { to: '/scout',    icon: '🔬', label: 'Scout Engine', sub: 'B2B · Private Beta', color: '#5eead4' },
-          { to: '/news',     icon: '📰', label: 'Haberler',    sub: 'Son gelişmeler',     color: '#4CAF50' },
+          { to: '/matches',  Icon: CalendarDays, label: 'Maç Takvimi', sub: 'Yaklaşan & Biten',  color: '#FF4655' },
+          { to: '/tournaments', Icon: Trophy, label: 'Turnuvalar', sub: 'Aktif ve Geçmiş',  color: '#FFB800' },
+          { to: '/scout',    Icon: FlaskConical, label: 'Scout Engine', sub: 'B2B · Private Beta', color: '#5eead4' },
+          { to: '/news',     Icon: Newspaper, label: 'Haberler',    sub: 'Son gelişmeler',     color: '#4CAF50' },
         ].map(l => (
           <Link key={l.to} to={l.to} style={{ textDecoration: 'none' }}>
             <div style={{
@@ -2937,7 +2938,7 @@ export default function Dashboard() {
                 e.currentTarget.style.transform     = 'translateY(0)'
               }}
             >
-              <div style={{ fontSize: 20, marginBottom: 7 }}>{l.icon}</div>
+              <l.Icon size={20} strokeWidth={2} color={l.color} style={{ marginBottom: 7 }} />
               <div style={{ fontSize: 12, fontWeight: 700, color: l.color, marginBottom: 3 }}>{l.label}</div>
               <div style={{ fontSize: 10, color: '#2a2a2a' }}>{l.sub}</div>
             </div>

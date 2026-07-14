@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Target } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 
 /**
@@ -62,7 +63,8 @@ export default function PredictionAccuracyBadge({ variant = 'card' }) {
           background: 'rgba(20,184,166,.12)', border: '1px solid rgba(94,234,212,.28)',
         }}
       >
-        🎯 AI'nın en güvendiği maçlarda %{confPct} net isabet
+        <Target size={12} strokeWidth={2.4} />
+        AI'nın en güvendiği maçlarda %{confPct} net isabet
       </div>
     )
   }
@@ -82,8 +84,9 @@ export default function PredictionAccuracyBadge({ variant = 'card' }) {
         </span>
       </div>
       <div style={{ flex: 1, minWidth: 180 }}>
-        <div style={{ fontSize: 13, color: '#ddfffb', fontWeight: 800, marginBottom: 4 }}>
-          🎯 Yapay Zekanın En Güvendiği Maçlarda %{confPct} Net İsabet
+        <div style={{ fontSize: 13, color: '#ddfffb', fontWeight: 800, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Target size={15} strokeWidth={2.4} />
+          Yapay Zekanın En Güvendiği Maçlarda %{confPct} Net İsabet
         </div>
         <div style={{ fontSize: 12, color: '#c6c6c6', lineHeight: 1.5 }}>
           Elo tabanlı model, yüksek güvenli tahminlerinde ({sample} maçta ölçüldü) bu isabeti tutturuyor.

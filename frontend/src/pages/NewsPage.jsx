@@ -20,6 +20,7 @@ import SeoHead from '../components/SeoHead'
 import NewsCover, { scoreFromHero } from '../components/NewsCover'
 import { cleanDisplayName } from '../utils/nameCleaner'
 import { buildNewsSlug } from '../utils/newsSlug'
+import { MessageSquare, Library } from 'lucide-react'
 
 const GAME_FILTERS = GAMES.filter(game => !game.soon && game.id !== 'all' && ['valorant', 'cs2', 'lol'].includes(game.id))
 const CATEGORY_TABS = [
@@ -111,7 +112,7 @@ function articleRowToStory(row) {
       gameId,
       gameLabel: game?.shortLabel || game?.label || 'ESPORTS',
       gameColor: game?.color || '#C8102E',
-      gameIcon: game?.icon || '🎮',
+      gameIcon: game?.icon || null,
       tournamentName: row.tournament_name || 'Ana Sahne',
       tier,
       turkish: Boolean(isTurkishTeam?.(row.team_a_name) || isTurkishTeam?.(row.team_b_name)),
@@ -126,8 +127,8 @@ function articleRowToStory(row) {
 
 function NewsTrustLayer({ item, onReport }) {
   return (
-    <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed #282828', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-      <span style={{ fontSize: 11, color: '#8f8f8f' }}>PandaScore verileriyle otomatik uretilmistir.</span>
+    <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed #26324a', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+      <span style={{ fontSize: 11, color: '#94a3b8' }}>PandaScore verileriyle otomatik uretilmistir.</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
         <ShareButton path={`/news/${buildNewsSlug(item)}`} title={item.title} compact />
         <button
@@ -136,9 +137,9 @@ function NewsTrustLayer({ item, onReport }) {
             onReport(item)
           }}
           style={{
-            border: '1px solid #353535',
-            background: '#121212',
-            color: '#d6d6d6',
+            border: '1px solid #334155',
+            background: '#131b2b',
+            color: '#e2e8f0',
             borderRadius: 8,
             padding: '5px 8px',
             fontSize: 11,
@@ -222,7 +223,7 @@ function NewsCard({ item, likes, liked, comments, onLike, canInteract, onOpenDet
     <article
       onClick={() => onOpenDetail(item)}
       style={{
-        background: 'linear-gradient(180deg,#101010 0%,#0b0b0b 100%)',
+        background: 'linear-gradient(180deg,#131b2b 0%,#0b0f19 100%)',
         border: '1px solid #1f1f22',
         borderRadius: 18,
         padding: 16,
@@ -249,17 +250,17 @@ function NewsCard({ item, likes, liked, comments, onLike, canInteract, onOpenDet
                 For You
               </span>
             )}
-            <span style={{ fontSize: 10, color: '#f4f4f4', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, padding: '4px 8px', borderRadius: 999, background: `${visuals.gameColor}22`, border: `1px solid ${visuals.gameColor}55` }}>
+            <span style={{ fontSize: 10, color: '#e2e8f0', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, padding: '4px 8px', borderRadius: 999, background: `${visuals.gameColor}22`, border: `1px solid ${visuals.gameColor}55` }}>
               {item.tag}
             </span>
-            <span style={{ fontSize: 10, color: '#d8d8d8', padding: '4px 8px', borderRadius: 999, background: 'rgba(255,255,255,.04)', border: '1px solid #272727' }}>
+            <span style={{ fontSize: 10, color: '#e2e8f0', padding: '4px 8px', borderRadius: 999, background: 'rgba(255,255,255,.04)', border: '1px solid #26324a' }}>
               {visuals.gameLabel}
             </span>
-            <span style={{ fontSize: 10, color: HERO_TIERS.has(visuals.tier) ? '#ffb3bd' : '#a5a5a5', padding: '4px 8px', borderRadius: 999, background: HERO_TIERS.has(visuals.tier) ? 'rgba(200,16,46,.18)' : 'rgba(255,255,255,.03)', border: HERO_TIERS.has(visuals.tier) ? '1px solid rgba(200,16,46,.35)' : '1px solid #242424' }}>
+            <span style={{ fontSize: 10, color: HERO_TIERS.has(visuals.tier) ? '#ffb3bd' : '#cbd5e1', padding: '4px 8px', borderRadius: 999, background: HERO_TIERS.has(visuals.tier) ? 'rgba(200,16,46,.18)' : 'rgba(255,255,255,.03)', border: HERO_TIERS.has(visuals.tier) ? '1px solid rgba(200,16,46,.35)' : '1px solid #26324a' }}>
               Tier {visuals.tier}
             </span>
           </div>
-          <span style={{ fontSize: 10, color: '#7f7f7f' }}>{fmtDate(item.publishedAt)}</span>
+          <span style={{ fontSize: 10, color: '#64748b' }}>{fmtDate(item.publishedAt)}</span>
         </div>
 
         <div style={{ marginBottom: 12 }}>
@@ -271,7 +272,7 @@ function NewsCard({ item, likes, liked, comments, onLike, canInteract, onOpenDet
         </div>
 
         <div style={{ fontSize: 14, color: '#f0d3d8', marginBottom: 8, fontWeight: 700 }}>{item.heroScore}</div>
-        <p style={{ margin: 0, color: '#c6c6c6', lineHeight: 1.6 }}>{item.summary}</p>
+        <p style={{ margin: 0, color: '#cbd5e1', lineHeight: 1.6 }}>{item.summary}</p>
 
         <ScoutNoteCard item={item} compact />
 
@@ -283,9 +284,9 @@ function NewsCard({ item, likes, liked, comments, onLike, canInteract, onOpenDet
               onLike(item.id)
             }}
             style={{
-              border: `1px solid ${liked ? '#ffc857' : '#333'}`,
-              background: liked ? 'linear-gradient(140deg, rgba(255,200,87,.22), rgba(35,25,8,.95))' : '#151515',
-              color: liked ? '#ffe7b1' : '#b1b1b1',
+              border: `1px solid ${liked ? '#ffc857' : '#334155'}`,
+              background: liked ? 'linear-gradient(140deg, rgba(255,200,87,.22), rgba(35,25,8,.95))' : '#131b2b',
+              color: liked ? '#ffe7b1' : '#cbd5e1',
               borderRadius: 8,
               padding: '6px 10px',
               cursor: canInteract ? 'pointer' : 'not-allowed',
@@ -301,11 +302,11 @@ function NewsCard({ item, likes, liked, comments, onLike, canInteract, onOpenDet
               e.stopPropagation()
               onOpenDetail(item)
             }}
-            style={{ fontSize: 11, color: comments.length > 0 ? '#a0c4ff' : '#888', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 8, background: comments.length > 0 ? 'rgba(100,160,255,.08)' : '#151515', border: comments.length > 0 ? '1px solid rgba(100,160,255,.2)' : '1px solid #2a2a2a', fontWeight: comments.length > 0 ? 700 : 400, cursor: 'pointer' }}
+            style={{ fontSize: 11, color: comments.length > 0 ? '#a0c4ff' : '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 8, background: comments.length > 0 ? 'rgba(100,160,255,.08)' : '#131b2b', border: comments.length > 0 ? '1px solid rgba(100,160,255,.2)' : '1px solid #26324a', fontWeight: comments.length > 0 ? 700 : 400, cursor: 'pointer' }}
           >
-            💬 {comments.length > 0 ? `${comments.length} yorum` : 'Yorum yap'} ›
+            <MessageSquare size={12} /> {comments.length > 0 ? `${comments.length} yorum` : 'Yorum yap'} ›
           </button>
-          {!canInteract && <span style={{ fontSize: 11, color: '#6a6a6a' }}>Etkilesim icin giris yapin</span>}
+          {!canInteract && <span style={{ fontSize: 11, color: '#64748b' }}>Etkilesim icin giris yapin</span>}
         </div>
 
         <NewsTrustLayer item={item} onReport={onReport} />
@@ -581,20 +582,20 @@ export default function NewsPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#090909', color: '#f2f2f2' }}>
+    <div style={{ minHeight: '100vh', background: '#0b0f19', color: '#e2e8f0' }}>
       <SeoHead
         title="Günün E-Spor Bülteni"
         description="Tier öncelikli manşetler, skora dayalı sonuç haberleri ve yaklaşan haftanın maçları tek akışta — Valorant, CS2, LoL."
         type="website"
       />
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: isMobile ? '14px 10px 34px' : '22px 16px 48px' }}>
-        <div style={{ borderRadius: 18, border: '1px solid #1f1f1f', overflow: 'hidden', marginBottom: 18, background: 'linear-gradient(180deg,#0b0b0b 0%,#111 100%)' }}>
-          <div style={{ background: 'linear-gradient(90deg,#C8102E,#8c0e20 45%,#f4f4f4)', color: '#fff', fontSize: 11, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase', textAlign: 'center', padding: 8 }}>
+        <div style={{ borderRadius: 18, border: '1px solid #172032', overflow: 'hidden', marginBottom: 18, background: 'linear-gradient(180deg,#0b0f19 0%,#131b2b 100%)' }}>
+          <div style={{ background: 'linear-gradient(90deg,#C8102E,#8c0e20 45%,#e2e8f0)', color: '#fff', fontSize: 11, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase', textAlign: 'center', padding: 8 }}>
             Esports News Desk
           </div>
-          <div style={{ padding: 18, background: 'radial-gradient(circle at 78% 20%, rgba(198,27,51,.18), transparent 36%), radial-gradient(circle at 10% 12%, rgba(255,255,255,.05), transparent 24%), #111' }}>
+          <div style={{ padding: 18, background: 'radial-gradient(circle at 78% 20%, rgba(198,27,51,.18), transparent 36%), radial-gradient(circle at 10% 12%, rgba(255,255,255,.05), transparent 24%), #131b2b' }}>
             <h1 style={{ margin: 0, fontSize: isMobile ? 26 : 34, lineHeight: 1.1 }}>Gunun E-Spor Bulteni</h1>
-            <p style={{ margin: '8px 0 16px', color: '#9b9b9b', fontSize: isMobile ? 13 : 14 }}>
+            <p style={{ margin: '8px 0 16px', color: '#94a3b8', fontSize: isMobile ? 13 : 14 }}>
               Tier oncelikli mansetler, skora dayali sonuc haberleri ve yaklasan haftanin maclari tek akista.
             </p>
 
@@ -602,7 +603,7 @@ export default function NewsPage() {
               {CATEGORY_TABS.map(tab => {
                 const active = tab.id === activeCategory
                 const game = GAME_FILTERS.find(item => item.id === tab.id)
-                const color = game?.color || '#8f8f8f'
+                const color = game?.color || '#94a3b8'
                 return (
                   <button
                     key={tab.id}
@@ -610,9 +611,9 @@ export default function NewsPage() {
                     style={{
                       padding: '8px 14px',
                       borderRadius: 999,
-                      border: active ? `1px solid ${color}` : '1px solid #2a2a2a',
-                      background: active ? `${color}22` : '#121212',
-                      color: active ? '#ffffff' : '#9e9e9e',
+                      border: active ? `1px solid ${color}` : '1px solid #26324a',
+                      background: active ? `${color}22` : '#131b2b',
+                      color: active ? '#ffffff' : '#94a3b8',
                       fontSize: 12,
                       fontWeight: 700,
                       letterSpacing: '.2px',
@@ -631,25 +632,25 @@ export default function NewsPage() {
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                   fontSize: 12, fontWeight: 700, letterSpacing: '.3px',
-                  color: '#e7e7e7', textDecoration: 'none',
+                  color: '#e2e8f0', textDecoration: 'none',
                   padding: '8px 14px', borderRadius: 999,
-                  border: '1px solid #2a2a2a', background: '#121212',
+                  border: '1px solid #26324a', background: '#131b2b',
                 }}
               >
-                📚 Tüm Haber Arşivi ›
+                <Library size={13} /> Tüm Haber Arşivi ›
               </Link>
             </div>
           </div>
         </div>
 
-        {loading && <div style={{ color: '#888', fontSize: 13 }}>Haberler hazirlaniyor...</div>}
+        {loading && <div style={{ color: '#94a3b8', fontSize: 13 }}>Haberler hazirlaniyor...</div>}
 
         {hero && (
           <section style={{ marginBottom: 18 }}>
             <div style={{ marginBottom: 8, fontSize: 11, color: '#c61b33', textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 800 }}>
               {hero.isForYou ? 'Manset · For You' : 'Manset'}
             </div>
-            <article onClick={() => openStoryDetail(hero)} style={{ borderRadius: 18, padding: isMobile ? 14 : 20, border: '1px solid #2a2a2a', background: 'linear-gradient(145deg,#171717,#101010)', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
+            <article onClick={() => openStoryDetail(hero)} style={{ borderRadius: 18, padding: isMobile ? 14 : 20, border: '1px solid #26324a', background: 'linear-gradient(145deg,#131b2b,#131b2b)', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
               <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: hero.visuals.turkish ? 'radial-gradient(circle at 12% 18%, rgba(200,16,46,.22), transparent 34%)' : 'radial-gradient(circle at 90% 10%, rgba(255,255,255,.05), transparent 24%)' }} />
               <div style={{ position: 'relative', zIndex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
@@ -662,14 +663,14 @@ export default function NewsPage() {
                     <span style={{ fontSize: 10, color: '#ffd2d8', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.1, padding: '5px 9px', borderRadius: 999, background: 'rgba(200,16,46,.18)', border: '1px solid rgba(200,16,46,.38)' }}>
                       Manset
                     </span>
-                    <span style={{ fontSize: 10, color: '#f0f0f0', padding: '5px 9px', borderRadius: 999, background: `${hero.visuals.gameColor}22`, border: `1px solid ${hero.visuals.gameColor}55` }}>
+                    <span style={{ fontSize: 10, color: '#e2e8f0', padding: '5px 9px', borderRadius: 999, background: `${hero.visuals.gameColor}22`, border: `1px solid ${hero.visuals.gameColor}55` }}>
                       {hero.visuals.gameLabel}
                     </span>
                     <span style={{ fontSize: 10, color: '#f7b6bf', padding: '5px 9px', borderRadius: 999, background: 'rgba(200,16,46,.18)', border: '1px solid rgba(200,16,46,.34)' }}>
                       Tier {hero.visuals.tier}
                     </span>
                   </div>
-                  <div style={{ fontSize: 11, color: '#a0a0a0' }}>{fmtDate(hero.publishedAt)}</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8' }}>{fmtDate(hero.publishedAt)}</div>
                 </div>
 
                 <div style={{ marginBottom: 14 }}>
@@ -680,7 +681,7 @@ export default function NewsPage() {
                   <div style={{ color: '#f0d3d8', fontSize: 17, fontWeight: 700 }}>{hero.heroScore}</div>
                 </div>
 
-                <p style={{ margin: 0, color: '#d8d8d8', lineHeight: 1.7 }}>{hero.summary}</p>
+                <p style={{ margin: 0, color: '#e2e8f0', lineHeight: 1.7 }}>{hero.summary}</p>
 
                 <ScoutNoteCard item={hero} />
 
@@ -692,9 +693,9 @@ export default function NewsPage() {
                       toggleLike(hero.id)
                     }}
                     style={{
-                      border: `1px solid ${likedSet.has(hero.id) ? '#ffc857' : '#383838'}`,
-                      background: likedSet.has(hero.id) ? 'linear-gradient(140deg, rgba(255,200,87,.22), rgba(35,25,8,.95))' : '#151515',
-                      color: likedSet.has(hero.id) ? '#ffe7b1' : '#c8c8c8',
+                      border: `1px solid ${likedSet.has(hero.id) ? '#ffc857' : '#334155'}`,
+                      background: likedSet.has(hero.id) ? 'linear-gradient(140deg, rgba(255,200,87,.22), rgba(35,25,8,.95))' : '#131b2b',
+                      color: likedSet.has(hero.id) ? '#ffe7b1' : '#cbd5e1',
                       borderRadius: 9,
                       padding: '7px 11px',
                       cursor: canInteract ? 'pointer' : 'not-allowed',
@@ -704,7 +705,7 @@ export default function NewsPage() {
                   >
                     {likedSet.has(hero.id) ? 'STARRED' : 'STAR'} ({likesByNews[hero.id] || 0})
                   </button>
-                  <span style={{ fontSize: 12, color: '#8b8b8b' }}>Yorum: {(commentsByNews[hero.id] || []).length}</span>
+                  <span style={{ fontSize: 12, color: '#94a3b8' }}>Yorum: {(commentsByNews[hero.id] || []).length}</span>
                 </div>
 
                 <NewsTrustLayer item={hero} onReport={reportStoryIssue} />
@@ -714,7 +715,7 @@ export default function NewsPage() {
         )}
 
         <section>
-          <div style={{ marginBottom: 10, fontSize: 11, color: '#f4f4f4', textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 800 }}>Gundem</div>
+          <div style={{ marginBottom: 10, fontSize: 11, color: '#e2e8f0', textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 800 }}>Gundem</div>
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit,minmax(320px,1fr))' }}>
             {pagedAgenda.map(item => (
               <NewsCard
@@ -738,15 +739,15 @@ export default function NewsPage() {
               <button
                 onClick={() => setPage(prev => Math.max(1, prev - 1))}
                 disabled={page === 1}
-                style={{ border: '1px solid #303030', background: page === 1 ? '#111' : '#181818', color: page === 1 ? '#666' : '#ddd', borderRadius: 8, padding: '6px 10px', cursor: page === 1 ? 'not-allowed' : 'pointer' }}
+                style={{ border: '1px solid #334155', background: page === 1 ? '#131b2b' : '#172032', color: page === 1 ? '#64748b' : '#e2e8f0', borderRadius: 8, padding: '6px 10px', cursor: page === 1 ? 'not-allowed' : 'pointer' }}
               >
                 ‹ Onceki
               </button>
-              <span style={{ fontSize: 12, color: '#9d9d9d' }}>Sayfa {page} / {totalPages}</span>
+              <span style={{ fontSize: 12, color: '#94a3b8' }}>Sayfa {page} / {totalPages}</span>
               <button
                 onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={page >= totalPages}
-                style={{ border: '1px solid #303030', background: page >= totalPages ? '#111' : '#181818', color: page >= totalPages ? '#666' : '#ddd', borderRadius: 8, padding: '6px 10px', cursor: page >= totalPages ? 'not-allowed' : 'pointer' }}
+                style={{ border: '1px solid #334155', background: page >= totalPages ? '#131b2b' : '#172032', color: page >= totalPages ? '#64748b' : '#e2e8f0', borderRadius: 8, padding: '6px 10px', cursor: page >= totalPages ? 'not-allowed' : 'pointer' }}
               >
                 Sonraki ›
               </button>
@@ -755,7 +756,7 @@ export default function NewsPage() {
         </section>
 
         {!loading && filteredStories.length === 0 && (
-          <div style={{ marginTop: 18, color: '#777', fontSize: 13 }}>Su an secili oyun icin gosterilecek taze haber bulunamadi.</div>
+          <div style={{ marginTop: 18, color: '#64748b', fontSize: 13 }}>Su an secili oyun icin gosterilecek taze haber bulunamadi.</div>
         )}
       </div>
     </div>

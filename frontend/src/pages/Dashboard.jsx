@@ -10,7 +10,7 @@ import { isTurkishTeam }                   from '../constants'
 import { useUser }                          from '../context/UserContext'
 import { useAuth }                          from '../context/AuthContext'
 import BRANDING                             from '../branding.config'
-import { Radio, Flag, CalendarDays, Sparkles, Zap, SlidersHorizontal, Clock, Gamepad2, Shield, Trophy, FlaskConical, Newspaper, Flame, Star } from 'lucide-react'
+import { Radio, Flag, CalendarDays, Sparkles, Zap, SlidersHorizontal, Clock, Gamepad2, Shield, Trophy, FlaskConical, Newspaper, Flame, Star, TriangleAlert, Moon } from 'lucide-react'
 import { buildFinishedStory, buildUpcomingStory } from '../utils/newsStories'
 import { isStoryFollowedTeam, prioritizeStoriesForYou } from '../utils/newsPersonalization'
 import { calculatePredictionAccuracy, getMatchImpactLabel } from '../utils/accuracyTracker'
@@ -76,8 +76,8 @@ const TodaySchedule = memo(function TodaySchedule({ matches, liveMatches, onMatc
           background: 'linear-gradient(135deg,rgba(76,175,80,.15),rgba(76,175,80,.07))',
           border: '1px solid rgba(76,175,80,.35)', flexShrink: 0,
         }}>
-          <span style={{ fontSize: 9, fontWeight: 900, color: '#9ee6a3', letterSpacing: '.5px', textTransform: 'uppercase' }}>
-            📅 Bugün
+          <span style={{ fontSize: 9, fontWeight: 900, color: '#9ee6a3', letterSpacing: '.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <CalendarDays size={11} /> Bugün
           </span>
           <span style={{ padding: '1px 6px', borderRadius: 8, background: 'rgba(76,175,80,.25)', color: '#9ee6a3', fontSize: 10, fontWeight: 700 }}>
             {all.length}
@@ -497,8 +497,8 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
                   />
                   <span style={{ minWidth: 0, display: 'grid', gap: 2 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.name}</span>
-                    <span style={{ fontSize: 10, color: active ? '#ffb2bc' : '#8e8e8e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {(gameMeta?.icon || '🎮')} {gameMeta?.label || team?.game?.name || 'Unknown Game'}
+                    <span style={{ fontSize: 10, color: active ? '#ffb2bc' : '#8e8e8e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: gameMeta?.color || '#64748b', flexShrink: 0 }} /> {gameMeta?.label || team?.game?.name || 'Unknown Game'}
                     </span>
                   </span>
                 </button>
@@ -2194,8 +2194,9 @@ export default function Dashboard() {
           fontSize: 12,
           fontWeight: 700,
           letterSpacing: '.15px',
+          display: 'flex', alignItems: 'center', gap: 7,
         }}>
-          ⚠️ {globalError}
+          <TriangleAlert size={14} /> {globalError}
         </div>
       )}
 
@@ -2410,7 +2411,7 @@ export default function Dashboard() {
           </div>
         ) : liveMatches.length === 0 ? (
           <div style={{ padding: '20px', borderRadius: 16, background: '#131b2b', border: '1px solid #232f47', textAlign: 'center' }}>
-            <div style={{ fontSize: 22, marginBottom: 6 }}>😴</div>
+            <div style={{ marginBottom: 6, display: 'flex', justifyContent: 'center' }}><Moon size={22} color="#334155" /></div>
             <div style={{ fontSize: 11, color: '#2a2a2a' }}>Şu an canlı maç yok</div>
           </div>
         ) : (

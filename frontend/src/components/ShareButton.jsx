@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Check, Link2 } from 'lucide-react'
 
 /**
  * Paylaşım butonu — X (Twitter) + kopyala-link.
@@ -49,7 +50,7 @@ export default function ShareButton({ path, title = '', compact = false }) {
         onClick={shareX}
         title="X'te paylaş"
         style={{
-          border: '1px solid #2d2d2d', background: '#161616', color: '#cfcfcf',
+          border: '1px solid #26324a', background: '#131b2b', color: '#cbd5e1',
           borderRadius: 8, padding: pad, fontSize: fs, fontWeight: 700, cursor: 'pointer',
           display: 'inline-flex', alignItems: 'center', gap: 5,
         }}
@@ -61,14 +62,14 @@ export default function ShareButton({ path, title = '', compact = false }) {
         onClick={copyLink}
         title="Bağlantıyı kopyala"
         style={{
-          border: `1px solid ${copied ? '#2f6846' : '#2d2d2d'}`,
-          background: copied ? '#10281a' : '#161616',
-          color: copied ? '#8de3af' : '#cfcfcf',
+          border: `1px solid ${copied ? '#2f6846' : '#26324a'}`,
+          background: copied ? '#10281a' : '#131b2b',
+          color: copied ? '#8de3af' : '#cbd5e1',
           borderRadius: 8, padding: pad, fontSize: fs, fontWeight: 700, cursor: 'pointer',
           display: 'inline-flex', alignItems: 'center', gap: 5,
         }}
       >
-        {copied ? '✓ Kopyalandı' : '🔗 Link'}
+        {copied ? <><Check size={13} /> Kopyalandı</> : <><Link2 size={13} /> Link</>}
       </button>
     </div>
   )

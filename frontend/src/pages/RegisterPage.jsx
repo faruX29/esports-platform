@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import TeamPicker from '../components/TeamPicker'
 import Turnstile from '../components/Turnstile'
 import { getEsportsName } from '../utils/esportsName'
+import { MessageCircle } from 'lucide-react'
 import { DISCORD_ENABLED, TURNSTILE_ENABLED } from '../features'
 
 export default function RegisterPage() {
@@ -49,7 +50,7 @@ export default function RegisterPage() {
         setSuccess('Kayıt tamamlandı! Yönlendiriliyorsun...')
         setTimeout(() => navigate('/', { replace: true }), 700)
       } else {
-        setSuccess('✅ Kayıt alındı! E-postana gönderdiğimiz doğrulama linkine tıkla, sonra giriş yap.')
+        setSuccess('Kayıt alındı! E-postana gönderdiğimiz doğrulama linkine tıkla, sonra giriş yap.')
         setTimeout(() => navigate('/login'), 3500)
       }
     } catch (err) {
@@ -67,15 +68,15 @@ export default function RegisterPage() {
     try { await signInWithDiscord() } catch (err) { setError(err.message || 'Discord girişi başarısız.') }
   }
 
-  const inputStyle = { background: '#0c0c0c', border: '1px solid #232323', color: '#fff', borderRadius: 11, padding: '11px 12px', minWidth: 0, width: '100%' }
+  const inputStyle = { background: '#131b2b', border: '1px solid #26324a', color: '#fff', borderRadius: 11, padding: '11px 12px', minWidth: 0, width: '100%' }
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'radial-gradient(ellipse at 78% 12%, rgba(200,16,46,.16), transparent 45%), radial-gradient(ellipse at 20% 88%, rgba(255,255,255,.05), transparent 45%), #0a0a0a' }}>
-      <div style={{ width: 'min(500px, 100%)', borderRadius: 18, border: '1px solid #1c1c1c', background: 'linear-gradient(160deg,#111,#0d0d0d)', overflow: 'hidden', boxShadow: '0 18px 40px rgba(0,0,0,.5)' }}>
-        <div style={{ background: 'linear-gradient(90deg,#f7f7f7,#C8102E 55%,#930d22)', padding: 9, textAlign: 'center', fontSize: 11, color: '#111', fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase' }}>New Account Registration</div>
+    <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'radial-gradient(ellipse at 78% 12%, rgba(200,16,46,.16), transparent 45%), radial-gradient(ellipse at 20% 88%, rgba(255,255,255,.05), transparent 45%), #0b0f19' }}>
+      <div style={{ width: 'min(500px, 100%)', borderRadius: 18, border: '1px solid #172032', background: 'linear-gradient(160deg,#131b2b,#131b2b)', overflow: 'hidden', boxShadow: '0 18px 40px rgba(0,0,0,.5)' }}>
+        <div style={{ background: 'linear-gradient(90deg,#e2e8f0,#C8102E 55%,#930d22)', padding: 9, textAlign: 'center', fontSize: 11, color: '#131b2b', fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase' }}>New Account Registration</div>
         <div style={{ padding: 22 }}>
-          <h1 style={{ margin: 0, fontSize: 28, lineHeight: 1.1, color: '#f2f2f2' }}>Kayıt Ol</h1>
-          <p style={{ margin: '6px 0 18px', fontSize: 13, color: '#747474' }}>Espor kimliğini oluştur — profilin ve favorilerin bulutta saklansın.</p>
+          <h1 style={{ margin: 0, fontSize: 28, lineHeight: 1.1, color: '#e2e8f0' }}>Kayıt Ol</h1>
+          <p style={{ margin: '6px 0 18px', fontSize: 13, color: '#64748b' }}>Espor kimliğini oluştur — profilin ve favorilerin bulutta saklansın.</p>
 
           <form onSubmit={onSubmit} style={{ display: 'grid', gap: 10 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -100,18 +101,18 @@ export default function RegisterPage() {
           {DISCORD_ENABLED && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0' }}>
-                <div style={{ flex: 1, height: 1, background: '#222' }} />
-                <span style={{ fontSize: 11, color: '#666' }}>veya</span>
-                <div style={{ flex: 1, height: 1, background: '#222' }} />
+                <div style={{ flex: 1, height: 1, background: '#26324a' }} />
+                <span style={{ fontSize: 11, color: '#64748b' }}>veya</span>
+                <div style={{ flex: 1, height: 1, background: '#26324a' }} />
               </div>
               <button type="button" onClick={onDiscord} style={{ width: '100%', border: 'none', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#fff', fontWeight: 800, background: '#5865F2', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <span style={{ fontSize: 16 }}>🎮</span> Discord ile Kayıt Ol
+                <MessageCircle size={16} /> Discord ile Kayıt Ol
               </button>
             </>
           )}
 
-          <div style={{ marginTop: 14, fontSize: 12, color: '#777' }}>
-            Zaten hesabın var mı? <Link to="/login" style={{ color: '#f2f2f2' }}>Giriş yap</Link>
+          <div style={{ marginTop: 14, fontSize: 12, color: '#64748b' }}>
+            Zaten hesabın var mı? <Link to="/login" style={{ color: '#e2e8f0' }}>Giriş yap</Link>
           </div>
         </div>
       </div>

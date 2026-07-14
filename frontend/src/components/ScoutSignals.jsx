@@ -8,6 +8,8 @@
  */
 import { Link } from 'react-router-dom'
 
+import { Satellite } from 'lucide-react'
+
 const TEAL = '#5eead4'
 
 /* Gerçek deep-scout verisi olan panellerin üstüne konan premium rozet. */
@@ -24,7 +26,7 @@ export function DeepScoutBadge({ label = 'Deep Scout Analitiği Aktif', source =
         ...style,
       }}
     >
-      <span style={{ fontSize: 11 }}>🛰️</span> {label}
+      <Satellite size={12} /> {label}
     </span>
   )
 }
@@ -48,7 +50,7 @@ export function StatsCoverageNotice({
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 7 }}>
-        <span style={{ fontSize: 17 }}>🛰️</span>
+        <Satellite size={17} />
         <span style={{ fontSize: 13, fontWeight: 800, color: '#d7fbf4', letterSpacing: '.3px' }}>{title}</span>
         <span style={{
           marginLeft: 'auto', fontSize: 9, fontWeight: 800, letterSpacing: '.5px',

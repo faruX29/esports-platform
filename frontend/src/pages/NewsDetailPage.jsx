@@ -22,6 +22,7 @@ import NewsCover, { scoreFromHero } from '../components/NewsCover'
 import { cleanDisplayName } from '../utils/nameCleaner'
 import { buildNewsSlug, parseNewsRef } from '../utils/newsSlug'
 import { getEsportsName } from '../utils/esportsName'
+import { X as XIcon, MessageSquare } from 'lucide-react'
 
 function isMissingTableError(error, tableName) {
   const code = error?.code || ''
@@ -204,7 +205,7 @@ function ScoutRankBadge({ score }) {
         {emblem}
       </span>
       <span style={{ color: rank.accent }}>{rank.badge}</span>
-      <span style={{ color: '#f1f1f1', opacity: 0.9 }}>#{rank.score}</span>
+      <span style={{ color: '#e2e8f0', opacity: 0.9 }}>#{rank.score}</span>
     </span>
   )
 }
@@ -222,7 +223,7 @@ function AIProbabilityBar({ story }) {
   const aFavored = predA >= predB
 
   return (
-    <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid #1a2a3a', background: 'linear-gradient(145deg,#0a1520,#0f0f0f)', padding: 16 }}>
+    <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid #1a2a3a', background: 'linear-gradient(145deg,#0a1520,#131b2b)', padding: 16 }}>
       <div style={{ fontSize: 11, color: '#7dd3fc', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800, marginBottom: 14 }}>
         AI Güç Dengesi
       </div>
@@ -232,37 +233,37 @@ function AIProbabilityBar({ story }) {
           <InitialsImage
             src={teamA.logo_url} alt={teamA.name || ''} name={teamA.name}
             width={26} height={26} borderRadius={7} objectFit='contain'
-            style={{ background: '#111', padding: 3, border: '1px solid #2a2a2a', flexShrink: 0 }}
+            style={{ background: '#131b2b', padding: 3, border: '1px solid #26324a', flexShrink: 0 }}
           />
-          <span style={{ fontSize: 13, fontWeight: 700, color: aFavored ? '#f0f0f0' : '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: aFavored ? '#e2e8f0' : '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {teamA.name}
           </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           <span style={{ fontSize: 15, fontWeight: 800, color: aFavored ? '#86efac' : '#9ca3af' }}>{pctA.toFixed(1)}%</span>
-          <span style={{ fontSize: 11, color: '#333' }}>:</span>
+          <span style={{ fontSize: 11, color: '#334155' }}>:</span>
           <span style={{ fontSize: 15, fontWeight: 800, color: !aFavored ? '#86efac' : '#9ca3af' }}>{pctB.toFixed(1)}%</span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flex: '1 1 0', justifyContent: 'flex-end' }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: !aFavored ? '#f0f0f0' : '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: !aFavored ? '#e2e8f0' : '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {teamB.name}
           </span>
           <InitialsImage
             src={teamB.logo_url} alt={teamB.name || ''} name={teamB.name}
             width={26} height={26} borderRadius={7} objectFit='contain'
-            style={{ background: '#111', padding: 3, border: '1px solid #2a2a2a', flexShrink: 0 }}
+            style={{ background: '#131b2b', padding: 3, border: '1px solid #26324a', flexShrink: 0 }}
           />
         </div>
       </div>
 
-      <div style={{ height: 10, borderRadius: 999, overflow: 'hidden', display: 'flex', background: '#141414' }}>
-        <div style={{ width: `${pctA}%`, background: aFavored ? 'linear-gradient(90deg,#C8102E,#ff4d6d)' : 'linear-gradient(90deg,#333,#444)', transition: 'width 0.4s ease' }} />
-        <div style={{ flex: 1, background: !aFavored ? 'linear-gradient(270deg,#1d4ed8,#60a5fa)' : 'linear-gradient(270deg,#222,#333)', transition: 'flex 0.4s ease' }} />
+      <div style={{ height: 10, borderRadius: 999, overflow: 'hidden', display: 'flex', background: '#131b2b' }}>
+        <div style={{ width: `${pctA}%`, background: aFavored ? 'linear-gradient(90deg,#C8102E,#ff4d6d)' : 'linear-gradient(90deg,#334155,#475569)', transition: 'width 0.4s ease' }} />
+        <div style={{ flex: 1, background: !aFavored ? 'linear-gradient(270deg,#1d4ed8,#60a5fa)' : 'linear-gradient(270deg,#26324a,#334155)', transition: 'flex 0.4s ease' }} />
       </div>
 
-      <div style={{ marginTop: 6, fontSize: 11, color: '#444', textAlign: 'center' }}>
+      <div style={{ marginTop: 6, fontSize: 11, color: '#475569', textAlign: 'center' }}>
         Model öngörüsü — favori tarafın rengi vurgulanır
       </div>
     </section>
@@ -272,17 +273,17 @@ function AIProbabilityBar({ story }) {
 function TrustLayer({ story, onReport }) {
   const isTransfer = story?.variant === 'transfer' || story?.status === 'transfer'
   return (
-    <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed #2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-      <span style={{ fontSize: 12, color: '#9a9a9a' }}>
+    <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed #26324a', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+      <span style={{ fontSize: 12, color: '#94a3b8' }}>
         {isTransfer
-          ? <>Transfer verisi <a href="https://liquipedia.net" target="_blank" rel="noopener noreferrer" style={{ color: '#8a8a8a', textDecoration: 'underline' }}>Liquipedia</a> kaynaklıdır; haber otomatik üretildi.</>
+          ? <>Transfer verisi <a href="https://liquipedia.net" target="_blank" rel="noopener noreferrer" style={{ color: '#94a3b8', textDecoration: 'underline' }}>Liquipedia</a> kaynaklıdır; haber otomatik üretildi.</>
           : 'PandaScore verileriyle otomatik uretilmistir.'}
       </span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <ShareButton path={`/news/${buildNewsSlug(story)}`} title={story.title} />
         <button
           onClick={() => onReport(story)}
-          style={{ border: '1px solid #353535', background: '#121212', color: '#ddd', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer' }}
+          style={{ border: '1px solid #334155', background: '#131b2b', color: '#e2e8f0', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer' }}
         >
           Hata Bildir
         </button>
@@ -996,12 +997,12 @@ export default function NewsDetailPage() {
   }, [story])
 
   if (loading) {
-    return <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px', color: '#888' }}>Haber detayi yukleniyor...</div>
+    return <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px', color: '#94a3b8' }}>Haber detayi yukleniyor...</div>
   }
 
   if (error || !story) {
     return (
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px', color: '#ddd' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px', color: '#e2e8f0' }}>
         <div style={{ marginBottom: 14, color: '#ff8c9a' }}>{error || 'Haber bulunamadi.'}</div>
         <Link to='/news' style={{ color: '#ffb3bd' }}>Haber akisina don</Link>
       </div>
@@ -1009,7 +1010,7 @@ export default function NewsDetailPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#090909', color: '#f2f2f2' }}>
+    <div style={{ minHeight: '100vh', background: '#0b0f19', color: '#e2e8f0' }}>
       <SeoHead
         title={story.title}
         description={story.summary || story.heroScore || ''}
@@ -1032,18 +1033,18 @@ export default function NewsDetailPage() {
 
         <Link to='/news' style={{ color: '#ffb3bd', fontSize: 13, textDecoration: 'none' }}>← Haber akisina don</Link>
 
-        <section style={{ marginTop: 14, borderRadius: 20, border: '1px solid #242424', background: 'linear-gradient(145deg,#141414,#0f0f0f)', padding: 22 }}>
+        <section style={{ marginTop: 14, borderRadius: 20, border: '1px solid #26324a', background: 'linear-gradient(145deg,#131b2b,#131b2b)', padding: 22 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
             <span style={{ fontSize: 10, fontWeight: 800, color: '#ffd2d8', padding: '4px 8px', borderRadius: 999, background: 'rgba(200,16,46,.18)', border: '1px solid rgba(200,16,46,.34)', textTransform: 'uppercase', letterSpacing: 1 }}>
               {explain.classification}
             </span>
-            <span style={{ fontSize: 10, color: '#f0f0f0', padding: '4px 8px', borderRadius: 999, background: `${story.visuals.gameColor}22`, border: `1px solid ${story.visuals.gameColor}55` }}>
+            <span style={{ fontSize: 10, color: '#e2e8f0', padding: '4px 8px', borderRadius: 999, background: `${story.visuals.gameColor}22`, border: `1px solid ${story.visuals.gameColor}55` }}>
               {story.visuals.gameLabel}
             </span>
-            <span style={{ fontSize: 10, color: '#9a9a9a', padding: '4px 8px', borderRadius: 999, border: '1px solid #2a2a2a' }}>
+            <span style={{ fontSize: 10, color: '#94a3b8', padding: '4px 8px', borderRadius: 999, border: '1px solid #26324a' }}>
               Tier {story.visuals.tier}
             </span>
-            <span style={{ marginLeft: 'auto', fontSize: 11, color: '#878787' }}>{fmtDate(story.publishedAt)}</span>
+            <span style={{ marginLeft: 'auto', fontSize: 11, color: '#94a3b8' }}>{fmtDate(story.publishedAt)}</span>
           </div>
 
           <div style={{ marginBottom: 14 }}>
@@ -1057,7 +1058,7 @@ export default function NewsDetailPage() {
           <p style={{ margin: 0, color: '#9fa3af', lineHeight: 1.85, textAlign: 'left', fontSize: 15 }}>{story.summary}</p>
 
           {story.content && story.content !== story.summary && (
-            <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid #1e1e1e' }}>
+            <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid #172032' }}>
               {story.content.split('\n\n').filter(para => para.trim()).map((para, idx) => (
                 <p key={idx} style={{ margin: idx === 0 ? 0 : '14px 0 0', color: '#9fa3af', lineHeight: 1.85, textAlign: 'left', fontSize: 15 }}>
                   {para.trim()}
@@ -1071,26 +1072,26 @@ export default function NewsDetailPage() {
 
         <AIProbabilityBar story={story} />
 
-        <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid #1f1f1f', background: '#0f0f0f', padding: 16 }}>
+        <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid #172032', background: '#131b2b', padding: 16 }}>
           <div style={{ fontSize: 11, color: '#ffb3bd', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800, marginBottom: 10 }}>
             Maç Analizi
           </div>
           <div style={{ display: 'grid', gap: 8 }}>
             {explain.explanations.map((line, idx) => (
-              <div key={idx} style={{ fontSize: 13, color: '#d4d4d4', lineHeight: 1.5, padding: '8px 10px', borderRadius: 10, border: '1px solid #252525', background: '#111' }}>
+              <div key={idx} style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.5, padding: '8px 10px', borderRadius: 10, border: '1px solid #26324a', background: '#131b2b' }}>
                 {line}
               </div>
             ))}
           </div>
         </section>
 
-        <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid #1f1f1f', background: '#0f0f0f', overflow: 'hidden' }}>
+        <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid #172032', background: '#131b2b', overflow: 'hidden' }}>
           <button
             onClick={() => setTechMetricsOpen(prev => !prev)}
             style={{
               width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '14px 16px', background: 'transparent', border: 'none', borderBottom: techMetricsOpen ? '1px solid #1a1a1a' : 'none',
-              color: '#9a9a9a', cursor: 'pointer', fontSize: 11, fontWeight: 800,
+              padding: '14px 16px', background: 'transparent', border: 'none', borderBottom: techMetricsOpen ? '1px solid #172032' : 'none',
+              color: '#94a3b8', cursor: 'pointer', fontSize: 11, fontWeight: 800,
               letterSpacing: 1, textTransform: 'uppercase',
             }}
           >
@@ -1103,46 +1104,46 @@ export default function NewsDetailPage() {
           <div style={{ maxHeight: techMetricsOpen ? 900 : 0, overflow: 'hidden', transition: 'max-height 0.3s ease' }}>
             <div style={{ padding: '14px 16px 16px' }}>
               <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', marginBottom: 12 }}>
-                <div style={{ border: '1px solid #222', borderRadius: 10, padding: '9px 10px', background: '#111' }}>
-                  <div style={{ fontSize: 10, color: '#555', marginBottom: 3 }}>Match ID</div>
+                <div style={{ border: '1px solid #26324a', borderRadius: 10, padding: '9px 10px', background: '#131b2b' }}>
+                  <div style={{ fontSize: 10, color: '#64748b', marginBottom: 3 }}>Match ID</div>
                   <div style={{ fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{story.matchId || '-'}</div>
                 </div>
-                <div style={{ border: '1px solid #222', borderRadius: 10, padding: '9px 10px', background: '#111' }}>
-                  <div style={{ fontSize: 10, color: '#555', marginBottom: 3 }}>Durum</div>
+                <div style={{ border: '1px solid #26324a', borderRadius: 10, padding: '9px 10px', background: '#131b2b' }}>
+                  <div style={{ fontSize: 10, color: '#64748b', marginBottom: 3 }}>Durum</div>
                   <div style={{ fontSize: 14, fontWeight: 800 }}>{story.status}</div>
                 </div>
-                <div style={{ border: '1px solid #222', borderRadius: 10, padding: '9px 10px', background: '#111' }}>
-                  <div style={{ fontSize: 10, color: '#555', marginBottom: 3 }}>Model Tahmini (Ham)</div>
+                <div style={{ border: '1px solid #26324a', borderRadius: 10, padding: '9px 10px', background: '#131b2b' }}>
+                  <div style={{ fontSize: 10, color: '#64748b', marginBottom: 3 }}>Model Tahmini (Ham)</div>
                   <div style={{ fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
                     {fmtPct(story.source?.predictionA)} : {fmtPct(story.source?.predictionB)}
                   </div>
                 </div>
-                <div style={{ border: '1px solid #222', borderRadius: 10, padding: '9px 10px', background: '#111' }}>
-                  <div style={{ fontSize: 10, color: '#555', marginBottom: 3 }}>Skor Marjı</div>
+                <div style={{ border: '1px solid #26324a', borderRadius: 10, padding: '9px 10px', background: '#131b2b' }}>
+                  <div style={{ fontSize: 10, color: '#64748b', marginBottom: 3 }}>Skor Marjı</div>
                   <div style={{ fontSize: 14, fontWeight: 800 }}>{story.source?.margin ?? '-'}</div>
                 </div>
               </div>
 
               {matchData && (
-                <div style={{ fontSize: 12, color: '#666', marginBottom: 10 }}>
+                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 10 }}>
                   Tarih: {fmtDate(matchData.scheduled_at)} · Turnuva: {matchData.tournament?.name || '-'}
                 </div>
               )}
 
-              <div style={{ border: '1px solid #1e1e1e', borderRadius: 10, overflow: 'hidden' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', padding: '8px 10px', fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: '.8px', background: '#0e0e0e', borderBottom: '1px solid #1e1e1e' }}>
+              <div style={{ border: '1px solid #172032', borderRadius: 10, overflow: 'hidden' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', padding: '8px 10px', fontSize: 10, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.8px', background: '#131b2b', borderBottom: '1px solid #172032' }}>
                   <div>Takım</div>
                   <div style={{ textAlign: 'right' }}>Score Metric</div>
                 </div>
                 {statsRows.length === 0 && (
-                  <div style={{ padding: '10px', color: '#555', fontSize: 12 }}>Ek match_stats verisi bulunamadı.</div>
+                  <div style={{ padding: '10px', color: '#64748b', fontSize: 12 }}>Ek match_stats verisi bulunamadı.</div>
                 )}
                 {statsRows.map((row, idx) => (
-                  <div key={`${row.team_id}_${idx}`} style={{ display: 'grid', gridTemplateColumns: '1fr 120px', padding: '9px 10px', fontSize: 12, borderBottom: idx === statsRows.length - 1 ? 'none' : '1px solid #181818', background: '#0d0d0d' }}>
-                    <div style={{ color: '#c0c0c0' }}>
+                  <div key={`${row.team_id}_${idx}`} style={{ display: 'grid', gridTemplateColumns: '1fr 120px', padding: '9px 10px', fontSize: 12, borderBottom: idx === statsRows.length - 1 ? 'none' : '1px solid #172032', background: '#131b2b' }}>
+                    <div style={{ color: '#cbd5e1' }}>
                       {Number(row.team_id) === Number(matchData?.team_a_id) ? (matchData?.team_a?.name || 'Team A') : (matchData?.team_b?.name || 'Team B')}
                     </div>
-                    <div style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: '#e0e0e0', fontWeight: 700 }}>
+                    <div style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: '#e2e8f0', fontWeight: 700 }}>
                       {Number(row?.stats?.score ?? 0).toFixed(0)}
                     </div>
                   </div>
@@ -1152,13 +1153,13 @@ export default function NewsDetailPage() {
           </div>
         </section>
 
-        <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid #1f1f1f', background: '#0f0f0f', padding: 16 }}>
+        <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid #172032', background: '#131b2b', padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ fontSize: 11, color: '#f4f4f4', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800 }}>
+              <div style={{ fontSize: 11, color: '#e2e8f0', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800 }}>
                 Forum
               </div>
-              <div style={{ fontSize: 12, color: '#8f8f8f' }}>{comments.length} yorum</div>
+              <div style={{ fontSize: 12, color: '#94a3b8' }}>{comments.length} yorum</div>
             </div>
             <div style={{ display: 'flex', gap: 4 }}>
               {[{ key: 'best', label: 'En İyi' }, { key: 'newest', label: 'En Yeni' }].map(({ key, label }) => (
@@ -1168,9 +1169,9 @@ export default function NewsDetailPage() {
                   onClick={() => setSortMode(key)}
                   style={{
                     fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 999,
-                    border: sortMode === key ? '1px solid #FF4655' : '1px solid #2d2d2d',
+                    border: sortMode === key ? '1px solid #FF4655' : '1px solid #26324a',
                     background: sortMode === key ? 'rgba(255,70,85,.12)' : 'transparent',
-                    color: sortMode === key ? '#FF4655' : '#666',
+                    color: sortMode === key ? '#FF4655' : '#64748b',
                     cursor: 'pointer', letterSpacing: '.3px',
                   }}
                 >{label}</button>
@@ -1191,7 +1192,7 @@ export default function NewsDetailPage() {
           )}
 
           {forumComingSoon ? (
-            <div style={{ border: '1px dashed #2d2d2d', borderRadius: 10, padding: '12px', color: '#888', fontSize: 12 }}>
+            <div style={{ border: '1px dashed #26324a', borderRadius: 10, padding: '12px', color: '#94a3b8', fontSize: 12 }}>
               Yorumlar yakinda.
             </div>
           ) : (
@@ -1205,22 +1206,22 @@ export default function NewsDetailPage() {
                 }}
                 placeholder='Mac analizi veya gorusunu yaz...'
                 rows={3}
-                style={{ resize: 'vertical', minHeight: 86, borderRadius: 10, border: '1px solid #2a2a2a', background: '#121212', color: '#e5e5e5', padding: '10px 12px', fontSize: 13 }}
+                style={{ resize: 'vertical', minHeight: 86, borderRadius: 10, border: '1px solid #26324a', background: '#131b2b', color: '#e2e8f0', padding: '10px 12px', fontSize: 13 }}
               />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 10, color: commentInput.length > 900 ? '#ff6b6b' : '#444' }}>
+                <span style={{ fontSize: 10, color: commentInput.length > 900 ? '#ff6b6b' : '#475569' }}>
                   {commentInput.length}/1000
                 </span>
                 <button
                   disabled={!commentInput.trim() || commentSubmitting || (!canInteract && !forumFallback)}
-                  style={{ border: '1px solid #3b3b3b', background: '#181818', color: '#f1f1f1', borderRadius: 8, padding: '8px 12px', fontSize: 12, cursor: (!canInteract && !forumFallback) ? 'not-allowed' : 'pointer', opacity: (!canInteract && !forumFallback) ? 0.5 : 1 }}
+                  style={{ border: '1px solid #334155', background: '#172032', color: '#e2e8f0', borderRadius: 8, padding: '8px 12px', fontSize: 12, cursor: (!canInteract && !forumFallback) ? 'not-allowed' : 'pointer', opacity: (!canInteract && !forumFallback) ? 0.5 : 1 }}
                 >
                   {commentSubmitting ? 'Gonderiliyor...' : 'Yorumu Gonder'}
                 </button>
               </div>
               {canInteract
-                ? <div style={{ fontSize: 11, color: '#8f8f8f' }}>Yorumun hesabinla paylasilir.</div>
-                : <div style={{ fontSize: 11, color: '#8f8f8f' }}>
+                ? <div style={{ fontSize: 11, color: '#94a3b8' }}>Yorumun hesabinla paylasilir.</div>
+                : <div style={{ fontSize: 11, color: '#94a3b8' }}>
                     Yorum yazmak icin{' '}
                     <Link to="/login" style={{ color: '#FF4655', textDecoration: 'none', fontWeight: 600 }}>giris yap</Link>
                     {' '}veya{' '}
@@ -1230,9 +1231,9 @@ export default function NewsDetailPage() {
             </form>
           )}
 
-          {commentsLoading && <div style={{ fontSize: 12, color: '#8a8a8a' }}>Forum yukleniyor...</div>}
+          {commentsLoading && <div style={{ fontSize: 12, color: '#94a3b8' }}>Forum yukleniyor...</div>}
           {!commentsLoading && comments.length === 0 && (
-            <div style={{ border: '1px dashed #2d2d2d', borderRadius: 10, padding: '12px', color: '#888', fontSize: 12 }}>
+            <div style={{ border: '1px dashed #26324a', borderRadius: 10, padding: '12px', color: '#94a3b8', fontSize: 12 }}>
               Henuz yorum yok. Ilk yorumu sen yaz.
             </div>
           )}
@@ -1246,7 +1247,7 @@ export default function NewsDetailPage() {
                 const isTopComment = comment.id === topCommentId
 
                 return (
-                  <div key={comment.id} style={{ border: isTopComment ? '1px solid rgba(255,184,0,.42)' : '1px solid #242424', borderRadius: 12, background: isTopComment ? 'linear-gradient(145deg, rgba(255,184,0,.08), #111)' : '#111', padding: '10px 11px' }}>
+                  <div key={comment.id} style={{ border: isTopComment ? '1px solid rgba(255,184,0,.42)' : '1px solid #26324a', borderRadius: 12, background: isTopComment ? 'linear-gradient(145deg, rgba(255,184,0,.08), #131b2b)' : '#131b2b', padding: '10px 11px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flexWrap: 'wrap' }}>
                         <InitialsImage
@@ -1258,7 +1259,7 @@ export default function NewsDetailPage() {
                           objectFit="cover"
                           textScale={0.38}
                         />
-                        <div style={{ fontSize: 12, color: '#d2d2d2', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{comment.author || 'Topluluk'}</div>
+                        <div style={{ fontSize: 12, color: '#e2e8f0', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{comment.author || 'Topluluk'}</div>
                         {comment.authorTeamLogo && (
                           <img src={comment.authorTeamLogo} alt={comment.authorTeamName || ''} title={comment.authorTeamName || ''}
                             style={{ width: 16, height: 16, borderRadius: 4, objectFit: 'contain', flexShrink: 0 }} />
@@ -1271,20 +1272,20 @@ export default function NewsDetailPage() {
                         )}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                        <div style={{ fontSize: 11, color: '#777' }}>{fmtDate(comment.created_at)}</div>
+                        <div style={{ fontSize: 11, color: '#64748b' }}>{fmtDate(comment.created_at)}</div>
                         {user?.id && comment.user_id === user.id && (
                           <button
                             type="button"
                             onClick={() => deleteComment(comment.id)}
                             title="Yorumu sil"
-                            style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 13, padding: '0 2px', lineHeight: 1, display: 'flex', alignItems: 'center' }}
+                            style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 13, padding: '0 2px', lineHeight: 1, display: 'flex', alignItems: 'center' }}
                             onMouseEnter={e => { e.currentTarget.style.color = '#ff6b6b' }}
-                            onMouseLeave={e => { e.currentTarget.style.color = '#555' }}
-                          >✕</button>
+                            onMouseLeave={e => { e.currentTarget.style.color = '#64748b' }}
+                          ><XIcon size={14} /></button>
                         )}
                       </div>
                     </div>
-                    <div style={{ fontSize: 13, lineHeight: 1.55, color: '#cdcdcd', marginBottom: 8 }}>{comment.comment_text}</div>
+                    <div style={{ fontSize: 13, lineHeight: 1.55, color: '#cbd5e1', marginBottom: 8 }}>{comment.comment_text}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <button
                         type='button'
@@ -1293,7 +1294,7 @@ export default function NewsDetailPage() {
                           voteComment(comment.id, 1)
                         }}
                         disabled={!canInteract}
-                        style={{ border: myVote === 1 ? '1px solid #2f6846' : '1px solid #2d2d2d', background: myVote === 1 ? '#10281a' : '#161616', color: myVote === 1 ? '#8de3af' : '#bfbfbf', borderRadius: 8, padding: '5px 8px', fontSize: 12, cursor: canInteract ? 'pointer' : 'not-allowed', animation: votePulse.commentId === comment.id && votePulse.direction === 1 ? 'voteUpPop .26s ease' : 'none' }}
+                        style={{ border: myVote === 1 ? '1px solid #2f6846' : '1px solid #26324a', background: myVote === 1 ? '#10281a' : '#131b2b', color: myVote === 1 ? '#8de3af' : '#cbd5e1', borderRadius: 8, padding: '5px 8px', fontSize: 12, cursor: canInteract ? 'pointer' : 'not-allowed', animation: votePulse.commentId === comment.id && votePulse.direction === 1 ? 'voteUpPop .26s ease' : 'none' }}
                       >
                         ▲ {voteState.up || 0}
                       </button>
@@ -1304,17 +1305,17 @@ export default function NewsDetailPage() {
                           voteComment(comment.id, -1)
                         }}
                         disabled={!canInteract}
-                        style={{ border: myVote === -1 ? '1px solid #7a3636' : '1px solid #2d2d2d', background: myVote === -1 ? '#2a1313' : '#161616', color: myVote === -1 ? '#ff9f9f' : '#bfbfbf', borderRadius: 8, padding: '5px 8px', fontSize: 12, cursor: canInteract ? 'pointer' : 'not-allowed', animation: votePulse.commentId === comment.id && votePulse.direction === -1 ? 'voteDownPop .26s ease' : 'none' }}
+                        style={{ border: myVote === -1 ? '1px solid #7a3636' : '1px solid #26324a', background: myVote === -1 ? '#2a1313' : '#131b2b', color: myVote === -1 ? '#ff9f9f' : '#cbd5e1', borderRadius: 8, padding: '5px 8px', fontSize: 12, cursor: canInteract ? 'pointer' : 'not-allowed', animation: votePulse.commentId === comment.id && votePulse.direction === -1 ? 'voteDownPop .26s ease' : 'none' }}
                       >
                         ▼ {voteState.down || 0}
                       </button>
-                      <span style={{ marginLeft: 4, fontSize: 12, color: '#a2a2a2' }}>Skor: {score}</span>
+                      <span style={{ marginLeft: 4, fontSize: 12, color: '#94a3b8' }}>Skor: {score}</span>
                       {!forumComingSoon && (
                         <button
                           type="button"
                           onClick={() => { setReplyTo(replyTo === comment.id ? null : comment.id); setReplyText('') }}
-                          style={{ marginLeft: 'auto', border: 'none', background: 'none', color: '#7dd3fc', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-                        >💬 Yanıtla</button>
+                          style={{ marginLeft: 'auto', border: 'none', background: 'none', color: '#7dd3fc', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                        ><MessageSquare size={12} /> Yanıtla</button>
                       )}
                     </div>
 
@@ -1327,7 +1328,7 @@ export default function NewsDetailPage() {
                           onKeyDown={e => { if (e.key === 'Enter') submitReply(comment.id) }}
                           placeholder={`${comment.author || 'yoruma'} yanıt yaz...`}
                           autoFocus
-                          style={{ flex: 1, background: '#161616', border: '1px solid #2a2a2a', borderRadius: 8, color: '#e5e5e5', padding: '7px 10px', fontSize: 12 }}
+                          style={{ flex: 1, background: '#131b2b', border: '1px solid #26324a', borderRadius: 8, color: '#e2e8f0', padding: '7px 10px', fontSize: 12 }}
                         />
                         <button type="button" onClick={() => submitReply(comment.id)} disabled={!replyText.trim()} style={{ border: '1px solid #2f6846', background: '#10281a', color: '#8de3af', borderRadius: 8, padding: '0 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Gönder</button>
                       </div>
@@ -1335,22 +1336,22 @@ export default function NewsDetailPage() {
 
                     {/* Yanıtlar (iç içe) */}
                     {(repliesByParent[comment.id] || []).length > 0 && (
-                      <div style={{ marginTop: 8, marginLeft: 14, paddingLeft: 10, borderLeft: '2px solid #232323', display: 'grid', gap: 6 }}>
+                      <div style={{ marginTop: 8, marginLeft: 14, paddingLeft: 10, borderLeft: '2px solid #26324a', display: 'grid', gap: 6 }}>
                         {(repliesByParent[comment.id] || []).map(reply => (
-                          <div key={reply.id} style={{ background: '#0d0d0d', border: '1px solid #1c1c1c', borderRadius: 9, padding: '7px 9px' }}>
+                          <div key={reply.id} style={{ background: '#131b2b', border: '1px solid #172032', borderRadius: 9, padding: '7px 9px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                              <span style={{ fontSize: 11, fontWeight: 700, color: '#bdbdbd' }}>{reply.author || 'Topluluk'}</span>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: '#cbd5e1' }}>{reply.author || 'Topluluk'}</span>
                               {reply.authorTeamLogo && (
                                 <img src={reply.authorTeamLogo} alt={reply.authorTeamName || ''} title={reply.authorTeamName || ''}
                                   style={{ width: 14, height: 14, borderRadius: 3, objectFit: 'contain', flexShrink: 0 }} />
                               )}
                               <ScoutRankBadge score={reply.authorScoutScore} />
-                              <span style={{ fontSize: 10, color: '#666', marginLeft: 'auto' }}>{fmtDate(reply.created_at)}</span>
+                              <span style={{ fontSize: 10, color: '#64748b', marginLeft: 'auto' }}>{fmtDate(reply.created_at)}</span>
                               {user?.id && reply.user_id === user.id && (
-                                <button type="button" onClick={() => deleteComment(reply.id)} title="Yanıtı sil" style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 12 }}>✕</button>
+                                <button type="button" onClick={() => deleteComment(reply.id)} title="Yanıtı sil" style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}><XIcon size={12} /></button>
                               )}
                             </div>
-                            <div style={{ fontSize: 12.5, lineHeight: 1.5, color: '#c4c4c4' }}>{reply.comment_text}</div>
+                            <div style={{ fontSize: 12.5, lineHeight: 1.5, color: '#cbd5e1' }}>{reply.comment_text}</div>
                           </div>
                         ))}
                       </div>

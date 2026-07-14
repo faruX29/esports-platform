@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../supabaseClient'
+import { CircleCheck } from 'lucide-react'
 
 /**
  * Şifre sıfırlama — kullanıcı e-postadaki linke tıklayınca buraya gelir.
@@ -46,21 +47,21 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'radial-gradient(ellipse at 20% 10%, rgba(200,16,46,.15), transparent 45%), #0a0a0a' }}>
-      <div style={{ width: 'min(460px, 100%)', borderRadius: 18, border: '1px solid #1c1c1c', background: 'linear-gradient(160deg,#111,#0d0d0d)', overflow: 'hidden', boxShadow: '0 18px 40px rgba(0,0,0,.5)' }}>
-        <div style={{ background: 'linear-gradient(90deg,#C8102E,#930d22 45%,#f7f7f7)', padding: 9, textAlign: 'center', fontSize: 11, color: '#fff', fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase' }}>Set New Password</div>
+    <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'radial-gradient(ellipse at 20% 10%, rgba(200,16,46,.15), transparent 45%), #0b0f19' }}>
+      <div style={{ width: 'min(460px, 100%)', borderRadius: 18, border: '1px solid #172032', background: 'linear-gradient(160deg,#131b2b,#131b2b)', overflow: 'hidden', boxShadow: '0 18px 40px rgba(0,0,0,.5)' }}>
+        <div style={{ background: 'linear-gradient(90deg,#C8102E,#930d22 45%,#e2e8f0)', padding: 9, textAlign: 'center', fontSize: 11, color: '#fff', fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase' }}>Set New Password</div>
         <div style={{ padding: 22 }}>
-          <h1 style={{ margin: 0, fontSize: 26, color: '#f2f2f2' }}>Yeni Şifre Belirle</h1>
+          <h1 style={{ margin: 0, fontSize: 26, color: '#e2e8f0' }}>Yeni Şifre Belirle</h1>
           {done ? (
-            <p style={{ marginTop: 14, fontSize: 14, color: '#4ade80' }}>✅ Şifren güncellendi! Yönlendiriliyorsun...</p>
+            <p style={{ marginTop: 14, fontSize: 14, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 6 }}><CircleCheck size={15} /> Şifren güncellendi! Yönlendiriliyorsun...</p>
           ) : (
             <>
-              <p style={{ margin: '6px 0 18px', fontSize: 13, color: '#747474' }}>
+              <p style={{ margin: '6px 0 18px', fontSize: 13, color: '#64748b' }}>
                 {ready ? 'Yeni şifreni gir.' : 'Bağlantı doğrulanıyor... (e-postadaki linkten geldiysen birkaç saniye sürebilir)'}
               </p>
               <form onSubmit={onSubmit} style={{ display: 'grid', gap: 10 }}>
-                <input type="password" required minLength={6} value={password} onChange={e => setPassword(e.target.value)} placeholder="Yeni şifre (min 6)" style={{ background: '#0c0c0c', border: '1px solid #232323', color: '#fff', borderRadius: 11, padding: '11px 12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }} />
-                <input type="password" required minLength={6} value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Yeni şifre (tekrar)" style={{ background: '#0c0c0c', border: '1px solid #232323', color: '#fff', borderRadius: 11, padding: '11px 12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }} />
+                <input type="password" required minLength={6} value={password} onChange={e => setPassword(e.target.value)} placeholder="Yeni şifre (min 6)" style={{ background: '#131b2b', border: '1px solid #26324a', color: '#fff', borderRadius: 11, padding: '11px 12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }} />
+                <input type="password" required minLength={6} value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Yeni şifre (tekrar)" style={{ background: '#131b2b', border: '1px solid #26324a', color: '#fff', borderRadius: 11, padding: '11px 12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }} />
                 <button disabled={loading} style={{ marginTop: 4, border: 'none', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#fff', fontWeight: 800, background: 'linear-gradient(135deg,#C8102E,#ff4b63)', opacity: loading ? 0.6 : 1 }}>{loading ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}</button>
                 {error && <div style={{ fontSize: 12, color: '#FF4655' }}>{error}</div>}
               </form>

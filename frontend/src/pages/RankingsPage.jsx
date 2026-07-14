@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { useGame, gameMatchesFilter, GAMES } from '../context/GameContext'
+import { useGame, GAMES } from '../context/GameContext'
 import { useUser } from '../context/UserContext'
 import { correctedScores } from '../utils/matchResult'
+import { normalizeGameId } from '../utils/gameUtils'
 
 function toNum(v) {
   const n = Number(v)
@@ -18,18 +19,42 @@ function formatPercent(v) {
   return `${Math.round(v)}%`
 }
 
-function buildPowerRankings(matches, activeGame) {
+// Turnuva tier gücü. DB'de tier BÜYÜK/küçük harf karışık + NULL geliyor → normalize.
+// Bu ağırlık hem "karşılaşılan seviye" (program gücü) hem güç tavanı olarak kullanılır.
+const TIER_STRENGTH = { s: 1.0, a: 0.66, b: 0.42, c: 0.24, d: 0.12, unranked: 0.18 }
+
+function tierKey(tier) {
+  const t = String(tier || '').trim().toLowerCase()
+  return ['s', 'a', 'b', 'c', 'd'].includes(t) ? t : 'unranked'
+}
+
+// Güncellik ağırlığı: son maçlar daha değerli (τ=120 gün → ~83 günde yarı etki).
+function recencyWeight(iso, nowMs) {
+  if (!iso) return 0.25
+  const ageDays = Math.max(0, (nowMs - new Date(iso).getTime()) / 86400000)
+  return Math.exp(-ageDays / 120)
+}
+
+// Kanonik oyuna ait TÜM game_id'ler (mükerrer kayıtlar dahil: CS2 id=2/8, LoL id=3/9).
+function resolveGameIds(activeGame, games) {
+  const canonical = normalizeGameId(activeGame) ?? String(activeGame || '').toLowerCase()
+  const ids = (games || [])
+    .filter(g => normalizeGameId(g?.slug ?? g?.name) === canonical)
+    .map(g => g?.id)
+    .filter(id => id != null)
+  return [...new Set(ids)]
+}
+
+function buildPowerRankings(matches) {
   const map = new Map()
+  const nowMs = Date.now()
 
-  const sorted = [...(matches || [])].sort((a, b) => {
-    const da = a?.scheduled_at ? new Date(a.scheduled_at).getTime() : 0
-    const db = b?.scheduled_at ? new Date(b.scheduled_at).getTime() : 0
-    return db - da
-  })
-
-  for (const m of sorted) {
+  for (const m of (matches || [])) {
     const gameName = m?.game?.name || ''
-    if (!gameMatchesFilter(gameName, activeGame)) continue
+    const tier = tierKey(m?.tournament?.tier)
+    const tierStr = TIER_STRENGTH[tier]
+    const recW = recencyWeight(m?.scheduled_at, nowMs)
+    const matchW = tierStr * recW // maç ağırlığı: hem tier hem güncellik
 
     // Skorları winner_id ile tutarlı hale getir (ters-atanmış skor quirk'i)
     const cs = correctedScores({
@@ -46,14 +71,9 @@ function buildPowerRankings(matches, activeGame) {
 
       if (!map.has(t.id)) {
         map.set(t.id, {
-          teamId: t.id,
-          team: t.data,
-          gameName,
-          wins: 0,
-          losses: 0,
-          total: 0,
-          roundsFor: 0,
-          roundsAgainst: 0,
+          teamId: t.id, team: t.data, gameName,
+          wins: 0, losses: 0, total: 0,
+          sumW: 0, sumWinW: 0, strNum: 0, strDen: 0,
           recent: [],
         })
       }
@@ -61,19 +81,21 @@ function buildPowerRankings(matches, activeGame) {
       const entry = map.get(t.id)
       entry.total += 1
 
-      // Sonuç winner_id ÖNCELİKLİ (güvenilir alan). winner_id yoksa düzeltilmiş skordan.
-      // Skorlar eşitse (Bo2 1:1 / 0:0) beraberlik → W/L sayılmaz.
+      // Sonuç winner_id ÖNCELİKLİ. Skorlar eşitse (Bo2 1:1 / 0:0) beraberlik → W/L sayılmaz.
       let outcome = null
       if (m?.winner_id != null) {
         outcome = Number(m.winner_id) === Number(t.id) ? 'W' : 'L'
       } else if (t.score != null && t.oppScore != null && t.score !== t.oppScore) {
         outcome = t.score > t.oppScore ? 'W' : 'L'
       }
-      if (outcome === 'W') entry.wins += 1
-      else if (outcome === 'L') entry.losses += 1
 
-      if (t.score != null) entry.roundsFor += t.score
-      if (t.oppScore != null) entry.roundsAgainst += t.oppScore
+      if (outcome === 'W') { entry.wins += 1; entry.sumWinW += matchW }
+      else if (outcome === 'L') { entry.losses += 1 }
+      if (outcome) entry.sumW += matchW // ağırlıklı galibiyet oranının paydası (kararlı maçlar)
+
+      // Program gücü: karşılaşılan tier'ın güncellik-ağırlıklı ortalaması (0..1)
+      entry.strNum += tierStr * recW
+      entry.strDen += recW
 
       if (entry.recent.length < 10 && outcome) {
         entry.recent.push(outcome === 'W' ? 1 : 0)
@@ -86,19 +108,16 @@ function buildPowerRankings(matches, activeGame) {
     .map(x => {
       const decided = x.wins + x.losses
       const winRate = decided > 0 ? (x.wins / decided) * 100 : 0
-      const netPerMatch = x.total > 0 ? (x.roundsFor - x.roundsAgainst) / x.total : 0
-      const netNormalized = clamp(((netPerMatch + 6) / 12) * 100, 0, 100)
+      const weightedWinRate = x.sumW > 0 ? x.sumWinW / x.sumW : 0        // 0..1 (tier+güncellik ağırlıklı)
+      const scheduleStrength = x.strDen > 0 ? x.strNum / x.strDen : 0    // 0..1 (karşılaşılan seviye)
       const recentRate = x.recent.length > 0 ? (x.recent.reduce((a, b) => a + b, 0) / x.recent.length) * 100 : winRate
-      const impactScore = clamp(winRate * 0.55 + netNormalized * 0.2 + recentRate * 0.25, 0, 100)
-      const powerScore = clamp(winRate * 0.6 + impactScore * 0.4, 0, 100)
 
-      return {
-        ...x,
-        winRate,
-        recentRate,
-        impactScore,
-        powerScore,
-      }
+      // ÇARPIMSAL model: tier güç TAVANINI belirler. Bir takım ancak yüksek tier'da
+      // kazanarak yükselebilir → B-tier bir takım (tavan ~62) bir S-tier şampiyonu (70+) ASLA geçemez.
+      const powerScore = clamp(100 * weightedWinRate * (0.35 + 0.65 * scheduleStrength), 0, 100)
+      const impactScore = clamp(scheduleStrength * 100, 0, 100) // "Kalite" sütunu: program gücü
+
+      return { ...x, winRate, recentRate, impactScore, scheduleStrength, powerScore }
     })
     .sort((a, b) => b.powerScore - a.powerScore)
 }
@@ -160,31 +179,50 @@ export default function RankingsPage() {
       setError('')
 
       try {
-        const { data, error: fetchErr } = await supabase
-          .from('matches')
-          .select(`
-            id,
-            scheduled_at,
-            status,
-            winner_id,
-            team_a_score,
-            team_b_score,
-            team_a:teams!matches_team_a_id_fkey(id,name,logo_url,acronym),
-            team_b:teams!matches_team_b_id_fkey(id,name,logo_url,acronym),
-            game:games(name)
-          `)
-          .eq('status', 'finished')
-          .not('winner_id', 'is', null)
-          // Power ranking GÜNCEL forma dayanmalı: son 180 gün + en yeniden sırala.
-          // (Geçmiş backfill 2014+ maç ekledi; ORDER'sız limit antik sonuç çekerdi.)
-          .gte('scheduled_at', new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString())
-          .order('scheduled_at', { ascending: false })
-          .limit(9000)
+        // Oyun id'lerini çöz (mükerrer kayıtlar dahil) → maçları SUNUCU-taraflı oyuna göre çek.
+        // Eskiden tüm oyunlar 9000 limitiyle birlikte çekiliyordu; CS2 hacmi bütçeyi yiyip
+        // Valorant/LoL'ü "aç bırakıyordu" (maç sayısı artmıyor hissi). Artık her oyun kendi penceresini alır.
+        const { data: games } = await supabase.from('games').select('id,name,slug')
+        const gameIds = resolveGameIds(activeGame, games)
+        const since = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString()
 
-        if (fetchErr) throw fetchErr
-        if (cancelled) return
+        // PostgREST max-rows=1000 → .limit(9000) 1000'e kırpılıyordu (ranking son ~1000 maça
+        // bakıyordu, 6 ayın tamamına değil). Bütün pencereyi SAYFALAYARAK çekiyoruz.
+        const PAGE = 1000
+        const MAX_ROWS = 12000
+        let allMatches = []
+        for (let from = 0; from < MAX_ROWS; from += PAGE) {
+          let query = supabase
+            .from('matches')
+            .select(`
+              id,
+              scheduled_at,
+              status,
+              winner_id,
+              team_a_score,
+              team_b_score,
+              team_a:teams!matches_team_a_id_fkey(id,name,logo_url,acronym),
+              team_b:teams!matches_team_b_id_fkey(id,name,logo_url,acronym),
+              game:games(name),
+              tournament:tournaments(tier)
+            `)
+            .eq('status', 'finished')
+            .not('winner_id', 'is', null)
+            .gte('scheduled_at', since)
+            .order('scheduled_at', { ascending: false })
+            .range(from, from + PAGE - 1)
 
-        const computed = buildPowerRankings(data || [], activeGame)
+          if (gameIds.length) query = query.in('game_id', gameIds)
+
+          const { data: page, error: fetchErr } = await query
+          if (fetchErr) throw fetchErr
+          if (cancelled) return
+
+          allMatches = allMatches.concat(page || [])
+          if (!page || page.length < PAGE) break
+        }
+
+        const computed = buildPowerRankings(allMatches)
         setRows(computed)
       } catch (e) {
         if (!cancelled) {
@@ -237,10 +275,10 @@ export default function RankingsPage() {
         <div style={{ marginBottom: 18 }}>
           <h1 style={{ margin: 0, fontSize: 30, letterSpacing: '.5px' }}>Global Power Rankings</h1>
           <p style={{ margin: '8px 0 0', color: '#a8a8a8', fontSize: 13 }}>
-            Win Rate ve Impact Score karmasiyla uretilen dinamik global guc siralamasi.
+            Son 6 ayin maclari; turnuva tier'i ve guncellik agirlikli guc siralamasi.
           </p>
           <p style={{ margin: '6px 0 0', color: '#7f7f7f', fontSize: 12 }}>
-            Siralama her zaman tek bir oyuna gore hesaplanir.
+            Tier tavani belirler: dusuk tier bir takim yuksek tier bir sampiyonu gecemez. Siralama tek oyuna gore.
           </p>
         </div>
 
@@ -262,8 +300,8 @@ export default function RankingsPage() {
           </div>
           <div style={{ background: '#111111d9', border: '1px solid #2a2a2a', borderRadius: 14, padding: 14 }}>
             <div style={{ fontSize: 11, color: '#9a9a9a' }}>Model</div>
-            <div style={{ marginTop: 4, fontWeight: 800, fontSize: 16 }}>Power = WinRate + Impact</div>
-            <div style={{ marginTop: 2, fontSize: 12, color: '#d0d0d0' }}>Impact: skor farki + form trendi</div>
+            <div style={{ marginTop: 4, fontWeight: 800, fontSize: 16 }}>Power = Form × Tier × Güncellik</div>
+            <div style={{ marginTop: 2, fontSize: 12, color: '#d0d0d0' }}>Kalite: karşılaşılan tier (güncellik ağırlıklı)</div>
           </div>
         </div>
 
@@ -296,7 +334,7 @@ export default function RankingsPage() {
             />
             {[
               { key: 'power', label: 'Power' },
-              { key: 'impact', label: 'Impact' },
+              { key: 'impact', label: 'Kalite' },
               { key: 'winrate', label: 'Win Rate' },
               { key: 'wins', label: 'Wins' },
             ].map(btn => {
@@ -347,7 +385,7 @@ export default function RankingsPage() {
             <div>Team</div>
             <div>Record</div>
             <div>Win Rate</div>
-            <div>Impact</div>
+            <div>Kalite</div>
             <div>Power</div>
             <div>Follow</div>
           </div>

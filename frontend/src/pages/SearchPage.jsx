@@ -900,7 +900,7 @@ export default function SearchPage() {
         supabase
           .from('teams')
           .select('id, name, acronym, logo_url, location, game:games(id, name, slug)')
-          .ilike('name', `%${q}%`)
+          .or(`name.ilike.%${q}%,acronym.ilike.%${q}%`)
           .limit(12),
         supabase
           .from('players')

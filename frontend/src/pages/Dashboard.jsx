@@ -346,8 +346,8 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
     searchDebounceRef.current = setTimeout(async () => {
       const { data } = await supabase
         .from('teams')
-        .select('id,name,logo_url,game_id,game:games(id,name,slug)')
-        .ilike('name', `%${q}%`)
+        .select('id,name,acronym,logo_url,game_id,game:games(id,name,slug)')
+        .or(`name.ilike.%${q}%,acronym.ilike.%${q}%`)
         .order('name', { ascending: true })
         .limit(14)
       setSearchResults(data || [])
@@ -1227,12 +1227,17 @@ const ResultRow = memo(function ResultRow({ match: m, onMatchClick }) {
       style={{
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '9px 12px', borderRadius: 12, cursor: 'pointer',
-        background: '#131b2b', border: '1px solid #232f47', transition: 'all .15s',
+        background: '#131b2b', border: '1px solid #26324a', transition: 'background .15s, border-color .15s',
       }}
-      onMouseEnter={e => { e.currentTarget.style.background = '#172032'; e.currentTarget.style.borderColor = '#2a2a2a' }}
-      onMouseLeave={e => { e.currentTarget.style.background = '#131b2b'; e.currentTarget.style.borderColor = '#232f47' }}
+      onMouseEnter={e => { e.currentTarget.style.background = '#172032'; e.currentTarget.style.borderColor = '#33415d' }}
+      onMouseLeave={e => { e.currentTarget.style.background = '#131b2b'; e.currentTarget.style.borderColor = '#26324a' }}
     >
-      <span style={{ fontSize: 8, padding: '2px 6px', borderRadius: 4, background: '#232f47', color: '#444', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', flexShrink: 0 }}>
+      {/* Tarih/saat — bugünse sadece saat, öncesi "13 Tem HH:MM" */}
+      <span style={{ fontSize: 9.5, color: '#64748b', flexShrink: 0, width: 62, textAlign: 'center', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>
+        {fmtWhen(m.scheduled_at)}
+      </span>
+
+      <span style={{ fontSize: 8, padding: '2px 6px', borderRadius: 4, background: '#232f47', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', flexShrink: 0 }}>
         {m.game?.name?.slice(0, 3).toUpperCase() || '—'}
       </span>
 
@@ -1858,7 +1863,7 @@ export default function Dashboard() {
             .select(selectStr)
             .eq('status', 'finished')
             .order('scheduled_at', { ascending: false })
-            .limit(12),
+            .limit(40),
           supabase
             .from('matches')
             .select(selectStr)
@@ -1924,11 +1929,16 @@ export default function Dashboard() {
           const involvesFav = (m) =>
             favSet.has(String(m?.team_a_id)) || favSet.has(String(m?.team_b_id)) ||
             favSet.has(String(m?.team_a?.id)) || favSet.has(String(m?.team_b?.id))
+          // Son Sonuçlar sadece üst-tier (kesin S / A) maçları göstersin — alt-tier gürültüsü olmasın.
+          const topTierOnly = (m) => {
+            const k = normalizeTierKey(m?.tournament?.tier)
+            return k === 'S' || k === 'A'
+          }
           const orderedResults = [...finished]
+            .filter(topTierOnly)
             .sort((a, b) => {
-              const fav = (involvesFav(b) ? 1 : 0) - (involvesFav(a) ? 1 : 0)
-              if (fav !== 0) return fav
-              return (isHeroTier(b?.tournament?.tier) ? 1 : 0) - (isHeroTier(a?.tournament?.tier) ? 1 : 0)
+              // Favori takım maçları en üstte; sonrası tarih-desc (finished zaten öyle sıralı, stable).
+              return (involvesFav(b) ? 1 : 0) - (involvesFav(a) ? 1 : 0)
             })
             .slice(0, 8)
           setRecentResults(orderedResults)

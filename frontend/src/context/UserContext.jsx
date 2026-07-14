@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, useRef } from 'react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from './AuthContext'
 import BRANDING from '../branding.config'
@@ -61,7 +61,11 @@ export function UserProvider({ children }) {
   const [gameIds, setGameIds] = useState(() => uniqueCanonicalGames(storedState.gameIds))
   const [teamGameMap, setTeamGameMap] = useState(() => sanitizeTeamGameMap(storedState.teamGameMap))
   const [hydratedFromDb, setHydratedFromDb] = useState(false)
-  const [syncing, setSyncing] = useState(false)
+  // Yazma islemlerini seri hale getiren kilit — art arda follow'larda yaris kosulu /
+  // veri kaybi olmaz. profileRef, persist icinde guncel profili stale kapamadan okur.
+  const writeLockRef = useRef(Promise.resolve())
+  const profileRef = useRef(profile)
+  useEffect(() => { profileRef.current = profile }, [profile])
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ teamIds, playerIds, gameIds, teamGameMap }))
@@ -137,77 +141,77 @@ export function UserProvider({ children }) {
     return () => { cancelled = true }
   }, [user?.id])
 
-  // Follow degisikliklerini veritabanina yaz.
+  // Follow degisikliklerini veritabanina yaz — debounce + seri kilit.
+  // Onceki surum: in-flight persist iptal olunca setSyncing(false) atlanip syncing
+  // kalici true'ya takiliyor, sonraki takimlar hic yazilmiyordu (F5'te 2/3 bug'i).
+  // Simdi: her degisiklik 300ms sonra SON durumu tek persist eder; yazmalar
+  // writeLockRef zincirinde sirayla kosar (cakisma/duplicate yok).
   useEffect(() => {
-    if (!user?.id || !hydratedFromDb || syncing) return
+    if (!user?.id || !hydratedFromDb) return
 
-    let cancelled = false
-
-    async function persistFollows() {
-      setSyncing(true)
-      const mappedGameIds = collectMappedGames(teamIds, teamGameMap)
-      const persistedGameIds = [...new Set([
+    const snapshot = {
+      userId: user.id,
+      teamIds: [...teamIds],
+      playerIds: [...playerIds],
+      persistedGameIds: [...new Set([
         ...uniqueCanonicalGames(gameIds),
-        ...mappedGameIds,
-      ])]
-
-      // Hedef durumu anahtar->satir haritasi olarak kur.
-      const desired = new Map()
-      for (const id of teamIds) desired.set(`team:${String(id)}`, { user_id: user.id, target_type: 'team', target_id: String(id) })
-      for (const id of playerIds) desired.set(`player:${String(id)}`, { user_id: user.id, target_type: 'player', target_id: String(id) })
-      for (const id of persistedGameIds) desired.set(`game:${String(id)}`, { user_id: user.id, target_type: 'game', target_id: String(id) })
-
-      // Mevcut satirlari oku, sadece FARKI uygula. Destructive "hepsini sil"
-      // yok — boylece kismi bir hata tum takipleri ucurmaz (F5 bug'inin ikinci savunmasi).
-      const { data: existing, error: readError } = await supabase
-        .from('follows')
-        .select('id,target_type,target_id')
-        .eq('user_id', user.id)
-
-      if (readError) {
-        console.warn('UserContext follows read:', readError.message)
-        setSyncing(false)
-        return
-      }
-
-      const existingByKey = new Map()
-      for (const row of existing || []) existingByKey.set(`${row.target_type}:${String(row.target_id)}`, row.id)
-
-      const toInsert = [...desired].filter(([key]) => !existingByKey.has(key)).map(([, row]) => row)
-      const toDeleteIds = [...existingByKey].filter(([key]) => !desired.has(key)).map(([, id]) => id)
-
-      // Once ekle (veri kaybi riski yok), sonra fazlalari sil.
-      if (toInsert.length) {
-        const { error: insError } = await supabase.from('follows').insert(toInsert)
-        if (insError) {
-          console.warn('UserContext follows insert:', insError.message)
-          setSyncing(false)
-          return
-        }
-      }
-
-      if (toDeleteIds.length) {
-        const { error: delError } = await supabase.from('follows').delete().in('id', toDeleteIds)
-        if (delError) console.warn('UserContext follows delete:', delError.message)
-      }
-
-      if (!cancelled && typeof updateProfile === 'function') {
-        const preferredTeam = teamIds[0] || null
-        if ((profile?.favorite_team_id || null) !== preferredTeam) {
-          try {
-            await updateProfile({ favorite_team_id: preferredTeam })
-          } catch (e) {
-            console.warn('UserContext profile favorite sync:', e.message)
-          }
-        }
-      }
-
-      if (!cancelled) setSyncing(false)
+        ...collectMappedGames(teamIds, teamGameMap),
+      ])],
     }
 
-    persistFollows()
-    return () => { cancelled = true }
-  }, [user?.id, hydratedFromDb, teamIds, playerIds, gameIds, teamGameMap, updateProfile, profile?.favorite_team_id, syncing])
+    const handle = setTimeout(() => {
+      writeLockRef.current = writeLockRef.current
+        .then(() => persistSnapshot(snapshot))
+        .catch(err => console.warn('UserContext persist chain:', err?.message))
+    }, 300)
+
+    return () => clearTimeout(handle)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, hydratedFromDb, teamIds, playerIds, gameIds, teamGameMap])
+
+  async function persistSnapshot({ userId, teamIds: tIds, playerIds: pIds, persistedGameIds }) {
+    // Hedef durumu anahtar->satir haritasi olarak kur.
+    const desired = new Map()
+    for (const id of tIds) desired.set(`team:${String(id)}`, { user_id: userId, target_type: 'team', target_id: String(id) })
+    for (const id of pIds) desired.set(`player:${String(id)}`, { user_id: userId, target_type: 'player', target_id: String(id) })
+    for (const id of persistedGameIds) desired.set(`game:${String(id)}`, { user_id: userId, target_type: 'game', target_id: String(id) })
+
+    // Mevcut satirlari oku, sadece FARKI uygula. Destructive "hepsini sil" yok —
+    // kismi bir hata tum takipleri ucurmaz.
+    const { data: existing, error: readError } = await supabase
+      .from('follows')
+      .select('id,target_type,target_id')
+      .eq('user_id', userId)
+
+    if (readError) { console.warn('UserContext follows read:', readError.message); return }
+
+    const existingByKey = new Map()
+    for (const row of existing || []) existingByKey.set(`${row.target_type}:${String(row.target_id)}`, row.id)
+
+    const toInsert = [...desired].filter(([key]) => !existingByKey.has(key)).map(([, row]) => row)
+    const toDeleteIds = [...existingByKey].filter(([key]) => !desired.has(key)).map(([, id]) => id)
+
+    // Once ekle (veri kaybi riski yok), sonra fazlalari sil.
+    if (toInsert.length) {
+      const { error: insError } = await supabase.from('follows').insert(toInsert)
+      if (insError) { console.warn('UserContext follows insert:', insError.message); return }
+    }
+    if (toDeleteIds.length) {
+      const { error: delError } = await supabase.from('follows').delete().in('id', toDeleteIds)
+      if (delError) console.warn('UserContext follows delete:', delError.message)
+    }
+
+    if (typeof updateProfile === 'function') {
+      const preferredTeam = tIds[0] || null
+      if ((profileRef.current?.favorite_team_id || null) !== preferredTeam) {
+        try {
+          await updateProfile({ favorite_team_id: preferredTeam })
+        } catch (e) {
+          console.warn('UserContext profile favorite sync:', e.message)
+        }
+      }
+    }
+  }
 
   function followTeam(teamId) {
     if (!teamId) return

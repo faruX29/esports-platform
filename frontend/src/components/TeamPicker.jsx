@@ -28,10 +28,11 @@ export default function TeamPicker({ value, onChange, placeholder = 'Favori takÄ
     if (!query.trim() || query.trim().length < 2) { setResults([]); return }
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
+      const q = query.trim()
       const { data } = await supabase
         .from('teams')
-        .select('id,name,logo_url')
-        .ilike('name', `%${query.trim()}%`)
+        .select('id,name,acronym,logo_url')
+        .or(`name.ilike.%${q}%,acronym.ilike.%${q}%`)
         .order('name', { ascending: true })
         .limit(8)
       setResults(data || [])

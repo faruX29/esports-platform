@@ -214,7 +214,9 @@ export default function PlayersPage() {
       setError('')
 
       try {
-        const [playersRes, teamsRes, gamesRes, playerStatsRes, teamStatsRes] = await Promise.all([
+        // match_stats (büyük JSONB, 65k satır) SADECE fallback'te gerekiyor → burada
+        // eager çekme. player_match_stats başarısız olursa aşağıda lazy çekilir.
+        const [playersRes, teamsRes, gamesRes, playerStatsRes] = await Promise.all([
           supabase
             .from('players')
             .select('id,nickname,real_name,role,image_url,nationality,team_pandascore_id')
@@ -231,10 +233,6 @@ export default function PlayersPage() {
             .from('player_match_stats')
             .select('*')
             .limit(30000),
-          supabase
-            .from('match_stats')
-            .select('team_id,stats')
-            .limit(12000),
         ])
 
         if (playersRes.error) throw playersRes.error
@@ -259,10 +257,6 @@ export default function PlayersPage() {
         if (playerStatsRes.error) {
           granularReady = false
           setMetricsSource('team_fallback')
-        }
-
-        if (!granularReady && teamStatsRes.error) {
-          throw teamStatsRes.error
         }
 
         if (granularReady) {
@@ -313,6 +307,10 @@ export default function PlayersPage() {
             }
           }
         } else {
+          // Fallback: player_match_stats yoksa takım-bazlı tahmin için match_stats'i
+          // şimdi çek (yalnız bu nadir yolda).
+          const teamStatsRes = await supabase.from('match_stats').select('team_id,stats').limit(1000)
+          if (teamStatsRes.error) throw teamStatsRes.error
           for (const row of (teamStatsRes.data || [])) {
             const teamId = row?.team_id
             if (!teamId) continue
@@ -633,7 +631,7 @@ export default function PlayersPage() {
 
         <div style={{
           border: '1px solid #26324a',
-          background: '#101010d9',
+          background: '#131b2bd9',
           borderRadius: 14,
           padding: 14,
           marginBottom: 14,

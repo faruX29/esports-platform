@@ -180,6 +180,10 @@ export default function RankingsPage() {
     let cancelled = false
 
     async function fetchData() {
+      // 'all' iken çekme: diğer effect az sonra oyunu default'a çevirip yeniden
+      // tetikler. Aksi halde ilk yüklemede boşa 12-sayfalık tüm-oyun taraması olur.
+      if (!activeGame || activeGame === 'all') return
+
       setLoading(true)
       setError('')
 

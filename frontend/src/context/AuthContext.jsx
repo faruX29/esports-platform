@@ -263,15 +263,20 @@ export function AuthProvider({ children }) {
 		}
 		const { error } = await supabase.from('profiles').upsert(payload, { onConflict: 'id' })
 		if (error) throw error
+		// payload yalnızca DEĞİŞEN alanları içerir (koşullu spread). Mevcut profilin
+		// üzerine bindir → temizlenen alanlar (null) doğru yansır; `??` fallback'i
+		// null'ı eski değere geri döndürüp "favori takım kaldırılamıyor" bug'ı yapıyordu.
 		const merged = {
+			username: buildUsername(user),
+			first_name: null,
+			last_name: null,
+			avatar_url: null,
+			favorite_team_id: null,
+			scout_score: 0,
+			show_team_badge: true,
+			...(profile || {}),
+			...payload,
 			id: user.id,
-			username: payload.username ?? profile?.username ?? buildUsername(user),
-			first_name: payload.first_name ?? profile?.first_name ?? null,
-			last_name: payload.last_name ?? profile?.last_name ?? null,
-			avatar_url: payload.avatar_url ?? profile?.avatar_url ?? null,
-			favorite_team_id: payload.favorite_team_id ?? profile?.favorite_team_id ?? null,
-			scout_score: payload.scout_score ?? profile?.scout_score ?? 0,
-			show_team_badge: payload.show_team_badge ?? profile?.show_team_badge ?? true,
 		}
 		setProfile(merged)
 		return merged

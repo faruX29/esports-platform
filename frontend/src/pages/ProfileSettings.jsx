@@ -44,12 +44,12 @@ function FollowedTeamsManager() {
   }
 
   return (
-    <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid #1c1c1c' }}>
+    <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid #26324a' }}>
       <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 4 }}>Takip Ettiğim Takımlar ({followedTeamIds.length})</div>
-      <div style={{ fontSize: 11, color: '#777', marginBottom: 12 }}>Buradaki takımların maçları ve haberleri akışında öne çıkar.</div>
+      <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 12 }}>Buradaki takımların maçları ve haberleri akışında öne çıkar.</div>
 
       {followedTeamIds.length === 0 && !loading && (
-        <div style={{ fontSize: 12, color: '#666', border: '1px dashed #262626', borderRadius: 10, padding: 12, textAlign: 'center', marginBottom: 12 }}>
+        <div style={{ fontSize: 12, color: '#64748b', border: '1px dashed #26324a', borderRadius: 10, padding: 12, textAlign: 'center', marginBottom: 12 }}>
           Henüz takım takip etmiyorsun. Aşağıdan arayıp ekleyebilirsin.
         </div>
       )}
@@ -58,24 +58,24 @@ function FollowedTeamsManager() {
         <div style={{ display: 'grid', gap: 8, marginBottom: 14 }}>
           {teams.map(team => {
             const g = normalizeGameId(team?.game?.slug ?? team?.game?.name)
-            const color = GAME_COLOR[g] || '#888'
+            const color = GAME_COLOR[g] || '#94a3b8'
             return (
-              <div key={team.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#0d0d0d', border: '1px solid #202020', borderRadius: 11, padding: '8px 12px' }}>
+              <div key={team.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#172032', border: '1px solid #26324a', borderRadius: 11, padding: '8px 12px' }}>
                 <InitialsImage src={team.logo_url} name={team.name} width={26} height={26} borderRadius={6} objectFit="contain" />
-                <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#eee', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.name}</span>
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.name}</span>
                 {g && (
                   <span style={{ fontSize: 9, fontWeight: 800, color, background: `${color}1f`, border: `1px solid ${color}55`, borderRadius: 5, padding: '2px 6px', flexShrink: 0 }}>
                     {GAME_SHORT[g] || g.toUpperCase()}
                   </span>
                 )}
-                <button type="button" onClick={() => unfollowTeam(team.id)} title="Takibi bırak" style={{ background: 'transparent', border: '1px solid #333', color: '#999', borderRadius: 8, width: 26, height: 26, cursor: 'pointer', flexShrink: 0, fontSize: 15, lineHeight: 1 }}>×</button>
+                <button type="button" onClick={() => unfollowTeam(team.id)} title="Takibi bırak" style={{ background: 'transparent', border: '1px solid #33415d', color: '#94a3b8', borderRadius: 8, width: 26, height: 26, cursor: 'pointer', flexShrink: 0, fontSize: 15, lineHeight: 1 }}>×</button>
               </div>
             )
           })}
         </div>
       )}
 
-      <span style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 6 }}>Takım ekle</span>
+      <span style={{ fontSize: 11, color: '#94a3b8', display: 'block', marginBottom: 6 }}>Takım ekle</span>
       <TeamPicker key={pickerKey} value={null} onChange={id => handleAdd(id)} placeholder="Takip etmek için takım ara..." />
     </div>
   )
@@ -130,7 +130,7 @@ export default function ProfileSettings() {
     }
   }
 
-  const inputStyle = { background: '#0d0d0d', border: '1px solid #222', borderRadius: 10, color: '#fff', padding: '10px 12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }
+  const inputStyle = { background: '#172032', border: '1px solid #26324a', borderRadius: 10, color: '#f8fafc', padding: '10px 12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }
 
   return (
     <div style={{ maxWidth: 860, margin: '0 auto', padding: '28px 16px 48px' }}>
@@ -138,29 +138,29 @@ export default function ProfileSettings() {
         <span>Turkish Pride</span>
       </div>
 
-      <div style={{ background: '#111', border: '1px solid #1a1a1a', borderTop: 'none', borderRadius: '0 0 16px 16px', padding: 20 }}>
+      <div style={{ background: '#131b2b', border: '1px solid #26324a', borderTop: 'none', borderRadius: '0 0 16px 16px', padding: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div>
             <div style={{ fontSize: 20, fontWeight: 900 }}>Profil Ayarları</div>
-            <div style={{ fontSize: 12, color: '#666' }}>{user?.email}</div>
+            <div style={{ fontSize: 12, color: '#94a3b8' }}>{user?.email}</div>
           </div>
-          <button onClick={() => navigate(-1)} style={{ background: '#0d0d0d', color: '#777', border: '1px solid #242424', borderRadius: 10, padding: '7px 11px', cursor: 'pointer' }}>Geri</button>
+          <button onClick={() => navigate(-1)} style={{ background: '#172032', color: '#94a3b8', border: '1px solid #26324a', borderRadius: 10, padding: '7px 11px', cursor: 'pointer' }}>Geri</button>
         </div>
 
         <form onSubmit={onSave} style={{ display: 'grid', gap: 12 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <label style={{ display: 'grid', gap: 6 }}>
-              <span style={{ fontSize: 11, color: '#888' }}>Ad</span>
+              <span style={{ fontSize: 11, color: '#94a3b8' }}>Ad</span>
               <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Ömer Faruk" style={inputStyle} />
             </label>
             <label style={{ display: 'grid', gap: 6 }}>
-              <span style={{ fontSize: 11, color: '#888' }}>Soyad</span>
+              <span style={{ fontSize: 11, color: '#94a3b8' }}>Soyad</span>
               <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Selçuk" style={inputStyle} />
             </label>
           </div>
 
           <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 11, color: '#888' }}>Gamertag / Oyuncu Adı</span>
+            <span style={{ fontSize: 11, color: '#94a3b8' }}>Gamertag / Oyuncu Adı</span>
             <input value={gamertag} onChange={e => setGamertag(e.target.value)} placeholder="faruks" style={inputStyle} />
           </label>
 
@@ -171,28 +171,28 @@ export default function ProfileSettings() {
           )}
 
           <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 11, color: '#888' }}>Favori Takım</span>
+            <span style={{ fontSize: 11, color: '#94a3b8' }}>Favori Takım</span>
             <TeamPicker value={favoriteTeamId} onChange={id => setFavoriteTeamId(id)} />
           </label>
 
           {/* Rozet tercihi — kullanıcı isterse takım logosunu gizler */}
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: '#0d0d0d', border: '1px solid #222', borderRadius: 10, padding: '10px 12px' }}>
-            <input type="checkbox" checked={showBadge} onChange={e => setShowBadge(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#C8102E' }} />
-            <span style={{ fontSize: 13, color: '#ddd' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: '#172032', border: '1px solid #26324a', borderRadius: 10, padding: '10px 12px' }}>
+            <input type="checkbox" checked={showBadge} onChange={e => setShowBadge(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#FF4655' }} />
+            <span style={{ fontSize: 13, color: '#cbd5e1' }}>
               Forum yorumlarımda favori takım logomu <b>göster</b>
-              <span style={{ display: 'block', fontSize: 11, color: '#777' }}>Kapatırsan yorumlarında takım rozeti çıkmaz.</span>
+              <span style={{ display: 'block', fontSize: 11, color: '#94a3b8' }}>Kapatırsan yorumlarında takım rozeti çıkmaz.</span>
             </span>
           </label>
 
           <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 11, color: '#888' }}>Avatar URL</span>
+            <span style={{ fontSize: 11, color: '#94a3b8' }}>Avatar URL</span>
             <input value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} placeholder="https://..." style={inputStyle} />
           </label>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
             {avatarUrl
-              ? <img src={avatarUrl} alt="avatar" style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', border: '2px solid #262626' }} />
-              : <div style={{ width: 42, height: 42, borderRadius: '50%', border: '2px solid #262626', display: 'grid', placeItems: 'center', color: '#bbb', fontWeight: 800 }}>{fallbackAvatar}</div>
+              ? <img src={avatarUrl} alt="avatar" style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', border: '2px solid #26324a' }} />
+              : <div style={{ width: 42, height: 42, borderRadius: '50%', border: '2px solid #26324a', display: 'grid', placeItems: 'center', color: '#94a3b8', fontWeight: 800 }}>{fallbackAvatar}</div>
             }
             <button disabled={saving} style={{ background: 'linear-gradient(135deg,#FF4655,#F0A500)', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 16px', fontWeight: 800, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>{saving ? 'Kaydediliyor...' : 'Kaydet'}</button>
             {msg && <span style={{ fontSize: 12, color: msg.startsWith('Hata') ? '#FF4655' : '#4ade80' }}>{msg}</span>}

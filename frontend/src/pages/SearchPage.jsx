@@ -707,7 +707,7 @@ export default function SearchPage() {
       const map = {}
       for (const { y, count } of results) map[y] = count
       setYearCounts(map)
-      console.log('📅 Year counts:', map)
+      if (SEARCH_DEBUG) console.log('📅 Year counts:', map)
     } catch (e) {
       console.error('fetchYearCounts:', e)
     }
@@ -809,7 +809,7 @@ export default function SearchPage() {
       const filteredData = applyGameFilter(data || [])
 
       dbg.rawCount = filteredData.length
-      console.log('🏆 fetchTournaments:', dbg)
+      if (SEARCH_DEBUG) console.log('🏆 fetchTournaments:', dbg)
 
       setTournaments(filteredData)
       setDebugInfo(dbg)
@@ -829,7 +829,7 @@ export default function SearchPage() {
    * matches.tournament_id → tournaments join
    */
   async function fetchTournamentsFallback(dbg = {}) {
-    console.log('🔄 Fallback: matches üzerinden turnuvalar sorgulanıyor...')
+    if (SEARCH_DEBUG) console.log('🔄 Fallback: matches üzerinden turnuvalar sorgulanıyor...')
     try {
       let q = supabase
         .from('matches')
@@ -886,7 +886,7 @@ export default function SearchPage() {
 
       dbg.rawCount = unique.length
       dbg.fallback = true
-      console.log('🔄 Fallback sonuç:', dbg)
+      if (SEARCH_DEBUG) console.log('🔄 Fallback sonuç:', dbg)
 
       setTournaments(unique)
       setDebugInfo(dbg)
@@ -951,7 +951,7 @@ export default function SearchPage() {
         throw new Error(baseMsg || 'Search query failed')
       }
 
-      console.log(`🔍 Search "${q}": teams=${teamRes.data?.length}, players=${playerRes.data?.length}`)
+      if (SEARCH_DEBUG) console.log(`🔍 Search "${q}": teams=${teamRes.data?.length}, players=${playerRes.data?.length}`)
 
       setTeams(teamRes.data   || [])
       setPlayers(playerRes.data || [])

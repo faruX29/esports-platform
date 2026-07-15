@@ -308,17 +308,17 @@ export default function RankingsPage() {
           gap: 12,
           marginBottom: 16,
         }}>
-          <div style={{ background: '#111111d9', border: '1px solid #26324a', borderRadius: 14, padding: 14 }}>
+          <div style={{ background: '#131b2bd9', border: '1px solid #26324a', borderRadius: 14, padding: 14 }}>
             <div style={{ fontSize: 11, color: '#94a3b8' }}>Lider</div>
             <div style={{ marginTop: 4, fontWeight: 800, fontSize: 18 }}>{top?.team?.name || '—'}</div>
             <div style={{ marginTop: 2, fontSize: 12, color: '#d74a61' }}>{top ? `${top.rating} Puan` : 'Veri bekleniyor'}</div>
           </div>
-          <div style={{ background: '#111111d9', border: '1px solid #26324a', borderRadius: 14, padding: 14 }}>
+          <div style={{ background: '#131b2bd9', border: '1px solid #26324a', borderRadius: 14, padding: 14 }}>
             <div style={{ fontSize: 11, color: '#94a3b8' }}>Listelenen Takim</div>
             <div style={{ marginTop: 4, fontWeight: 800, fontSize: 22 }}>{filtered.length}</div>
             <div style={{ marginTop: 2, fontSize: 12, color: '#e2e8f0' }}>Min. 6 mac · gercek turnuva</div>
           </div>
-          <div style={{ background: '#111111d9', border: '1px solid #26324a', borderRadius: 14, padding: 14 }}>
+          <div style={{ background: '#131b2bd9', border: '1px solid #26324a', borderRadius: 14, padding: 14 }}>
             <div style={{ fontSize: 11, color: '#94a3b8' }}>Model</div>
             <div style={{ marginTop: 4, fontWeight: 800, fontSize: 16 }}>Power = Form × Tier × Güncellik</div>
             <div style={{ marginTop: 2, fontSize: 12, color: '#e2e8f0' }}>Kalite: karşılaşılan tier (güncellik ağırlıklı)</div>

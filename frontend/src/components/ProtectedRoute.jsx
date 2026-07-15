@@ -7,7 +7,7 @@ export default function ProtectedRoute({ children }) {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '50vh', display: 'grid', placeItems: 'center', color: '#666', fontSize: 13 }}>
+      <div style={{ minHeight: '50vh', display: 'grid', placeItems: 'center', color: '#94a3b8', fontSize: 13 }}>
         Oturum kontrol ediliyor...
       </div>
     )

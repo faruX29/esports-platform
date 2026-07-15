@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useAuth } from './AuthContext'
 import BRANDING from '../branding.config'
@@ -55,12 +56,14 @@ function readStoredState() {
 
 export function UserProvider({ children }) {
   const storedState = readStoredState()
-  const { user, profile, updateProfile } = useAuth()
+  const { user, profile, updateProfile, loading: authLoading } = useAuth()
   const [teamIds, setTeamIds] = useState(() => parseTeamIds(storedState.teamIds))
   const [playerIds, setPlayerIds] = useState(() => Array.isArray(storedState.playerIds) ? storedState.playerIds : [])
   const [gameIds, setGameIds] = useState(() => uniqueCanonicalGames(storedState.gameIds))
   const [teamGameMap, setTeamGameMap] = useState(() => sanitizeTeamGameMap(storedState.teamGameMap))
   const [hydratedFromDb, setHydratedFromDb] = useState(false)
+  // Anonim takip yok — giriş yapmadan takip denemesi kayıt modalını açar.
+  const [authPromptOpen, setAuthPromptOpen] = useState(false)
   // Yazma islemlerini seri hale getiren kilit — art arda follow'larda yaris kosulu /
   // veri kaybi olmaz. profileRef, persist icinde guncel profili stale kapamadan okur.
   const writeLockRef = useRef(Promise.resolve())
@@ -76,7 +79,19 @@ export function UserProvider({ children }) {
     let cancelled = false
 
     async function loadFromDb() {
+      // Auth henüz çözülmedi — logged-in kullanicinin follow'larini yanlislikla
+      // silmemek icin bekle (bu asamada user gecici olarak null olabilir).
+      if (authLoading) return
+
       if (!user?.id) {
+        // Anonim / cikis yapilmis: yerel takip verisini temizle. Anonim takip yok;
+        // takip icin kayit gerekir. Ortak bilgisayarda onceki kullanicinin
+        // takipleri de bir sonrakine sizmaz.
+        setTeamIds([])
+        setPlayerIds([])
+        setGameIds([])
+        setTeamGameMap({})
+        try { localStorage.removeItem(STORAGE_KEY) } catch { /* yok say */ }
         setHydratedFromDb(true)
         return
       }
@@ -139,7 +154,7 @@ export function UserProvider({ children }) {
 
     loadFromDb()
     return () => { cancelled = true }
-  }, [user?.id])
+  }, [user?.id, authLoading])
 
   // Follow degisikliklerini veritabanina yaz — debounce + seri kilit.
   // Onceki surum: in-flight persist iptal olunca setSyncing(false) atlanip syncing
@@ -213,8 +228,15 @@ export function UserProvider({ children }) {
     }
   }
 
+  // Giris yoksa takip mutasyonunu engelle + kayit modalini ac. true => devam.
+  function requireAuth() {
+    if (user?.id) return true
+    setAuthPromptOpen(true)
+    return false
+  }
+
   function followTeam(teamId) {
-    if (!teamId) return
+    if (!teamId || !requireAuth()) return
     setTeamIds(prev => (prev.includes(teamId) ? prev : [...prev, teamId]))
   }
 
@@ -225,6 +247,7 @@ export function UserProvider({ children }) {
 
   function toggleTeamFollow(teamId) {
     if (!teamId) return
+    if (!teamIds.includes(teamId) && !requireAuth()) return
     setTeamIds(prev => (prev.includes(teamId)
       ? prev.filter(id => id !== teamId)
       : [...prev, teamId]))
@@ -235,7 +258,7 @@ export function UserProvider({ children }) {
   }
 
   function followPlayer(playerId) {
-    if (!playerId) return
+    if (!playerId || !requireAuth()) return
     setPlayerIds(prev => (prev.includes(playerId) ? prev : [...prev, playerId]))
   }
 
@@ -246,6 +269,7 @@ export function UserProvider({ children }) {
 
   function togglePlayerFollow(playerId) {
     if (!playerId) return
+    if (!playerIds.includes(playerId) && !requireAuth()) return
     setPlayerIds(prev => (prev.includes(playerId)
       ? prev.filter(id => id !== playerId)
       : [...prev, playerId]))
@@ -257,7 +281,7 @@ export function UserProvider({ children }) {
 
   function followGame(gameId) {
     const normalized = normalizeGameId(gameId)
-    if (!normalized) return
+    if (!normalized || !requireAuth()) return
     setGameIds(prev => (prev.includes(normalized) ? prev : [...prev, normalized]))
   }
 
@@ -270,6 +294,7 @@ export function UserProvider({ children }) {
   function toggleGameFollow(gameId) {
     const normalized = normalizeGameId(gameId)
     if (!normalized) return
+    if (!gameIds.includes(normalized) && !requireAuth()) return
     setGameIds(prev => (prev.includes(normalized)
       ? prev.filter(id => id !== normalized)
       : [...prev, normalized]))
@@ -282,6 +307,7 @@ export function UserProvider({ children }) {
   }
 
   function setFollowedTeams(nextTeamIds = [], options = {}) {
+    if (!requireAuth()) return
     const normalizedTeamIds = parseTeamIds(nextTeamIds)
     const providedMap = sanitizeTeamGameMap(options?.teamGameMap)
     const mergedMap = { ...teamGameMap, ...providedMap }
@@ -301,6 +327,7 @@ export function UserProvider({ children }) {
   }
 
   function setFollowedGames(nextGameIds = [], options = {}) {
+    if (!requireAuth()) return
     const normalizedTeamIds = parseTeamIds(options?.teamIds || teamIds)
     const providedMap = sanitizeTeamGameMap(options?.teamGameMap)
     const mergedMap = { ...teamGameMap, ...providedMap }
@@ -334,9 +361,81 @@ export function UserProvider({ children }) {
     isGameFollowed,
     setFollowedTeams,
     setFollowedGames,
-  }), [teamIds, playerIds, gameIds])
+    authPromptOpen,
+    closeAuthPrompt: () => setAuthPromptOpen(false),
+  }), [teamIds, playerIds, gameIds, authPromptOpen])
 
-  return <UserContext.Provider value={value}>{children}</UserContext.Provider>
+  return (
+    <UserContext.Provider value={value}>
+      {children}
+      {authPromptOpen && <FollowAuthPrompt onClose={() => setAuthPromptOpen(false)} />}
+    </UserContext.Provider>
+  )
+}
+
+// Anonim kullanici takip etmeye calisinca cikan kayit-yonlendirme modali.
+// Amac: anonim takip yerine kullaniciyi hesap acmaya yonlendirmek.
+function FollowAuthPrompt({ onClose }) {
+  const navigate = useNavigate()
+  function go(path) { onClose(); navigate(path) }
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000, display: 'grid', placeItems: 'center',
+        background: 'rgba(3,6,12,.72)', backdropFilter: 'blur(4px)', padding: 16,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 380, background: '#131b2b', border: '1px solid #26324a',
+          borderRadius: 16, padding: '26px 22px', textAlign: 'center',
+          boxShadow: '0 24px 60px rgba(0,0,0,.55)',
+        }}
+      >
+        <div style={{ fontSize: 15, fontWeight: 900, color: '#f8fafc', marginBottom: 6 }}>
+          Takip etmek için giriş yap
+        </div>
+        <div style={{ fontSize: 12.5, color: '#94a3b8', lineHeight: 1.6, marginBottom: 20 }}>
+          Takımlarını, oyuncularını ve oyunlarını takip et; kişisel akışın, maç
+          hatırlatmaları ve favori rozeti hesabına kayıtlı gelsin.
+        </div>
+        <div style={{ display: 'grid', gap: 9 }}>
+          <button
+            type="button"
+            onClick={() => go('/register')}
+            style={{
+              background: 'linear-gradient(135deg,#FF4655,#F0A500)', color: '#fff', border: 'none',
+              borderRadius: 11, padding: '11px 14px', fontWeight: 800, fontSize: 13.5, cursor: 'pointer',
+            }}
+          >
+            Ücretsiz hesap oluştur
+          </button>
+          <button
+            type="button"
+            onClick={() => go('/login')}
+            style={{
+              background: '#172032', color: '#cbd5e1', border: '1px solid #26324a',
+              borderRadius: 11, padding: '10px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+            }}
+          >
+            Zaten hesabım var
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: 'transparent', color: '#64748b', border: 'none',
+              padding: '4px', fontSize: 12, cursor: 'pointer',
+            }}
+          >
+            Şimdi değil
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export function useUser() {

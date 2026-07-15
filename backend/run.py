@@ -318,7 +318,18 @@ def main():
         args.accuracy_check,
         args.generate_news,
     ])
-    should_sync_matches = not args.liquipedia_enrich or has_non_enrichment_work
+    # Saf zenginleştirme/LLM-üretim işleri mevcut DB verisini okur; PandaScore maç
+    # sync'ine ihtiyaç duymaz. Tek başına çalıştıklarında (cron'daki liquipedia
+    # job'ları) gereksiz bir valorant sync tetiklemesinler.
+    enrichment_only = any([
+        args.hybrid_stats,
+        args.sync_transfers,
+        args.generate_transfers,
+        args.generate_previews,
+        args.generate_tournament_recaps,
+        args.liquipedia_enrich,
+    ])
+    should_sync_matches = has_non_enrichment_work or not enrichment_only
 
     if should_sync_matches:
         if args.all_games:

@@ -918,7 +918,7 @@ function MapRow({ map, index, teamAId }) {
       <div style={{ textAlign: 'center', minWidth: 80 }}>
         <div style={{ fontSize: 9, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 2 }}>Harita {index + 1}</div>
         <div style={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>{map.map_name || '—'}</div>
-        {map.length_seconds && <div style={{ fontSize: 9, color: '#334155', marginTop: 2 }}>⏱ {fmtDur(map.length_seconds)}</div>}
+        {map.length_seconds && <div style={{ fontSize: 9, color: '#475569', marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 3 }}><Clock size={9} /> {fmtDur(map.length_seconds)}</div>}
       </div>
       <div style={{ textAlign: 'left', fontSize: 20, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: bWon ? '#4CAF50' : aWon ? '#334155' : '#cbd5e1' }}>{map.team_b_score ?? '—'}</div>
     </div>

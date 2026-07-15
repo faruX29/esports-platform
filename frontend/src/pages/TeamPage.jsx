@@ -10,7 +10,7 @@ import { deriveWinnerTeamId, matchOutcome, correctedScores } from '../utils/matc
 import {
   Radio, CircleCheck, X as XIcon, Trophy, Star, MapPin, Flame, Swords, Users,
   Handshake, CalendarDays, ClipboardList, TriangleAlert, Video, AtSign,
-  Globe, Music, Gamepad2, Link as LinkIcon, Clock,
+  Globe, Music, Gamepad2, Link as LinkIcon, Clock, Info,
 } from 'lucide-react'
 
 // ── Yardımcılar ───────────────────────────────────────────────────────────────
@@ -640,7 +640,7 @@ export default function TeamPage() {
         ><Star size={14} fill={isFav ? '#FFD700' : 'none'} color={isFav ? '#FFD700' : 'currentColor'} /> {isFav ? 'Favori' : 'Favoriye Ekle'}</button>
 
         {/* Team identity */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24, mt: 8, marginTop: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginTop: 24 }}>
           {/* Logo */}
           <div style={{ position: 'relative', flexShrink: 0 }}>
             <InitialsImage
@@ -775,7 +775,7 @@ export default function TeamPage() {
                 <div style={{ marginBottom: 14, padding: '10px 14px', borderRadius: 10, background: 'rgba(255,184,0,.06)', border: '1px solid rgba(255,184,0,.2)', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <TriangleAlert size={14} color="#FFB800" />
                   <span style={{ fontSize: 11, color: '#94a3b8' }}>
-                    Bu kadroda {players.length} oyuncu görünüyor. Bazıları transfer olmuş ancak veri henüz güncellenmemiş olabilir. Backend&apos;den <code style={{ background: '#172032', padding: '1px 5px', borderRadius: 4, color: '#fbbf24' }}>sync_team_players</code> çalıştırıldığında roster otomatik düzelecek.
+                    Bu kadroda {players.length} oyuncu görünüyor. Bazıları transfer olmuş olabilir; güncel kadro yakında yansıyacak.
                   </span>
                 </div>
               )}
@@ -786,8 +786,8 @@ export default function TeamPage() {
 
               <TransferTimeline transfers={teamTransfers} />
 
-              <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 10, background: '#131b2b', border: '1px solid #172032', fontSize: 12, color: '#334155', textAlign: 'center' }}>
-                ℹ️ Oyuncu K/D verisi Liquipedia kapsamındaki maçlardan hesaplanır; kadro büyüdükçe zenginleşir
+              <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 10, background: '#131b2b', border: '1px solid #172032', fontSize: 12, color: '#475569', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <Info size={13} style={{ flexShrink: 0 }} /> Oyuncu K/D verisi Liquipedia kapsamındaki maçlardan hesaplanır; kadro büyüdükçe zenginleşir
               </div>
             </div>
           )

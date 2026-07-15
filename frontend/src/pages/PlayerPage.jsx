@@ -23,6 +23,7 @@ import {
   Brain, ClipboardList, Target, Swords, Skull, Handshake, Crosshair, Map as MapIcon,
   Compass, Sparkles, TriangleAlert, Star, MapPin, CircleCheck, X as XIcon, BarChart3,
   Zap, Flame, Trophy, Inbox, Video, AtSign, Globe, Music, Gamepad2, Link as LinkIcon,
+  Clock, Info,
 } from 'lucide-react'
 
 // ─── Yardımcılar ────────────────────────────────────────────────────────────
@@ -478,13 +479,13 @@ function ScoutPanel({ analytics, individual }) {
         <div style={{ display: 'flex', gap: 10 }}>
           {avgWinLen && (
             <div style={{ flex: 1, background: '#131b2b', borderRadius: 10, border: '1px solid rgba(76,175,80,.2)', padding: '10px 14px', textAlign: 'center' }}>
-              <div style={{ fontSize: 10, color: '#475569', marginBottom: 4 }}>⏱ Ortalama Galibiyet</div>
+              <div style={{ fontSize: 10, color: '#475569', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Clock size={11} /> Ortalama Galibiyet</div>
               <div style={{ fontSize: 16, fontWeight: 800, color: '#4CAF50' }}>{fmtDuration(Math.round(avgWinLen))}</div>
             </div>
           )}
           {avgLossLen && (
             <div style={{ flex: 1, background: '#131b2b', borderRadius: 10, border: '1px solid rgba(255,70,85,.2)', padding: '10px 14px', textAlign: 'center' }}>
-              <div style={{ fontSize: 10, color: '#475569', marginBottom: 4 }}>⏱ Ortalama Mağlubiyet</div>
+              <div style={{ fontSize: 10, color: '#475569', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Clock size={11} /> Ortalama Mağlubiyet</div>
               <div style={{ fontSize: 16, fontWeight: 800, color: '#FF4655' }}>{fmtDuration(Math.round(avgLossLen))}</div>
             </div>
           )}
@@ -492,8 +493,8 @@ function ScoutPanel({ analytics, individual }) {
       )}
 
       {!individual && (
-        <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, background: 'rgba(255,184,0,.05)', border: '1px solid rgba(255,184,0,.15)', fontSize: 11, color: '#64748b' }}>
-          ℹ️ Bireysel oyuncu satiri bulunamadi; takim bazli scout verisi gosteriliyor.
+        <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, background: 'rgba(255,184,0,.05)', border: '1px solid rgba(255,184,0,.15)', fontSize: 11, color: '#64748b', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Info size={12} style={{ flexShrink: 0 }} /> Bireysel oyuncu satırı bulunamadı; takım bazlı scout verisi gösteriliyor.
         </div>
       )}
     </div>
@@ -1233,8 +1234,8 @@ export default function PlayerPage() {
           <div style={{ textAlign: 'center', padding: '48px 20px', color: '#334155' }}>
             <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><Inbox size={38} color="#334155" /></div>
             <div style={{ fontSize: 14 }}>Bu oyuncu için henüz istatistik verisi yok</div>
-            <div style={{ fontSize: 12, marginTop: 6, color: '#26324a' }}>
-              Maç istatistikleri ETL sonrası güncellenir
+            <div style={{ fontSize: 12, marginTop: 6, color: '#475569' }}>
+              Maç istatistikleri işlendikçe güncellenecek
             </div>
           </div>
         )}

@@ -58,6 +58,11 @@ const Turnstile = forwardRef(function Turnstile({ onVerify, onExpire, theme = 'd
       widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: TURNSTILE_SITE_KEY,
         theme,
+        // Uzun kayıt formunda token (300s TTL) bayatlar → süre dolunca otomatik
+        // yeni challenge çöz + yeni token üret; hata olunca da otomatik yeniden dene.
+        // Böylece submit anında elde her zaman TAZE token olur ("timeout" hatası önlenir).
+        'refresh-expired': 'auto',
+        retry: 'auto',
         callback: (token) => onVerifyRef.current?.(token),
         'expired-callback': () => onExpireRef.current?.(),
         'error-callback': () => onExpireRef.current?.(),

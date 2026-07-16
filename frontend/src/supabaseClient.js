@@ -93,14 +93,26 @@ export function triggerBrowserMatchNotification(notification) {
 	}
 }
 
+function requestUrl(input) {
+	if (typeof input === 'string') return input
+	return input?.url || ''
+}
+
 async function resilientFetch(input, init) {
+	// Auth istekleri (signup/login/reset) tek-kullanımlık Turnstile captcha token'ı
+	// taşır. Ağ blip'i ya da geçici 5xx'te retry AYNI token'ı tekrar oynatır →
+	// Cloudflare "timeout-or-duplicate" döndürür ve kayıt/giriş kırılır. Ayrıca auth
+	// POST'ları idempotent değil (çift kayıt riski). → auth'ta retry YOK.
+	const isAuthRequest = requestUrl(input).includes('/auth/v1/')
+	const maxAttempts = isAuthRequest ? 0 : RETRY_ATTEMPTS
+
 	let attempt = 0
 	let lastError = null
 
-	while (attempt <= RETRY_ATTEMPTS) {
+	while (attempt <= maxAttempts) {
 		try {
 			const response = await fetch(input, init)
-			if (attempt < RETRY_ATTEMPTS && isRetryableStatus(response.status)) {
+			if (attempt < maxAttempts && isRetryableStatus(response.status)) {
 				const backoff = RETRY_BASE_DELAY_MS * (2 ** attempt)
 				await wait(backoff)
 				attempt += 1
@@ -109,7 +121,7 @@ async function resilientFetch(input, init) {
 			return response
 		} catch (err) {
 			lastError = err
-			if (attempt >= RETRY_ATTEMPTS || !isTransientNetworkError(err)) break
+			if (attempt >= maxAttempts || !isTransientNetworkError(err)) break
 			const backoff = RETRY_BASE_DELAY_MS * (2 ** attempt)
 			await wait(backoff)
 			attempt += 1

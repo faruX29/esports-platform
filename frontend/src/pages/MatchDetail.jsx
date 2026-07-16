@@ -20,6 +20,11 @@ import {
 import { getBOFormat }                              from '../utils/matchFormat'
 import { deriveWinnerTeamId, correctedScores }      from '../utils/matchResult'
 
+// MVP Oylaması şimdilik GİZLİ (kurucu kararı 2026-07-16): gerçek oyuncu istatistiği
+// altyapısı olmadan oy "en popüler oyuncu" yarışına dönüşüyor (düşük performanslı ama
+// sevilen oyuncu MVP seçilebiliyor). İstatistik motoru olgunlaşınca true yap.
+const MVP_VOTING_ENABLED = false
+
 /* ─── Voter fingerprint ─────────────────────────────────────────────────────── */
 const VOTER_KEY = 'esports_voter_id'
 const VOTED_KEY = 'esports_mvp_voted'
@@ -890,9 +895,14 @@ function TwitchEmbed({ channel }) {
 /* ─── PlayerCard ────────────────────────────────────────────────────────────── */
 function PlayerCard({ player, side = 'left' }) {
   const r = side === 'right'
+  const navigate = useNavigate()
+  const clickable = !!player.id
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 10, background: '#131b2b', border: '1px solid #172032', flexDirection: r ? 'row-reverse' : 'row', transition: 'border-color .15s,background .15s' }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = '#26324a'; e.currentTarget.style.background = '#131b2b' }}
+    <div
+      onClick={() => clickable && navigate(`/player/${player.id}`)}
+      title={clickable ? `${player.nickname} profilini gör` : undefined}
+      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 10, background: '#131b2b', border: '1px solid #172032', flexDirection: r ? 'row-reverse' : 'row', transition: 'border-color .15s,background .15s', cursor: clickable ? 'pointer' : 'default' }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = clickable ? '#FF4655' : '#26324a'; e.currentTarget.style.background = clickable ? '#172032' : '#131b2b' }}
       onMouseLeave={e => { e.currentTarget.style.borderColor = '#172032'; e.currentTarget.style.background = '#131b2b' }}
     >
       {player.image_url
@@ -1659,8 +1669,8 @@ export default function MatchDetail() {
               }
             </div>
 
-            {/* MVP */}
-            {isFin && (
+            {/* MVP Oylaması — MVP_VOTING_ENABLED ile gizli (istatistik altyapısı bekleniyor) */}
+            {MVP_VOTING_ENABLED && isFin && (
               <div style={{ background: '#131b2b', borderRadius: 16, border: '1px solid rgba(167,139,250,.15)', padding: 18 }}>
                 <ST Icon={Award} label="MVP Oylaması" />
                 <MVPVoting matchId={parseInt(id)} players={players} isFinished={isFin} />

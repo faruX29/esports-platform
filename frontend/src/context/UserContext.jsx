@@ -394,12 +394,14 @@ function FollowAuthPrompt({ onClose }) {
           boxShadow: '0 24px 60px rgba(0,0,0,.55)',
         }}
       >
-        <div style={{ fontSize: 15, fontWeight: 900, color: '#f8fafc', marginBottom: 6 }}>
-          Takip etmek için giriş yap
+        <div style={{ fontSize: 16, fontWeight: 900, color: '#f8fafc', marginBottom: 8 }}>
+          Hiçbir gelişmeyi kaçırma
         </div>
-        <div style={{ fontSize: 12.5, color: '#94a3b8', lineHeight: 1.6, marginBottom: 20 }}>
-          Takımlarını, oyuncularını ve oyunlarını takip et; kişisel akışın, maç
-          hatırlatmaları ve favori rozeti hesabına kayıtlı gelsin.
+        <div style={{ fontSize: 12.5, color: '#94a3b8', lineHeight: 1.65, marginBottom: 20 }}>
+          Takip ettiğin takımların <b style={{ color: '#cbd5e1' }}>canlı maç tahminlerini</b>,
+          anlık <b style={{ color: '#cbd5e1' }}>transfer haberlerini</b> ve maç
+          hatırlatmalarını kaçırma. <b style={{ color: '#f8fafc' }}>5 saniyede</b> ücretsiz
+          hesabını oluştur.
         </div>
         <div style={{ display: 'grid', gap: 9 }}>
           <button

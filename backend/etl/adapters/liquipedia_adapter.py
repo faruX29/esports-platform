@@ -388,8 +388,11 @@ class LiquipediaAdapter(BaseDataAdapter):
                             ORDER BY m.scheduled_at DESC NULLS LAST
                             LIMIT 1
                         ) meta ON TRUE
-                        WHERE LOWER(COALESCE(p.nickname, '')) = ANY(%s)
-                           OR LOWER(COALESCE(p.real_name, '')) = ANY(%s)
+                        WHERE (LOWER(COALESCE(p.nickname, '')) = ANY(%s)
+                               OR LOWER(COALESCE(p.real_name, '')) = ANY(%s))
+                          -- Zaten işlenmişi (başarı VEYA profile_found:false) ATLA →
+                          -- günlük cron küratör listesinde yeni yıldızlara ilerler.
+                          AND (p.extra_metadata->'liquipedia') IS NULL
                         ORDER BY
                             CASE
                                 WHEN LOWER(COALESCE(p.nickname, '')) = ANY(%s) THEN 0

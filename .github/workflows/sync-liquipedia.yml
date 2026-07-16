@@ -78,12 +78,17 @@ jobs:
           LIQUIPEDIA_API_KEY: ${{ secrets.LIQUIPEDIA_API_KEY }}
         run: python run.py --generate-tournament-recaps
 
-      # NOT: Bulk player-enrichment (Liquipedia player sayfaları) CRON'DAN ÇIKARILDI.
-      # Ölçüm: bulunamayan oyuncu ~16 dk (429 retry storm) → günde ~1 oyuncu +
-      # Liquipedia'yı yorma (compliance). "Takım geçmişi" ihtiyacı roster_changes
-      # (transfer verisi) ile zaten karşılanıyor. Belirli YILDIZLAR için hedefli:
-      # LIQUIPEDIA_PLAYER_TARGETS="faker,zeus,..." python run.py --liquipedia-enrich
-      #   --liquipedia-sections players (hedefli isimler hızlı çözülür).
+      # Küratör yıldız-oyuncu enrichment (Gemini hibrit strateji): en popüler ~50
+      # oyuncuya kariyer/sosyal/yaş çek. Liquipedia 429'ladığı için DÜŞÜK hacim
+      # (limit 5/gün) + işlenmişi atla (adapter targeted mod) → ~2 haftada liste dolar,
+      # compliance'a saygılı. Geri kalan 5300+ oyuncuda veri boşsa UI zaten gizliyor.
+      - name: Curated star-player enrichment (career/social/age, düşük hacim)
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          LIQUIPEDIA_API_KEY: ${{ secrets.LIQUIPEDIA_API_KEY }}
+          LIQUIPEDIA_PLAYER_TARGETS: "s1mple,ZywOo,NiKo,donk,m0NESY,device,ropz,sh1ro,blameF,Twistzz,broky,huNter,electronic,Ax1Le,XANTARES,woxic,Spinx,jL,frozen,degster,Faker,Chovy,Caps,Knight,Ruler,Keria,Gumayusi,Zeus,Oner,Peanut,ShowMaker,Canyon,Viper,Deft,Scout,Bin,Elk,Wei,aspas,Derke,TenZ,yay,Chronicle,Alfajer,Boaster,Less,Sacy,nAts,Zekken,cNed,Jinggg,f0rsakeN,Demon1,Zellsis,Leo,Marved,crashies"
+        run: python run.py --liquipedia-enrich --liquipedia-sections players --liquipedia-limit 5
 
       # NOT: SEO sitemap artık dinamik Vercel Edge route (frontend/api/sitemap.js,
       # Gemini #15) — statik dosya üretimi/commit'i kaldırıldı. Sitemap istek anında

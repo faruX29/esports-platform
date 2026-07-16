@@ -128,10 +128,6 @@ const SOCIAL_ICON_MAP = {
   steam: { Icon: Gamepad2, label: 'Steam' },
 }
 
-function toArray(value) {
-  return Array.isArray(value) ? value : []
-}
-
 function getPlayerSocials(player) {
   const links = player?.extra_metadata?.liquipedia?.social_links || {}
   return Object.entries(links)
@@ -146,19 +142,22 @@ function parseTransferDate(value) {
   return new Date(t)
 }
 
-function getTeamTransfers(team) {
-  const rows = toArray(team?.extra_metadata?.liquipedia?.transfers)
-  return rows
-    .map(item => {
-      const dateObj = parseTransferDate(item?.Date)
+// Transferler `roster_changes` tablosundan gelir (Liquipedia v3/wikitext ETL).
+// IN/OUT bu takıma göre: target_team_id === bu takım → katıldı (IN); source → ayrıldı (OUT).
+function mapRosterChanges(rows, teamIdNum) {
+  return (rows || [])
+    .map(row => {
+      const p = row?.raw_payload || {}
+      const isIncoming = Number(row?.target_team_id) === teamIdNum
+      const dateObj = parseTransferDate(row?.transfer_date || p?.date)
       return {
-        dateRaw: item?.Date || null,
+        dateRaw: row?.transfer_date || p?.date || null,
         dateObj,
-        player: item?.Player || 'Unknown',
-        role: item?.Role || null,
-        changeType: String(item?.JoinOrLeave || '').toLowerCase(),
-        oldTeam: item?.OldTeam || null,
-        newTeam: item?.NewTeam || null,
+        player: p?.player || 'Bilinmiyor',
+        role: p?.role || null,
+        changeType: isIncoming ? 'in' : 'out',
+        oldTeam: p?.old_team || null,
+        newTeam: p?.new_team || null,
       }
     })
     .sort((a, b) => {
@@ -461,6 +460,7 @@ export default function TeamPage() {
   const [team,     setTeam]     = useState(null)
   const [matches,  setMatches]  = useState([])
   const [players,  setPlayers]  = useState([])
+  const [teamTransfers, setTeamTransfers] = useState([])
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState(null)
   const [activeTab, setActiveTab] = useState('roster')
@@ -471,7 +471,7 @@ export default function TeamPage() {
     setLoading(true)
     setError(null)
     try {
-      const [teamRes, matchRes, playerRes] = await Promise.all([
+      const [teamRes, matchRes, playerRes, rosterChangesRes] = await Promise.all([
         supabase.from('teams').select('*').eq('id', teamId).single(),
 
         supabase.from('matches').select(`
@@ -492,6 +492,13 @@ export default function TeamPage() {
           .select('id, nickname, real_name, role, image_url, nationality, extra_metadata')
           .eq('team_pandascore_id', parseInt(teamId))
           .order('role'),
+
+        // Transferler: roster_changes tablosu (bu takıma giren/çıkan oyuncular)
+        supabase.from('roster_changes')
+          .select('source_team_id, target_team_id, transfer_date, transfer_type, raw_payload')
+          .or(`source_team_id.eq.${parseInt(teamId)},target_team_id.eq.${parseInt(teamId)}`)
+          .order('transfer_date', { ascending: false })
+          .limit(30),
       ])
 
       if (teamRes.error)   throw teamRes.error
@@ -499,6 +506,7 @@ export default function TeamPage() {
 
       setTeam(teamRes.data)
       setMatches(matchRes.data || [])
+      setTeamTransfers(mapRosterChanges(rosterChangesRes?.data, parseInt(teamId)))
       const roster = playerRes.data || []
       setPlayers(roster)
 
@@ -544,7 +552,6 @@ export default function TeamPage() {
   const draws           = pastMatches.length - wins - losses
   const rating          = calcTeamRating(wins, wins + losses)
   const isTR            = isTurkishTeam(team?.name ?? '')
-  const teamTransfers   = getTeamTransfers(team)
 
   // Last 10 matches form
   const form = [...pastMatches]

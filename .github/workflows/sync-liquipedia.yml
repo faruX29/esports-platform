@@ -47,6 +47,12 @@ jobs:
           LIQUIPEDIA_API_KEY: ${{ secrets.LIQUIPEDIA_API_KEY }}
         run: python run.py --sync-transfers --transfer-days 14
 
+      - name: Apply transfers to rosters (Liquipedia → players.team_pandascore_id)
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python apply_roster_changes.py --apply
+
       - name: Generate transfer news (LLM, bekleyen roster_changes)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

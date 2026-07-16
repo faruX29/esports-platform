@@ -1065,6 +1065,11 @@ export default function PlayerPage() {
                   {flag} {player.nationality}
                 </span>
               )}
+              {liquipediaMeta.age && (
+                <span style={{ padding: '4px 10px', borderRadius: 8, fontSize: 12, fontWeight: 700, background: '#172032', border: '1px solid #26324a', color: '#94a3b8' }}>
+                  {liquipediaMeta.age} yaş
+                </span>
+              )}
               {isTR && (
                 <span style={{ padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800, background: 'rgba(200,16,46,.2)', border: '1px solid rgba(200,16,46,.5)', color: '#ff6b7a' }}>
                   🇹🇷 Turkish Pro

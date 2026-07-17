@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://esportshub.pro/sitemap.xml
+Sitemap: https://fextesports.com/sitemap.xml

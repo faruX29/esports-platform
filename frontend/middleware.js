@@ -93,7 +93,7 @@ function htmlDoc({ title, desc, url, img, type = 'article' }) {
 <title>${t}</title>
 <meta name="description" content="${d}"/>
 <meta property="og:type" content="${type}"/>
-<meta property="og:site_name" content="EsportsHub Pro"/>
+<meta property="og:site_name" content="feXt"/>
 <meta property="og:title" content="${t}"/>
 <meta property="og:description" content="${d}"/>
 <meta property="og:url" content="${u}"/>
@@ -125,7 +125,7 @@ async function buildForMatch(id, origin, url) {
     s: score, g: gm.label, t: row.tournament?.tier, tn: row.tournament?.name, p, c: gm.accent,
   })
   const title = `${a} vs ${b}${row.tournament?.name ? ' · ' + row.tournament.name : ''}`
-  const desc = p ? `${p} · EsportsHub Pro AI analizi ve canlı skor.` : 'EsportsHub Pro — AI analizi, canlı skor ve istatistikler.'
+  const desc = p ? `${p} · feXt AI analizi ve canlı skor.` : 'feXt — AI analizi, canlı skor ve istatistikler.'
   return htmlDoc({ title, desc, url, img })
 }
 
@@ -146,7 +146,7 @@ async function buildForNews(ref, origin, url) {
     a: row.team_a_name, b: row.team_b_name, la: row.team_a_logo, lb: row.team_b_logo,
     s: scoreFromHero(row.hero_score), g: gm.label, t: row.tier, tn: row.tournament_name, c: gm.accent,
   })
-  return htmlDoc({ title: row.title || 'EsportsHub Pro', desc: row.summary || '', url, img })
+  return htmlDoc({ title: row.title || 'feXt', desc: row.summary || '', url, img })
 }
 
 export default async function middleware(req) {

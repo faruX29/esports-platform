@@ -15,7 +15,7 @@ export default function SeoHead({
   image = '',
   url = '',
   type = 'article',
-  siteName = 'EsportsHub Pro',
+  siteName = 'feXt',
 }) {
   const fullTitle = title ? `${title} | ${siteName}` : siteName
   const canonical = url || (typeof window !== 'undefined' ? window.location.href : '')

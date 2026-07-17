@@ -170,7 +170,7 @@ export default function handler(req) {
     'div',
     { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' } },
     h('div', { style: { display: 'flex', fontSize: 22, color: '#b8b8b8', fontWeight: 600, maxWidth: 780 } }, `${turkish ? '🇹🇷 ' : ''}${tournament || ''}`),
-    h('div', { style: { display: 'flex', alignItems: 'center', fontSize: 24, fontWeight: 900, color: accent } }, '⚡ EsportsHub Pro'),
+    h('div', { style: { display: 'flex', alignItems: 'center', fontSize: 26, fontWeight: 900, color: accent } }, 'feXt'),
   )
 
   const root = h(

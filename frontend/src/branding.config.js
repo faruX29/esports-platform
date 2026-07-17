@@ -1,8 +1,8 @@
 const BRANDING = {
-  productName: 'E-Sports Hub',
-  shortName: 'E-Sports Hub',
-  aiNewsSource: 'E-Sports Hub AI',
-  newsSource: 'E-Sports Hub',
+  productName: 'feXt',
+  shortName: 'feXt',
+  aiNewsSource: 'feXt AI',
+  newsSource: 'feXt',
   followStateStorageKey: 'e_sports_hub_user_follow_state_v1',
   imageFallbacks: {
     noLogo: '/no-logo.png',

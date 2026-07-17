@@ -2665,10 +2665,15 @@ export default function Dashboard() {
           border: '1px solid #232f47',
           display: 'flex', flexDirection: 'column', justifyContent: 'center',
         }}>
-          <Zap size={28} color="#FF4655" style={{ marginBottom: 8 }} />
           <h1 style={{
-            margin: '0 0 8px', fontSize: 26, fontWeight: 900, letterSpacing: '-.5px', color: '#f3f5f8',
-          }}>{BRANDING.shortName}</h1>
+            margin: '2px 0 8px', fontSize: 34, fontWeight: 800, letterSpacing: '-.02em',
+            fontFamily: "'Baloo 2','Fredoka',system-ui,sans-serif",
+          }}>
+            <span style={{ color: '#F8FAFC' }}>fe</span>
+            <span style={{ background: 'linear-gradient(135deg,#DF4888,#8B3AA0 55%,#6A297F)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              <span style={{ fontSize: '1.22em' }}>X</span>t
+            </span>
+          </h1>
           <p style={{ margin: '0 0 16px', fontSize: 11, color: '#444', lineHeight: 1.6 }}>
             Canli sonuclar · PandaScore verileri
           </p>

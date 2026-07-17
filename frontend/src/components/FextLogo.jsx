@@ -57,9 +57,9 @@ export default function FextLogo({ height = 34, wordmark = true, interactive = t
         <g dangerouslySetInnerHTML={{ __html: MASCOT_BASE }} />
         {/* Göz bebekleri — fareyi takip eder */}
         <g ref={pupilsRef} style={{ transition: 'transform .12s ease-out' }} dangerouslySetInnerHTML={{ __html: MASCOT_PUPILS }} />
-        {/* Gülümseme — nötr ağzı (gözün SAĞINDA) dar pembe yamayla kapat + dolgu mutlu ağız */}
-        <ellipse cx="221" cy="257" rx="13" ry="9" fill="#E1478A" />
-        <path d="M211 254 Q221 271 231 254 Q221 261 211 254 Z" fill="#201240" />
+        {/* Gülümseme — navy dolgu mutlu ağız; eski nötr ağzı içine alır (navy-üstü-navy,
+            gözü pembeleştirmez, yama gerekmez) */}
+        <path d="M206 250 Q225 257 244 250 Q246 273 225 275 Q204 273 206 250 Z" fill="#201240" />
         {/* Göz kapakları — blink */}
         <g>
           <ellipse className={`fext-lid${_forceBlink ? ' fext-lid-closed' : ''}`} cx="182" cy="229" rx="42" ry="41" fill="#DF4888" stroke="#201240" strokeWidth="5" />

@@ -26,6 +26,10 @@ import {
   Clock, Info,
 } from 'lucide-react'
 
+// Player Signature (imza ajan) şimdilik GİZLİ (kurucu kararı 2026-07-16): veri/gösterim
+// henüz tatmin edici değil. İleride (orantısal % gösterim + daha çok veri) tek satırla aç.
+const PLAYER_SIGNATURE_ENABLED = false
+
 // ─── Yardımcılar ────────────────────────────────────────────────────────────
 
 function fmtDate(d) {
@@ -1248,7 +1252,7 @@ export default function PlayerPage() {
         <ScoutPanel analytics={analytics} individual={individualStats} />
         <LiquipediaCredit align="center" />
 
-        <PlayerSignatureElements items={signatureElements} />
+        {PLAYER_SIGNATURE_ENABLED && <PlayerSignatureElements items={signatureElements} />}
 
         <CareerTimeline entries={careerTimelineEntries} />
 

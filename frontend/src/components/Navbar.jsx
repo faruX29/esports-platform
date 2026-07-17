@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { Menu, Trophy, X } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import BRANDING from '../branding.config'
+import FextLogo from './FextLogo'
 
 /* Nav öğesi — lucide ikon + hover state (emoji "AI havası"nı kaldırır) */
 function NavItem({ link, mobile = false }) {
@@ -106,23 +107,8 @@ export default function Navbar({ navLinks, SearchComponent }) {
         padding: '0 16px',
         height: 58,
       }}>
-        <NavLink to="/" style={{ textDecoration: 'none', marginRight: 8, flexShrink: 0, display: 'inline-flex', alignItems: 'center', height: 36 }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, lineHeight: 1 }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, transform: 'translateY(.5px)' }}>
-              <Trophy size={14} strokeWidth={2.2} color="#F0A500" />
-            </span>
-            <span style={{
-              fontSize: 16,
-              fontWeight: 900,
-              letterSpacing: '-0.5px',
-              background: 'linear-gradient(135deg,#FF4655,#F0A500)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              transform: 'translateY(.5px)',
-            }}>
-              {BRANDING.shortName}
-            </span>
-          </span>
+        <NavLink to="/" style={{ textDecoration: 'none', marginRight: 8, flexShrink: 0, display: 'inline-flex', alignItems: 'center', height: 36 }} aria-label="feXt ana sayfa">
+          <FextLogo height={30} />
         </NavLink>
 
         {!isMobile && (

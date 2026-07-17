@@ -802,8 +802,13 @@ function collectPlayerSignatureElements(extraMetadata = {}) {
 
 // player_match_stats.stats.maps[].agent'ten en çok oynanan ajanları türet (Valorant).
 // Liquipedia imza verisi (top_heroes/weapons) TÜM oyuncularda 0 → gerçek imza kaynağı bu.
+// Yeterli örneklem yoksa imza GÖSTERME — 2 maçtan "imza ajan" çıkarmak zayıf/yanıltıcı
+// durur (kurucu geri bildirimi). Toplam ajan-map < eşik ise gizle.
+const SIGNATURE_MIN_SAMPLE = 5
+
 function deriveSignatureFromMatchStats(rows = []) {
   const counts = {}
+  let total = 0
   for (const row of rows) {
     const maps = row?.stats?.maps
     if (!Array.isArray(maps)) continue
@@ -811,8 +816,10 @@ function deriveSignatureFromMatchStats(rows = []) {
       const name = String(m?.agent || '').trim()
       if (!name || name.toLowerCase() === 'null') continue
       counts[name] = (counts[name] || 0) + 1
+      total += 1
     }
   }
+  if (total < SIGNATURE_MIN_SAMPLE) return []
   return Object.entries(counts)
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'tr'))
     .slice(0, 3)

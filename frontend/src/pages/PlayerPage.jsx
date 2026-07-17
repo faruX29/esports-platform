@@ -800,6 +800,25 @@ function collectPlayerSignatureElements(extraMetadata = {}) {
     .slice(0, 3)
 }
 
+// player_match_stats.stats.maps[].agent'ten en çok oynanan ajanları türet (Valorant).
+// Liquipedia imza verisi (top_heroes/weapons) TÜM oyuncularda 0 → gerçek imza kaynağı bu.
+function deriveSignatureFromMatchStats(rows = []) {
+  const counts = {}
+  for (const row of rows) {
+    const maps = row?.stats?.maps
+    if (!Array.isArray(maps)) continue
+    for (const m of maps) {
+      const name = String(m?.agent || '').trim()
+      if (!name || name.toLowerCase() === 'null') continue
+      counts[name] = (counts[name] || 0) + 1
+    }
+  }
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'tr'))
+    .slice(0, 3)
+    .map(([name, count]) => ({ name, type: 'Agent', count, icon: null, image: null }))
+}
+
 function PlayerSignatureElements({ items = [] }) {
   if (!items.length) return null
 
@@ -838,6 +857,7 @@ export default function PlayerPage() {
   const [matches,   setMatches]   = useState([])
   const [analytics, setAnalytics] = useState(null)
   const [individualStats, setIndividualStats] = useState(null)
+  const [statSignature, setStatSignature] = useState([])
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState(null)
 
@@ -898,6 +918,9 @@ export default function PlayerPage() {
       ])
 
       if (teamRes.data) setTeam(teamRes.data)
+
+      // İmza ajanları: player_match_stats'ten türet (Liquipedia top_heroes 0 → tek gerçek kaynak)
+      setStatSignature(deriveSignatureFromMatchStats(playerStatsRes.data || []))
 
       const statsRows   = statsRes.data || []
       const teamMatches = teamMatchesRes.data || []
@@ -982,7 +1005,9 @@ export default function PlayerPage() {
   const socials = Object.entries(liquipediaMeta.social_links || {}).filter(([_, href]) => typeof href === 'string' && href.trim())
   const formerTeams = Array.isArray(liquipediaMeta.former_teams) ? liquipediaMeta.former_teams.slice(0, 6) : []
   const careerTimelineEntries = buildCareerTimelineEntries(liquipediaMeta.career_history, formerTeams)
-  const signatureElements = collectPlayerSignatureElements(player?.extra_metadata || {})
+  // Liquipedia imza verisi varsa onu, yoksa maç istatistiklerinden türetilen ajanları kullan.
+  const metaSignature = collectPlayerSignatureElements(player?.extra_metadata || {})
+  const signatureElements = metaSignature.length > 0 ? metaSignature : statSignature
 
   // ── Render ────────────────────────────────────────────────────
   return (

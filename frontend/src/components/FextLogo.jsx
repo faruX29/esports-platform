@@ -1,35 +1,38 @@
 import { useEffect, useRef } from 'react'
-import mascotRaw from '../assets/fext-mascot.svg?raw'
-
-// Mascot path'lerini <svg> sarmalayıcısı olmadan al (inline gömmek için).
-const MASCOT_INNER = mascotRaw.replace(/<svg[^>]*>/i, '').replace(/<\/svg>\s*$/i, '')
+import { MASCOT_BASE, MASCOT_PUPILS, MASCOT_VIEWBOX } from './fextMascotPaths'
 
 /**
  * FextLogo — feXt marka logosu (inline mascot + wordmark).
- * Animasyon: float (süzülme) + parallax (fareyi takip) + göz-kırpma (blink).
- * Göz kapakları gözlerin üstüne kafa-rengi elips olarak konur, arada scaleY ile iner.
+ * Animasyon:
+ *  • float   — hafif süzülme (CSS)
+ *  • göz takibi — göz bebekleri (pupiller) fareye doğru kayar (viewBox biriminde)
+ *  • blink   — arada göz kırpma (kafa-rengi göz kapağı elipsleri, scaleY)
  *
- * Props: height (px), wordmark (bool), interactive (parallax), _forceBlink (test).
+ * Props: height (px), wordmark (bool), interactive (göz takibi aç/kapa).
  */
 export default function FextLogo({ height = 34, wordmark = true, interactive = true, _forceBlink = false }) {
   const svgRef = useRef(null)
+  const pupilsRef = useRef(null)
 
   useEffect(() => {
     if (!interactive) return
-    const el = svgRef.current
-    if (!el) return
+    const svg = svgRef.current
+    const pupils = pupilsRef.current
+    if (!svg || !pupils) return
     let raf = 0
     function onMove(e) {
       if (raf) return
       raf = requestAnimationFrame(() => {
         raf = 0
-        const r = el.getBoundingClientRect()
+        const r = svg.getBoundingClientRect()
         const dx = e.clientX - (r.left + r.width / 2)
         const dy = e.clientY - (r.top + r.height / 2)
         const dist = Math.hypot(dx, dy) || 1
-        const s = Math.min(6, dist / 45)
-        el.style.setProperty('--px', ((dx / dist) * s).toFixed(2) + 'px')
-        el.style.setProperty('--py', ((dy / dist) * s).toFixed(2) + 'px')
+        // pupiller viewBox biriminde kayar (logo boyutuyla ölçeklenir)
+        const range = Math.min(7, dist / 22)
+        const px = ((dx / dist) * range).toFixed(2)
+        const py = ((dy / dist) * range).toFixed(2)
+        pupils.setAttribute('transform', `translate(${px} ${py})`)
       })
     }
     window.addEventListener('mousemove', onMove, { passive: true })
@@ -44,20 +47,19 @@ export default function FextLogo({ height = 34, wordmark = true, interactive = t
         ref={svgRef}
         width={size}
         height={size}
-        viewBox="95 130 195 205"
+        viewBox={MASCOT_VIEWBOX}
         xmlns="http://www.w3.org/2000/svg"
         role="img"
         aria-label="feXt"
-        style={{
-          display: 'block',
-          overflow: 'visible',
-          transform: 'translate(var(--px,0px), var(--py,0px))',
-          transition: 'transform .2s ease-out',
-          animation: 'fextFloat 4.2s ease-in-out infinite',
-          willChange: 'transform, translate',
-        }}
+        style={{ display: 'block', animation: 'fextFloat 4.2s ease-in-out infinite', willChange: 'translate' }}
       >
-        <g dangerouslySetInnerHTML={{ __html: MASCOT_INNER }} />
+        {/* Mascot gövdesi (pupiller hariç) */}
+        <g dangerouslySetInnerHTML={{ __html: MASCOT_BASE }} />
+        {/* Göz bebekleri — fareyi takip eder */}
+        <g ref={pupilsRef} style={{ transition: 'transform .12s ease-out' }} dangerouslySetInnerHTML={{ __html: MASCOT_PUPILS }} />
+        {/* Gülümseme — illüstrasyonun nötr ağzını pembe yamayla kapat + dolgu mutlu ağız */}
+        <path d="M195 245 Q216 237 237 245 Q242 263 216 269 Q190 263 195 245 Z" fill="#E24A8B" />
+        <path d="M203 253 Q216 273 229 253 Q216 261 203 253 Z" fill="#201240" />
         {/* Göz kapakları — blink */}
         <g>
           <ellipse className={`fext-lid${_forceBlink ? ' fext-lid-closed' : ''}`} cx="182" cy="229" rx="42" ry="41" fill="#DF4888" stroke="#201240" strokeWidth="5" />
@@ -67,8 +69,8 @@ export default function FextLogo({ height = 34, wordmark = true, interactive = t
 
       {wordmark && (
         <span style={{
-          fontSize: height, fontWeight: 800, letterSpacing: '-0.03em',
-          fontFamily: "'Baloo 2','Fredoka','Nunito',system-ui,-apple-system,'Segoe UI',sans-serif",
+          fontSize: Math.round(height * 1.06), fontWeight: 700, letterSpacing: '-0.01em',
+          fontFamily: "'Baloo 2','Fredoka',system-ui,-apple-system,'Segoe UI',sans-serif",
         }}>
           <span style={{ color: '#F8FAFC' }}>fe</span>
           <span style={{
@@ -82,10 +84,7 @@ export default function FextLogo({ height = 34, wordmark = true, interactive = t
         @keyframes fextFloat { 0%,100%{ translate: 0 0 } 50%{ translate: 0 -3px } }
         .fext-lid { transform-box: fill-box; transform-origin: center top; transform: scaleY(0); animation: fextBlink 5s ease-in-out infinite; }
         .fext-lid-closed { transform: scaleY(1) !important; animation: none !important; }
-        @keyframes fextBlink {
-          0%, 92%, 100% { transform: scaleY(0); }
-          94.5%, 96.5%  { transform: scaleY(1); }
-        }
+        @keyframes fextBlink { 0%, 92%, 100% { transform: scaleY(0); } 94.5%, 96.5% { transform: scaleY(1); } }
         @media (prefers-reduced-motion: reduce) {
           svg[aria-label="feXt"] { animation: none !important; }
           .fext-lid { animation: none !important; transform: scaleY(0) !important; }

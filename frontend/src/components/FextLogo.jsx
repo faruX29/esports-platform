@@ -57,9 +57,9 @@ export default function FextLogo({ height = 34, wordmark = true, interactive = t
         <g dangerouslySetInnerHTML={{ __html: MASCOT_BASE }} />
         {/* Göz bebekleri — fareyi takip eder */}
         <g ref={pupilsRef} style={{ transition: 'transform .12s ease-out' }} dangerouslySetInnerHTML={{ __html: MASCOT_PUPILS }} />
-        {/* Gülümseme — illüstrasyonun nötr ağzını pembe yamayla kapat + dolgu mutlu ağız */}
-        <path d="M195 245 Q216 237 237 245 Q242 263 216 269 Q190 263 195 245 Z" fill="#E24A8B" />
-        <path d="M203 253 Q216 273 229 253 Q216 261 203 253 Z" fill="#201240" />
+        {/* Gülümseme — nötr ağzı (gözün SAĞINDA) dar pembe yamayla kapat + dolgu mutlu ağız */}
+        <ellipse cx="221" cy="257" rx="13" ry="9" fill="#E1478A" />
+        <path d="M211 254 Q221 271 231 254 Q221 261 211 254 Z" fill="#201240" />
         {/* Göz kapakları — blink */}
         <g>
           <ellipse className={`fext-lid${_forceBlink ? ' fext-lid-closed' : ''}`} cx="182" cy="229" rx="42" ry="41" fill="#DF4888" stroke="#201240" strokeWidth="5" />
@@ -76,7 +76,9 @@ export default function FextLogo({ height = 34, wordmark = true, interactive = t
           <span style={{
             background: 'linear-gradient(135deg,#DF4888 0%,#8B3AA0 55%,#6A297F 100%)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-          }}>Xt</span>
+          }}>
+            <span style={{ fontSize: '1.22em' }}>X</span>t
+          </span>
         </span>
       )}
 

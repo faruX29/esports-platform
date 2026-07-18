@@ -1,28 +1,21 @@
 /**
- * Espor isim formatı — KULLANICILAR için (Gemini kararı [[auth-onboarding]]).
+ * Görünen kullanıcı adı — düz nickname (kullanıcı adı).
  *
- *   Ad "Gamertag" Soyad   →   Ömer Faruk "faruks" Selçuk
+ * NOT: Eski `Ad "Gamertag" Soyad` formatı (Lee "Faker" Sang-hyeok stili) kaldırıldı;
+ * artık her yerde sade kullanıcı adı gösterilir. Ad/Soyad yalnızca profilde saklanır,
+ * herkese açık gösterimde kullanılmaz.
  *
- * Liquipedia/turnuva-reji altın standardı (Lee "Faker" Sang-hyeok). Forum
- * yorumları, profil sayfaları ve B2B Scout raporlarında imza kimliğimiz.
- *
- * gamertag = profiles.username. first_name/last_name yoksa sade gamertag'e düşer.
+ * nickname = profiles.username. Yoksa (eski kayıtlar) ad-soyada, o da yoksa Anonim.
  */
 export function getEsportsName(profile) {
   if (!profile) return 'Anonim'
-  const first = String(profile.first_name || '').trim()
-  const last = String(profile.last_name || '').trim()
   const tag = String(profile.gamertag || profile.username || '').trim()
-
-  if (tag && (first || last)) {
-    return `${first} "${tag}" ${last}`.replace(/\s+/g, ' ').trim()
-  }
   if (tag) return tag
-  const full = `${first} ${last}`.trim()
+  const full = `${String(profile.first_name || '').trim()} ${String(profile.last_name || '').trim()}`.replace(/\s+/g, ' ').trim()
   return full || 'Anonim'
 }
 
-/** Kısa gamertag (rozet/kompakt yerler için) */
+/** Kısa nickname (rozet/kompakt yerler için) — getEsportsName ile aynı, geriye dönük uyum. */
 export function getGamertag(profile) {
   return String(profile?.gamertag || profile?.username || '').trim() || 'Anonim'
 }

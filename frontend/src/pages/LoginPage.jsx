@@ -2,13 +2,15 @@ import { useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Turnstile from '../components/Turnstile'
-import { DISCORD_ENABLED, TURNSTILE_ENABLED } from '../features'
+import PasswordInput from '../components/PasswordInput'
+import GoogleIcon from '../components/GoogleIcon'
+import { DISCORD_ENABLED, GOOGLE_ENABLED, TURNSTILE_ENABLED } from '../features'
 import { MessageCircle } from 'lucide-react'
 
 export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { signIn, signInWithDiscord } = useAuth()
+  const { signIn, signInWithDiscord, signInWithGoogle } = useAuth()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -29,7 +31,7 @@ export default function LoginPage() {
       await signIn({ email, password, captchaToken })
       navigate(location.state?.from || '/', { replace: true })
     } catch (err) {
-      setError(err.message || 'Giris basarisiz.')
+      setError(err.message || 'Giriş başarısız.')
       captchaRef.current?.reset()
       setCaptchaToken('')
     } finally {
@@ -41,42 +43,58 @@ export default function LoginPage() {
     setError('')
     try { await signInWithDiscord() } catch (err) { setError(err.message || 'Discord girişi başarısız.') }
   }
+  async function onGoogle() {
+    setError('')
+    try { await signInWithGoogle() } catch (err) { setError(err.message || 'Google girişi başarısız.') }
+  }
+
+  const inputStyle = { background: '#131b2b', border: '1px solid #26324a', color: '#fff', borderRadius: 11, padding: '11px 12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }
+  const oauthEnabled = DISCORD_ENABLED || GOOGLE_ENABLED
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'radial-gradient(ellipse at 20% 10%, rgba(200,16,46,.15), transparent 45%), radial-gradient(ellipse at 80% 90%, rgba(255,255,255,.06), transparent 45%), #0b0f19' }}>
-      <div style={{ width: 'min(460px, 100%)', borderRadius: 18, border: '1px solid #172032', background: 'linear-gradient(160deg,#131b2b,#131b2b)', overflow: 'hidden', boxShadow: '0 18px 40px rgba(0,0,0,.5)' }}>
-        <div style={{ background: 'linear-gradient(90deg,#C8102E,#930d22 45%,#e2e8f0)', padding: 9, textAlign: 'center', fontSize: 11, color: '#fff', fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase' }}>Esports Portal Access</div>
-        <div style={{ padding: 22 }}>
-          <h1 style={{ margin: 0, fontSize: 28, lineHeight: 1.1, color: '#e2e8f0' }}>Giris Yap</h1>
-          <p style={{ margin: '6px 0 18px', fontSize: 13, color: '#64748b' }}>Hesabina baglan ve takip akisini senkronize et.</p>
+    <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'radial-gradient(ellipse at 20% 10%, rgba(223,72,136,.15), transparent 45%), radial-gradient(ellipse at 80% 90%, rgba(106,41,127,.14), transparent 45%), #0b0f19' }}>
+      <div style={{ width: 'min(440px, 100%)', borderRadius: 18, border: '1px solid #26324a', background: '#131b2b', overflow: 'hidden', boxShadow: '0 18px 40px rgba(0,0,0,.5)' }}>
+        <div style={{ height: 4, background: 'linear-gradient(90deg,#DF4888,#8B3AA0 55%,#6A297F)' }} />
+        <div style={{ padding: 24 }}>
+          <h1 style={{ margin: 0, fontSize: 26, lineHeight: 1.1, color: '#f8fafc' }}>Giriş Yap</h1>
+          <p style={{ margin: '6px 0 18px', fontSize: 13, color: '#94a3b8' }}>Hesabına bağlan, takip akışını senkronize et.</p>
 
           <form onSubmit={onSubmit} style={{ display: 'grid', gap: 10 }}>
-            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="E-posta" style={{ background: '#131b2b', border: '1px solid #26324a', color: '#fff', borderRadius: 11, padding: '11px 12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }} />
-            <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="Sifre" style={{ background: '#131b2b', border: '1px solid #26324a', color: '#fff', borderRadius: 11, padding: '11px 12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }} />
+            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="E-posta" autoComplete="email" style={inputStyle} />
+            <PasswordInput required value={password} onChange={e => setPassword(e.target.value)} placeholder="Şifre" autoComplete="current-password" style={inputStyle} />
             <Turnstile ref={captchaRef} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken('')} />
-            <button disabled={loading} style={{ marginTop: 4, border: 'none', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#fff', fontWeight: 800, background: 'linear-gradient(135deg,#C8102E,#ff4b63)', opacity: loading ? 0.6 : 1 }}>{loading ? 'Baglaniliyor...' : 'Giris Yap'}</button>
+            <button disabled={loading} style={{ marginTop: 4, border: 'none', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#fff', fontWeight: 800, background: 'linear-gradient(135deg,#DF4888,#8B3AA0 55%,#6A297F)', opacity: loading ? 0.6 : 1 }}>{loading ? 'Bağlanılıyor...' : 'Giriş Yap'}</button>
             {error && <div style={{ fontSize: 12, color: '#FF4655' }}>{error}</div>}
           </form>
 
           <div style={{ marginTop: 10, textAlign: 'right' }}>
-            <Link to="/forgot-password" style={{ fontSize: 12, color: '#9db4ff', textDecoration: 'none' }}>Şifremi unuttum?</Link>
+            <Link to="/forgot-password" style={{ fontSize: 12, color: '#c98bd6', textDecoration: 'none' }}>Şifremi unuttum?</Link>
           </div>
 
-          {DISCORD_ENABLED && (
+          {oauthEnabled && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 0' }}>
                 <div style={{ flex: 1, height: 1, background: '#26324a' }} />
                 <span style={{ fontSize: 11, color: '#64748b' }}>veya</span>
                 <div style={{ flex: 1, height: 1, background: '#26324a' }} />
               </div>
-              <button type="button" onClick={onDiscord} style={{ width: '100%', border: 'none', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#fff', fontWeight: 800, background: '#5865F2', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <MessageCircle size={16} /> Discord ile Giriş Yap
-              </button>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {GOOGLE_ENABLED && (
+                  <button type="button" onClick={onGoogle} style={{ width: '100%', border: '1px solid #26324a', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', fontWeight: 700, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <GoogleIcon /> <span style={{ color: '#1f2937' }}>Google ile Giriş Yap</span>
+                  </button>
+                )}
+                {DISCORD_ENABLED && (
+                  <button type="button" onClick={onDiscord} style={{ width: '100%', border: 'none', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#fff', fontWeight: 800, background: '#5865F2', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <MessageCircle size={16} /> Discord ile Giriş Yap
+                  </button>
+                )}
+              </div>
             </>
           )}
 
-          <div style={{ marginTop: 14, fontSize: 12, color: '#64748b' }}>
-            Hesabin yok mu? <Link to="/register" style={{ color: '#e2e8f0' }}>Kayit ol</Link>
+          <div style={{ marginTop: 16, fontSize: 12, color: '#94a3b8' }}>
+            Hesabın yok mu? <Link to="/register" style={{ color: '#f8fafc' }}>Kayıt ol</Link>
           </div>
         </div>
       </div>

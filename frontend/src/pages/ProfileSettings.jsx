@@ -5,7 +5,7 @@ import { useUser } from '../context/UserContext'
 import { supabase } from '../supabaseClient'
 import TeamPicker from '../components/TeamPicker'
 import InitialsImage from '../components/InitialsImage'
-import { getEsportsName } from '../utils/esportsName'
+import PasswordInput from '../components/PasswordInput'
 import { normalizeGameId } from '../utils/gameUtils'
 
 const GAME_SHORT = { valorant: 'VAL', cs2: 'CS2', lol: 'LOL', dota2: 'DOTA2' }
@@ -83,7 +83,7 @@ function FollowedTeamsManager() {
 
 export default function ProfileSettings() {
   const navigate = useNavigate()
-  const { user, profile, updateProfile } = useAuth()
+  const { user, profile, updateProfile, updatePassword } = useAuth()
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -94,6 +94,12 @@ export default function ProfileSettings() {
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
 
+  // Şifre değiştirme (aynı sayfada, ayrı form)
+  const [newPass, setNewPass] = useState('')
+  const [confirmPass, setConfirmPass] = useState('')
+  const [pwSaving, setPwSaving] = useState(false)
+  const [pwMsg, setPwMsg] = useState('')
+
   useEffect(() => {
     setFirstName(profile?.first_name || '')
     setLastName(profile?.last_name || '')
@@ -103,7 +109,6 @@ export default function ProfileSettings() {
     setShowBadge(profile?.show_team_badge !== false)
   }, [profile])
 
-  const preview = getEsportsName({ first_name: firstName, last_name: lastName, username: gamertag })
   const fallbackAvatar = useMemo(() => {
     const source = gamertag || user?.email || 'ES'
     return source.slice(0, 2).toUpperCase()
@@ -130,13 +135,28 @@ export default function ProfileSettings() {
     }
   }
 
+  async function onChangePassword(e) {
+    e.preventDefault()
+    setPwMsg('')
+    if (newPass.length < 6) { setPwMsg('Hata: Şifre en az 6 karakter olmalı.'); return }
+    if (newPass !== confirmPass) { setPwMsg('Hata: Şifreler eşleşmiyor.'); return }
+    setPwSaving(true)
+    try {
+      await updatePassword(newPass)
+      setNewPass(''); setConfirmPass('')
+      setPwMsg('Şifren güncellendi.')
+    } catch (err) {
+      setPwMsg(`Hata: ${err.message}`)
+    } finally {
+      setPwSaving(false)
+    }
+  }
+
   const inputStyle = { background: '#172032', border: '1px solid #26324a', borderRadius: 10, color: '#f8fafc', padding: '10px 12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }
 
   return (
     <div style={{ maxWidth: 860, margin: '0 auto', padding: '28px 16px 48px' }}>
-      <div style={{ background: 'linear-gradient(90deg,#C8102E,#a00d25 40%,#001f6d)', borderRadius: '14px 14px 0 0', padding: 8, display: 'flex', justifyContent: 'center', gap: 8, fontSize: 11, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase' }}>
-        <span>Turkish Pride</span>
-      </div>
+      <div style={{ height: 4, background: 'linear-gradient(90deg,#DF4888,#8B3AA0 55%,#6A297F)', borderRadius: '14px 14px 0 0' }} />
 
       <div style={{ background: '#131b2b', border: '1px solid #26324a', borderTop: 'none', borderRadius: '0 0 16px 16px', padding: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -160,15 +180,9 @@ export default function ProfileSettings() {
           </div>
 
           <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 11, color: '#94a3b8' }}>Gamertag / Oyuncu Adı</span>
-            <input value={gamertag} onChange={e => setGamertag(e.target.value)} placeholder="faruks" style={inputStyle} />
+            <span style={{ fontSize: 11, color: '#94a3b8' }}>Kullanıcı Adı</span>
+            <input value={gamertag} onChange={e => setGamertag(e.target.value)} placeholder="kullanici_adi" style={inputStyle} />
           </label>
-
-          {gamertag.trim() && (
-            <div style={{ fontSize: 12, color: '#8fd6c9', marginTop: -4 }}>
-              Görünen adın: <b style={{ color: '#ddfffb' }}>{preview}</b>
-            </div>
-          )}
 
           <label style={{ display: 'grid', gap: 6 }}>
             <span style={{ fontSize: 11, color: '#94a3b8' }}>Favori Takım</span>
@@ -177,7 +191,7 @@ export default function ProfileSettings() {
 
           {/* Rozet tercihi — kullanıcı isterse takım logosunu gizler */}
           <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: '#172032', border: '1px solid #26324a', borderRadius: 10, padding: '10px 12px' }}>
-            <input type="checkbox" checked={showBadge} onChange={e => setShowBadge(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#FF4655' }} />
+            <input type="checkbox" checked={showBadge} onChange={e => setShowBadge(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#DF4888' }} />
             <span style={{ fontSize: 13, color: '#cbd5e1' }}>
               Forum yorumlarımda favori takım logomu <b>göster</b>
               <span style={{ display: 'block', fontSize: 11, color: '#94a3b8' }}>Kapatırsan yorumlarında takım rozeti çıkmaz.</span>
@@ -194,8 +208,22 @@ export default function ProfileSettings() {
               ? <img src={avatarUrl} alt="avatar" style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', border: '2px solid #26324a' }} />
               : <div style={{ width: 42, height: 42, borderRadius: '50%', border: '2px solid #26324a', display: 'grid', placeItems: 'center', color: '#94a3b8', fontWeight: 800 }}>{fallbackAvatar}</div>
             }
-            <button disabled={saving} style={{ background: 'linear-gradient(135deg,#FF4655,#F0A500)', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 16px', fontWeight: 800, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>{saving ? 'Kaydediliyor...' : 'Kaydet'}</button>
+            <button disabled={saving} style={{ background: 'linear-gradient(135deg,#DF4888,#8B3AA0 55%,#6A297F)', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 16px', fontWeight: 800, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>{saving ? 'Kaydediliyor...' : 'Kaydet'}</button>
             {msg && <span style={{ fontSize: 12, color: msg.startsWith('Hata') ? '#FF4655' : '#4ade80' }}>{msg}</span>}
+          </div>
+        </form>
+
+        {/* Şifre değiştirme — sadece e-posta/şifre ile giriş yapanlar için anlamlı;
+            Google/Discord kullanıcıları da yeni bir şifre atayarak e-posta girişi açabilir. */}
+        <form onSubmit={onChangePassword} style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid #26324a', display: 'grid', gap: 10 }}>
+          <div style={{ fontSize: 14, fontWeight: 800 }}>Şifre Değiştir</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <PasswordInput value={newPass} onChange={e => setNewPass(e.target.value)} placeholder="Yeni şifre (min 6)" autoComplete="new-password" style={{ ...inputStyle, background: '#131b2b' }} />
+            <PasswordInput value={confirmPass} onChange={e => setConfirmPass(e.target.value)} placeholder="Yeni şifre (tekrar)" autoComplete="new-password" style={{ ...inputStyle, background: '#131b2b' }} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button disabled={pwSaving || !newPass} style={{ background: '#172032', color: '#f8fafc', border: '1px solid #26324a', borderRadius: 10, padding: '10px 16px', fontWeight: 700, cursor: 'pointer', opacity: (pwSaving || !newPass) ? 0.6 : 1 }}>{pwSaving ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}</button>
+            {pwMsg && <span style={{ fontSize: 12, color: pwMsg.startsWith('Hata') ? '#FF4655' : '#4ade80' }}>{pwMsg}</span>}
           </div>
         </form>
 

@@ -564,10 +564,27 @@ function RealtimeToastBridge() {
   )
 }
 
+/* ─── RecoveryGate ──────────────────────────────────────────────────────────────
+   Şifre-kurtarma linkinden gelen kullanıcı, YENİ ŞİFRE belirlemeden hiçbir sayfaya
+   gidemesin — aksi halde link'le girip şifre koymadan çıkınca eski (bilinmeyen)
+   şifreye kilitleniyordu. Yeni şifre kaydedilince (veya çıkış) recoveryMode temizlenir. */
+function RecoveryGate() {
+  const { recoveryMode } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
+  useEffect(() => {
+    if (recoveryMode && location.pathname !== '/reset-password') {
+      navigate('/reset-password', { replace: true })
+    }
+  }, [recoveryMode, location.pathname, navigate])
+  return null
+}
+
 /* ─── AppShell ──────────────────────────────────────────────────────────────── */
 function AppShell() {
   return (
     <div style={{ minHeight: '100vh', background: '#0b0f19', color: 'white' }}>
+      <RecoveryGate />
       <RealtimeToastBridge />
       <NavbarComponent navLinks={NAV_LINKS} SearchComponent={NavSearch} />
       <GameSelectorBar />

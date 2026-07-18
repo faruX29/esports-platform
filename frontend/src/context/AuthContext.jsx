@@ -18,6 +18,17 @@ export function AuthProvider({ children }) {
 	const [profile, setProfile] = useState(null)
 	const [loading, setLoading] = useState(true)
 	const [profileLoading, setProfileLoading] = useState(false)
+	// Şifre-kurtarma modu: e-postadaki linkten gelince (PASSWORD_RECOVERY) true olur.
+	// Bu modda kullanıcı YENİ ŞİFRE belirlemeden siteyi gezemez (RecoveryGate zorlar) —
+	// aksi halde link'le girip şifre koymadan çıkınca eski (bilinmeyen) şifreye takılıyordu.
+	const [recoveryMode, setRecoveryMode] = useState(() => {
+		try { return sessionStorage.getItem('fext_recovery') === '1' } catch { return false }
+	})
+
+	const clearRecoveryMode = useCallback(() => {
+		setRecoveryMode(false)
+		try { sessionStorage.removeItem('fext_recovery') } catch { /* yoksay */ }
+	}, [])
 
 	const userRef = useRef(null)
 	const profileRef = useRef(null)
@@ -154,6 +165,11 @@ export function AuthProvider({ children }) {
 
 		const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
 			if (!mounted) return
+			// Şifre kurtarma linkinden gelindi → yeni şifre belirlenene kadar kapıyı kilitle.
+			if (event === 'PASSWORD_RECOVERY') {
+				setRecoveryMode(true)
+				try { sessionStorage.setItem('fext_recovery', '1') } catch { /* yoksay */ }
+			}
 			// Token refresh eventlerinde profile sorgusunu tekrar tekrar tetikleme.
 			if (event === 'TOKEN_REFRESHED') {
 				setSession(nextSession)
@@ -175,6 +191,21 @@ export function AuthProvider({ children }) {
 		const firstName = String(first_name || '').trim() || null
 		const lastName = String(last_name || '').trim() || null
 		const favTeam = favorite_team_id ?? null
+
+		// Kullanıcı adı benzersizliği (büyük/küçük harf duyarsız). DB'de de unique index
+		// var (nihai garanti); bu ön-kontrol kullanıcıya net hata verir. [[auth-onboarding]]
+		if (cleanUsername) {
+			const { data: taken } = await supabase
+				.from('profiles')
+				.select('id')
+				.ilike('username', cleanUsername)
+				.limit(1)
+				.maybeSingle()
+			if (taken?.id) {
+				throw new Error('Bu kullanıcı adı zaten alınmış. Başka bir tane dene.')
+			}
+		}
+
 		const { data, error } = await supabase.auth.signUp({
 			email,
 			password,
@@ -230,6 +261,17 @@ export function AuthProvider({ children }) {
 		if (error) throw error
 	}
 
+	// ── Google OAuth (e-posta yazmadan tek-tık giriş) ──────────────────────────
+	// ⚠️ Supabase → Auth → Providers → Google AÇIK olmalı + Google Cloud OAuth
+	// client kurulmalı, yoksa "provider not enabled" döner. [[auth-onboarding]]
+	async function signInWithGoogle() {
+		const { error } = await supabase.auth.signInWithOAuth({
+			provider: 'google',
+			options: { redirectTo: `${window.location.origin}/` },
+		})
+		if (error) throw error
+	}
+
 	async function signIn({ email, password, captchaToken }) {
 		const { data, error } = await supabase.auth.signInWithPassword({
 			email,
@@ -247,6 +289,7 @@ export function AuthProvider({ children }) {
 		setProfileLoading(false)
 		inFlightProfileUserIdRef.current = null
 		setProfile(null)
+		clearRecoveryMode()
 	}
 
 	async function updateProfile(partial) {
@@ -296,8 +339,11 @@ export function AuthProvider({ children }) {
 		requestPasswordReset,
 		updatePassword,
 		signInWithDiscord,
+		signInWithGoogle,
+		recoveryMode,
+		clearRecoveryMode,
 		isAuthenticated: !!user,
-	}), [session, user, profile, loading, profileLoading, refreshProfile])
+	}), [session, user, profile, loading, profileLoading, refreshProfile, recoveryMode, clearRecoveryMode])
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

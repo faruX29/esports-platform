@@ -10,7 +10,7 @@ export const DISCORD_ENABLED = false
 // kurulduktan SONRA true yapılmalı — aksi halde tıklanınca "provider is not enabled"
 // hatası verir. Kurulum: Google Cloud Console → OAuth client (Web) → Authorized redirect
 // URI = https://<PROJ>.supabase.co/auth/v1/callback → Client ID+Secret'ı Supabase'e gir.
-export const GOOGLE_ENABLED = false
+export const GOOGLE_ENABLED = true
 
 // TURNSTILE — Cloudflare bot koruması (SMTP kotasını bot kayıt/reset saldırısından korur).
 // Site key PUBLIC'tir, Vercel env `VITE_TURNSTILE_SITE_KEY`'den okunur. Secret key

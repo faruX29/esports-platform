@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useUser } from '../context/UserContext'
@@ -100,6 +100,10 @@ export default function ProfileSettings() {
   const [pwSaving, setPwSaving] = useState(false)
   const [pwMsg, setPwMsg] = useState('')
 
+  // Profil fotoğrafı yükleme (Supabase Storage)
+  const fileRef = useRef(null)
+  const [uploading, setUploading] = useState(false)
+
   useEffect(() => {
     setFirstName(profile?.first_name || '')
     setLastName(profile?.last_name || '')
@@ -152,6 +156,37 @@ export default function ProfileSettings() {
     }
   }
 
+  async function handleAvatarFile(e) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // aynı dosyayı tekrar seçebilmek için sıfırla
+    if (!file) return
+    if (!file.type.startsWith('image/')) { setMsg('Hata: Lütfen bir görsel dosyası seç.'); return }
+    if (file.size > 3 * 1024 * 1024) { setMsg('Hata: Görsel en fazla 3 MB olabilir.'); return }
+    if (!user?.id) { setMsg('Hata: Önce giriş yapmalısın.'); return }
+    setUploading(true); setMsg('')
+    try {
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
+      const path = `${user.id}/${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true, cacheControl: '3600' })
+      if (upErr) throw upErr
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+      const url = data.publicUrl
+      setAvatarUrl(url)
+      await updateProfile({ avatar_url: url }) // fotoğrafı anında kaydet (Kaydet'e basmaya gerek yok)
+      setMsg('Profil fotoğrafı güncellendi.')
+    } catch (err) {
+      setMsg(`Hata: ${err.message || 'Yükleme başarısız.'}`)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  async function removeAvatar() {
+    setAvatarUrl('')
+    setMsg('')
+    try { await updateProfile({ avatar_url: null }) } catch (err) { setMsg(`Hata: ${err.message}`) }
+  }
+
   const inputStyle = { background: '#172032', border: '1px solid #26324a', borderRadius: 10, color: '#f8fafc', padding: '10px 12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }
 
   return (
@@ -198,16 +233,29 @@ export default function ProfileSettings() {
             </span>
           </label>
 
-          <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 11, color: '#94a3b8' }}>Avatar URL</span>
-            <input value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} placeholder="https://..." style={inputStyle} />
-          </label>
+          <div style={{ display: 'grid', gap: 6 }}>
+            <span style={{ fontSize: 11, color: '#94a3b8' }}>Profil Fotoğrafı</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {avatarUrl
+                ? <img src={avatarUrl} alt="avatar" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid #26324a', flexShrink: 0 }} />
+                : <div style={{ width: 56, height: 56, borderRadius: '50%', border: '2px solid #26324a', display: 'grid', placeItems: 'center', color: '#94a3b8', fontWeight: 800, flexShrink: 0 }}>{fallbackAvatar}</div>
+              }
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} style={{ background: '#172032', color: '#f8fafc', border: '1px solid #26324a', borderRadius: 10, padding: '9px 14px', fontWeight: 700, cursor: 'pointer', opacity: uploading ? 0.6 : 1 }}>
+                  {uploading ? 'Yükleniyor...' : (avatarUrl ? 'Fotoğrafı Değiştir' : 'Fotoğraf Seç')}
+                </button>
+                {avatarUrl && (
+                  <button type="button" onClick={removeAvatar} disabled={uploading} style={{ background: 'transparent', color: '#94a3b8', border: '1px solid #33415d', borderRadius: 10, padding: '9px 14px', fontWeight: 700, cursor: 'pointer' }}>
+                    Kaldır
+                  </button>
+                )}
+              </div>
+              <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatarFile} style={{ display: 'none' }} />
+            </div>
+            <span style={{ fontSize: 11, color: '#64748b' }}>Bilgisayarından JPG/PNG seç — en fazla 3 MB. Fotoğraf anında kaydedilir.</span>
+          </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
-            {avatarUrl
-              ? <img src={avatarUrl} alt="avatar" style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', border: '2px solid #26324a' }} />
-              : <div style={{ width: 42, height: 42, borderRadius: '50%', border: '2px solid #26324a', display: 'grid', placeItems: 'center', color: '#94a3b8', fontWeight: 800 }}>{fallbackAvatar}</div>
-            }
             <button disabled={saving} style={{ background: 'linear-gradient(135deg,#DF4888,#8B3AA0 55%,#6A297F)', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 16px', fontWeight: 800, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>{saving ? 'Kaydediliyor...' : 'Kaydet'}</button>
             {msg && <span style={{ fontSize: 12, color: msg.startsWith('Hata') ? '#FF4655' : '#4ade80' }}>{msg}</span>}
           </div>

@@ -20,6 +20,7 @@ import {
 
 import ProtectedRoute from './components/ProtectedRoute'
 import NavbarComponent from './components/Navbar'
+import Footer from './components/Footer'
 import { Home, CalendarDays, Trophy, BarChart3, Newspaper, Radar, Search, X as XIcon, Shield, User, ArrowRight, CornerDownLeft } from 'lucide-react'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -617,6 +618,7 @@ function AppShell() {
           <Route path="/settings"                 element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
         </Routes>
       </Suspense>
+      <Footer />
     </div>
   )
 }

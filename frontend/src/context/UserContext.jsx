@@ -408,7 +408,7 @@ function FollowAuthPrompt({ onClose }) {
             type="button"
             onClick={() => go('/register')}
             style={{
-              background: 'linear-gradient(135deg,#FF4655,#F0A500)', color: '#fff', border: 'none',
+              background: 'linear-gradient(135deg,#DF4888,#8B3AA0 55%,#6A297F)', color: '#fff', border: 'none',
               borderRadius: 11, padding: '11px 14px', fontWeight: 800, fontSize: 13.5, cursor: 'pointer',
             }}
           >

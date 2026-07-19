@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams }     from 'react-router-dom'
 import { supabase, subscribeToMatchesUpdates } from '../supabaseClient'
 import { useGame, GAMES }                   from '../context/GameContext'
-import { getFavorites, addFavorite, removeFavorite, isFavorite } from '../utils/favoritesHelper'
+import { useUser } from '../context/UserContext'
 import { isTurkishTeam }                   from '../constants'
 import { normalizeGameId }                  from '../utils/gameUtils'
 import { FEXT, statusStyle }                from '../theme'
@@ -162,6 +162,9 @@ function Countdown({ target }) {
 function Matches() {
   const navigate = useNavigate()
   const { activeGame } = useGame()
+  // Favoriler = site geneli takip sistemi (DB). Böylece herhangi bir yerde takip
+  // ettiğin takım burada da "favori" olur; çıkış yapmadan tek sistem. [[user-context]]
+  const { followedTeamIds, toggleTeamFollow, isTeamFollowed } = useUser()
   const [searchParams] = useSearchParams()   // deep-link: /matches?q=Fnatic&tab=past
 
   const [matches, setMatches]                     = useState([])
@@ -179,7 +182,6 @@ function Matches() {
   const [sortBy, setSortBy]                       = useState(initialTab === 'past' ? 'date-desc' : 'date-asc')
   const [dateFrom, setDateFrom]                   = useState('')   // Past tab: tarih aralığı
   const [dateTo, setDateTo]                       = useState('')
-  const [favorites, setFavorites]                 = useState([])
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
   const [lastUpdate, setLastUpdate]               = useState(new Date())
   const [autoRefresh, setAutoRefresh]             = useState(false)
@@ -209,9 +211,6 @@ function Matches() {
     setCurrentPage(1)
   }, [activeGame, sortBy, activeTab, dateFrom, dateTo, debouncedSearch, showFavoritesOnly])
 
-  useEffect(() => {
-    setFavorites(getFavorites())
-  }, [])
 
   // DB'deki gerçek oyun isimlerini bir kez çek (debug için)
   useEffect(() => {
@@ -234,7 +233,9 @@ function Matches() {
 
   useEffect(() => {
     fetchMatches()
-  }, [activeGame, sortBy, activeTab, currentPage, gamesLoading, gameNames, dateFrom, dateTo, debouncedSearch, showFavoritesOnly, favorites])  // filtre değişince tekrar çek
+    // favFilterKey: yalnızca "Favoriler" açıkken favori seti değişince tekrar çek —
+    // filtre kapalıyken yıldız değiştirmek listeyi gereksiz yenilemesin.
+  }, [activeGame, sortBy, activeTab, currentPage, gamesLoading, gameNames, dateFrom, dateTo, debouncedSearch, (showFavoritesOnly ? followedTeamIds.join(',') : '')])  // filtre değişince tekrar çek
 
   useEffect(() => {
     applyFilters()
@@ -376,8 +377,8 @@ function Matches() {
         // ── Favoriler: SUNUCU tarafında (tüm arşivde favori takım maçları) ──
         // Eskiden client-side sadece açık sayfayı süzüyordu → favori takımın maçı
         // o sayfada yoksa "boş" görünüyordu. Artık tüm sonuçları favoriye göre çeker.
-        if (showFavoritesOnly && favorites.length) {
-          query = query.or(`team_a_id.in.(${favorites.join(',')}),team_b_id.in.(${favorites.join(',')})`)
+        if (showFavoritesOnly && followedTeamIds.length) {
+          query = query.or(`team_a_id.in.(${followedTeamIds.join(',')}),team_b_id.in.(${followedTeamIds.join(',')})`)
         }
 
         query = query.order('scheduled_at', {
@@ -431,11 +432,8 @@ function Matches() {
 
   function toggleFavorite(teamId, e) {
     e.stopPropagation()
-    if (isFavorite(teamId)) {
-      setFavorites(removeFavorite(teamId))
-    } else {
-      setFavorites(addFavorite(teamId))
-    }
+    // Site geneli takip sistemi — giriş yoksa kayıt modalını açar (anonim takip yok).
+    toggleTeamFollow(teamId)
   }
 
   async function openMatchDetails(match) {
@@ -707,7 +705,7 @@ function Matches() {
           </div>
         )}
 
-        <button onClick={() => setShowFavoritesOnly(v => !v)} disabled={favorites.length === 0} style={{ padding: '8px 14px', borderRadius: 8, border: showFavoritesOnly ? '1px solid #FFD700' : '1px solid #26324a', background: showFavoritesOnly ? 'rgba(255,215,0,.15)' : '#131b2b', color: showFavoritesOnly ? '#FFD700' : favorites.length === 0 ? '#475569' : '#94a3b8', fontSize: 13, cursor: favorites.length === 0 ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <button onClick={() => setShowFavoritesOnly(v => !v)} disabled={followedTeamIds.length === 0} style={{ padding: '8px 14px', borderRadius: 8, border: showFavoritesOnly ? '1px solid #FFD700' : '1px solid #26324a', background: showFavoritesOnly ? 'rgba(255,215,0,.15)' : '#131b2b', color: showFavoritesOnly ? '#FFD700' : followedTeamIds.length === 0 ? '#475569' : '#94a3b8', fontSize: 13, cursor: followedTeamIds.length === 0 ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <Star size={14} fill={showFavoritesOnly ? '#FFD700' : 'none'} /> {showFavoritesOnly ? 'Tümü' : 'Favoriler'}
         </button>
 
@@ -725,7 +723,7 @@ function Matches() {
         {liveCount > 0 && <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: '#FF4655', background: 'rgba(255,70,85,.15)', border: '1px solid #FF465555', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Radio size={13} /> {liveCount} Canlı</div>}
         <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: '#94a3b8', background: 'rgba(148,163,184,.12)', border: '1px solid #94a3b855', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Clock size={13} /> {upcomingCount} Yaklaşan</div>
         <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: '#94a3b8', background: 'rgba(255,255,255,.05)', border: '1px solid #33415d', display: 'inline-flex', alignItems: 'center', gap: 6 }}><BarChart3 size={13} /> {totalCount.toLocaleString()} Toplam</div>
-        {favorites.length > 0 && <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: '#FFD700', background: 'rgba(255,215,0,.12)', border: '1px solid #FFD70055', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Star size={13} fill="#FFD700" /> {favorites.length} Fav</div>}
+        {followedTeamIds.length > 0 && <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: '#FFD700', background: 'rgba(255,215,0,.12)', border: '1px solid #FFD70055', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Star size={13} fill="#FFD700" /> {followedTeamIds.length} Favori</div>}
         <div style={{ color: '#475569', fontSize: 11, display: 'flex', alignItems: 'center' }}>
           Güncellendi: {lastUpdate.toLocaleTimeString('tr-TR')}
           {autoRefresh && <span style={{ color: '#4CAF50', marginLeft: 8 }}>● auto</span>}
@@ -757,8 +755,8 @@ function Matches() {
             const statusBadge = getStatusBadge(match.status)
             const cs          = correctedScores(match)  // ters-atanmış skor quirk'ini düzelt
             const isLive      = match.status === 'running'
-            const teamAFav    = isFavorite(match.team_a_id)
-            const teamBFav    = isFavorite(match.team_b_id)
+            const teamAFav    = isTeamFollowed(match.team_a_id)
+            const teamBFav    = isTeamFollowed(match.team_b_id)
             const turkA       = isTurkishTeam(match.team_a?.name ?? '')
             const turkB       = isTurkishTeam(match.team_b?.name ?? '')
             const hasTurkish  = turkA || turkB
@@ -792,8 +790,8 @@ function Matches() {
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.transform   = 'translateY(-5px) scale(1.012)'
-                  e.currentTarget.style.boxShadow   = '0 12px 32px rgba(255,70,85,.22)'
-                  e.currentTarget.style.borderColor = '#FF4655'
+                  e.currentTarget.style.boxShadow   = '0 12px 32px rgba(194,92,208,.22)'
+                  e.currentTarget.style.borderColor = FEXT.accent
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.transform   = 'none'

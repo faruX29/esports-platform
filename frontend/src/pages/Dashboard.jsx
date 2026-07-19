@@ -880,7 +880,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
         /* kart yüksekliği içerikle büyüsün, min sabit */
         minHeight: 0,
       }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,70,85,.55)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(194,92,208,.55)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
       onMouseLeave={e => { e.currentTarget.style.borderColor = '#26324a';  e.currentTarget.style.transform = 'translateY(0)' }}
     >
       {/* Üst ince kırmızı vurgu — yavaş süzülen soft hareket (glow yok) */}
@@ -2185,9 +2185,9 @@ export default function Dashboard() {
             alignItems: 'center',
             gap: 7,
             borderRadius: 999,
-            border: '1px solid rgba(255,70,85,.4)',
-            background: 'rgba(255,70,85,.1)',
-            color: '#ffd7dc',
+            border: '1px solid rgba(194,92,208,.4)',
+            background: 'rgba(194,92,208,.1)',
+            color: '#f0d6f5',
             fontSize: 11,
             fontWeight: 700,
             letterSpacing: '.2px',
@@ -2195,8 +2195,8 @@ export default function Dashboard() {
             cursor: 'pointer',
             whiteSpace: 'nowrap',
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,70,85,.18)'; e.currentTarget.style.borderColor = 'rgba(255,70,85,.6)' }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,70,85,.1)'; e.currentTarget.style.borderColor = 'rgba(255,70,85,.4)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(194,92,208,.18)'; e.currentTarget.style.borderColor = 'rgba(194,92,208,.6)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(194,92,208,.1)'; e.currentTarget.style.borderColor = 'rgba(194,92,208,.4)' }}
         >
           <SlidersHorizontal size={13} strokeWidth={2.2} />
           {(preferredGameLabels.length > 0 || followedTeamIds.length > 0)

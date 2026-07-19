@@ -195,10 +195,10 @@ function TeamCard({ team, navigate }) {
         boxShadow: isTR ? '0 0 10px rgba(200,16,46,.1)' : 'none',
       }}
       onMouseEnter={e => {
-        e.currentTarget.style.borderColor = isTR ? '#C8102E' : '#FF4655'
+        e.currentTarget.style.borderColor = isTR ? '#C8102E' : FEXT.accent
         e.currentTarget.style.transform   = 'translateY(-2px)'
         e.currentTarget.style.boxShadow   =
-          `0 6px 20px ${isTR ? 'rgba(200,16,46,.25)' : 'rgba(255,70,85,.18)'}`
+          `0 6px 20px ${isTR ? 'rgba(200,16,46,.25)' : 'rgba(194,92,208,.18)'}`
       }}
       onMouseLeave={e => {
         e.currentTarget.style.borderColor = isTR ? 'rgba(200,16,46,.4)' : '#172032'

@@ -10,6 +10,7 @@ import { useGame, GAMES }                   from '../context/GameContext'
 import { getFavorites, addFavorite, removeFavorite, isFavorite } from '../utils/favoritesHelper'
 import { isTurkishTeam }                   from '../constants'
 import { normalizeGameId }                  from '../utils/gameUtils'
+import { FEXT }                             from '../theme'
 import { getBOFormat }                       from '../utils/matchFormat'
 import { correctedScores }                   from '../utils/matchResult'
 import InitialsImage                        from '../components/InitialsImage'
@@ -620,9 +621,9 @@ function Matches() {
     return {
       padding: active ? '8px 14px' : '8px 12px',
       minWidth: 36, height: 36, borderRadius: 10,
-      border: active ? '1.5px solid #FF4655' : '1px solid #26324a',
-      background: active ? 'rgba(255,70,85,.2)' : '#131b2b',
-      color: disabled ? '#26324a' : active ? '#FF4655' : '#64748b',
+      border: active ? `1.5px solid ${FEXT.accent}` : '1px solid #26324a',
+      background: active ? FEXT.accentSoftBg : '#131b2b',
+      color: disabled ? '#26324a' : active ? FEXT.accentText : '#64748b',
       fontSize: 13, fontWeight: active ? 800 : 400,
       cursor: disabled ? 'not-allowed' : 'pointer',
       transition: 'all .15s',
@@ -635,7 +636,7 @@ function Matches() {
 
       {/* Başlık */}
       <div style={{ textAlign: 'center', marginBottom: 20 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, margin: '0 0 6px', display: 'inline-flex', alignItems: 'center', gap: 10 }}><CalendarDays size={26} color="#FF4655" /> Matches</h1>
+        <h1 style={{ fontSize: 28, fontWeight: 800, margin: '0 0 6px', display: 'inline-flex', alignItems: 'center', gap: 10 }}><CalendarDays size={26} color={FEXT.accent} /> Matches</h1>
         <p style={{ color: '#64748b', fontSize: 13, margin: 0 }}>
           Tüm esports maçları — canlı, yaklaşan &amp; geçmiş
         </p>
@@ -652,7 +653,7 @@ function Matches() {
             padding: '9px 22px', borderRadius: 12, border: 'none', cursor: 'pointer',
             fontSize: 13, fontWeight: activeTab === t.key ? 700 : 500,
             background: activeTab === t.key
-              ? (t.isLive ? '#FF4655' : '#FF4655')
+              ? (t.isLive ? '#FF4655' : FEXT.accent)
               : '#172032',
             color: activeTab === t.key ? '#fff' : (t.isLive ? '#FF4655' : '#94a3b8'),
             display: 'flex', alignItems: 'center', gap: 7,
@@ -871,7 +872,7 @@ function Matches() {
 
                     {/* VS */}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                      <span style={{ fontSize: 11, fontWeight: 800, color: '#FF4655', letterSpacing: '2px' }}>VS</span>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: FEXT.accentText, letterSpacing: '2px' }}>VS</span>
                       <div style={{ width: 1, height: 24, background: '#26324a' }} />
                       {match.status === 'not_started' && <Countdown target={matchTimeIso(match)} />}
                     </div>
@@ -969,10 +970,10 @@ function Matches() {
       {/* Modal — değişmedi, aynı kalıyor */}
       {showModal && selectedMatch && (
         <div onClick={closeModal} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: 20 }}>
-          <div onClick={e => e.stopPropagation()} style={{ backgroundColor: '#172032', borderRadius: 15, padding: 30, maxWidth: 600, width: '100%', maxHeight: '90vh', overflowY: 'auto', border: '2px solid #FF4655', position: 'relative' }}>
+          <div onClick={e => e.stopPropagation()} style={{ backgroundColor: '#172032', borderRadius: 15, padding: 30, maxWidth: 600, width: '100%', maxHeight: '90vh', overflowY: 'auto', border: `2px solid ${FEXT.accent}`, position: 'relative' }}>
             <button onClick={closeModal} style={{ position: 'absolute', top: 15, right: 15, background: 'none', border: 'none', color: '#94a3b8', fontSize: 30, cursor: 'pointer' }}>×</button>
 
-            <div style={{ display: 'inline-block', padding: '5px 15px', backgroundColor: '#FF4655', borderRadius: 20, fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase', marginBottom: 20 }}>
+            <div style={{ display: 'inline-block', padding: '5px 15px', background: FEXT.accentGrad, borderRadius: 20, fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase', marginBottom: 20 }}>
               {gameDisplayName(selectedMatch.game)}
             </div>
 
@@ -987,7 +988,7 @@ function Matches() {
                 />
                 <div style={{ fontSize: 20, fontWeight: 'bold' }}>{selectedMatch.team_a?.name}</div>
               </div>
-              <div style={{ fontSize: 40, fontWeight: 'bold', color: '#FF4655', padding: '0 30px' }}>VS</div>
+              <div style={{ fontSize: 40, fontWeight: 'bold', color: FEXT.accentText, padding: '0 30px' }}>VS</div>
               <div style={{ textAlign: 'center', flex: 1 }}>
                 <InitialsImage
                   src={selectedMatch.team_b?.logo_url}
@@ -1163,7 +1164,7 @@ function Matches() {
               </div>
             )}
 
-            <button onClick={closeModal} style={{ width: '100%', padding: 15, borderRadius: 8, border: 'none', backgroundColor: '#FF4655', color: 'white', fontSize: 16, fontWeight: 'bold', cursor: 'pointer' }}>
+            <button onClick={closeModal} style={{ width: '100%', padding: 15, borderRadius: 8, border: 'none', background: FEXT.accentGrad, color: 'white', fontSize: 16, fontWeight: 'bold', cursor: 'pointer' }}>
               Close
             </button>
           </div>

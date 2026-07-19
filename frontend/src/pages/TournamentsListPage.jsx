@@ -213,23 +213,23 @@ export default function TournamentsListPage() {
           borderRadius: 999,
           padding: 3,
           gap: 4,
-          background: 'linear-gradient(120deg, rgba(255,70,85,.18), rgba(25,25,25,.95))',
-          border: '1px solid rgba(255,70,85,.28)',
-          boxShadow: '0 0 16px rgba(255,70,85,.14)',
+          background: 'linear-gradient(120deg, rgba(194,92,208,.18), rgba(19,27,43,.95))',
+          border: '1px solid rgba(194,92,208,.28)',
+          boxShadow: '0 0 16px rgba(194,92,208,.14)',
         }}>
           <button
             onClick={() => setShowAllTiers(false)}
             style={{
               border: '1px solid transparent',
-              background: showAllTiers ? 'transparent' : 'linear-gradient(135deg, rgba(255,70,85,.2), rgba(255,120,80,.18))',
-              color: showAllTiers ? '#cbd5e1' : '#ffd3d9',
+              background: showAllTiers ? 'transparent' : 'linear-gradient(135deg, rgba(223,72,136,.24), rgba(106,41,127,.2))',
+              color: showAllTiers ? '#cbd5e1' : '#f0d6f5',
               borderRadius: 999,
               fontSize: 11,
               fontWeight: 800,
               letterSpacing: '.2px',
               padding: '7px 12px',
               cursor: 'pointer',
-              boxShadow: showAllTiers ? 'none' : 'inset 0 0 0 1px rgba(255,120,130,.35), 0 0 14px rgba(255,70,85,.2)',
+              boxShadow: showAllTiers ? 'none' : 'inset 0 0 0 1px rgba(194,92,208,.35), 0 0 14px rgba(194,92,208,.2)',
             }}
           >
             S/A Pro Pool

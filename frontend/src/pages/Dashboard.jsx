@@ -838,32 +838,11 @@ function WinBar({ predA, predB, confidence }) {
   )
 }
 
-function MatchImpactPill({ match, compact = false }) {
-  const label = getMatchImpactLabel(match)
-  if (!label) return null
-
-  return (
-    <span
-      title={`AI Guven: %${label.confidencePct}`}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: 999,
-        padding: compact ? '2px 7px' : '3px 8px',
-        border: `1px solid ${label.border}`,
-        background: label.bg,
-        color: label.color,
-        fontSize: compact ? 8 : 9,
-        fontWeight: 800,
-        letterSpacing: '.35px',
-        whiteSpace: 'nowrap',
-        flexShrink: 0,
-      }}
-    >
-      {label.text}
-    </span>
-  )
+// Risk/güven etiketleri ("Dengeli"/"Riskli Maç"/"Yüksek Güven") KALDIRILDI —
+// altındaki AI tahmin barı zaten sonucu gösteriyordu, etiket gereksiz + rengarenk
+// duruyordu (kurucu kararı). Bar korunuyor. İleride Gemini maç yorumu düşünülebilir.
+function MatchImpactPill() {
+  return null
 }
 
 /* ── LiveMatchCard ────────────────────────────────────────────────────────── */

@@ -6,6 +6,7 @@ import { useUser } from '../context/UserContext'
 import { correctedScores } from '../utils/matchResult'
 import { normalizeGameId } from '../utils/gameUtils'
 import { Medal, Star } from 'lucide-react'
+import { FEXT } from '../theme'
 
 function toNum(v) {
   const n = Number(v)
@@ -292,7 +293,7 @@ export default function RankingsPage() {
         position: 'absolute',
         inset: 0,
         pointerEvents: 'none',
-        background: 'radial-gradient(circle at 8% 10%, rgba(200,16,46,.18), transparent 36%), radial-gradient(circle at 88% 0%, rgba(255,255,255,.08), transparent 28%)',
+        background: 'radial-gradient(circle at 8% 10%, rgba(194,92,208,.18), transparent 36%), radial-gradient(circle at 88% 0%, rgba(255,255,255,.06), transparent 28%)',
       }} />
 
       <div style={{ position: 'relative', zIndex: 1 }}>
@@ -370,8 +371,8 @@ export default function RankingsPage() {
                   style={{
                     height: 34,
                     borderRadius: 10,
-                    border: active ? '1px solid #c8102e' : '1px solid #26324a',
-                    background: active ? 'rgba(200,16,46,.2)' : '#131b2b',
+                    border: active ? `1px solid ${FEXT.accent}` : '1px solid #26324a',
+                    background: active ? FEXT.accent : '#131b2b',
                     color: active ? '#ffffff' : '#cbd5e1',
                     fontSize: 12,
                     fontWeight: 700,
@@ -442,10 +443,10 @@ export default function RankingsPage() {
                   padding: '12px 14px',
                   borderBottom: '1px solid #172032',
                   cursor: 'pointer',
-                  background: idx < 3 ? 'linear-gradient(90deg, rgba(200,16,46,.12), transparent 55%)' : 'transparent',
+                  background: idx < 3 ? 'linear-gradient(90deg, rgba(194,92,208,.12), transparent 55%)' : 'transparent',
                 }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,.03)' }}
-                onMouseLeave={e => { e.currentTarget.style.background = idx < 3 ? 'linear-gradient(90deg, rgba(200,16,46,.12), transparent 55%)' : 'transparent' }}
+                onMouseLeave={e => { e.currentTarget.style.background = idx < 3 ? 'linear-gradient(90deg, rgba(194,92,208,.12), transparent 55%)' : 'transparent' }}
               >
                 <div style={{ fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
                   {medalColor && <Medal size={16} color={medalColor} strokeWidth={2.2} />} #{idx + 1}
@@ -483,8 +484,8 @@ export default function RankingsPage() {
                       height: 30,
                       width: 30,
                       borderRadius: 8,
-                      border: followed ? '1px solid #FF4655' : '1px solid #26324a',
-                      background: followed ? 'rgba(255,70,85,.16)' : '#131b2b',
+                      border: followed ? `1px solid ${FEXT.accent}` : '1px solid #26324a',
+                      background: followed ? FEXT.accentSoftBg : '#131b2b',
                       color: followed ? '#fff' : '#94a3b8',
                       cursor: 'pointer',
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',

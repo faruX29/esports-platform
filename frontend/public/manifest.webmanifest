@@ -1,0 +1,19 @@
+{
+  "name": "feXt — Espor Maçları, Skorlar ve Haberler",
+  "short_name": "feXt",
+  "description": "Valorant, CS2 ve LoL espor maçları, canlı skorlar, transferler, oyuncu istatistikleri ve AI destekli haber bülteni.",
+  "lang": "tr",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0f19",
+  "theme_color": "#0b0f19",
+  "categories": ["sports", "news", "games"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

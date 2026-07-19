@@ -3,8 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/fext-mascot.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0B0F19" />
+
+    <!-- PWA — ana ekrana eklenebilir + bildirim altyapısı (mobil app iskeleti) -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="feXt" />
 
     <!-- Inter — veri-yoğun UI; Baloo 2 — feXt marka wordmark'ı (yuvarlak/oyunbaz) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -21,9 +29,51 @@
     <meta property="og:title" content="feXt — Espor Maçları, Skorlar ve Haberler" />
     <meta property="og:description" content="Valorant, CS2 ve LoL espor maçları, canlı skorlar, turnuva takibi ve AI haber bülteni." />
     <meta name="twitter:card" content="summary" />
+
+    <!-- Yapısal veri (Schema.org) — Google'da marka bilgisi + site-içi arama kutusu -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://fextesports.com/#organization",
+          "name": "feXt",
+          "url": "https://fextesports.com/",
+          "logo": "https://fextesports.com/icons/icon-512.png",
+          "sameAs": [
+            "https://instagram.com/fextesports",
+            "https://x.com/fextesports",
+            "https://www.tiktok.com/@fextesports"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://fextesports.com/#website",
+          "url": "https://fextesports.com/",
+          "name": "feXt",
+          "inLanguage": "tr-TR",
+          "publisher": { "@id": "https://fextesports.com/#organization" },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": { "@type": "EntryPoint", "urlTemplate": "https://fextesports.com/search?q={search_term_string}" },
+            "query-input": "required name=search_term_string"
+          }
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <!-- Service Worker kaydı (PWA). Yalnızca prod/https'te; hata sayfayı bozmaz. -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {})
+        })
+      }
+    </script>
   </body>
 </html>

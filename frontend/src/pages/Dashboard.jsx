@@ -18,6 +18,7 @@ import { memo }                             from 'react'
 import InitialsImage                        from '../components/InitialsImage'
 import { normalizeGameId }                  from '../utils/gameUtils'
 import { getBOFormat }                       from '../utils/matchFormat'
+import { FEXT, statusStyle }                 from '../theme'
 import { correctedScores }                   from '../utils/matchResult'
 import PredictionAccuracyBadge              from '../components/PredictionAccuracyBadge'
 
@@ -183,12 +184,7 @@ function matchesDashboardGame(matchRow, activeGameId) {
 }
 
 function getStatusBadge(status) {
-  const normalized = normalizeMatchStatus(status)
-  return {
-    not_started: { text: 'Upcoming', color: '#FFB800', bg: 'rgba(255,184,0,.12)' },
-    running:     { text: 'LIVE',     color: '#FF4655', bg: 'rgba(255,70,85,.18)' },
-    finished:    { text: 'Bitti',    color: '#4CAF50', bg: 'rgba(76,175,80,.12)' },
-  }[normalized] || { text: normalized || 'unknown', color: '#555', bg: 'transparent' }
+  return statusStyle(status)
 }
 
 function normalizeTierKey(value) {

@@ -21,6 +21,7 @@ import {
 import ProtectedRoute from './components/ProtectedRoute'
 import NavbarComponent from './components/Navbar'
 import Footer from './components/Footer'
+import { FEXT } from './theme'
 import { Home, CalendarDays, Trophy, BarChart3, Newspaper, Radar, Search, X as XIcon, Shield, User, ArrowRight, CornerDownLeft } from 'lucide-react'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -175,13 +176,13 @@ function NavSearch() {
         <div style={{
           display: 'flex', alignItems: 'center', gap: 6,
           background: focused ? '#172032' : '#131b2b',
-          border: `1.5px solid ${focused ? '#FF4655' : '#26324a'}`,
+          border: `1.5px solid ${focused ? FEXT.accent : '#26324a'}`,
           borderRadius: 10, padding: '5px 10px',
           transition: 'all .2s',
-          boxShadow: focused ? '0 0 0 3px rgba(255,70,85,.1)' : 'none',
+          boxShadow: focused ? `0 0 0 3px ${FEXT.accentGlow}` : 'none',
           width: focused ? 'min(260px, 70vw)' : 180,
         }}>
-          <span style={{ color: focused ? '#FF4655' : '#64748b',
+          <span style={{ color: focused ? FEXT.accent : '#64748b',
             flexShrink: 0, transition: 'color .2s', display: 'inline-flex' }}><Search size={14} /></span>
           <input
             ref={inputRef}
@@ -216,7 +217,7 @@ function NavSearch() {
           {loading && (
             <div style={{
               width: 6, height: 6, borderRadius: '50%',
-              background: '#FF4655', flexShrink: 0,
+              background: FEXT.accent, flexShrink: 0,
               animation: 'pulse 1s infinite',
             }} />
           )}
@@ -369,9 +370,9 @@ function NavSearch() {
             onMouseEnter={e => e.currentTarget.style.background = '#172032'}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
           >
-            <span style={{ color: '#FF4655', display: 'inline-flex' }}><Search size={13} /></span>
+            <span style={{ color: FEXT.accentText, display: 'inline-flex' }}><Search size={13} /></span>
             <span style={{ fontSize: 12, color: '#94a3b8' }}>
-              "<span style={{ color: '#FF4655', fontWeight: 700 }}>{q}</span>" için tüm sonuçları gör
+              "<span style={{ color: FEXT.accentText, fontWeight: 700 }}>{q}</span>" için tüm sonuçları gör
             </span>
             <span style={{ marginLeft: 'auto', fontSize: 10, color: '#475569', display: 'inline-flex', alignItems: 'center', gap: 4 }}>Enter <CornerDownLeft size={11} /></span>
           </div>

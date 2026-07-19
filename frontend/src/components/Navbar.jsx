@@ -4,6 +4,7 @@ import { Menu, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import BRANDING from '../branding.config'
 import FextLogo from './FextLogo'
+import { FEXT } from '../theme'
 
 /* Nav öğesi — lucide ikon + hover state (emoji "AI havası"nı kaldırır) */
 function NavItem({ link, mobile = false }) {
@@ -20,8 +21,8 @@ function NavItem({ link, mobile = false }) {
             textDecoration: 'none', padding: '9px 12px', borderRadius: 10, fontSize: 13,
             fontWeight: isActive ? 800 : 600,
             color: isActive ? '#fff' : (hover ? '#fff' : '#cbd5e1'),
-            background: isActive ? 'linear-gradient(120deg, rgba(255,70,85,.2), rgba(255,184,0,.12))' : (hover ? '#172032' : '#131b2b'),
-            border: isActive ? '1px solid rgba(255,120,130,.4)' : '1px solid #26324a',
+            background: isActive ? FEXT.accentSoftBg : (hover ? '#172032' : '#131b2b'),
+            border: isActive ? `1px solid ${FEXT.accentBorder}` : '1px solid #26324a',
             display: 'flex', alignItems: 'center', gap: 9, transition: 'all .15s',
           }
         : {
@@ -45,14 +46,14 @@ function AuthWidget() {
 
   const avatar = profile?.avatar_url
   const metaUsername = user?.user_metadata?.username
-  const username = profile?.username || metaUsername || (profileLoading ? 'Yukleniyor...' : (user?.email?.split('@')?.[0] || 'Fan'))
+  const username = profile?.username || metaUsername || (profileLoading ? 'Yükleniyor...' : (user?.email?.split('@')?.[0] || 'Fan'))
 
   return (
     <>
       {!isAuthenticated ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, height: 34 }}>
-          <button onClick={() => navigate('/login')} style={{ background: 'linear-gradient(135deg,#FF4655,#e63a48)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 9, color: '#fff', fontSize: 12, fontWeight: 800, padding: '8px 13px', cursor: 'pointer', whiteSpace: 'nowrap', height: 34, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>Giris Yap</button>
-          <button onClick={() => navigate('/register')} style={{ background: '#172032', border: '1px solid #26324a', borderRadius: 9, color: '#cbd5e1', fontSize: 12, fontWeight: 700, padding: '8px 13px', cursor: 'pointer', whiteSpace: 'nowrap', height: 34, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>Kayit Ol</button>
+          <button onClick={() => navigate('/login')} style={{ background: FEXT.accentGrad, border: '1px solid rgba(255,255,255,.12)', borderRadius: 9, color: '#fff', fontSize: 12, fontWeight: 800, padding: '8px 13px', cursor: 'pointer', whiteSpace: 'nowrap', height: 34, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>Giriş Yap</button>
+          <button onClick={() => navigate('/register')} style={{ background: '#172032', border: '1px solid #26324a', borderRadius: 9, color: '#cbd5e1', fontSize: 12, fontWeight: 700, padding: '8px 13px', cursor: 'pointer', whiteSpace: 'nowrap', height: 34, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>Kayıt Ol</button>
         </div>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, height: 34 }}>
@@ -63,7 +64,7 @@ function AuthWidget() {
             }
             <span style={{ fontSize: 12, color: '#cbd5e1', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{username}</span>
           </button>
-          <button onClick={signOut} style={{ background: '#131b2b', border: '1px solid #26324a', borderRadius: 8, color: '#94a3b8', padding: '6px 9px', fontSize: 11, cursor: 'pointer', height: 34 }}>Cikis</button>
+          <button onClick={signOut} style={{ background: '#131b2b', border: '1px solid #26324a', borderRadius: 8, color: '#94a3b8', padding: '6px 9px', fontSize: 11, cursor: 'pointer', height: 34 }}>Çıkış</button>
         </div>
       )}
 

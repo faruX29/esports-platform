@@ -1,4 +1,5 @@
 import { createContext, useContext, useState } from 'react';
+import { GAME_COLORS } from '../theme';
 
 export const GAMES = [
   {
@@ -6,7 +7,7 @@ export const GAMES = [
     label:      'All Games',
     shortLabel: 'All',
     icon:       '🎮',
-    color:      '#aaaaaa',
+    color:      GAME_COLORS.all,
     soon:       false,
     patterns:   [],
   },
@@ -15,7 +16,7 @@ export const GAMES = [
     label:      'VALORANT',
     shortLabel: 'VAL',
     icon:       '⚡',
-    color:      '#FF4655',
+    color:      GAME_COLORS.valorant,
     soon:       false,
     patterns:   ['valorant'],
   },
@@ -24,7 +25,7 @@ export const GAMES = [
     label:      'Counter-Strike 2',
     shortLabel: 'CS2',
     icon:       '🎯',
-    color:      '#F0A500',
+    color:      GAME_COLORS.cs2,
     soon:       false,
     patterns:   ['counter-strike', 'counter strike', 'counter-strike global offensive', 'cs-go', 'csgo', 'cs2'],
   },
@@ -33,7 +34,7 @@ export const GAMES = [
     label:      'League of Legends',
     shortLabel: 'LoL',
     icon:       '🏆',
-    color:      '#C89B3C',
+    color:      GAME_COLORS.lol,
     soon:       false,
     patterns:   ['league of legends', 'league-of-legends'],
   },
@@ -42,7 +43,7 @@ export const GAMES = [
     label:      'Dota 2',
     shortLabel: 'Dota2',
     icon:       '🔮',
-    color:      '#9d2226',
+    color:      GAME_COLORS.dota2,
     soon:       true,
     patterns:   ['dota'],
   },

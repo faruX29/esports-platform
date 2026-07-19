@@ -668,7 +668,7 @@ export default function PlayersPage() {
               <option value='kd'>K/D</option>
               <option value='acs'>ACS</option>
               <option value='hs'>Headshot %</option>
-              <option value='wr'>Win Rate</option>
+              <option value='wr'>Kazanma Oranı</option>
             </select>
           </div>
         </div>

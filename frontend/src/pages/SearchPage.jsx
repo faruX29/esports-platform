@@ -1018,7 +1018,7 @@ export default function SearchPage() {
             background: FEXT.accentGrad,
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          }}><Search size={26} color={FEXT.accent} /> Global Search</h1>
+          }}><Search size={26} color={FEXT.accent} /> Arama</h1>
 
           <p style={{ textAlign: 'center', color: '#334155', fontSize: 13, margin: '0 0 24px' }}>
             Takımlar, oyuncular, turnuvalar — hepsi bir arada

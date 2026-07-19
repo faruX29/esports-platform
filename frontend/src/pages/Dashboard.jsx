@@ -2149,7 +2149,7 @@ export default function Dashboard() {
   /* ── Stat tile tanımları ── */
   const statTiles = useMemo(() => [
     { Icon: Radio,    value: loading ? '…' : stats.live,  label: 'Canli',    color: '#FF4655' },
-    { Icon: Clock,    value: loading ? '…' : stats.today, label: 'Bugun',    color: '#FFB800' },
+    { Icon: Clock,    value: loading ? '…' : stats.today, label: 'Bugün',    color: '#FFB800' },
     { Icon: Gamepad2, value: loading ? '…' : stats.total, label: 'Toplam',   color: '#6366f1' },
     { Icon: Shield,   value: loading ? '…' : stats.teams, label: 'Takimlar', color: '#4CAF50' },
   ], [loading, stats.live, stats.today, stats.total, stats.teams])
@@ -2317,7 +2317,7 @@ export default function Dashboard() {
 
         <div style={{ border: '1px solid #2b3a58', borderRadius: 14, background: 'radial-gradient(circle at 8% 8%, rgba(200,16,46,.18), transparent 35%), #131b2b', overflow: 'hidden' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1fr .9fr .9fr .9fr', gap: 8, padding: '11px 14px', borderBottom: '1px solid #202020', fontSize: 10, color: '#8b8b8b', textTransform: 'uppercase', letterSpacing: '.6px' }}>
-            <div>Rank</div><div>Player</div><div>Team</div><div>Matches</div><div>Avg Impact</div><div>Momentum</div>
+            <div>Sıra</div><div>Oyuncu</div><div>Takım</div><div>Maç</div><div>Ort. Etki</div><div>Form</div>
           </div>
           {dreamLoading && <div style={{ padding: 14, color: '#777', fontSize: 12 }}>Dream Team hesaplanıyor...</div>}
           {!dreamLoading && dreamTeam.length === 0 && <div style={{ padding: 14, color: '#777', fontSize: 12 }}>Haftalık oyuncu verisi bulunamadı.</div>}
@@ -2364,7 +2364,7 @@ export default function Dashboard() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
           <span style={{ fontSize: 11, fontWeight: 800, color: '#FF4655', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
             <Radio size={13} color="#FF4655" style={{ animation: 'livePulse 1.2s infinite' }} />
-            Live Now
+            Şu An Canlı
           </span>
           {!loading && liveMatches.length > 0 && (
             <span style={{ padding: '1px 7px', borderRadius: 8, background: 'rgba(255,70,85,.15)', color: '#FF4655', fontSize: 10, fontWeight: 700 }}>

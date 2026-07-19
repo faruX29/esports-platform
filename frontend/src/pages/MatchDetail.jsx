@@ -1526,7 +1526,7 @@ export default function MatchDetail() {
                     </div>
                     {mapStats.length > 0 && (
                       <div style={{ marginTop: 12, background: '#0b0f19', borderRadius: 10, border: '1px solid #172032', padding: 10 }}>
-                        <div style={{ fontSize: 10, fontWeight: 800, color: '#475569', marginBottom: 8, textTransform: 'uppercase' }}>Map Win Rates</div>
+                        <div style={{ fontSize: 10, fontWeight: 800, color: '#475569', marginBottom: 8, textTransform: 'uppercase' }}>Harita Kazanma Oranları</div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                           {mapStats.map(m => (
                             <div key={m.map} style={{ background: '#131b2b', borderRadius: 8, border: '1px solid #172032', padding: '7px 8px' }}>
@@ -1755,7 +1755,7 @@ function LiveScoreboard({ teamAName, teamBName, teamABoard, teamBBoard, isLive }
   return (
     <div style={{ marginTop: 16, marginBottom: 4, background: 'linear-gradient(160deg,#170d0f,#131b2b)', borderRadius: 16, border: '1px solid rgba(255,70,85,.25)', padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ fontSize: 12, fontWeight: 900, color: '#FF4655', textTransform: 'uppercase', letterSpacing: '1px' }}>Canli Scoreboard</div>
+        <div style={{ fontSize: 12, fontWeight: 900, color: '#FF4655', textTransform: 'uppercase', letterSpacing: '1px' }}>Canlı Skor Tablosu</div>
         <div style={{ fontSize: 10, color: '#7a3038' }}>K/D/A anlik performans</div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>

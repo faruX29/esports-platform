@@ -48,14 +48,14 @@ import './App.css'
 
 /* ─── Nav linkleri (emoji yerine lucide ikon → "AI havası" kalkar; Navbar hover ekler) ── */
 const NAV_LINKS = [
-  { to: '/',         label: 'Home',      end: true,  icon: Home },
-  { to: '/matches',  label: 'Matches',   end: false, icon: CalendarDays },
+  { to: '/',         label: 'Ana Sayfa', end: true,  icon: Home },
+  { to: '/matches',  label: 'Maçlar',    end: false, icon: CalendarDays },
   { to: '/tournaments', label: 'Turnuvalar', end: false, icon: Trophy },
-  { to: '/rankings', label: 'Rankings',  end: false, icon: BarChart3 },
+  { to: '/rankings', label: 'Sıralama',  end: false, icon: BarChart3 },
   // NOT: '/players' listeleme sekmesi gizlendi — oyuncu istatistikleri seyrek olduğu
   // için sıralama/compare boş duruyordu. Oyuncu DETAY sayfaları (/player/:id) arama +
   // takım kadrosu + maç üzerinden erişilir kalır. İstatistik kapsamı büyüyünce geri açılır.
-  { to: '/news',     label: 'News',      end: false, icon: Newspaper },
+  { to: '/news',     label: 'Haberler',  end: false, icon: Newspaper },
   { to: '/scout',    label: 'Scout',     end: false, icon: Radar },
 ]
 

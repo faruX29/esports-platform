@@ -293,7 +293,7 @@ export function AuthProvider({ children }) {
 	}
 
 	async function updateProfile(partial) {
-		if (!user?.id) throw new Error('Giris yapmadan profil guncellenemez.')
+		if (!user?.id) throw new Error('Giriş yapmadan profil güncellenemez.')
 		const payload = {
 			id: user.id,
 			...(partial?.username !== undefined ? { username: partial.username || buildUsername(user) } : {}),

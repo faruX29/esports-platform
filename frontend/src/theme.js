@@ -55,7 +55,7 @@ export const GAME_COLORS = {
 /** Maç durumu → rozet stili (text + renk + arka plan). */
 export function statusStyle(status) {
   const s = String(status || '').toLowerCase()
-  if (s === 'running' || s === 'live')  return { text: 'LIVE',     ...FEXT.status.live }
+  if (s === 'running' || s === 'live')  return { text: 'CANLI',    ...FEXT.status.live }
   if (s === 'finished')                 return { text: 'Bitti',    ...FEXT.status.finished }
-  return { text: 'Upcoming', ...FEXT.status.upcoming } // not_started / upcoming / diğer
+  return { text: 'Yaklaşan', ...FEXT.status.upcoming } // not_started / upcoming / diğer
 }

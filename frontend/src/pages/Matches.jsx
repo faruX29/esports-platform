@@ -480,8 +480,7 @@ function Matches() {
 
   function closeModal()    { setShowModal(false); setSelectedMatch(null) }
   function getStatusBadge(status) {
-    const s = statusStyle(status)
-    return status === 'finished' ? { ...s, text: 'Finished' } : s
+    return statusStyle(status)
   }
 
   // ── Game filtresi debug banner ──────────────────────────────────
@@ -636,7 +635,7 @@ function Matches() {
 
       {/* Başlık */}
       <div style={{ textAlign: 'center', marginBottom: 20 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, margin: '0 0 6px', display: 'inline-flex', alignItems: 'center', gap: 10 }}><CalendarDays size={26} color={FEXT.accent} /> Matches</h1>
+        <h1 style={{ fontSize: 28, fontWeight: 800, margin: '0 0 6px', display: 'inline-flex', alignItems: 'center', gap: 10 }}><CalendarDays size={26} color={FEXT.accent} /> Maçlar</h1>
         <p style={{ color: '#64748b', fontSize: 13, margin: 0 }}>
           Tüm esports maçları — canlı, yaklaşan &amp; geçmiş
         </p>
@@ -645,9 +644,9 @@ function Matches() {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 20 }}>
         {[
-          { key: 'live',     label: 'LIVE',          isLive: true },
-          { key: 'upcoming', label: 'Upcoming',      Icon: Clock },
-          { key: 'past',     label: 'Past Results',  Icon: CircleCheck },
+          { key: 'live',     label: 'CANLI',          isLive: true },
+          { key: 'upcoming', label: 'Yaklaşan',       Icon: Clock },
+          { key: 'past',     label: 'Geçmiş',         Icon: CircleCheck },
         ].map(t => (
           <button key={t.key} onClick={() => { setActiveTab(t.key); setSortBy(t.key === 'past' ? 'date-desc' : 'date-asc') }} style={{
             padding: '9px 22px', borderRadius: 12, border: 'none', cursor: 'pointer',
@@ -717,15 +716,15 @@ function Matches() {
         </button>
 
         <button onClick={() => setAutoRefresh(v => !v)} style={{ padding: '8px 14px', borderRadius: 8, border: autoRefresh ? '1px solid #4CAF50' : '1px solid #26324a', background: autoRefresh ? 'rgba(76,175,80,.15)' : '#131b2b', color: autoRefresh ? '#4CAF50' : '#94a3b8', fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <Repeat size={14} /> {autoRefresh ? 'Auto ON' : 'Auto OFF'}
+          <Repeat size={14} /> {autoRefresh ? 'Otomatik Açık' : 'Otomatik Kapalı'}
         </button>
       </div>
 
       {/* Stats chips */}
       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 22 }}>
-        {liveCount > 0 && <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: '#FF4655', background: 'rgba(255,70,85,.15)', border: '1px solid #FF465555', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Radio size={13} /> {liveCount} Live</div>}
-        <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: '#94a3b8', background: 'rgba(148,163,184,.12)', border: '1px solid #94a3b855', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Clock size={13} /> {upcomingCount} Upcoming</div>
-        <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: '#94a3b8', background: 'rgba(255,255,255,.05)', border: '1px solid #33415d', display: 'inline-flex', alignItems: 'center', gap: 6 }}><BarChart3 size={13} /> {totalCount.toLocaleString()} Total</div>
+        {liveCount > 0 && <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: '#FF4655', background: 'rgba(255,70,85,.15)', border: '1px solid #FF465555', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Radio size={13} /> {liveCount} Canlı</div>}
+        <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: '#94a3b8', background: 'rgba(148,163,184,.12)', border: '1px solid #94a3b855', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Clock size={13} /> {upcomingCount} Yaklaşan</div>
+        <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: '#94a3b8', background: 'rgba(255,255,255,.05)', border: '1px solid #33415d', display: 'inline-flex', alignItems: 'center', gap: 6 }}><BarChart3 size={13} /> {totalCount.toLocaleString()} Toplam</div>
         {favorites.length > 0 && <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: '#FFD700', background: 'rgba(255,215,0,.12)', border: '1px solid #FFD70055', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Star size={13} fill="#FFD700" /> {favorites.length} Fav</div>}
         <div style={{ color: '#475569', fontSize: 11, display: 'flex', alignItems: 'center' }}>
           Güncellendi: {lastUpdate.toLocaleTimeString('tr-TR')}
@@ -825,7 +824,7 @@ function Matches() {
                       {/* AI Hot Pick */}
                       {isHotPick && (
                         <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 800, background: 'rgba(255,100,50,.2)', border: '1px solid rgba(255,100,50,.5)', color: '#ff8c42', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          <Flame size={11} /> Hot
+                          <Flame size={11} /> Sıcak
                         </span>
                       )}
                       {/* Prediction % */}
@@ -951,7 +950,7 @@ function Matches() {
                         </a>
                       )}
                       <div style={{ fontSize: 11, fontWeight: 600, color: isLive ? '#FF4655' : '#4CAF50', background: isLive ? 'rgba(255,70,85,.1)' : 'rgba(76,175,80,.1)', padding: '2px 8px', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                        {isLive ? <><span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF4655', animation: 'pulse 1.4s infinite' }} /> LIVE</> : formatMatchTime(match, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        {isLive ? <><span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF4655', animation: 'pulse 1.4s infinite' }} /> CANLI</> : formatMatchTime(match, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
                   </div>
@@ -1015,7 +1014,7 @@ function Matches() {
               <div style={{ marginBottom: selectedMatch.stream_url ? 15 : 0 }}>
                 <div style={{ color: '#94a3b8', fontSize: 14, marginBottom: 5, display: 'flex', alignItems: 'center', gap: 6 }}><BarChart3 size={14} /> Status</div>
                 <div style={{ fontSize: 16, fontWeight: 'bold', color: selectedMatch.status === 'not_started' ? '#FFB800' : '#4CAF50' }}>
-                  {selectedMatch.status === 'not_started' ? 'Upcoming' : selectedMatch.status === 'running' ? 'Live' : 'Finished'}
+                  {selectedMatch.status === 'not_started' ? 'Yaklaşan' : selectedMatch.status === 'running' ? 'Canlı' : 'Bitti'}
                 </div>
               </div>
               {selectedMatch.stream_url && (

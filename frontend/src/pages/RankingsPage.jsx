@@ -298,7 +298,7 @@ export default function RankingsPage() {
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         <div style={{ marginBottom: 18 }}>
-          <h1 style={{ margin: 0, fontSize: 30, letterSpacing: '.5px' }}>Global Power Rankings</h1>
+          <h1 style={{ margin: 0, fontSize: 30, letterSpacing: '.5px' }}>Güç Sıralaması</h1>
           <p style={{ margin: '8px 0 0', color: '#cbd5e1', fontSize: 13 }}>
             Son 6 ayin maclari; turnuva tier'i ve guncellik agirlikli guc siralamasi.
           </p>
@@ -360,7 +360,7 @@ export default function RankingsPage() {
             {[
               { key: 'power', label: 'Power' },
               { key: 'impact', label: 'Kalite' },
-              { key: 'winrate', label: 'Win Rate' },
+              { key: 'winrate', label: 'Kazanma Oranı' },
               { key: 'wins', label: 'Wins' },
             ].map(btn => {
               const active = sortKey === btn.key
@@ -409,7 +409,7 @@ export default function RankingsPage() {
             <div>Rank</div>
             <div>Team</div>
             <div>Record</div>
-            <div>Win Rate</div>
+            <div>Kazanma Oranı</div>
             <div>Kalite</div>
             <div>Power</div>
             <div>Follow</div>

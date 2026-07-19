@@ -208,7 +208,7 @@ function ProfessionalStatsPanel({ stats, isMobile = false }) {
       }}>
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,minmax(0,1fr))' : 'repeat(4,minmax(0,1fr))', gap: 10, marginBottom: 12 }}>
           <ProMetricCard label="KDA" value={stats.kda.toFixed(2)} sub={`K/D ${stats.kd.toFixed(2)}`} accent={kdaColor} />
-          <ProMetricCard label="Win Rate" value={`${Math.round(stats.winRate)}%`} sub={`${stats.sampleMatches} sample match`} accent={wrColor} />
+          <ProMetricCard label="Kazanma Oranı" value={`${Math.round(stats.winRate)}%`} sub={`${stats.sampleMatches} örnek maç`} accent={wrColor} />
           {useAcs
             ? <ProMetricCard label="ACS" value={stats.acs} sub="Combat Score" accent="#5eead4" />
             : <ProMetricCard label="Headshot" value={`${Math.round(stats.hsPct)}%`} sub="Precision" accent={hsColor} />}
@@ -223,7 +223,7 @@ function ProfessionalStatsPanel({ stats, isMobile = false }) {
         }}>
           <div style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 10 }}>Round-by-round efficiency proxy</div>
           <ProgressBar pct={Math.min(100, stats.kda * 42)} color={kdaColor} label="KDA Pressure" value={stats.kda.toFixed(2)} />
-          <ProgressBar pct={stats.winRate} color={wrColor} label="Win Rate" value={`${Math.round(stats.winRate)}%`} />
+          <ProgressBar pct={stats.winRate} color={wrColor} label="Kazanma Oranı" value={`${Math.round(stats.winRate)}%`} />
           {useAcs
             ? <ProgressBar pct={Math.min(100, (stats.acs / 350) * 100)} color="#5eead4" label="ACS" value={String(stats.acs)} />
             : <ProgressBar pct={stats.hsPct} color={hsColor} label="Headshot %" value={`${Math.round(stats.hsPct)}%`} />}
@@ -451,7 +451,7 @@ function ScoutPanel({ analytics, individual }) {
           </div>
           <ProgressBar pct={individualBars.kdBar} color="#ff6a7f" label="K/D Ratio" value={individual.kd.toFixed(2)} />
           <ProgressBar pct={individualBars.hsBar} color="#e2e8f0" label="Headshot Rate" value={`${Math.round(individual.hsPct)}%`} />
-          <ProgressBar pct={individualBars.winBar} color="#4CAF50" label="Win Rate" value={`${Math.round(individual.winRate)}%`} />
+          <ProgressBar pct={individualBars.winBar} color="#4CAF50" label="Kazanma Oranı" value={`${Math.round(individual.winRate)}%`} />
           <ProgressBar pct={individualBars.impactBar} color="#ff9aa9" label="Impact Score" value={`${Math.round(individual.impact)}`} />
         </div>
       )}
@@ -1214,7 +1214,7 @@ export default function PlayerPage() {
                 <StatBox
                   Icon={BarChart3}
                   value={`${Math.round(wr)}%`}
-                  label="Win Rate"
+                  label="Kazanma Oranı"
                   color={wr >= 60 ? '#4CAF50' : wr >= 45 ? '#FFB800' : '#FF4655'}
                 />
               )

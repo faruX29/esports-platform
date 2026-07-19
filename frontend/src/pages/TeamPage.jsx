@@ -75,7 +75,7 @@ function WinRateBar({ wins, total }) {
   return (
     <div style={{ marginTop: 10 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 5 }}>
-        <span style={{ color: '#64748b' }}>Win Rate</span>
+        <span style={{ color: '#64748b' }}>Kazanma Oranı</span>
         <span style={{ color, fontWeight: 800 }}>{pct}%</span>
       </div>
       <div style={{ height: 6, borderRadius: 3, background: '#131b2b', overflow: 'hidden' }}>

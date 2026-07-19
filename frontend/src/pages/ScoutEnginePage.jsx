@@ -3,6 +3,7 @@ import { supabase } from '../supabaseClient'
 import SeoHead from '../components/SeoHead'
 import InitialsImage from '../components/InitialsImage'
 import { BarChart3, TrendingUp, Target, Search, Gamepad2, Trophy, Shield, User, CalendarDays, CircleCheck } from 'lucide-react'
+import { FEXT } from '../theme'
 
 /**
  * Scout Engine — B2B "Private Beta / Waitlist" landing.
@@ -12,7 +13,7 @@ import { BarChart3, TrendingUp, Target, Search, Gamepad2, Trophy, Shield, User, 
  * Örnek raporlar gerçek oyuncu isimleriyle beslenir (graceful fallback).
  */
 
-const ACCENT = '#5eead4'  // teal — B2B/analitik kimliği (B2C kırmızıdan ayrışsın)
+const ACCENT = FEXT.accent  // feXt moru — marka tutarlılığı (eski teal kaldırıldı)
 
 const FEATURES = [
   { Icon: BarChart3, title: 'Derin Performans Analitiği', desc: 'Harita bazlı KDA, Impact skoru, HS% ve tempo metrikleri — hibrit veri hattıyla zenginleştirilmiş.' },
@@ -120,14 +121,14 @@ function SampleReportCard({ report, player, real = false }) {
   return (
     <div style={{
       background: 'linear-gradient(160deg, rgba(20,184,166,.06), #131b2b)',
-      border: '1px solid rgba(94,234,212,.18)', borderRadius: 16, padding: 16,
+      border: '1px solid rgba(194,92,208,.18)', borderRadius: 16, padding: 16,
       display: 'flex', flexDirection: 'column', gap: 10,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <InitialsImage
           src={player?.image_url} name={player?.nickname || report.role}
           width={44} height={44} borderRadius={10} objectFit="cover"
-          style={{ border: '1px solid rgba(94,234,212,.25)', flexShrink: 0 }}
+          style={{ border: '1px solid rgba(194,92,208,.25)', flexShrink: 0 }}
         />
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 800, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -138,7 +139,7 @@ function SampleReportCard({ report, player, real = false }) {
           </div>
         </div>
         <span style={{
-          marginLeft: 'auto', fontSize: 10, fontWeight: 800, color: '#04201b',
+          marginLeft: 'auto', fontSize: 10, fontWeight: 800, color: '#fff',
           background: ACCENT, borderRadius: 999, padding: '3px 9px', whiteSpace: 'nowrap',
         }}>
           {report.verdict}
@@ -187,7 +188,7 @@ function DepthStrip({ depth }) {
 
   const tileBox = {
     background: 'linear-gradient(160deg, rgba(20,184,166,.06), #131b2b)',
-    border: '1px solid rgba(94,234,212,.16)', borderRadius: 13, padding: '13px 12px', textAlign: 'center',
+    border: '1px solid rgba(194,92,208,.16)', borderRadius: 13, padding: '13px 12px', textAlign: 'center',
   }
 
   return (
@@ -203,7 +204,7 @@ function DepthStrip({ depth }) {
           ? DEPTH_LABELS.map((lbl, i) => (
               <div key={i} style={{ ...tileBox, animation: 'scoutPulse 1.6s ease-in-out infinite' }}>
                 <div style={{ height: 15, marginBottom: 5 }} />
-                <div style={{ height: 22, width: '62%', margin: '0 auto', borderRadius: 6, background: 'rgba(94,234,212,.10)' }} />
+                <div style={{ height: 22, width: '62%', margin: '0 auto', borderRadius: 6, background: 'rgba(194,92,208,.10)' }} />
                 <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: 6 }}>{lbl}</div>
               </div>
             ))
@@ -325,7 +326,7 @@ export default function ScoutEnginePage() {
 
         {/* Hero */}
         <section style={{
-          borderRadius: 20, border: '1px solid rgba(94,234,212,.2)', overflow: 'hidden',
+          borderRadius: 20, border: '1px solid rgba(194,92,208,.2)', overflow: 'hidden',
           background: `radial-gradient(circle at 85% 10%, rgba(20,184,166,.16), transparent 40%), linear-gradient(160deg,#131b2b,#0b0f19)`,
           padding: '34px 24px', marginBottom: 22,
         }}>
@@ -341,7 +342,7 @@ export default function ScoutEnginePage() {
             transfer kararını sunar. Rakiplerinden önce yeteneği keşfet.
           </p>
           <a href="#waitlist" style={{
-            display: 'inline-block', marginTop: 20, background: ACCENT, color: '#04201b',
+            display: 'inline-block', marginTop: 20, background: ACCENT, color: '#fff',
             fontWeight: 800, fontSize: 14, padding: '11px 22px', borderRadius: 10, textDecoration: 'none',
           }}>
             Bekleme Listesine Katıl →
@@ -430,7 +431,7 @@ export default function ScoutEnginePage() {
               <button
                 type="submit" disabled={status === 'sending'}
                 style={{
-                  background: ACCENT, color: '#04201b', fontWeight: 800, fontSize: 15,
+                  background: ACCENT, color: '#fff', fontWeight: 800, fontSize: 15,
                   border: 'none', borderRadius: 10, padding: '12px', cursor: status === 'sending' ? 'wait' : 'pointer',
                 }}
               >

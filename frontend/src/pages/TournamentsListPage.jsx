@@ -238,8 +238,8 @@ export default function TournamentsListPage() {
             onClick={() => setShowAllTiers(true)}
             style={{
               border: '1px solid transparent',
-              background: showAllTiers ? 'linear-gradient(135deg, rgba(76,175,80,.24), rgba(40,120,220,.22))' : 'transparent',
-              color: showAllTiers ? '#d6f6d8' : '#cbd5e1',
+              background: showAllTiers ? 'linear-gradient(135deg, rgba(223,72,136,.24), rgba(106,41,127,.2))' : 'transparent',
+              color: showAllTiers ? '#f0d6f5' : '#cbd5e1',
               borderRadius: 999,
               fontSize: 11,
               fontWeight: 800,

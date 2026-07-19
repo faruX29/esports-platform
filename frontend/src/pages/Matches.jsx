@@ -170,11 +170,13 @@ function Matches() {
   const [error, setError]                         = useState(null)
   const [searchQuery, setSearchQuery]             = useState(() => searchParams.get('q') || '')
   const [debouncedSearch, setDebouncedSearch]     = useState(() => (searchParams.get('q') || '').trim())
-  const [sortBy, setSortBy]                       = useState('date-asc')
-  const [activeTab, setActiveTab]                 = useState(() => {
+  const initialTab = (() => {
     const t = searchParams.get('tab')
-    return ['live', 'upcoming', 'past'].includes(t) ? t : 'upcoming'
-  })
+    return ['live', 'upcoming', 'past'].includes(t) ? t : 'past'
+  })()
+  const [activeTab, setActiveTab]                 = useState(initialTab)
+  // Geçmiş sekmesinde en yeni önce, yaklaşan/canlıda en erken önce mantıklı.
+  const [sortBy, setSortBy]                       = useState(initialTab === 'past' ? 'date-desc' : 'date-asc')
   const [dateFrom, setDateFrom]                   = useState('')   // Past tab: tarih aralığı
   const [dateTo, setDateTo]                       = useState('')
   const [favorites, setFavorites]                 = useState([])
@@ -205,7 +207,7 @@ function Matches() {
   // Sekme / oyun / tarih / arama değişince 1. sayfaya dön
   useEffect(() => {
     setCurrentPage(1)
-  }, [activeGame, sortBy, activeTab, dateFrom, dateTo, debouncedSearch])
+  }, [activeGame, sortBy, activeTab, dateFrom, dateTo, debouncedSearch, showFavoritesOnly])
 
   useEffect(() => {
     setFavorites(getFavorites())
@@ -232,11 +234,11 @@ function Matches() {
 
   useEffect(() => {
     fetchMatches()
-  }, [activeGame, sortBy, activeTab, currentPage, gamesLoading, gameNames, dateFrom, dateTo, debouncedSearch])  // filtre değişince tekrar çek
+  }, [activeGame, sortBy, activeTab, currentPage, gamesLoading, gameNames, dateFrom, dateTo, debouncedSearch, showFavoritesOnly, favorites])  // filtre değişince tekrar çek
 
   useEffect(() => {
     applyFilters()
-  }, [matches, searchQuery, showFavoritesOnly, favorites])
+  }, [matches, searchQuery])
   // NOT: activeGame artık burada YOK — filtre Supabase sorgusunda yapılıyor
 
   useEffect(() => {
@@ -371,6 +373,13 @@ function Matches() {
           query = ors.length ? query.or(ors.join(',')) : query.eq('id', -1) // eşleşme yok → boş
         }
 
+        // ── Favoriler: SUNUCU tarafında (tüm arşivde favori takım maçları) ──
+        // Eskiden client-side sadece açık sayfayı süzüyordu → favori takımın maçı
+        // o sayfada yoksa "boş" görünüyordu. Artık tüm sonuçları favoriye göre çeker.
+        if (showFavoritesOnly && favorites.length) {
+          query = query.or(`team_a_id.in.(${favorites.join(',')}),team_b_id.in.(${favorites.join(',')})`)
+        }
+
         query = query.order('scheduled_at', {
           ascending: sortBy === 'date-asc',
         })
@@ -416,13 +425,7 @@ function Matches() {
       )
     }
 
-    // Favoriler
-    if (showFavoritesOnly && favorites.length > 0) {
-      filtered = filtered.filter(m =>
-        favorites.includes(m.team_a_id) || favorites.includes(m.team_b_id)
-      )
-    }
-
+    // NOT: Favoriler filtresi artık SUNUCU tarafında (buildQuery) — burada yok.
     setFilteredMatches(filtered)
   }
 
@@ -646,7 +649,7 @@ function Matches() {
           { key: 'upcoming', label: 'Upcoming',      Icon: Clock },
           { key: 'past',     label: 'Past Results',  Icon: CircleCheck },
         ].map(t => (
-          <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
+          <button key={t.key} onClick={() => { setActiveTab(t.key); setSortBy(t.key === 'past' ? 'date-desc' : 'date-asc') }} style={{
             padding: '9px 22px', borderRadius: 12, border: 'none', cursor: 'pointer',
             fontSize: 13, fontWeight: activeTab === t.key ? 700 : 500,
             background: activeTab === t.key

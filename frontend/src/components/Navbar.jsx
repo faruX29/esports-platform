@@ -28,8 +28,8 @@ function NavItem({ link, mobile = false }) {
         : {
             textDecoration: 'none', padding: '7px 11px', borderRadius: 8, fontSize: 12,
             fontWeight: isActive ? 700 : 500,
-            color: isActive ? '#fff' : (hover ? '#e2e8f0' : '#94a3b8'),
-            background: isActive ? 'rgba(255,255,255,.08)' : (hover ? 'rgba(255,255,255,.05)' : 'transparent'),
+            color: isActive ? FEXT.accentText : (hover ? '#e2e8f0' : '#94a3b8'),
+            background: isActive ? FEXT.accentSoftBg : (hover ? 'rgba(255,255,255,.05)' : 'transparent'),
             transition: 'all .15s', whiteSpace: 'nowrap',
             display: 'inline-flex', alignItems: 'center', gap: 7, height: 34,
           })}

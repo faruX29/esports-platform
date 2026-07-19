@@ -54,14 +54,14 @@ export default function TeamPicker({ value, onChange, placeholder = 'Favori tak�
     onChange?.(null, null)
   }
 
-  const inputStyle = { background: '#172032', border: '1px solid #26324a', color: '#f8fafc', borderRadius: 11, padding: '11px 12px', width: '100%', boxSizing: 'border-box' }
+  const inputStyle = { background: 'var(--surface-2)', border: '1px solid var(--line)', color: 'var(--text)', borderRadius: 11, padding: '11px 12px', width: '100%', boxSizing: 'border-box' }
 
   if (selected) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#172032', border: '1px solid #26324a', borderRadius: 11, padding: '8px 12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 11, padding: '8px 12px' }}>
         <InitialsImage src={selected.logo_url} name={selected.name} width={26} height={26} borderRadius={6} objectFit="contain" />
-        <span style={{ flex: 1, color: '#f8fafc', fontSize: 14, fontWeight: 700 }}>{selected.name}</span>
-        <button type="button" onClick={clear} style={{ background: 'transparent', border: '1px solid #33415d', color: '#94a3b8', borderRadius: 8, padding: '4px 8px', cursor: 'pointer', fontSize: 12 }}>Değiştir</button>
+        <span style={{ flex: 1, color: 'var(--text)', fontSize: 14, fontWeight: 700 }}>{selected.name}</span>
+        <button type="button" onClick={clear} style={{ background: 'transparent', border: '1px solid var(--line-2)', color: 'var(--text-3)', borderRadius: 8, padding: '4px 8px', cursor: 'pointer', fontSize: 12 }}>Değiştir</button>
       </div>
     )
   }
@@ -76,14 +76,14 @@ export default function TeamPicker({ value, onChange, placeholder = 'Favori tak�
         style={inputStyle}
       />
       {open && results.length > 0 && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, marginTop: 4, background: '#131b2b', border: '1px solid #26324a', borderRadius: 11, overflow: 'hidden', maxHeight: 260, overflowY: 'auto', boxShadow: '0 12px 28px rgba(0,0,0,.55)' }}>
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, marginTop: 4, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 11, overflow: 'hidden', maxHeight: 260, overflowY: 'auto', boxShadow: '0 12px 28px rgba(0,0,0,.55)' }}>
           {results.map(team => (
             <button
               key={team.id}
               type="button"
               onClick={() => pick(team)}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: '1px solid #26324a', color: '#e2e8f0', padding: '9px 12px', cursor: 'pointer', fontSize: 14 }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#172032' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: '1px solid var(--line)', color: 'var(--text-1)', padding: '9px 12px', cursor: 'pointer', fontSize: 14 }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-2)' }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
             >
               <InitialsImage src={team.logo_url} name={team.name} width={22} height={22} borderRadius={5} objectFit="contain" />

@@ -14,7 +14,7 @@ export default function LiquipediaCredit({ align = 'left', compact = false }) {
     <div style={{
       marginTop: 8,
       fontSize: compact ? 9 : 10,
-      color: '#64748b',
+      color: 'var(--text-4)',
       textAlign: align,
       letterSpacing: '.2px',
     }}>
@@ -24,7 +24,7 @@ export default function LiquipediaCredit({ align = 'left', compact = false }) {
         target="_blank"
         rel="noopener noreferrer"
         onClick={e => e.stopPropagation()}
-        style={{ color: '#94a3b8', textDecoration: 'underline', fontWeight: 600 }}
+        style={{ color: 'var(--text-3)', textDecoration: 'underline', fontWeight: 600 }}
       >
         Liquipedia
       </a>

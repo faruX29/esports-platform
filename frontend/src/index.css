@@ -1,26 +1,73 @@
 /* ── Tailwind v4 — PREFLIGHT'SIZ (incremental adoption; mevcut inline stiller korunur) ──
    Sadece theme + utilities import edilir; base/preflight KASITLI dışarıda bırakıldı ki
-   Tailwind'in global reset'i mevcut 255 inline-stilli görünümü bozmasın. */
+   Tailwind'in global reset'i mevcut inline-stilli görünümü bozmasın. */
 @layer theme, base, components, utilities;
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities);
 
-/* Marka token'ları (Sofascore-clean slate paleti) → bg-base, bg-surface, border-line, text-accent … */
-@theme {
-  --color-base:      #0b0f19;
-  --color-surface:   #131b2b;
-  --color-surface-2: #172032;
-  --color-line:      #26324a;
-  --color-accent:    #ff4655;
-  --color-gold:      #f0c040;
-  --color-teal:      #5eead4;
-  --color-good:      #4caf50;
+/* ─────────────────────────────────────────────────────────────────────────────
+   feXt RENK TOKEN'LARI — TEK KAYNAK (açık/koyu tema).
+   Kod içinde ham hex yerine var(--surface), var(--text-3) gibi kullan → tema
+   düğmesiyle otomatik döner. Koyu = varsayılan; [data-theme="light"] override eder.
+   Marka/anlam renkleri (magenta aksan, canlı kırmızı, oyun renkleri, yeşil, altın)
+   iki modda da AYNI kalır — burada tokenlanmaz.
+   ───────────────────────────────────────────────────────────────────────────── */
+:root, :root[data-theme="dark"] {
+  --bg:         #0b0f19;   /* sayfa zemini */
+  --surface:    #131b2b;   /* kart */
+  --surface-2:  #172032;   /* ikincil yüzey / hover */
+  --surface-3:  #1c2740;   /* daha açık yüzey */
+  --line:       #26324a;   /* kenarlık */
+  --line-2:     #33415d;   /* güçlü kenarlık */
+  --text:       #f8fafc;   /* birincil metin (en parlak) */
+  --text-1:     #e2e8f0;
+  --text-2:     #cbd5e1;
+  --text-3:     #94a3b8;   /* ikincil slate */
+  --text-4:     #64748b;   /* soluk */
+  --text-5:     #475569;   /* daha soluk */
+  --text-6:     #334155;   /* en soluk */
+  --hover:        rgba(255,255,255,.05);
+  --hover-strong: rgba(255,255,255,.08);
+  --shadow:       rgba(0,0,0,.5);
+  --nav-bg:       rgba(11,15,25,.82);
+  --nav-border:   rgba(38,50,74,.6);
+  color-scheme: dark;
 }
 
-/* Global reset + tema — feXt (dark, full-width, mobil-güvenli).
-   NOT: Eski Vite şablon defaultları (body flex-center, h1 3.2em, mor linkler,
-   light-mode flip) mobili bozuyordu; kaldırıldı. */
+:root[data-theme="light"] {
+  --bg:         #f5f7fb;
+  --surface:    #ffffff;
+  --surface-2:  #eef2f8;
+  --surface-3:  #e6ebf4;
+  --line:       #e3e8f1;
+  --line-2:     #cbd5e1;
+  --text:       #0f172a;
+  --text-1:     #1e293b;
+  --text-2:     #334155;
+  --text-3:     #5a6b82;
+  --text-4:     #7d8ba0;
+  --text-5:     #a7b1c2;
+  --text-6:     #cbd5e1;
+  --hover:        rgba(15,23,42,.05);
+  --hover-strong: rgba(15,23,42,.08);
+  --shadow:       rgba(15,23,42,.14);
+  --nav-bg:       rgba(245,247,251,.85);
+  --nav-border:   rgba(203,213,225,.7);
+  color-scheme: light;
+}
 
+/* Tailwind utility'leri de aynı token'lara bağlı (ileride bg-surface vb. kullanınca döner) */
+@theme {
+  --color-bg:        var(--bg);
+  --color-surface:   var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line:      var(--line);
+  --color-accent:    #C25CD0;
+  --color-gold:      #f0c040;
+  --color-good:      #46B658;
+}
+
+/* Global reset + tema */
 *, *::before, *::after { box-sizing: border-box; }
 
 :root {
@@ -28,7 +75,6 @@
   line-height: 1.5;
   font-weight: 400;
   font-feature-settings: 'cv11', 'ss01';  /* Inter: daha net rakam/karakter formları */
-  color-scheme: dark;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -39,8 +85,9 @@ html, body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  background-color: #0b0f19;
-  color: #f8fafc;
+  background-color: var(--bg);
+  color: var(--text);
+  transition: background-color .2s ease, color .2s ease;
   /* Yatay taşma güvenlik ağı. `clip`, `hidden`'ın aksine scroll-container
      yaratmaz → sticky navbar bozulmaz. */
   overflow-x: clip;

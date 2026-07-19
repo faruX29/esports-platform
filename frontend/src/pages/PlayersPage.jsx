@@ -104,9 +104,9 @@ function GameFilterTabs({ activeGame, setActiveGame }) {
             style={{
               padding: '8px 14px',
               borderRadius: 999,
-              border: active ? `1px solid ${game.color}` : '1px solid #26324a',
-              background: active ? `${game.color}22` : '#131b2b',
-              color: active ? '#ffffff' : '#94a3b8',
+              border: active ? `1px solid ${game.color}` : '1px solid var(--line)',
+              background: active ? `${game.color}22` : 'var(--surface)',
+              color: active ? '#ffffff' : 'var(--text-3)',
               fontSize: 12,
               fontWeight: 700,
               letterSpacing: '.2px',
@@ -126,7 +126,7 @@ function GameFilterTabs({ activeGame, setActiveGame }) {
 function CompareCard({ player, onClear }) {
   if (!player) {
     return (
-      <div style={{ border: '1px dashed #334155', borderRadius: 12, padding: 12, minHeight: 188, display: 'grid', placeItems: 'center', color: '#64748b', fontSize: 12 }}>
+      <div style={{ border: '1px dashed var(--text-6)', borderRadius: 12, padding: 12, minHeight: 188, display: 'grid', placeItems: 'center', color: 'var(--text-4)', fontSize: 12 }}>
         Oyuncu sec
       </div>
     )
@@ -134,7 +134,7 @@ function CompareCard({ player, onClear }) {
 
   const bars = metricBars(player)
   return (
-    <div style={{ border: '1px solid #26324a', borderRadius: 12, padding: 12, background: '#131b2b' }}>
+    <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 12, background: 'var(--surface)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           <InitialsImage
@@ -145,28 +145,28 @@ function CompareCard({ player, onClear }) {
             height={34}
             borderRadius='50%'
             objectFit='cover'
-            style={{ border: '1px solid #334155' }}
+            style={{ border: '1px solid var(--text-6)' }}
           />
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 800, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.nickname || 'Unknown'}</div>
-            <div style={{ color: '#94a3b8', fontSize: 11 }}>{player.team?.name || 'Free Agent'}</div>
+            <div style={{ color: 'var(--text-3)', fontSize: 11 }}>{player.team?.name || 'Free Agent'}</div>
           </div>
         </div>
-        <button onClick={onClear} style={{ border: '1px solid #334155', background: '#131b2b', color: '#94a3b8', borderRadius: 7, padding: '4px 7px', cursor: 'pointer', fontSize: 11 }}>Temizle</button>
+        <button onClick={onClear} style={{ border: '1px solid var(--text-6)', background: 'var(--surface)', color: 'var(--text-3)', borderRadius: 7, padding: '4px 7px', cursor: 'pointer', fontSize: 11 }}>Temizle</button>
       </div>
 
       <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
-        <div><div style={{ fontSize: 10, color: '#64748b' }}>K/D</div><div style={{ fontSize: 15, fontWeight: 800 }}>{fmt(player.kd)}</div></div>
-        <div><div style={{ fontSize: 10, color: '#64748b' }}>HS%</div><div style={{ fontSize: 15, fontWeight: 800 }}>{Math.round(player.hsPct)}%</div></div>
-        <div><div style={{ fontSize: 10, color: '#64748b' }}>Win%</div><div style={{ fontSize: 15, fontWeight: 800 }}>{Math.round(player.winRate)}%</div></div>
-        <div><div style={{ fontSize: 10, color: '#64748b' }}>Impact</div><div style={{ fontSize: 15, fontWeight: 800, color: '#ff9aa9' }}>{Math.round(player.impact)}</div></div>
+        <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>K/D</div><div style={{ fontSize: 15, fontWeight: 800 }}>{fmt(player.kd)}</div></div>
+        <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>HS%</div><div style={{ fontSize: 15, fontWeight: 800 }}>{Math.round(player.hsPct)}%</div></div>
+        <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>Win%</div><div style={{ fontSize: 15, fontWeight: 800 }}>{Math.round(player.winRate)}%</div></div>
+        <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>Impact</div><div style={{ fontSize: 15, fontWeight: 800, color: '#ff9aa9' }}>{Math.round(player.impact)}</div></div>
       </div>
 
       <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
-        {[{ label: 'K/D', value: bars.kdBar, color: '#ff6a7f' }, { label: 'HS', value: bars.hsBar, color: '#e2e8f0' }, { label: 'Win', value: bars.winBar, color: '#7cd97f' }, { label: 'Impact', value: bars.impactBar, color: '#ff9aa9' }].map(row => (
+        {[{ label: 'K/D', value: bars.kdBar, color: '#ff6a7f' }, { label: 'HS', value: bars.hsBar, color: 'var(--text-1)' }, { label: 'Win', value: bars.winBar, color: '#7cd97f' }, { label: 'Impact', value: bars.impactBar, color: '#ff9aa9' }].map(row => (
           <div key={row.label}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#94a3b8', marginBottom: 3 }}><span>{row.label}</span><span>{Math.round(row.value)}</span></div>
-            <div style={{ height: 5, borderRadius: 4, background: '#172032', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-3)', marginBottom: 3 }}><span>{row.label}</span><span>{Math.round(row.value)}</span></div>
+            <div style={{ height: 5, borderRadius: 4, background: 'var(--surface-2)', overflow: 'hidden' }}>
               <div style={{ width: `${row.value}%`, height: '100%', background: row.color }} />
             </div>
           </div>
@@ -569,7 +569,7 @@ export default function PlayersPage() {
   const compareB = useMemo(() => visiblePlayers.find(p => String(p.id) === String(compareBId)) || null, [visiblePlayers, compareBId])
 
   return (
-    <div style={{ maxWidth: 1440, margin: '0 auto', padding: '24px 16px 80px', color: '#e2e8f0', position: 'relative' }}>
+    <div style={{ maxWidth: 1440, margin: '0 auto', padding: '24px 16px 80px', color: 'var(--text-1)', position: 'relative' }}>
       <div style={{
         position: 'absolute',
         inset: 0,
@@ -582,16 +582,16 @@ export default function PlayersPage() {
           <h1 style={{ margin: 0, fontSize: 30, letterSpacing: '.5px' }}>Player Scout Engine</h1>
           {metricsSource === 'player_match_stats' && <DeepScoutBadge />}
         </div>
-        <p style={{ margin: '8px 0 16px', color: '#cbd5e1', fontSize: 13 }}>
+        <p style={{ margin: '8px 0 16px', color: 'var(--text-2)', fontSize: 13 }}>
           Seçili oyuna göre oyuncuları K/D, ACS ve Impact'e göre sıralayın.
           {metricsSource === 'player_match_stats'
             ? <span style={{ color: '#5eead4' }}> · Gerçek maç istatistikleri</span>
-            : <span style={{ color: '#64748b' }}> · Takım bazlı tahmin</span>}
+            : <span style={{ color: 'var(--text-4)' }}> · Takım bazlı tahmin</span>}
         </p>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
           <GameFilterTabs activeGame={selectedGameId} setActiveGame={setActiveGame} />
-          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 10, color: '#e2e8f0', fontSize: 12, fontWeight: 700 }}>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 10, color: 'var(--text-1)', fontSize: 12, fontWeight: 700 }}>
             <input
               type='checkbox'
               checked={compareMode}
@@ -604,7 +604,7 @@ export default function PlayersPage() {
 
         {compareMode && (
           <div style={{
-            border: '1px solid #26324a',
+            border: '1px solid var(--line)',
             background: '#101010d9',
             borderRadius: 14,
             padding: 14,
@@ -614,11 +614,11 @@ export default function PlayersPage() {
               Compare
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 10, marginBottom: 10 }}>
-              <select value={compareAId} onChange={e => setCompareAId(e.target.value)} style={{ height: 36, borderRadius: 10, border: '1px solid #334155', background: '#131b2b', color: '#fff', padding: '0 10px' }}>
+              <select value={compareAId} onChange={e => setCompareAId(e.target.value)} style={{ height: 36, borderRadius: 10, border: '1px solid var(--text-6)', background: 'var(--surface)', color: '#fff', padding: '0 10px' }}>
                 <option value=''>Oyuncu A sec</option>
                 {visiblePlayers.map(p => <option key={p.id} value={p.id}>{p.nickname}</option>)}
               </select>
-              <select value={compareBId} onChange={e => setCompareBId(e.target.value)} style={{ height: 36, borderRadius: 10, border: '1px solid #334155', background: '#131b2b', color: '#fff', padding: '0 10px' }}>
+              <select value={compareBId} onChange={e => setCompareBId(e.target.value)} style={{ height: 36, borderRadius: 10, border: '1px solid var(--text-6)', background: 'var(--surface)', color: '#fff', padding: '0 10px' }}>
                 <option value=''>Oyuncu B sec</option>
                 {visiblePlayers.map(p => <option key={p.id} value={p.id}>{p.nickname}</option>)}
               </select>
@@ -631,7 +631,7 @@ export default function PlayersPage() {
         )}
 
         <div style={{
-          border: '1px solid #26324a',
+          border: '1px solid var(--line)',
           background: '#131b2bd9',
           borderRadius: 14,
           padding: 14,
@@ -646,12 +646,12 @@ export default function PlayersPage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder='Oyuncu ara (nick veya gerçek isim)...'
-              style={{ height: 38, width: '100%', borderRadius: 12, border: '1px solid #334155', background: '#131b2b', color: '#fff', padding: '0 38px 0 12px', outline: 'none' }}
+              style={{ height: 38, width: '100%', borderRadius: 12, border: '1px solid var(--text-6)', background: 'var(--surface)', color: '#fff', padding: '0 38px 0 12px', outline: 'none' }}
             />
             {search && (
               <button
                 onClick={() => setSearch('')}
-                style={{ position: 'absolute', right: 8, top: 7, width: 24, height: 24, borderRadius: 8, border: '1px solid #334155', background: '#172032', color: '#94a3b8', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                style={{ position: 'absolute', right: 8, top: 7, width: 24, height: 24, borderRadius: 8, border: '1px solid var(--text-6)', background: 'var(--surface-2)', color: 'var(--text-3)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
               >
                 <XIcon size={13} />
               </button>
@@ -662,7 +662,7 @@ export default function PlayersPage() {
             <select
               value={sortKey}
               onChange={e => setSortKey(e.target.value)}
-              style={{ height: 38, borderRadius: 12, border: '1px solid #334155', background: '#131b2b', color: '#fff', padding: '0 10px' }}
+              style={{ height: 38, borderRadius: 12, border: '1px solid var(--text-6)', background: 'var(--surface)', color: '#fff', padding: '0 10px' }}
             >
               <option value='impact'>Impact Score</option>
               <option value='kd'>K/D</option>
@@ -673,16 +673,16 @@ export default function PlayersPage() {
           </div>
         </div>
 
-        <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>
+        <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 8 }}>
           {visiblePlayers.length} oyuncu listelendi · {GAMES.find(game => game.id === selectedGameId)?.label || selectedGameId}
         </div>
 
         <div style={{ overflowX: 'auto' }}>
           <div style={{
-            border: '1px solid #26324a',
+            border: '1px solid var(--line)',
             borderRadius: 14,
             overflow: 'hidden',
-            background: '#131b2b',
+            background: 'var(--surface)',
             minWidth: 930,
           }}>
             <div style={{
@@ -690,9 +690,9 @@ export default function PlayersPage() {
             gridTemplateColumns: '1.7fr 1.2fr .7fr .7fr .7fr .7fr .7fr .6fr',
             gap: 8,
             padding: '12px 14px',
-            borderBottom: '1px solid #26324a',
+            borderBottom: '1px solid var(--line)',
             fontSize: 11,
-            color: '#94a3b8',
+            color: 'var(--text-3)',
             textTransform: 'uppercase',
             letterSpacing: '.5px',
           }}>
@@ -706,13 +706,13 @@ export default function PlayersPage() {
             <div>Follow</div>
           </div>
 
-            {loading && <div style={{ padding: 18, color: '#94a3b8', fontSize: 13 }}>Oyuncular yukleniyor...</div>}
+            {loading && <div style={{ padding: 18, color: 'var(--text-3)', fontSize: 13 }}>Oyuncular yukleniyor...</div>}
             {!loading && error && <div style={{ padding: 18, color: '#ff6a7f', fontSize: 13 }}>{error}</div>}
             {!loading && !error && visiblePlayers.length === 0 && (
               <div style={{ padding: 26, textAlign: 'center' }}>
-                <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}><SearchX size={26} color="#475569" /></div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#e2e8f0', marginBottom: 4 }}>Oyuncu Bulunamadı</div>
-                <div style={{ fontSize: 12, color: '#94a3b8' }}>
+                <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}><SearchX size={26} color="var(--text-5)" /></div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', marginBottom: 4 }}>Oyuncu Bulunamadı</div>
+                <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
                   Arama kelimesini sadeleştirip tekrar deneyin ya da oyun filtresini değiştirin.
                 </div>
               </div>
@@ -731,7 +731,7 @@ export default function PlayersPage() {
                   gap: 8,
                   alignItems: 'center',
                   padding: '12px 14px',
-                  borderBottom: '1px solid #172032',
+                  borderBottom: '1px solid var(--surface-2)',
                   background: idx < 3 ? 'linear-gradient(90deg, rgba(194,92,208,.11), transparent 58%)' : 'transparent',
                 }}
               >
@@ -747,7 +747,7 @@ export default function PlayersPage() {
                     height={34}
                     borderRadius='50%'
                     objectFit='cover'
-                    style={{ border: '1px solid #334155' }}
+                    style={{ border: '1px solid var(--text-6)' }}
                   />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.nickname || 'Unknown'}</div>
@@ -772,12 +772,12 @@ export default function PlayersPage() {
                     borderRadius={6}
                     objectFit='contain'
                   />
-                  <span style={{ fontSize: 12, color: '#cbd5e1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.team?.name || 'Free Agent'}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.team?.name || 'Free Agent'}</span>
                 </div>
 
                 <div style={{ fontWeight: 700 }}>{fmt(player.kd)}</div>
-                <div style={{ fontWeight: 700, color: player.acs != null ? '#5eead4' : '#475569' }}>{player.acs != null ? player.acs : '—'}</div>
-                <div style={{ fontWeight: 700, color: player.hsPct > 0 ? '#e2e8f0' : '#475569' }}>{player.hsPct > 0 ? `${Math.round(player.hsPct)}%` : '—'}</div>
+                <div style={{ fontWeight: 700, color: player.acs != null ? '#5eead4' : 'var(--text-5)' }}>{player.acs != null ? player.acs : '—'}</div>
+                <div style={{ fontWeight: 700, color: player.hsPct > 0 ? 'var(--text-1)' : 'var(--text-5)' }}>{player.hsPct > 0 ? `${Math.round(player.hsPct)}%` : '—'}</div>
                 <div style={{ fontWeight: 700 }}>{Math.round(player.winRate)}%</div>
                 <div style={{ color: '#ff9aa9', fontWeight: 800 }}>{Math.round(player.impact)}</div>
 
@@ -788,14 +788,14 @@ export default function PlayersPage() {
                       height: 30,
                       width: 30,
                       borderRadius: 8,
-                      border: followed ? `1px solid ${FEXT.accent}` : '1px solid #334155',
-                      background: followed ? FEXT.accentSoftBg : '#131b2b',
-                      color: followed ? '#fff' : '#94a3b8',
+                      border: followed ? `1px solid ${FEXT.accent}` : '1px solid var(--text-6)',
+                      background: followed ? FEXT.accentSoftBg : 'var(--surface)',
+                      color: followed ? '#fff' : 'var(--text-3)',
                       cursor: 'pointer', display: 'grid', placeItems: 'center',
                     }}
                     title={followed ? 'Takibi birak' : 'Takip et'}
                   >
-                    <Star size={14} fill={followed ? '#FFD700' : 'none'} color={followed ? '#FFD700' : '#94a3b8'} />
+                    <Star size={14} fill={followed ? '#FFD700' : 'none'} color={followed ? '#FFD700' : 'var(--text-3)'} />
                   </button>
                 </div>
               </div>
@@ -804,7 +804,7 @@ export default function PlayersPage() {
           </div>
         </div>
 
-        <div style={{ marginTop: 10, fontSize: 11, color: '#64748b' }}>
+        <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-4)' }}>
           Not: Oyuncular istatistikleri olmasa bile arama sonuclarinda listelenir. Faker/Caps gibi isimler dogrudan bulunabilir.
         </div>
       </div>

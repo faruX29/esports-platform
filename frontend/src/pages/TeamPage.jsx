@@ -31,7 +31,7 @@ function fmtDate(d) {
 
 // skeleton
 function Sk({ w = '100%', h = '16px', r = '8px' }) {
-  return <div style={{ width: w, height: h, borderRadius: r, background: 'linear-gradient(90deg,#131b2b 25%,#172032 50%,#131b2b 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
+  return <div style={{ width: w, height: h, borderRadius: r, background: 'linear-gradient(90deg,var(--surface) 25%,var(--surface-2) 50%,var(--surface) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
 }
 
 // ── Form pill ─────────────────────────────────────────────────────────────────
@@ -39,8 +39,8 @@ function FormPill({ result }) {
   const cfg = {
     W: { bg: 'rgba(76,175,80,.25)',  border: '#4CAF50', color: '#4CAF50', label: 'W' },
     L: { bg: 'rgba(255,70,85,.2)',   border: '#FF4655', color: '#FF4655', label: 'L' },
-    D: { bg: 'rgba(150,150,150,.15)',border: '#64748b',    color: '#64748b',    label: 'D' },
-  }[result] ?? { bg: '#131b2b', border: '#334155', color: '#64748b', label: '?' }
+    D: { bg: 'rgba(150,150,150,.15)',border: 'var(--text-4)',    color: 'var(--text-4)',    label: 'D' },
+  }[result] ?? { bg: 'var(--surface)', border: 'var(--text-6)', color: 'var(--text-4)', label: '?' }
 
   return (
     <div style={{
@@ -58,12 +58,12 @@ function StatBox({ Icon, value, label, color = '#fff' }) {
   return (
     <div style={{
       textAlign: 'center', padding: '16px 20px', minWidth: 90,
-      background: '#131b2b', borderRadius: 14,
-      border: '1px solid #172032',
+      background: 'var(--surface)', borderRadius: 14,
+      border: '1px solid var(--surface-2)',
     }}>
       <div style={{ marginBottom: 4, display: 'flex', justifyContent: 'center' }}>{Icon && <Icon size={20} color={color} />}</div>
       <div style={{ fontSize: 26, fontWeight: 900, color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
-      <div style={{ fontSize: 11, color: '#475569', marginTop: 4 }}>{label}</div>
+      <div style={{ fontSize: 11, color: 'var(--text-5)', marginTop: 4 }}>{label}</div>
     </div>
   )
 }
@@ -75,10 +75,10 @@ function WinRateBar({ wins, total }) {
   return (
     <div style={{ marginTop: 10 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 5 }}>
-        <span style={{ color: '#64748b' }}>Kazanma Oranı</span>
+        <span style={{ color: 'var(--text-4)' }}>Kazanma Oranı</span>
         <span style={{ color, fontWeight: 800 }}>{pct}%</span>
       </div>
-      <div style={{ height: 6, borderRadius: 3, background: '#131b2b', overflow: 'hidden' }}>
+      <div style={{ height: 6, borderRadius: 3, background: 'var(--surface)', overflow: 'hidden' }}>
         <div style={{
           width: `${pct}%`, height: '100%', borderRadius: 3,
           background: `linear-gradient(90deg, ${color}99, ${color})`,
@@ -99,17 +99,17 @@ function PlayerAvatar({ src, name, size = 64 }) {
       <img
         src={src} alt={name}
         onError={() => setErr(true)}
-        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', border: '2px solid #26324a', display: 'block' }}
+        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--line)', display: 'block' }}
       />
     )
   }
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%',
-      background: 'linear-gradient(135deg,#172032,#26324a)',
-      border: '2px solid #334155', display: 'flex', alignItems: 'center',
+      background: 'linear-gradient(135deg,var(--surface-2),var(--line))',
+      border: '2px solid var(--text-6)', display: 'flex', alignItems: 'center',
       justifyContent: 'center', fontSize: size * 0.3, fontWeight: 800,
-      color: '#64748b', flexShrink: 0,
+      color: 'var(--text-4)', flexShrink: 0,
     }}>{initials}</div>
   )
 }
@@ -172,7 +172,7 @@ function mapRosterChanges(rows, teamIdNum) {
 function TransferTimeline({ transfers }) {
   if (!transfers.length) {
     return (
-      <div style={{ marginTop: 18, padding: '14px 16px', borderRadius: 12, background: '#131b2b', border: '1px solid #172032', color: '#475569', fontSize: 12, textAlign: 'center' }}>
+      <div style={{ marginTop: 18, padding: '14px 16px', borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--surface-2)', color: 'var(--text-5)', fontSize: 12, textAlign: 'center' }}>
         Transfer akisi henuz bulunamadi.
       </div>
     )
@@ -199,20 +199,20 @@ function TransferTimeline({ transfers }) {
               <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
                 <div style={{ width: 10, height: 10, borderRadius: '50%', marginTop: 8, background: accent, boxShadow: `0 0 12px ${accent}AA` }} />
                 {index < transfers.length - 1 && (
-                  <div style={{ position: 'absolute', top: 22, width: 2, bottom: -10, background: 'linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,.05))' }} />
+                  <div style={{ position: 'absolute', top: 22, width: 2, bottom: -10, background: 'linear-gradient(180deg, rgba(255,255,255,.28), var(--hover))' }} />
                 )}
               </div>
 
-              <div style={{ background: '#131b2b', border: '1px solid #26324a', borderLeft: `3px solid ${accent}`, borderRadius: 10, padding: '9px 11px', display: 'grid', gap: 5 }}>
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderLeft: `3px solid ${accent}`, borderRadius: 10, padding: '9px 11px', display: 'grid', gap: 5 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: '#e2e8f0' }}>{item.player}</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>{item.player}</div>
                   <span style={{ fontSize: 10, fontWeight: 800, color: accent, border: `1px solid ${accent}77`, borderRadius: 999, padding: '2px 7px', background: `${accent}1A` }}>{label}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                  {item.oldTeam && <span style={{ fontSize: 11, color: '#94a3b8' }}>From: {item.oldTeam}</span>}
-                  {item.newTeam && <span style={{ fontSize: 11, color: '#e2e8f0' }}>To: {item.newTeam}</span>}
+                  {item.oldTeam && <span style={{ fontSize: 11, color: 'var(--text-3)' }}>From: {item.oldTeam}</span>}
+                  {item.newTeam && <span style={{ fontSize: 11, color: 'var(--text-1)' }}>To: {item.newTeam}</span>}
                   {item.role && <span style={{ fontSize: 10, color: '#ffadb8', border: '1px solid rgba(200,16,46,.35)', borderRadius: 7, padding: '1px 6px' }}>{item.role}</span>}
-                  <span style={{ fontSize: 10, color: '#64748b', marginLeft: 'auto' }}>{dateLabel}</span>
+                  <span style={{ fontSize: 10, color: 'var(--text-4)', marginLeft: 'auto' }}>{dateLabel}</span>
                 </div>
               </div>
             </div>
@@ -235,30 +235,30 @@ function PlayerCard({ player }) {
     <div
       onClick={() => player.id && navigate(`/player/${player.id}`)}  // ← tıklanabilir
       style={{
-        background: '#131b2b', borderRadius: 14,
-        border: '1px solid #172032', padding: '18px 14px',
+        background: 'var(--surface)', borderRadius: 14,
+        border: '1px solid var(--surface-2)', padding: '18px 14px',
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
         transition: 'border-color .2s, transform .2s',
         cursor: player.id ? 'pointer' : 'default',   // ← cursor
       }}
       onMouseEnter={e => {
-        e.currentTarget.style.borderColor = player.id ? badge.border : '#172032'
+        e.currentTarget.style.borderColor = player.id ? badge.border : 'var(--surface-2)'
         e.currentTarget.style.transform   = player.id ? 'translateY(-4px)' : 'none'
       }}
       onMouseLeave={e => {
-        e.currentTarget.style.borderColor = '#172032'
+        e.currentTarget.style.borderColor = 'var(--surface-2)'
         e.currentTarget.style.transform   = 'none'
       }}
     >
       <PlayerAvatar src={player.image_url} name={player.nickname} size={64} />
 
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: '#e2e8f0', lineHeight: 1.3 }}>{player.nickname}</div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', lineHeight: 1.3 }}>{player.nickname}</div>
         {player.real_name && (
-          <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{player.real_name}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-4)', marginTop: 2 }}>{player.real_name}</div>
         )}
         {flag && (
-          <div style={{ fontSize: 11, color: '#cbd5e1', marginTop: 4 }}>{flag} {natCode}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 4 }}>{flag} {natCode}</div>
         )}
       </div>
 
@@ -269,23 +269,23 @@ function PlayerCard({ player }) {
           color: badge.color, letterSpacing: '.5px', textTransform: 'capitalize',
         }}>{badge.label}</div>
       ) : (
-        <div style={{ fontSize: 11, color: '#334155' }}>—</div>
+        <div style={{ fontSize: 11, color: 'var(--text-6)' }}>—</div>
       )}
 
       {/* K/D — hybrid v3 verisi (varsa) */}
       {player.kd != null && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: -2 }}>
-          <span style={{ fontSize: 10, color: '#64748b' }}>K/D</span>
+          <span style={{ fontSize: 10, color: 'var(--text-4)' }}>K/D</span>
           <span style={{ fontSize: 13, fontWeight: 800, color: player.kd >= 1 ? '#4ade80' : '#ff6a7f', fontVariantNumeric: 'tabular-nums' }}>
             {player.kd.toFixed(2)}
           </span>
-          <span style={{ fontSize: 9, color: '#475569' }}>({player.statMatches} maç)</span>
+          <span style={{ fontSize: 9, color: 'var(--text-5)' }}>({player.statMatches} maç)</span>
         </div>
       )}
 
       {/* Profil linki göstergesi */}
       {player.id && (
-        <div style={{ fontSize: 9, color: '#334155', marginTop: -4 }}>profili gör →</div>
+        <div style={{ fontSize: 9, color: 'var(--text-6)', marginTop: -4 }}>profili gör →</div>
       )}
 
       {socials.length > 0 && (
@@ -341,11 +341,11 @@ function MatchCard({ match, teamId, navigate }) {
     <div
       onClick={() => navigate(`/match/${match.id}`)}
       style={{
-        background: '#131b2b', borderRadius: 14, padding: '14px 16px',
+        background: 'var(--surface)', borderRadius: 14, padding: '14px 16px',
         border: isWin  ? '1.5px solid rgba(76,175,80,.5)'
               : isLoss ? '1.5px solid rgba(255,70,85,.35)'
               : isLive ? '1.5px solid rgba(255,70,85,.6)'
-              : '1.5px solid #172032',
+              : '1.5px solid var(--surface-2)',
         boxShadow: isLive ? '0 0 14px rgba(255,70,85,.18)' : 'none',
         cursor: 'pointer',
         transition: 'transform .2s, border-color .2s',
@@ -353,13 +353,13 @@ function MatchCard({ match, teamId, navigate }) {
       onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.borderColor = '#FF4655' }}
       onMouseLeave={e => {
         e.currentTarget.style.transform = 'none'
-        e.currentTarget.style.borderColor = isWin ? 'rgba(76,175,80,.5)' : isLoss ? 'rgba(255,70,85,.35)' : isLive ? 'rgba(255,70,85,.6)' : '#172032'
+        e.currentTarget.style.borderColor = isWin ? 'rgba(76,175,80,.5)' : isLoss ? 'rgba(255,70,85,.35)' : isLive ? 'rgba(255,70,85,.6)' : 'var(--surface-2)'
       }}
     >
       {/* Top row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#475569', letterSpacing: '.5px' }}>
+          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-5)', letterSpacing: '.5px' }}>
             {match.game?.name === 'Counter-Strike 2' ? 'CS2' : match.game?.name === 'League of Legends' ? 'LoL' : (match.game?.name ?? '?')}
           </span>
           {getBOFormat(match.team_a_score, match.team_b_score, match.number_of_games) && (
@@ -377,8 +377,8 @@ function MatchCard({ match, teamId, navigate }) {
             <span style={{
               fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 6,
               background: isWin ? 'rgba(76,175,80,.2)' : isLoss ? 'rgba(255,70,85,.2)' : 'rgba(100,100,100,.15)',
-              color: isWin ? '#4CAF50' : isLoss ? '#FF4655' : '#94a3b8',
-              border: `1px solid ${isWin ? 'rgba(76,175,80,.4)' : isLoss ? 'rgba(255,70,85,.4)' : '#334155'}`,
+              color: isWin ? '#4CAF50' : isLoss ? '#FF4655' : 'var(--text-3)',
+              border: `1px solid ${isWin ? 'rgba(76,175,80,.4)' : isLoss ? 'rgba(255,70,85,.4)' : 'var(--text-6)'}`,
               display: 'inline-flex', alignItems: 'center', gap: 4,
             }}>
               {isWin ? <><CircleCheck size={11} /> WIN</> : isLoss ? <><XIcon size={11} /> LOSS</> : '— DRAW'}
@@ -393,9 +393,9 @@ function MatchCard({ match, teamId, navigate }) {
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           {myTeam?.logo_url
             ? <img src={myTeam.logo_url} alt="" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }} />
-            : <div style={{ width: 32, height: 32, background: '#172032', borderRadius: 6, flexShrink: 0 }} />
+            : <div style={{ width: 32, height: 32, background: 'var(--surface-2)', borderRadius: 6, flexShrink: 0 }} />
           }
-          <span style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: isWin ? '#4CAF50' : '#e2e8f0' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: isWin ? '#4CAF50' : 'var(--text-1)' }}>
             {myTeam?.name}
           </span>
         </div>
@@ -403,24 +403,24 @@ function MatchCard({ match, teamId, navigate }) {
         {/* Score */}
         <div style={{ textAlign: 'center', flexShrink: 0 }}>
           {isFin ? (
-            <div style={{ fontSize: 18, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: '#e2e8f0' }}>
-              <span style={{ color: isWin ? '#4CAF50' : isLoss ? '#FF4655' : '#94a3b8' }}>{myScore ?? 0}</span>
-              <span style={{ color: '#26324a', margin: '0 4px' }}>:</span>
-              <span style={{ color: isLoss ? '#4CAF50' : isWin ? '#94a3b8' : '#94a3b8' }}>{oppScore ?? 0}</span>
+            <div style={{ fontSize: 18, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: 'var(--text-1)' }}>
+              <span style={{ color: isWin ? '#4CAF50' : isLoss ? '#FF4655' : 'var(--text-3)' }}>{myScore ?? 0}</span>
+              <span style={{ color: 'var(--line)', margin: '0 4px' }}>:</span>
+              <span style={{ color: isLoss ? '#4CAF50' : isWin ? 'var(--text-3)' : 'var(--text-3)' }}>{oppScore ?? 0}</span>
             </div>
           ) : (
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#334155' }}>VS</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-6)' }}>VS</span>
           )}
         </div>
 
         {/* Opponent */}
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', minWidth: 0 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#64748b', textAlign: 'right' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-4)', textAlign: 'right' }}>
             {opp?.name}
           </span>
           {opp?.logo_url
             ? <img src={opp.logo_url} alt="" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }} />
-            : <div style={{ width: 32, height: 32, background: '#172032', borderRadius: 6, flexShrink: 0 }} />
+            : <div style={{ width: 32, height: 32, background: 'var(--surface-2)', borderRadius: 6, flexShrink: 0 }} />
           }
         </div>
       </div>
@@ -428,23 +428,23 @@ function MatchCard({ match, teamId, navigate }) {
       {/* AI Win bar */}
       {hasPred && (
         <div style={{ marginBottom: 8 }}>
-          <div style={{ height: 4, borderRadius: 2, background: '#131b2b', overflow: 'hidden' }}>
+          <div style={{ height: 4, borderRadius: 2, background: 'var(--surface)', overflow: 'hidden' }}>
             <div style={{ width: `${Math.round(myPred * 100)}%`, height: '100%', background: 'linear-gradient(90deg,#667eea,#764ba2)' }} />
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginTop: 3, color: '#475569' }}>
-            <span style={{ color: myPred >= oppPred ? '#818cf8' : '#475569' }}>{Math.round(myPred * 100)}%</span>
-            <span style={{ color: '#475569' }}>AI</span>
-            <span style={{ color: oppPred > myPred ? '#818cf8' : '#475569' }}>{Math.round(oppPred * 100)}%</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginTop: 3, color: 'var(--text-5)' }}>
+            <span style={{ color: myPred >= oppPred ? '#818cf8' : 'var(--text-5)' }}>{Math.round(myPred * 100)}%</span>
+            <span style={{ color: 'var(--text-5)' }}>AI</span>
+            <span style={{ color: oppPred > myPred ? '#818cf8' : 'var(--text-5)' }}>{Math.round(oppPred * 100)}%</span>
           </div>
         </div>
       )}
 
       {/* Bottom */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #172032', paddingTop: 8, gap: 8 }}>
-        <div style={{ fontSize: 10, color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--surface-2)', paddingTop: 8, gap: 8 }}>
+        <div style={{ fontSize: 10, color: 'var(--text-6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
           <Trophy size={11} style={{ flexShrink: 0 }} /> {match.tournament?.name ?? '—'}
         </div>
-        <div style={{ fontSize: 10, color: '#475569', flexShrink: 0 }}>
+        <div style={{ fontSize: 10, color: 'var(--text-5)', flexShrink: 0 }}>
           {new Date(match.scheduled_at).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
         </div>
       </div>
@@ -607,8 +607,8 @@ export default function TeamPage() {
       {/* ═══ HEADER KAPAK ═══════════════════════════════════════════ */}
       <div style={{
         position: 'relative', overflow: 'hidden',
-        background: 'linear-gradient(160deg, #131b2b 0%, #131b2b 100%)',
-        borderBottom: isTR ? '1px solid rgba(200,16,46,.4)' : '1px solid #172032',
+        background: 'linear-gradient(160deg, var(--surface) 0%, var(--surface) 100%)',
+        borderBottom: isTR ? '1px solid rgba(200,16,46,.4)' : '1px solid var(--surface-2)',
         padding: '36px 28px 28px',
         marginBottom: 28,
       }}>
@@ -625,12 +625,12 @@ export default function TeamPage() {
           onClick={() => navigate(-1)}
           style={{
             position: 'absolute', top: 16, left: 20,
-            background: 'rgba(255,255,255,.06)', border: '1px solid #26324a',
-            borderRadius: 8, color: '#94a3b8', padding: '6px 12px',
+            background: 'rgba(255,255,255,.06)', border: '1px solid var(--line)',
+            borderRadius: 8, color: 'var(--text-3)', padding: '6px 12px',
             fontSize: 12, cursor: 'pointer', transition: 'all .15s',
           }}
           onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-          onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}
+          onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}
         >← Geri</button>
 
         {/* Fav button */}
@@ -639,8 +639,8 @@ export default function TeamPage() {
           style={{
             position: 'absolute', top: 16, right: 20,
             background: isFav ? 'rgba(255,215,0,.15)' : 'rgba(255,255,255,.06)',
-            border: isFav ? '1px solid rgba(255,215,0,.5)' : '1px solid #26324a',
-            borderRadius: 8, color: isFav ? '#FFD700' : '#64748b',
+            border: isFav ? '1px solid rgba(255,215,0,.5)' : '1px solid var(--line)',
+            borderRadius: 8, color: isFav ? '#FFD700' : 'var(--text-4)',
             padding: '6px 14px', fontSize: 13, cursor: 'pointer',
             transition: 'all .15s', fontWeight: isFav ? 700 : 400,
             display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -671,18 +671,18 @@ export default function TeamPage() {
                 overflowWrap: 'anywhere', minWidth: 0,
                 background: isTR
                   ? 'linear-gradient(135deg,#fff,#ff6b7a)'
-                  : 'linear-gradient(135deg,#fff,#94a3b8)',
+                  : 'linear-gradient(135deg,#fff,var(--text-3))',
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
               }}>{team.name}</h1>
               {team.acronym && (
-                <span style={{ fontSize: 16, color: '#64748b', fontWeight: 700 }}>({team.acronym})</span>
+                <span style={{ fontSize: 16, color: 'var(--text-4)', fontWeight: 700 }}>({team.acronym})</span>
               )}
             </div>
 
             {/* Badges */}
             <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
               {team.location && (
-                <span style={{ padding: '3px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700, background: '#172032', border: '1px solid #26324a', color: '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ padding: '3px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700, background: 'var(--surface-2)', border: '1px solid var(--line)', color: 'var(--text-3)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                   <MapPin size={12} /> {team.location}
                 </span>
               )}
@@ -699,7 +699,7 @@ export default function TeamPage() {
             {/* Form strip */}
             {form.length > 0 && (
               <div style={{ marginTop: 14 }}>
-                <div style={{ fontSize: 10, color: '#475569', marginBottom: 6, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
+                <div style={{ fontSize: 10, color: 'var(--text-5)', marginBottom: 6, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
                   Son Form ({form.length} maç)
                   {streak && streak.count >= 3 && (
                     <span style={{
@@ -723,11 +723,11 @@ export default function TeamPage() {
 
         {/* Stats row */}
         <div style={{ display: 'flex', gap: 12, marginTop: 24, flexWrap: 'wrap' }}>
-          <StatBox Icon={Swords}      value={wins + losses}          label="Total Maç"   color="#94a3b8"  />
+          <StatBox Icon={Swords}      value={wins + losses}          label="Total Maç"   color="var(--text-3)"  />
           <StatBox Icon={CircleCheck} value={wins}                   label="Galibiyet"   color="#4CAF50"  />
           <StatBox Icon={XIcon}       value={losses}                 label="Mağlubiyet"  color="#FF4655"  />
           {draws > 0 && <StatBox Icon={Handshake} value={draws}      label="Beraberlik (Bo2)" color="#FFB800" />}
-          <StatBox Icon={Clock}       value={upcomingMatches.length} label="Yaklaşan"    color="#94a3b8"  />
+          <StatBox Icon={Clock}       value={upcomingMatches.length} label="Yaklaşan"    color="var(--text-3)"  />
           <StatBox Icon={Users}       value={players.length}         label="Oyuncu"      color="#818cf8"  />
         </div>
 
@@ -739,7 +739,7 @@ export default function TeamPage() {
 
       {/* ═══ TABS ════════════════════════════════════════════════════ */}
       <div style={{ padding: '0 20px', marginBottom: 24 }}>
-        <div style={{ display: 'flex', gap: 8, borderBottom: '1px solid #172032', paddingBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 8, borderBottom: '1px solid var(--surface-2)', paddingBottom: 12 }}>
           {[
             { key: 'roster',   label: 'Kadro',    Icon: Users,       count: players.length },
             { key: 'upcoming', label: 'Upcoming', Icon: Clock,       count: upcomingMatches.length },
@@ -750,15 +750,15 @@ export default function TeamPage() {
               <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '8px 18px', borderRadius: 10,
-                border: active ? `1.5px solid ${FEXT.accent}` : '1.5px solid #172032',
-                background: active ? FEXT.accentSoftBg : '#131b2b',
-                color: active ? FEXT.accentText : '#64748b',
+                border: active ? `1.5px solid ${FEXT.accent}` : '1.5px solid var(--surface-2)',
+                background: active ? FEXT.accentSoftBg : 'var(--surface)',
+                color: active ? FEXT.accentText : 'var(--text-4)',
                 fontSize: 13, fontWeight: active ? 800 : 500,
                 cursor: 'pointer', transition: 'all .18s',
               }}>
                 {t.Icon && <t.Icon size={14} />}
                 {t.label}
-                <span style={{ fontSize: 11, padding: '1px 6px', borderRadius: 6, background: active ? FEXT.accentSoftBg : '#172032', color: active ? FEXT.accentText : '#64748b' }}>
+                <span style={{ fontSize: 11, padding: '1px 6px', borderRadius: 6, background: active ? FEXT.accentSoftBg : 'var(--surface-2)', color: active ? FEXT.accentText : 'var(--text-4)' }}>
                   {t.count}
                 </span>
               </button>
@@ -773,8 +773,8 @@ export default function TeamPage() {
         {/* ── ROSTER ── */}
         {activeTab === 'roster' && (
           players.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px', color: '#475569' }}>
-              <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><Users size={38} color="#334155" /></div>
+            <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-5)' }}>
+              <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><Users size={38} color="var(--text-6)" /></div>
               <div>Kadro verisi henüz senkronize edilmedi</div>
             </div>
           ) : (
@@ -782,7 +782,7 @@ export default function TeamPage() {
               {players.length > 7 && (
                 <div style={{ marginBottom: 14, padding: '10px 14px', borderRadius: 10, background: 'rgba(255,184,0,.06)', border: '1px solid rgba(255,184,0,.2)', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <TriangleAlert size={14} color="#FFB800" />
-                  <span style={{ fontSize: 11, color: '#94a3b8' }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
                     Bu kadroda {players.length} oyuncu görünüyor. Bazıları transfer olmuş olabilir; güncel kadro yakında yansıyacak.
                   </span>
                 </div>
@@ -794,7 +794,7 @@ export default function TeamPage() {
 
               <TransferTimeline transfers={teamTransfers} />
 
-              <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 10, background: '#131b2b', border: '1px solid #172032', fontSize: 12, color: '#475569', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--surface-2)', fontSize: 12, color: 'var(--text-5)', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 <Info size={13} style={{ flexShrink: 0 }} /> Oyuncu K/D verisi Liquipedia kapsamındaki maçlardan hesaplanır; kadro büyüdükçe zenginleşir
               </div>
             </div>
@@ -816,9 +816,9 @@ export default function TeamPage() {
                     return (
                       <button key={g} onClick={() => setGameFilter(g)} style={{
                         padding: '6px 12px', borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                        border: active ? `1px solid ${FEXT.accent}` : '1px solid #26324a',
-                        background: active ? FEXT.accentSoftBg : '#131b2b',
-                        color: active ? FEXT.accentText : '#94a3b8',
+                        border: active ? `1px solid ${FEXT.accent}` : '1px solid var(--line)',
+                        background: active ? FEXT.accentSoftBg : 'var(--surface)',
+                        color: active ? FEXT.accentText : 'var(--text-3)',
                       }}>
                         {g === 'all' ? `Tümü (${source.length})` : `${g} (${source.filter(m => m.game?.name === g).length})`}
                       </button>
@@ -827,7 +827,7 @@ export default function TeamPage() {
                 </div>
               )}
               {activeTab === 'past' && team?.name && (
-                <div style={{ marginBottom: 12, fontSize: 12, color: '#64748b' }}>
+                <div style={{ marginBottom: 12, fontSize: 12, color: 'var(--text-4)' }}>
                   Son {source.length} maç gösteriliyor.{' '}
                   <Link to={`/matches?q=${encodeURIComponent(team.name)}&tab=past`} style={{ color: '#9db4ff', textDecoration: 'none', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                     <CalendarDays size={12} /> Tüm geçmişi (yıla göre) ara →
@@ -835,8 +835,8 @@ export default function TeamPage() {
                 </div>
               )}
               {list.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px', color: '#475569' }}>
-                  <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>{activeTab === 'upcoming' ? <CalendarDays size={38} color="#334155" /> : <ClipboardList size={38} color="#334155" />}</div>
+                <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-5)' }}>
+                  <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>{activeTab === 'upcoming' ? <CalendarDays size={38} color="var(--text-6)" /> : <ClipboardList size={38} color="var(--text-6)" />}</div>
                   <div>{activeTab === 'upcoming' ? 'Planlanmış maç yok' : 'Geçmiş maç yok'}</div>
                 </div>
               ) : (

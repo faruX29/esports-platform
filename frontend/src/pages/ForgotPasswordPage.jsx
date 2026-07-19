@@ -35,31 +35,31 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'radial-gradient(ellipse at 20% 10%, rgba(223,72,136,.14), transparent 45%), #0b0f19' }}>
-      <div style={{ width: 'min(440px, 100%)', borderRadius: 18, border: '1px solid #26324a', background: '#131b2b', overflow: 'hidden', boxShadow: '0 18px 40px rgba(0,0,0,.5)' }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'radial-gradient(ellipse at 20% 10%, rgba(223,72,136,.14), transparent 45%), var(--bg)' }}>
+      <div style={{ width: 'min(440px, 100%)', borderRadius: 18, border: '1px solid var(--line)', background: 'var(--surface)', overflow: 'hidden', boxShadow: '0 18px 40px rgba(0,0,0,.5)' }}>
         <div style={{ height: 4, background: 'linear-gradient(90deg,#DF4888,#8B3AA0 55%,#6A297F)' }} />
         <div style={{ padding: 24 }}>
-          <h1 style={{ margin: 0, fontSize: 24, color: '#f8fafc' }}>Şifreni mi unuttun?</h1>
-          <p style={{ margin: '6px 0 18px', fontSize: 13, color: '#94a3b8' }}>E-postanı gir, sıfırlama bağlantısı gönderelim.</p>
+          <h1 style={{ margin: 0, fontSize: 24, color: 'var(--text)' }}>Şifreni mi unuttun?</h1>
+          <p style={{ margin: '6px 0 18px', fontSize: 13, color: 'var(--text-3)' }}>E-postanı gir, sıfırlama bağlantısı gönderelim.</p>
 
           {sent ? (
             <div style={{ fontSize: 14, color: '#4ade80', lineHeight: 1.6 }}>
               <CircleCheck size={15} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 4 }} /> Sıfırlama bağlantısı <b style={{ color: '#ddfffb' }}>{email}</b> adresine gönderildi.
               E-postandaki linke tıklayıp yeni şifreni belirle.
-              <div style={{ marginTop: 14, fontSize: 12, color: '#64748b' }}>
-                <Link to="/login" style={{ color: '#e2e8f0' }}>Girişe dön</Link>
+              <div style={{ marginTop: 14, fontSize: 12, color: 'var(--text-4)' }}>
+                <Link to="/login" style={{ color: 'var(--text-1)' }}>Girişe dön</Link>
               </div>
             </div>
           ) : (
             <>
               <form onSubmit={onSubmit} style={{ display: 'grid', gap: 10 }}>
-                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="E-posta" style={{ background: '#131b2b', border: '1px solid #26324a', color: '#fff', borderRadius: 11, padding: '11px 12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }} />
+                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="E-posta" style={{ background: 'var(--surface)', border: '1px solid var(--line)', color: '#fff', borderRadius: 11, padding: '11px 12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }} />
                 <Turnstile ref={captchaRef} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken('')} />
                 <button disabled={loading} style={{ marginTop: 4, border: 'none', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#fff', fontWeight: 800, background: 'linear-gradient(135deg,#DF4888,#8B3AA0 55%,#6A297F)', opacity: loading ? 0.6 : 1 }}>{loading ? 'Gönderiliyor...' : 'Sıfırlama Bağlantısı Gönder'}</button>
                 {error && <div style={{ fontSize: 12, color: '#FF4655' }}>{error}</div>}
               </form>
-              <div style={{ marginTop: 14, fontSize: 12, color: '#64748b' }}>
-                <Link to="/login" style={{ color: '#e2e8f0' }}>Girişe dön</Link>
+              <div style={{ marginTop: 14, fontSize: 12, color: 'var(--text-4)' }}>
+                <Link to="/login" style={{ color: 'var(--text-1)' }}>Girişe dön</Link>
               </div>
             </>
           )}

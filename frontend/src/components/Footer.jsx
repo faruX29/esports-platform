@@ -16,7 +16,7 @@ function InstagramIcon() {
  */
 const WORDMARK = (
   <span style={{ fontFamily: "'Baloo 2','Fredoka',system-ui,sans-serif", fontWeight: 800, fontSize: 22, letterSpacing: '-.01em' }}>
-    <span style={{ color: '#F8FAFC' }}>fe</span>
+    <span style={{ color: 'var(--text)' }}>fe</span>
     <span style={{ background: 'linear-gradient(135deg,#DF4888 0%,#8B3AA0 55%,#6A297F 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
       <span style={{ fontSize: '1.22em' }}>X</span>t
     </span>
@@ -26,26 +26,26 @@ const WORDMARK = (
 function Col({ title, children }) {
   return (
     <div style={{ display: 'grid', gap: 8, alignContent: 'start' }}>
-      <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', color: '#475569' }}>{title}</div>
+      <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-5)' }}>{title}</div>
       {children}
     </div>
   )
 }
 
-const linkStyle = { fontSize: 13, color: '#94a3b8', textDecoration: 'none' }
+const linkStyle = { fontSize: 13, color: 'var(--text-3)', textDecoration: 'none' }
 
 function FLink({ to, children }) {
   return (
-    <Link to={to} style={linkStyle} onMouseEnter={e => (e.currentTarget.style.color = '#f8fafc')} onMouseLeave={e => (e.currentTarget.style.color = '#94a3b8')}>{children}</Link>
+    <Link to={to} style={linkStyle} onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}>{children}</Link>
   )
 }
 
 function Social({ href, label, children }) {
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" aria-label={label} title={label}
-      style={{ width: 34, height: 34, borderRadius: 9, border: '1px solid #26324a', background: '#131b2b', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}
-      onMouseEnter={e => { e.currentTarget.style.color = '#f8fafc'; e.currentTarget.style.borderColor = '#8B3AA0' }}
-      onMouseLeave={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = '#26324a' }}>
+      style={{ width: 34, height: 34, borderRadius: 9, border: '1px solid var(--line)', background: 'var(--surface)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}
+      onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = '#8B3AA0' }}
+      onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.borderColor = 'var(--line)' }}>
       {children}
     </a>
   )
@@ -54,13 +54,13 @@ function Social({ href, label, children }) {
 export default function Footer() {
   const year = new Date().getFullYear()
   return (
-    <footer style={{ borderTop: '1px solid #26324a', background: '#0b0f19', marginTop: 40 }}>
+    <footer style={{ borderTop: '1px solid var(--line)', background: 'var(--bg)', marginTop: 40 }}>
       <div style={{ maxWidth: 1440, margin: '0 auto', padding: '32px 16px 24px' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 32, justifyContent: 'space-between' }}>
           {/* Marka + sosyal */}
           <div style={{ display: 'grid', gap: 12, maxWidth: 300 }}>
             <Link to="/" style={{ textDecoration: 'none' }}>{WORDMARK}</Link>
-            <p style={{ margin: 0, fontSize: 12.5, color: '#64748b', lineHeight: 1.6 }}>
+            <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-4)', lineHeight: 1.6 }}>
               Valorant, CS2 ve LoL espor maçları, canlı skorlar, transferler ve AI destekli haberler — tek yerde.
             </p>
             <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
@@ -94,13 +94,13 @@ export default function Footer() {
         </div>
 
         {/* Alt şerit: telif + veri atıfları */}
-        <div style={{ marginTop: 28, paddingTop: 18, borderTop: '1px solid #172032', display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 12, color: '#475569' }}>© {year} feXt · Tüm hakları saklıdır.</span>
-          <span style={{ fontSize: 11, color: '#475569' }}>
+        <div style={{ marginTop: 28, paddingTop: 18, borderTop: '1px solid var(--surface-2)', display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-5)' }}>© {year} feXt · Tüm hakları saklıdır.</span>
+          <span style={{ fontSize: 11, color: 'var(--text-5)' }}>
             Veri kaynakları:{' '}
-            <a href="https://liquipedia.net" target="_blank" rel="noopener noreferrer" style={{ color: '#64748b', textDecoration: 'underline' }}>Liquipedia</a>
+            <a href="https://liquipedia.net" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-4)', textDecoration: 'underline' }}>Liquipedia</a>
             {' · '}
-            <a href="https://pandascore.co" target="_blank" rel="noopener noreferrer" style={{ color: '#64748b', textDecoration: 'underline' }}>PandaScore</a>
+            <a href="https://pandascore.co" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-4)', textDecoration: 'underline' }}>PandaScore</a>
           </span>
         </div>
       </div>

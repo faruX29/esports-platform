@@ -4,6 +4,7 @@ import { Menu, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import BRANDING from '../branding.config'
 import FextLogo from './FextLogo'
+import ThemeToggle from './ThemeToggle'
 import { FEXT } from '../theme'
 
 /* Nav öğesi — lucide ikon + hover state (emoji "AI havası"nı kaldırır) */
@@ -20,16 +21,16 @@ function NavItem({ link, mobile = false }) {
         ? {
             textDecoration: 'none', padding: '9px 12px', borderRadius: 10, fontSize: 13,
             fontWeight: isActive ? 800 : 600,
-            color: isActive ? '#fff' : (hover ? '#fff' : '#cbd5e1'),
-            background: isActive ? FEXT.accentSoftBg : (hover ? '#172032' : '#131b2b'),
-            border: isActive ? `1px solid ${FEXT.accentBorder}` : '1px solid #26324a',
+            color: isActive ? FEXT.accentText : (hover ? 'var(--text)' : 'var(--text-2)'),
+            background: isActive ? FEXT.accentSoftBg : (hover ? 'var(--surface-2)' : 'var(--surface)'),
+            border: isActive ? `1px solid ${FEXT.accentBorder}` : '1px solid var(--line)',
             display: 'flex', alignItems: 'center', gap: 9, transition: 'all .15s',
           }
         : {
             textDecoration: 'none', padding: '7px 11px', borderRadius: 8, fontSize: 12,
             fontWeight: isActive ? 700 : 500,
-            color: isActive ? FEXT.accentText : (hover ? '#e2e8f0' : '#94a3b8'),
-            background: isActive ? FEXT.accentSoftBg : (hover ? 'rgba(255,255,255,.05)' : 'transparent'),
+            color: isActive ? FEXT.accentText : (hover ? 'var(--text-1)' : 'var(--text-3)'),
+            background: isActive ? FEXT.accentSoftBg : (hover ? 'var(--hover)' : 'transparent'),
             transition: 'all .15s', whiteSpace: 'nowrap',
             display: 'inline-flex', alignItems: 'center', gap: 7, height: 34,
           })}
@@ -53,18 +54,18 @@ function AuthWidget() {
       {!isAuthenticated ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, height: 34 }}>
           <button onClick={() => navigate('/login')} style={{ background: FEXT.accentGrad, border: '1px solid rgba(255,255,255,.12)', borderRadius: 9, color: '#fff', fontSize: 12, fontWeight: 800, padding: '8px 13px', cursor: 'pointer', whiteSpace: 'nowrap', height: 34, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>Giriş Yap</button>
-          <button onClick={() => navigate('/register')} style={{ background: '#172032', border: '1px solid #26324a', borderRadius: 9, color: '#cbd5e1', fontSize: 12, fontWeight: 700, padding: '8px 13px', cursor: 'pointer', whiteSpace: 'nowrap', height: 34, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>Kayıt Ol</button>
+          <button onClick={() => navigate('/register')} style={{ background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 9, color: 'var(--text-2)', fontSize: 12, fontWeight: 700, padding: '8px 13px', cursor: 'pointer', whiteSpace: 'nowrap', height: 34, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>Kayıt Ol</button>
         </div>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, height: 34 }}>
-          <button onClick={() => navigate('/settings')} style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#131b2b', border: '1px solid #26324a', borderRadius: 20, padding: '5px 9px', cursor: 'pointer', height: 34 }}>
+          <button onClick={() => navigate('/settings')} style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 20, padding: '5px 9px', cursor: 'pointer', height: 34 }}>
             {avatar
-              ? <img src={avatar} alt={username} style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', border: '1px solid #33415d' }} />
-              : <div style={{ width: 22, height: 22, borderRadius: '50%', display: 'grid', placeItems: 'center', background: '#26324a', color: '#e2e8f0', fontSize: 10, fontWeight: 800 }}>{username.slice(0, 2).toUpperCase()}</div>
+              ? <img src={avatar} alt={username} style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--line-2)' }} />
+              : <div style={{ width: 22, height: 22, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'var(--line)', color: 'var(--text-1)', fontSize: 10, fontWeight: 800 }}>{username.slice(0, 2).toUpperCase()}</div>
             }
-            <span style={{ fontSize: 12, color: '#cbd5e1', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{username}</span>
+            <span style={{ fontSize: 12, color: 'var(--text-2)', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{username}</span>
           </button>
-          <button onClick={signOut} style={{ background: '#131b2b', border: '1px solid #26324a', borderRadius: 8, color: '#94a3b8', padding: '6px 9px', fontSize: 11, cursor: 'pointer', height: 34 }}>Çıkış</button>
+          <button onClick={signOut} style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, color: 'var(--text-3)', padding: '6px 9px', fontSize: 11, cursor: 'pointer', height: 34 }}>Çıkış</button>
         </div>
       )}
 
@@ -95,9 +96,9 @@ export default function Navbar({ navLinks, SearchComponent }) {
   return (
     <nav style={{
       position: 'sticky', top: 0, zIndex: 1000,
-      background: 'rgba(11,15,25,.82)',
+      background: 'var(--nav-bg)',
       backdropFilter: 'blur(14px)',
-      borderBottom: '1px solid rgba(38,50,74,.6)',
+      borderBottom: '1px solid var(--nav-border)',
     }}>
       <div style={{
         maxWidth: 1440,
@@ -122,6 +123,7 @@ export default function Navbar({ navLinks, SearchComponent }) {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 34 }}>
               {SearchComponent ? <SearchComponent /> : null}
+              <ThemeToggle />
               <AuthWidget />
             </div>
           </>
@@ -136,9 +138,9 @@ export default function Navbar({ navLinks, SearchComponent }) {
               width: 36,
               height: 36,
               borderRadius: 10,
-              border: '1px solid #26324a',
-              background: '#172032',
-              color: '#e2e8f0',
+              border: '1px solid var(--line)',
+              background: 'var(--surface-2)',
+              color: 'var(--text-1)',
               display: 'grid',
               placeItems: 'center',
               cursor: 'pointer',
@@ -151,8 +153,8 @@ export default function Navbar({ navLinks, SearchComponent }) {
 
       {isMobile && (
         <div style={{
-          borderTop: '1px solid #26324a',
-          background: 'rgba(11,15,25,.97)',
+          borderTop: '1px solid var(--line)',
+          background: 'var(--bg)',
           overflow: 'hidden',
           maxHeight: menuOpen ? 420 : 0,
           opacity: menuOpen ? 1 : 0,
@@ -172,7 +174,8 @@ export default function Navbar({ navLinks, SearchComponent }) {
               <NavItem key={`mobile_${l.to}`} link={l} mobile />
             ))}
 
-            <div style={{ marginTop: 6 }}>
+            <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ThemeToggle />
               <AuthWidget />
             </div>
           </div>

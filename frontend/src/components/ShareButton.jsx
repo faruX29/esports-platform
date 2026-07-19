@@ -50,7 +50,7 @@ export default function ShareButton({ path, title = '', compact = false }) {
         onClick={shareX}
         title="X'te paylaş"
         style={{
-          border: '1px solid #26324a', background: '#131b2b', color: '#cbd5e1',
+          border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-2)',
           borderRadius: 8, padding: pad, fontSize: fs, fontWeight: 700, cursor: 'pointer',
           display: 'inline-flex', alignItems: 'center', gap: 5,
         }}
@@ -62,9 +62,9 @@ export default function ShareButton({ path, title = '', compact = false }) {
         onClick={copyLink}
         title="Bağlantıyı kopyala"
         style={{
-          border: `1px solid ${copied ? '#2f6846' : '#26324a'}`,
-          background: copied ? '#10281a' : '#131b2b',
-          color: copied ? '#8de3af' : '#cbd5e1',
+          border: `1px solid ${copied ? '#2f6846' : 'var(--line)'}`,
+          background: copied ? '#10281a' : 'var(--surface)',
+          color: copied ? '#8de3af' : 'var(--text-2)',
           borderRadius: 8, padding: pad, fontSize: fs, fontWeight: 700, cursor: 'pointer',
           display: 'inline-flex', alignItems: 'center', gap: 5,
         }}

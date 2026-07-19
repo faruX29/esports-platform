@@ -29,7 +29,7 @@ function GameChip({ game }) {
   if (!canonical) return null
   const meta = GAMES.find(g => g.id === canonical)
   const label = meta?.shortLabel || meta?.label || game?.name
-  const color = meta?.color || '#94a3b8'
+  const color = meta?.color || 'var(--text-3)'
   return (
     <span style={{
       fontSize: 9, fontWeight: 800, letterSpacing: '.4px', textTransform: 'uppercase',
@@ -97,7 +97,7 @@ function getTierMeta(rawTier) {
   if (key && TIER_META[key]) return { ...TIER_META[key], key }
   return {
     key: rawTier || '-',
-    color: '#94a3b8',
+    color: 'var(--text-3)',
     bg: 'rgba(136,136,136,.12)',
     label: rawTier ? `Tier ${rawTier}` : 'Tier N/A',
   }
@@ -109,7 +109,7 @@ function slugToGame(name = '') {
   if (n.includes('counter') || n.includes('cs2') || n.includes('cs-go')) return GAME_META.cs2
   if (n.includes('league') || n.includes('legends')) return GAME_META.lol
   if (n.includes('dota'))                     return GAME_META.dota
-  return { color: '#cbd5e1', label: name }
+  return { color: 'var(--text-2)', label: name }
 }
 
 // ─── Hooks ───────────────────────────────────────────────────────────────────
@@ -129,7 +129,7 @@ function Sk({ w = '100%', h = '16px', r = '8px' }) {
   return (
     <div style={{
       width: w, height: h, borderRadius: r, flexShrink: 0,
-      background: 'linear-gradient(90deg,#131b2b 25%,#172032 50%,#131b2b 75%)',
+      background: 'linear-gradient(90deg,var(--surface) 25%,var(--surface-2) 50%,var(--surface) 75%)',
       backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite',
     }} />
   )
@@ -140,18 +140,18 @@ function Sk({ w = '100%', h = '16px', r = '8px' }) {
 function ST({ Icon, label, count }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-      {Icon && <Icon size={14} color="#94a3b8" />}
-      <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b',
+      {Icon && <Icon size={14} color="var(--text-3)" />}
+      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-4)',
         letterSpacing: '1.5px', textTransform: 'uppercase' }}>
         {label}
       </span>
       {count != null && (
         <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 6,
-          background: '#172032', color: '#475569' }}>
+          background: 'var(--surface-2)', color: 'var(--text-5)' }}>
           {count}
         </span>
       )}
-      <div style={{ flex: 1, height: 1, background: '#172032' }} />
+      <div style={{ flex: 1, height: 1, background: 'var(--surface-2)' }} />
     </div>
   )
 }
@@ -173,9 +173,9 @@ function Av({ src, name, size = 40, round = true }) {
   return (
     <div style={{
       width: size, height: size, borderRadius: r, flexShrink: 0,
-      background: 'linear-gradient(135deg,#172032,#26324a)',
+      background: 'linear-gradient(135deg,var(--surface-2),var(--line))',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: size * 0.3, fontWeight: 800, color: '#64748b',
+      fontSize: size * 0.3, fontWeight: 800, color: 'var(--text-4)',
     }}>{initials}</div>
   )
 }
@@ -189,8 +189,8 @@ function TeamCard({ team, navigate }) {
       onClick={() => navigate(`/team/${team.id}`)}
       style={{
         display: 'flex', alignItems: 'center', gap: 12,
-        padding: '12px 14px', borderRadius: 12, background: '#131b2b',
-        border: isTR ? '1.5px solid rgba(200,16,46,.4)' : '1.5px solid #172032',
+        padding: '12px 14px', borderRadius: 12, background: 'var(--surface)',
+        border: isTR ? '1.5px solid rgba(200,16,46,.4)' : '1.5px solid var(--surface-2)',
         cursor: 'pointer', transition: 'all .18s',
         boxShadow: isTR ? '0 0 10px rgba(200,16,46,.1)' : 'none',
       }}
@@ -201,24 +201,24 @@ function TeamCard({ team, navigate }) {
           `0 6px 20px ${isTR ? 'rgba(200,16,46,.25)' : 'rgba(194,92,208,.18)'}`
       }}
       onMouseLeave={e => {
-        e.currentTarget.style.borderColor = isTR ? 'rgba(200,16,46,.4)' : '#172032'
+        e.currentTarget.style.borderColor = isTR ? 'rgba(200,16,46,.4)' : 'var(--surface-2)'
         e.currentTarget.style.transform   = 'none'
         e.currentTarget.style.boxShadow   = isTR ? '0 0 10px rgba(200,16,46,.1)' : 'none'
       }}
     >
       <Av src={team.logo_url} name={team.name} size={40} round={false} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: '#e2e8f0',
+        <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {team.name}{isTR && ' 🇹🇷'}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#475569', marginTop: 3 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-5)', marginTop: 3 }}>
           <GameChip game={team.game} />
           {team.acronym && <span>({team.acronym})</span>}
           {team.location && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><MapPin size={11} /> {team.location}</span>}
         </div>
       </div>
-      <span style={{ fontSize: 11, color: '#334155' }}>→</span>
+      <span style={{ fontSize: 11, color: 'var(--text-6)' }}>→</span>
     </div>
   )
 }
@@ -233,7 +233,7 @@ function PlayerCard({ player, navigate }) {
       style={{
         display: 'flex', alignItems: 'center', gap: 12,
         padding: '12px 14px', borderRadius: 12,
-        background: '#131b2b', border: '1.5px solid #172032',
+        background: 'var(--surface)', border: '1.5px solid var(--surface-2)',
         cursor: 'pointer', transition: 'all .18s',
       }}
       onMouseEnter={e => {
@@ -242,19 +242,19 @@ function PlayerCard({ player, navigate }) {
         e.currentTarget.style.boxShadow   = `0 6px 20px ${badge.border}33`
       }}
       onMouseLeave={e => {
-        e.currentTarget.style.borderColor = '#172032'
+        e.currentTarget.style.borderColor = 'var(--surface-2)'
         e.currentTarget.style.transform   = 'none'
         e.currentTarget.style.boxShadow   = 'none'
       }}
     >
       <Av src={player.image_url} name={player.nickname} size={40} round />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: '#e2e8f0',
+        <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {player.nickname}
         </div>
         {player.real_name && (
-          <div style={{ fontSize: 11, color: '#64748b', marginTop: 2,
+          <div style={{ fontSize: 11, color: 'var(--text-4)', marginTop: 2,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {player.real_name}
           </div>
@@ -283,12 +283,12 @@ function TournamentCard({ t, navigate, highlighted }) {
     <div
       style={{
         position: 'relative', overflow: 'hidden', borderRadius: 16,
-        padding: '0 0 14px', background: '#131b2b',
+        padding: '0 0 14px', background: 'var(--surface)',
         border: highlighted
           ? `1.5px solid ${gm.color}88`
           : isTR
           ? '1.5px solid rgba(200,16,46,.4)'
-          : `1.5px solid ${hov ? '#334155' : '#172032'}`,
+          : `1.5px solid ${hov ? 'var(--text-6)' : 'var(--surface-2)'}`,
         boxShadow: hov
           ? `0 8px 28px ${gm.color}22`
           : isTR ? '0 0 12px rgba(200,16,46,.1)' : 'none',
@@ -332,7 +332,7 @@ function TournamentCard({ t, navigate, highlighted }) {
           {t.region && (
             <span style={{
               padding: '3px 9px', borderRadius: 6, fontSize: 10, fontWeight: 700,
-              background: 'rgba(255,255,255,.06)', border: '1px solid #334155', color: '#cbd5e1',
+              background: 'rgba(255,255,255,.06)', border: '1px solid var(--text-6)', color: 'var(--text-2)',
               display: 'inline-flex', alignItems: 'center', gap: 4,
             }}>
               <MapPin size={10} /> {String(t.region).toUpperCase()}
@@ -341,14 +341,14 @@ function TournamentCard({ t, navigate, highlighted }) {
         </div>
 
         {/* Name */}
-        <div style={{ fontSize: 14, fontWeight: 800, color: '#e2e8f0',
+        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-1)',
           marginBottom: 8, lineHeight: 1.3 }}>
           {t.name}
         </div>
 
         {/* Dates */}
         {(t.begin_at || t.end_at) && (
-          <div style={{ fontSize: 10, color: '#475569', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div style={{ fontSize: 10, color: 'var(--text-5)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
             <CalendarDays size={11} />{' '}
             {t.begin_at
               ? new Date(t.begin_at).toLocaleDateString('tr-TR',
@@ -390,7 +390,7 @@ function YearTimeline({ activeYear, onChange, counts }) {
       <div style={{
         position: 'absolute', left: '20px', right: '20px', top: '50%',
         height: 2,
-        background: 'linear-gradient(90deg,#172032,#26324a,#172032)',
+        background: 'linear-gradient(90deg,var(--surface-2),var(--line),var(--surface-2))',
         zIndex: 0, transform: 'translateY(-50%)',
       }} />
 
@@ -403,7 +403,7 @@ function YearTimeline({ activeYear, onChange, counts }) {
             {/* Count label */}
             <div style={{
               fontSize: 10, fontWeight: 700,
-              color: active ? FEXT.accentText : '#334155',
+              color: active ? FEXT.accentText : 'var(--text-6)',
               marginBottom: 6, transition: 'color .2s', height: 16,
             }}>
               {cnt > 0 ? `${cnt.toLocaleString('tr-TR')} maç` : ''}
@@ -417,11 +417,11 @@ function YearTimeline({ activeYear, onChange, counts }) {
                 borderRadius: '50%', border: 'none',
                 background: active
                   ? FEXT.accentGrad
-                  : '#131b2b',
+                  : 'var(--surface)',
                 outline: active
                   ? `3px solid ${FEXT.accentGlow}`
-                  : '2px solid #26324a',
-                color: active ? '#fff' : '#64748b',
+                  : '2px solid var(--line)',
+                color: active ? '#fff' : 'var(--text-4)',
                 fontSize: active ? 14 : 13,
                 fontWeight: active ? 900 : 600,
                 cursor: 'pointer',
@@ -437,8 +437,8 @@ function YearTimeline({ activeYear, onChange, counts }) {
               }}
               onMouseLeave={e => {
                 if (!active) {
-                  e.currentTarget.style.outline = '2px solid #26324a'
-                  e.currentTarget.style.color   = '#64748b'
+                  e.currentTarget.style.outline = '2px solid var(--line)'
+                  e.currentTarget.style.color   = 'var(--text-4)'
                 }
               }}
             >{y}</button>
@@ -466,8 +466,8 @@ function Sidebar({ filters, onChange, collapsed, onToggle }) {
   return (
     <div style={{
       width: collapsed ? 44 : 220, flexShrink: 0,
-      background: '#0b0f19', borderRadius: 16,
-      border: '1px solid #172032',
+      background: 'var(--bg)', borderRadius: 16,
+      border: '1px solid var(--surface-2)',
       transition: 'width .25s cubic-bezier(.4,0,.2,1)',
       overflow: 'hidden', alignSelf: 'flex-start',
       position: 'sticky', top: 116,
@@ -479,8 +479,8 @@ function Sidebar({ filters, onChange, collapsed, onToggle }) {
           width: '100%',
           padding: collapsed ? '12px 0' : '12px 16px',
           background: 'none', border: 'none',
-          borderBottom: '1px solid #172032',
-          color: '#64748b', cursor: 'pointer',
+          borderBottom: '1px solid var(--surface-2)',
+          color: 'var(--text-4)', cursor: 'pointer',
           display: 'flex', alignItems: 'center', gap: 8,
           fontSize: 11, fontWeight: 700, letterSpacing: '1px',
         }}
@@ -488,7 +488,7 @@ function Sidebar({ filters, onChange, collapsed, onToggle }) {
         <span style={{ display: 'inline-flex' }}>{collapsed ? <SlidersHorizontal size={14} /> : <ChevronLeft size={14} />}</span>
         {!collapsed && (
           <>
-            <span style={{ textTransform: 'uppercase', color: '#64748b' }}>Filtreler</span>
+            <span style={{ textTransform: 'uppercase', color: 'var(--text-4)' }}>Filtreler</span>
             {activeCount > 0 && (
               <span style={{
                 marginLeft: 'auto', fontSize: 10, padding: '1px 6px',
@@ -526,7 +526,7 @@ function Sidebar({ filters, onChange, collapsed, onToggle }) {
 
           {/* Oyun filtresi */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 10, color: '#475569', fontWeight: 700,
+            <div style={{ fontSize: 10, color: 'var(--text-5)', fontWeight: 700,
               letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8 }}>
               Oyun
             </div>
@@ -541,13 +541,13 @@ function Sidebar({ filters, onChange, collapsed, onToggle }) {
                       display: 'flex', alignItems: 'center', gap: 8,
                       padding: '7px 10px', borderRadius: 8, border: 'none',
                       background: active ? `${g.color}20` : 'transparent',
-                      color: active ? g.color : '#64748b',
+                      color: active ? g.color : 'var(--text-4)',
                       fontSize: 12, fontWeight: active ? 700 : 400,
                       cursor: 'pointer', transition: 'all .15s', textAlign: 'left',
                       outline: active ? `1px solid ${g.color}44` : '1px solid transparent',
                     }}
                     onMouseEnter={e => { if (!active) e.currentTarget.style.color = g.color }}
-                    onMouseLeave={e => { if (!active) e.currentTarget.style.color = '#64748b' }}
+                    onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--text-4)' }}
                   >
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: g.color, flexShrink: 0 }} />
                     <span>{g.shortLabel}</span>
@@ -560,7 +560,7 @@ function Sidebar({ filters, onChange, collapsed, onToggle }) {
 
           {/* Tier filtresi */}
           <div>
-            <div style={{ fontSize: 10, color: '#475569', fontWeight: 700,
+            <div style={{ fontSize: 10, color: 'var(--text-5)', fontWeight: 700,
               letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8 }}>
               Turnuva Tieri
             </div>
@@ -575,13 +575,13 @@ function Sidebar({ filters, onChange, collapsed, onToggle }) {
                       display: 'flex', alignItems: 'center', gap: 8,
                       padding: '7px 10px', borderRadius: 8, border: 'none',
                       background: active ? m.bg : 'transparent',
-                      color: active ? m.color : '#64748b',
+                      color: active ? m.color : 'var(--text-4)',
                       fontSize: 12, fontWeight: active ? 700 : 400,
                       cursor: 'pointer', transition: 'all .15s', textAlign: 'left',
                       outline: active ? `1px solid ${m.color}44` : '1px solid transparent',
                     }}
                     onMouseEnter={e => { if (!active) e.currentTarget.style.color = m.color }}
-                    onMouseLeave={e => { if (!active) e.currentTarget.style.color = '#64748b' }}
+                    onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--text-4)' }}
                   >
                     <span style={{ fontSize: 9 }}>◆</span>
                     <span>{m.label}</span>
@@ -604,7 +604,7 @@ function DebugPanel({ info, onClose }) {
   return (
     <div style={{
       position: 'fixed', bottom: 20, right: 20, zIndex: 9999,
-      background: '#131b2b', border: '1px solid #334155', borderRadius: 12,
+      background: 'var(--surface)', border: '1px solid var(--text-6)', borderRadius: 12,
       padding: '14px 18px', maxWidth: 420, fontSize: 11,
       boxShadow: '0 8px 32px rgba(0,0,0,.6)',
     }}>
@@ -613,9 +613,9 @@ function DebugPanel({ info, onClose }) {
         <span style={{ fontWeight: 800, color: '#FF4655' }}>🐛 Debug Log</span>
         <button onClick={onClose}
           style={{ background: 'none', border: 'none',
-            color: '#64748b', cursor: 'pointer', fontSize: 14 }}>✕</button>
+            color: 'var(--text-4)', cursor: 'pointer', fontSize: 14 }}>✕</button>
       </div>
-      <pre style={{ margin: 0, color: '#94a3b8', whiteSpace: 'pre-wrap',
+      <pre style={{ margin: 0, color: 'var(--text-3)', whiteSpace: 'pre-wrap',
         wordBreak: 'break-all', maxHeight: 300, overflowY: 'auto' }}>
         {JSON.stringify(info, null, 2)}
       </pre>
@@ -990,7 +990,7 @@ export default function SearchPage() {
 
   // ── Render ────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: '100vh', background: '#0b0f19', color: 'white', position: 'relative' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'white', position: 'relative' }}>
 
       <style>{`
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
@@ -1000,8 +1000,8 @@ export default function SearchPage() {
       {/* ══ HERO SEARCH BAR ════════════════════════════════════════ */}
       <div style={{
         position: 'relative', overflow: 'hidden',
-        background: 'linear-gradient(160deg,#0b0f19 0%,#131b2b 100%)',
-        borderBottom: '1px solid #131b2b',
+        background: 'linear-gradient(160deg,var(--bg) 0%,var(--surface) 100%)',
+        borderBottom: '1px solid var(--surface)',
         padding: '40px 24px 32px',
       }}>
         {/* Radial glow */}
@@ -1020,7 +1020,7 @@ export default function SearchPage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
           }}><Search size={26} color={FEXT.accent} /> Arama</h1>
 
-          <p style={{ textAlign: 'center', color: '#334155', fontSize: 13, margin: '0 0 24px' }}>
+          <p style={{ textAlign: 'center', color: 'var(--text-6)', fontSize: 13, margin: '0 0 24px' }}>
             Takımlar, oyuncular, turnuvalar — hepsi bir arada
           </p>
 
@@ -1028,7 +1028,7 @@ export default function SearchPage() {
           <div style={{ position: 'relative' }}>
             <span style={{
               position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)',
-              color: '#475569', pointerEvents: 'none', display: 'inline-flex',
+              color: 'var(--text-5)', pointerEvents: 'none', display: 'inline-flex',
             }}><Search size={16} /></span>
             <input
               ref={inputRef}
@@ -1040,8 +1040,8 @@ export default function SearchPage() {
                 width: '100%', boxSizing: 'border-box',
                 padding: '16px 48px 16px 46px',
                 borderRadius: 14, fontSize: 16,
-                background: '#131b2b', color: 'white',
-                border: '2px solid #172032', outline: 'none',
+                background: 'var(--surface)', color: 'white',
+                border: '2px solid var(--surface-2)', outline: 'none',
                 transition: 'border-color .2s, box-shadow .2s',
               }}
               onFocus={e => {
@@ -1049,7 +1049,7 @@ export default function SearchPage() {
                 e.target.style.boxShadow   = `0 0 0 3px ${FEXT.accentGlow}`
               }}
               onBlur={e => {
-                e.target.style.borderColor = '#172032'
+                e.target.style.borderColor = 'var(--surface-2)'
                 e.target.style.boxShadow   = 'none'
               }}
             />
@@ -1058,12 +1058,12 @@ export default function SearchPage() {
                 onClick={() => { setQuery(''); setTeams([]); setPlayers([]); setSearchDone(false) }}
                 style={{
                   position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', color: '#64748b', fontSize: 18,
+                  background: 'none', border: 'none', color: 'var(--text-4)', fontSize: 18,
                   cursor: 'pointer', width: 28, height: 28,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
                 onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-                onMouseLeave={e => e.currentTarget.style.color = '#64748b'}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-4)'}
               ><XIcon size={16} /></button>
             )}
           </div>
@@ -1078,16 +1078,16 @@ export default function SearchPage() {
                   onClick={() => setQuery(s)}
                   style={{
                     padding: '5px 12px', borderRadius: 8,
-                    background: '#131b2b', border: '1px solid #26324a',
-                    color: '#64748b', fontSize: 12, cursor: 'pointer', transition: 'all .15s',
+                    background: 'var(--surface)', border: '1px solid var(--line)',
+                    color: 'var(--text-4)', fontSize: 12, cursor: 'pointer', transition: 'all .15s',
                   }}
                   onMouseEnter={e => {
                     e.currentTarget.style.borderColor = '#FF4655'
                     e.currentTarget.style.color = '#FF4655'
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.borderColor = '#26324a'
-                    e.currentTarget.style.color = '#64748b'
+                    e.currentTarget.style.borderColor = 'var(--line)'
+                    e.currentTarget.style.color = 'var(--text-4)'
                   }}
                 >{s}</button>
               ))}
@@ -1097,7 +1097,7 @@ export default function SearchPage() {
           {/* Sonuç özeti */}
           {searchDone && hasQuery && (
             <div style={{ textAlign: 'center', marginTop: 12, fontSize: 12,
-              color: '#475569', animation: 'fadeUp .3s ease' }}>
+              color: 'var(--text-5)', animation: 'fadeUp .3s ease' }}>
               {totalResults > 0 ? (
                 <><span style={{ color: FEXT.accentText, fontWeight: 700 }}>{totalResults}</span>
                 {' '}sonuç — "{debouncedQ}"</>
@@ -1179,10 +1179,10 @@ export default function SearchPage() {
 
               {isEmpty && (
                 <div style={{ textAlign: 'center', padding: '60px',
-                  color: '#334155', animation: 'fadeUp .3s ease' }}>
-                  <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'center' }}><Inbox size={42} color="#334155" /></div>
-                  <div style={{ fontSize: 16, color: '#475569' }}>Sonuç bulunamadı</div>
-                  <div style={{ fontSize: 12, color: '#26324a', marginBottom: 20 }}>
+                  color: 'var(--text-6)', animation: 'fadeUp .3s ease' }}>
+                  <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'center' }}><Inbox size={42} color="var(--text-6)" /></div>
+                  <div style={{ fontSize: 16, color: 'var(--text-5)' }}>Sonuç bulunamadı</div>
+                  <div style={{ fontSize: 12, color: 'var(--line)', marginBottom: 20 }}>
                     Farklı bir ifade deneyin veya filtreleri kaldırın
                   </div>
                   {hasActiveFilters && (
@@ -1208,8 +1208,8 @@ export default function SearchPage() {
             <div style={{ display: 'flex', alignItems: 'center',
               justifyContent: 'space-between', marginBottom: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-                <Trophy size={14} color="#94a3b8" />
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b',
+                <Trophy size={14} color="var(--text-3)" />
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-4)',
                   letterSpacing: '1.5px', textTransform: 'uppercase' }}>
                   {activeYear
                     ? `${activeYear} Turnuvaları`
@@ -1218,10 +1218,10 @@ export default function SearchPage() {
                     : 'Tüm Turnuvalar'}
                 </span>
                 <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 6,
-                  background: '#172032', color: '#475569' }}>
+                  background: 'var(--surface-2)', color: 'var(--text-5)' }}>
                   {visibleTournaments.length}
                 </span>
-                <div style={{ flex: 1, height: 1, background: '#172032' }} />
+                <div style={{ flex: 1, height: 1, background: 'var(--surface-2)' }} />
               </div>
 
               {/* Debug butonu (yalnızca SEARCH_DEBUG) */}
@@ -1230,8 +1230,8 @@ export default function SearchPage() {
                   onClick={() => setShowDebug(v => !v)}
                   style={{
                     marginLeft: 8, padding: '3px 10px', borderRadius: 6,
-                    background: '#131b2b', border: '1px solid #26324a',
-                    color: '#475569', fontSize: 10, cursor: 'pointer',
+                    background: 'var(--surface)', border: '1px solid var(--line)',
+                    color: 'var(--text-5)', fontSize: 10, cursor: 'pointer',
                   }}
                   title="Debug log göster"
                 >🐛</button>
@@ -1244,7 +1244,7 @@ export default function SearchPage() {
                 display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap',
                 alignItems: 'center',
               }}>
-                <span style={{ fontSize: 11, color: '#475569' }}>Aktif:</span>
+                <span style={{ fontSize: 11, color: 'var(--text-5)' }}>Aktif:</span>
                 {activeYear && (
                   <span style={{ padding: '3px 10px', borderRadius: 8, fontSize: 11,
                     background: 'rgba(255,70,85,.1)', display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -1278,8 +1278,8 @@ export default function SearchPage() {
                 <button
                   onClick={clearAllFilters}
                   style={{ padding: '3px 10px', borderRadius: 8, fontSize: 11,
-                    background: 'transparent', border: '1px solid #26324a',
-                    color: '#64748b', cursor: 'pointer' }}>
+                    background: 'transparent', border: '1px solid var(--line)',
+                    color: 'var(--text-4)', cursor: 'pointer' }}>
                   Tümünü Temizle
                 </button>
               </div>
@@ -1294,11 +1294,11 @@ export default function SearchPage() {
             ) : visibleTournaments.length === 0 ? (
               /* ── Fallback: boş durum ── */
               <div style={{ textAlign: 'center', padding: '48px 20px',
-                color: '#334155', background: '#131b2b', borderRadius: 16,
-                border: '1px dashed #172032' }}>
-                <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><Trophy size={38} color="#334155" /></div>
-                <div style={{ fontSize: 15, color: '#475569', marginBottom: 6 }}>Sonuç bulunamadı</div>
-                <div style={{ fontSize: 12, color: '#26324a', marginBottom: 20 }}>
+                color: 'var(--text-6)', background: 'var(--surface)', borderRadius: 16,
+                border: '1px dashed var(--surface-2)' }}>
+                <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><Trophy size={38} color="var(--text-6)" /></div>
+                <div style={{ fontSize: 15, color: 'var(--text-5)', marginBottom: 6 }}>Sonuç bulunamadı</div>
+                <div style={{ fontSize: 12, color: 'var(--line)', marginBottom: 20 }}>
                   {hasActiveFilters
                     ? 'Filtreler sonuçları daraltıyor olabilir'
                     : 'Veritabanında tournaments tablosu boş olabilir'}
@@ -1322,9 +1322,9 @@ export default function SearchPage() {
                 {/* Debug bilgisi (yalnızca SEARCH_DEBUG) */}
                 {SEARCH_DEBUG && debugInfo && (
                   <div style={{ marginTop: 20, padding: '10px 14px', borderRadius: 10,
-                    background: '#131b2b', border: '1px solid #172032',
-                    textAlign: 'left', fontSize: 10, color: '#64748b' }}>
-                    <div style={{ fontWeight: 700, marginBottom: 6, color: '#475569' }}>
+                    background: 'var(--surface)', border: '1px solid var(--surface-2)',
+                    textAlign: 'left', fontSize: 10, color: 'var(--text-4)' }}>
+                    <div style={{ fontWeight: 700, marginBottom: 6, color: 'var(--text-5)' }}>
                       🐛 Son sorgu:
                     </div>
                     <div>Filtreler: {debugInfo.appliedFilters.length === 0

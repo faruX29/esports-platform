@@ -9,7 +9,7 @@ import { Eye, EyeOff } from 'lucide-react'
 export default function PasswordInput({ style, ...props }) {
   const [show, setShow] = useState(false)
   const base = {
-    background: '#131b2b', border: '1px solid #26324a', color: '#fff',
+    background: 'var(--surface)', border: '1px solid var(--line)', color: '#fff',
     borderRadius: 11, padding: '11px 42px 11px 12px', width: '100%',
     minWidth: 0, boxSizing: 'border-box',
   }
@@ -23,11 +23,11 @@ export default function PasswordInput({ style, ...props }) {
         title={show ? 'Şifreyi gizle' : 'Şifreyi göster'}
         style={{
           position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
-          background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer',
+          background: 'transparent', border: 'none', color: 'var(--text-4)', cursor: 'pointer',
           padding: 6, display: 'inline-flex', alignItems: 'center', borderRadius: 8,
         }}
-        onMouseEnter={e => (e.currentTarget.style.color = '#cbd5e1')}
-        onMouseLeave={e => (e.currentTarget.style.color = '#64748b')}
+        onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-2)')}
+        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-4)')}
         tabIndex={-1}
       >
         {show ? <EyeOff size={17} /> : <Eye size={17} />}

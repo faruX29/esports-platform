@@ -516,7 +516,7 @@ function TacticalScoutReport({ report }) {
   if (teams.length === 0) return null
 
   return (
-    <div style={{ marginTop: 14, background: '#131b2b', borderRadius: 14, border: '1px solid #172032', padding: 14 }}>
+    <div style={{ marginTop: 14, background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--surface-2)', padding: 14 }}>
       <ST Icon={Brain} label="Scout Analiz" />
       <div style={{ marginBottom: 10, fontSize: 11, color: '#9da3af' }}>
         Map kaynaklari: {report.mapsUsed} · Form ornegi: {report.formSample}
@@ -524,8 +524,8 @@ function TacticalScoutReport({ report }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 10 }}>
         {teams.map(team => (
-          <div key={team.name} style={{ borderRadius: 10, border: '1px solid #172032', background: '#0b0f19', padding: '10px 11px' }}>
-            <div style={{ fontSize: 12, fontWeight: 800, color: '#e2e8f0', marginBottom: 8 }}>{team.name}</div>
+          <div key={team.name} style={{ borderRadius: 10, border: '1px solid var(--surface-2)', background: 'var(--bg)', padding: '10px 11px' }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)', marginBottom: 8 }}>{team.name}</div>
 
             <div style={{ marginBottom: 8 }}>
               <div style={{ fontSize: 10, fontWeight: 800, color: '#86efac', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
@@ -557,16 +557,16 @@ function TacticalScoutReport({ report }) {
 
 /* ─── Skeleton ──────────────────────────────────────────────────────────────── */
 function Sk({ w = '100%', h = '16px', r = '8px' }) {
-  return <div style={{ width: w, height: h, borderRadius: r, background: 'linear-gradient(90deg,#131b2b 25%,#172032 50%,#131b2b 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite', flexShrink: 0 }} />
+  return <div style={{ width: w, height: h, borderRadius: r, background: 'linear-gradient(90deg,var(--surface) 25%,var(--surface-2) 50%,var(--surface) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite', flexShrink: 0 }} />
 }
 
 /* ─── SectionTitle ──────────────────────────────────────────────────────────── */
 function ST({ Icon, label }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-      {Icon && <Icon size={15} color="#94a3b8" />}
-      <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1.5px', color: '#475569', textTransform: 'uppercase' }}>{label}</span>
-      <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,#172032,transparent)' }} />
+      {Icon && <Icon size={15} color="var(--text-3)" />}
+      <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1.5px', color: 'var(--text-5)', textTransform: 'uppercase' }}>{label}</span>
+      <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,var(--surface-2),transparent)' }} />
     </div>
   )
 }
@@ -582,11 +582,11 @@ function KdaColumn({ rows, teamName, gc }) {
           const acs = r.stats?.acs_avg
           const kd = r.deaths > 0 ? (r.kills / r.deaths) : r.kills
           return (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#131b2b', border: '1px solid #172032', borderRadius: 8, padding: '6px 9px' }}>
-              <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.player?.nickname || '?'}</span>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface)', border: '1px solid var(--surface-2)', borderRadius: 8, padding: '6px 9px' }}>
+              <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.player?.nickname || '?'}</span>
               {acs != null && <span title="ACS" style={{ fontSize: 10, color: '#5eead4', fontWeight: 700, minWidth: 30, textAlign: 'right' }}>{acs}</span>}
-              <span style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums', color: '#cbd5e1', minWidth: 62, textAlign: 'right' }}>
-                {r.kills}<span style={{ color: '#475569' }}>/</span>{r.deaths}<span style={{ color: '#475569' }}>/</span>{r.assists}
+              <span style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums', color: 'var(--text-2)', minWidth: 62, textAlign: 'right' }}>
+                {r.kills}<span style={{ color: 'var(--text-5)' }}>/</span>{r.deaths}<span style={{ color: 'var(--text-5)' }}>/</span>{r.assists}
               </span>
               <span style={{ fontSize: 11, fontWeight: 800, color: kd >= 1 ? '#4ade80' : '#ff6a7f', minWidth: 32, textAlign: 'right' }}>{kd.toFixed(2)}</span>
             </div>
@@ -751,7 +751,7 @@ function CommunityPredictionPool({ matchId, teamAName, teamBName, aiWin, isFinis
   const sameDirection = communityFavorite === aiFavorite
 
   return (
-    <div style={{ marginTop: 14, background: '#131b2b', borderRadius: 14, border: '1px solid #172032', padding: 14 }}>
+    <div style={{ marginTop: 14, background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--surface-2)', padding: 14 }}>
       <ST Icon={Vote} label="Senin Tahminin (Community Vote)" />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 10 }}>
@@ -764,16 +764,16 @@ function CommunityPredictionPool({ matchId, teamAName, teamBName, aiWin, isFinis
               disabled={isFinished || submitting || loading}
               style={{
                 borderRadius: 10,
-                border: `1px solid ${selected ? 'rgba(124,58,237,.65)' : '#26324a'}`,
-                background: selected ? 'linear-gradient(130deg, rgba(124,58,237,.2), rgba(17,17,17,.95))' : '#131b2b',
-                color: selected ? '#e8d9ff' : '#e2e8f0',
+                border: `1px solid ${selected ? 'rgba(124,58,237,.65)' : 'var(--line)'}`,
+                background: selected ? 'linear-gradient(130deg, rgba(124,58,237,.2), rgba(17,17,17,.95))' : 'var(--surface)',
+                color: selected ? '#e8d9ff' : 'var(--text-1)',
                 padding: '9px 10px',
                 cursor: isFinished ? 'default' : 'pointer',
                 textAlign: 'left',
               }}
             >
               <div style={{ fontSize: 12, fontWeight: 800 }}>{team.name}</div>
-              <div style={{ marginTop: 3, fontSize: 10, color: selected ? '#c8b4ff' : '#64748b' }}>
+              <div style={{ marginTop: 3, fontSize: 10, color: selected ? '#c8b4ff' : 'var(--text-4)' }}>
                 {selected ? 'Secimin bu takim' : 'Tahminini sec'}
               </div>
             </button>
@@ -786,7 +786,7 @@ function CommunityPredictionPool({ matchId, teamAName, teamBName, aiWin, isFinis
           <div style={{ fontSize: 10, fontWeight: 800, color: '#8be9dd', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
             Topluluk Fav.
           </div>
-          <div style={{ height: 8, borderRadius: 999, overflow: 'hidden', background: '#0b0f19', border: '1px solid #172032', display: 'flex' }}>
+          <div style={{ height: 8, borderRadius: 999, overflow: 'hidden', background: 'var(--bg)', border: '1px solid var(--surface-2)', display: 'flex' }}>
             <div style={{ width: `${communityTeamAPct}%`, background: 'linear-gradient(90deg,#4ade80,#22c55e)' }} />
             <div style={{ width: `${communityTeamBPct}%`, background: 'linear-gradient(90deg,#fb7185,#FF4655)' }} />
           </div>
@@ -800,7 +800,7 @@ function CommunityPredictionPool({ matchId, teamAName, teamBName, aiWin, isFinis
           <div style={{ fontSize: 10, fontWeight: 800, color: '#c8b4ff', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
             AI Fav.
           </div>
-          <div style={{ height: 8, borderRadius: 999, overflow: 'hidden', background: '#0b0f19', border: '1px solid #172032', display: 'flex' }}>
+          <div style={{ height: 8, borderRadius: 999, overflow: 'hidden', background: 'var(--bg)', border: '1px solid var(--surface-2)', display: 'flex' }}>
             <div style={{ width: `${aiTeamAPct}%`, background: 'linear-gradient(90deg,#4ade80,#22c55e)' }} />
             <div style={{ width: `${aiTeamBPct}%`, background: 'linear-gradient(90deg,#fb7185,#FF4655)' }} />
           </div>
@@ -819,12 +819,12 @@ function CommunityPredictionPool({ matchId, teamAName, teamBName, aiWin, isFinis
       </div>
 
       {fallbackLocal && (
-        <div style={{ marginTop: 6, fontSize: 10, color: '#94a3b8' }}>
+        <div style={{ marginTop: 6, fontSize: 10, color: 'var(--text-3)' }}>
           Community tablosu ulasilamaz durumda. Local fallback aktif.
         </div>
       )}
       {isFinished && (
-        <div style={{ marginTop: 6, fontSize: 10, color: '#94a3b8' }}>
+        <div style={{ marginTop: 6, fontSize: 10, color: 'var(--text-3)' }}>
           Mac tamamlandi. Yeni community oy kabul edilmiyor.
         </div>
       )}
@@ -853,7 +853,7 @@ const ROLES = {
 }
 function RoleBadge({ role }) {
   if (!role) return null
-  const s = ROLES[role.toLowerCase()] || { c: '#64748b', bg: 'rgba(80,80,80,.2)', l: role }
+  const s = ROLES[role.toLowerCase()] || { c: 'var(--text-4)', bg: 'rgba(80,80,80,.2)', l: role }
   return <span style={{ padding: '2px 6px', borderRadius: 4, fontSize: 9, fontWeight: 700, flexShrink: 0, color: s.c, background: s.bg, border: `1px solid ${s.c}44`, textTransform: 'uppercase', letterSpacing: '.5px' }}>{s.l}</span>
 }
 
@@ -864,13 +864,13 @@ function FavButton({ teamId, active, onToggle }) {
       onClick={e => { e.preventDefault(); e.stopPropagation(); onToggle(teamId) }}
       style={{
         background: 'none',
-        border: `1px solid ${active ? 'rgba(255,215,0,.5)' : '#172032'}`,
-        borderRadius: 7, color: active ? '#FFD700' : '#334155',
+        border: `1px solid ${active ? 'rgba(255,215,0,.5)' : 'var(--surface-2)'}`,
+        borderRadius: 7, color: active ? '#FFD700' : 'var(--text-6)',
         fontSize: 11, padding: '4px 10px', cursor: 'pointer',
         transition: 'all .18s', display: 'flex', alignItems: 'center', gap: 4,
       }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = active ? '#FFD700' : '#334155'; e.currentTarget.style.color = active ? '#FFD700' : '#94a3b8' }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = active ? 'rgba(255,215,0,.5)' : '#172032'; e.currentTarget.style.color = active ? '#FFD700' : '#334155' }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = active ? '#FFD700' : 'var(--text-6)'; e.currentTarget.style.color = active ? '#FFD700' : 'var(--text-3)' }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = active ? 'rgba(255,215,0,.5)' : 'var(--surface-2)'; e.currentTarget.style.color = active ? '#FFD700' : 'var(--text-6)' }}
     >
       <Star size={13} fill={active ? '#FFD700' : 'none'} color={active ? '#FFD700' : 'currentColor'} />
       <span>{active ? 'Takip Ediliyor' : 'Takip Et'}</span>
@@ -902,17 +902,17 @@ function PlayerCard({ player, side = 'left' }) {
     <div
       onClick={() => clickable && navigate(`/player/${player.id}`)}
       title={clickable ? `${player.nickname} profilini gör` : undefined}
-      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 10, background: '#131b2b', border: '1px solid #172032', flexDirection: r ? 'row-reverse' : 'row', transition: 'border-color .15s,background .15s', cursor: clickable ? 'pointer' : 'default' }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = clickable ? FEXT.accent : '#26324a'; e.currentTarget.style.background = clickable ? '#172032' : '#131b2b' }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = '#172032'; e.currentTarget.style.background = '#131b2b' }}
+      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--surface-2)', flexDirection: r ? 'row-reverse' : 'row', transition: 'border-color .15s,background .15s', cursor: clickable ? 'pointer' : 'default' }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = clickable ? FEXT.accent : 'var(--line)'; e.currentTarget.style.background = clickable ? 'var(--surface-2)' : 'var(--surface)' }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--surface-2)'; e.currentTarget.style.background = 'var(--surface)' }}
     >
       {player.image_url
-        ? <img src={player.image_url} alt={player.nickname} style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid #172032' }} />
-        : <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#172032', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #26324a' }}><User size={17} color="#64748b" /></div>
+        ? <img src={player.image_url} alt={player.nickname} style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid var(--surface-2)' }} />
+        : <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--surface-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--line)' }}><User size={17} color="var(--text-4)" /></div>
       }
       <div style={{ minWidth: 0, flex: 1, textAlign: r ? 'right' : 'left' }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.nickname}</div>
-        {player.real_name && <div style={{ fontSize: 10, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.real_name}</div>}
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.nickname}</div>
+        {player.real_name && <div style={{ fontSize: 10, color: 'var(--text-5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.real_name}</div>}
       </div>
       <RoleBadge role={player.role} />
     </div>
@@ -924,14 +924,14 @@ function MapRow({ map, index, teamAId }) {
   const aWon = map.winner_id === teamAId
   const bWon = map.winner_id !== null && !aWon
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 10, padding: '9px 14px', borderRadius: 10, background: '#131b2b', border: '1px solid #172032' }}>
-      <div style={{ textAlign: 'right', fontSize: 20, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: aWon ? '#4CAF50' : bWon ? '#334155' : '#cbd5e1' }}>{map.team_a_score ?? '—'}</div>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 10, padding: '9px 14px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--surface-2)' }}>
+      <div style={{ textAlign: 'right', fontSize: 20, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: aWon ? '#4CAF50' : bWon ? 'var(--text-6)' : 'var(--text-2)' }}>{map.team_a_score ?? '—'}</div>
       <div style={{ textAlign: 'center', minWidth: 80 }}>
-        <div style={{ fontSize: 9, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 2 }}>Harita {index + 1}</div>
-        <div style={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>{map.map_name || '—'}</div>
-        {map.length_seconds && <div style={{ fontSize: 9, color: '#475569', marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 3 }}><Clock size={9} /> {fmtDur(map.length_seconds)}</div>}
+        <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-5)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 2 }}>Harita {index + 1}</div>
+        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-4)' }}>{map.map_name || '—'}</div>
+        {map.length_seconds && <div style={{ fontSize: 9, color: 'var(--text-5)', marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 3 }}><Clock size={9} /> {fmtDur(map.length_seconds)}</div>}
       </div>
-      <div style={{ textAlign: 'left', fontSize: 20, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: bWon ? '#4CAF50' : aWon ? '#334155' : '#cbd5e1' }}>{map.team_b_score ?? '—'}</div>
+      <div style={{ textAlign: 'left', fontSize: 20, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: bWon ? '#4CAF50' : aWon ? 'var(--text-6)' : 'var(--text-2)' }}>{map.team_b_score ?? '—'}</div>
     </div>
   )
 }
@@ -955,7 +955,7 @@ function WinProbabilityBar({ teamAName, teamBName, teamAPct, teamBPct }) {
         Win Probability
       </div>
 
-      <div style={{ position: 'relative', height: 14, borderRadius: 999, overflow: 'hidden', background: '#0b0f19', border: '1px solid #172032', marginBottom: 7 }}>
+      <div style={{ position: 'relative', height: 14, borderRadius: 999, overflow: 'hidden', background: 'var(--bg)', border: '1px solid var(--surface-2)', marginBottom: 7 }}>
         <div style={{ width: `${animatedA}%`, height: '100%', background: 'linear-gradient(90deg,#4ade80,#22c55e)', transition: 'width .7s cubic-bezier(.22,.61,.36,1)' }} />
         <div style={{ position: 'absolute', top: -1, left: `${animatedA}%`, width: 2, height: 16, background: '#fff', boxShadow: '0 0 10px rgba(255,255,255,.6)', transform: 'translateX(-1px)', animation: 'winBoundaryPulse 1.4s ease-in-out infinite' }} />
         <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
@@ -975,7 +975,7 @@ function getH2HBadge(match, refTeamAId) {
   if (!match?.winner_id) {
     return {
       text: 'D',
-      color: '#cbd5e1',
+      color: 'var(--text-2)',
       bg: 'rgba(120,120,120,.2)',
       border: 'rgba(120,120,120,.45)',
       label: 'Berabere',
@@ -1012,17 +1012,17 @@ function H2HRow({ match, refTeamAId }) {
   const rightWon = !isDraw && !leftWon
   // W/L rozeti kaldırıldı (referans takıma göreydi, hangi taraftan girdiğine göre
   // kafa karıştırıyordu). Bunun yerine kazananın adı yeşil, kaybedenin kırmızı.
-  const WIN = '#4CAF50', LOSE = '#ff6b72', DRAW = '#94a3b8'
+  const WIN = '#4CAF50', LOSE = '#ff6b72', DRAW = 'var(--text-3)'
   const leftColor  = isDraw ? DRAW : (leftWon ? WIN : LOSE)
   const rightColor = isDraw ? DRAW : (rightWon ? WIN : LOSE)
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: '#0b0f19', border: '1px solid #131b2b', fontSize: 11 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: 'var(--bg)', border: '1px solid var(--surface)', fontSize: 11 }}>
       <div style={{ textAlign: 'right', fontWeight: leftWon ? 800 : 600, color: leftColor, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {isALeft ? (match.team_a?.name || '?') : (match.team_b?.name || '?')}
       </div>
-      <div style={{ textAlign: 'center', minWidth: 52, fontWeight: 800, color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>
+      <div style={{ textAlign: 'center', minWidth: 52, fontWeight: 800, color: 'var(--text-4)', fontVariantNumeric: 'tabular-nums' }}>
         {aScore ?? '?'}:{bScore ?? '?'}
-        <div style={{ fontSize: 8, color: '#26324a', marginTop: 1 }}>
+        <div style={{ fontSize: 8, color: 'var(--line)', marginTop: 1 }}>
           {new Date(match.scheduled_at).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: '2-digit' })}
         </div>
       </div>
@@ -1109,27 +1109,27 @@ function MVPVoting({ matchId, players, isFinished }) {
   const topV     = votes[top?.id] || 0
 
   return (
-    <div style={{ background: 'linear-gradient(160deg,#110d1a,#131b2b)', borderRadius: 18, border: '1px solid rgba(167,139,250,.2)', padding: 20, position: 'relative', overflow: 'hidden' }}>
+    <div style={{ background: 'linear-gradient(160deg,#110d1a,var(--surface))', borderRadius: 18, border: '1px solid rgba(167,139,250,.2)', padding: 20, position: 'relative', overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#a78bfa,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Award size={16} color="#fff" /></div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 800, color: '#e2e8f0' }}>Maçın Adamı</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>Maçın Adamı</div>
             <div style={{ fontSize: 9, color: '#3a3a5a' }}>Her maç için 1 oy hakkı</div>
           </div>
         </div>
         {loadingV ? <Sk w="50px" h="20px" r="6px" /> : (
-          <div style={{ textAlign: 'right' }}><div style={{ fontSize: 18, fontWeight: 900, color: '#a78bfa' }}>{totalVotes}</div><div style={{ fontSize: 8, color: '#26324a', textTransform: 'uppercase', letterSpacing: '.5px' }}>oy</div></div>
+          <div style={{ textAlign: 'right' }}><div style={{ fontSize: 18, fontWeight: 900, color: '#a78bfa' }}>{totalVotes}</div><div style={{ fontSize: 8, color: 'var(--line)', textTransform: 'uppercase', letterSpacing: '.5px' }}>oy</div></div>
         )}
       </div>
       {justVoted && <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 9, background: 'rgba(74,222,128,.1)', border: '1px solid rgba(74,222,128,.3)', display: 'flex', alignItems: 'center', gap: 8 }}><PartyPopper size={14} color="#4ade80" /><span style={{ fontSize: 12, fontWeight: 700, color: '#4ade80' }}>Oyunuz kaydedildi!</span></div>}
       {voteError && <div style={{ marginBottom: 10, padding: '7px 10px', borderRadius: 8, background: 'rgba(255,70,85,.08)', border: '1px solid rgba(255,70,85,.2)', fontSize: 11, color: '#FF4655', display: 'flex', alignItems: 'center', gap: 6 }}><TriangleAlert size={12} /> {voteError}</div>}
       {!loadingV && topV > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, marginBottom: 14, background: 'rgba(167,139,250,.08)', border: '1px solid rgba(167,139,250,.2)' }}>
-          {top.image_url ? <img src={top.image_url} alt={top.nickname} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(167,139,250,.4)', flexShrink: 0 }} /> : <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#172032', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><User size={18} color="#64748b" /></div>}
+          {top.image_url ? <img src={top.image_url} alt={top.nickname} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(167,139,250,.4)', flexShrink: 0 }} /> : <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--surface-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><User size={18} color="var(--text-4)" /></div>}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: '#a78bfa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}><Crown size={12} color="#FFD700" /> {top.nickname}</div>
-            <div style={{ fontSize: 9, color: '#475569' }}>Şu an lider · {topV} oy</div>
+            <div style={{ fontSize: 9, color: 'var(--text-5)' }}>Şu an lider · {topV} oy</div>
           </div>
           <div style={{ fontSize: 15, fontWeight: 900, color: '#a78bfa' }}>{totalVotes > 0 ? Math.round(topV / totalVotes * 100) : 0}%</div>
         </div>
@@ -1144,17 +1144,17 @@ function MVPVoting({ matchId, players, isFinished }) {
               const my  = player.id === votedFor
               const isA = (players.teamA || []).some(p => p.id === player.id)
               return (
-                <div key={player.id} onClick={() => !hasVoted && castVote(player)} style={{ position: 'relative', overflow: 'hidden', padding: '9px 12px', borderRadius: 11, border: my ? '1.5px solid rgba(167,139,250,.55)' : '1.5px solid #172032', background: my ? 'rgba(167,139,250,.07)' : '#131b2b', cursor: hasVoted ? 'default' : voting ? 'wait' : 'pointer', transition: 'all .18s', userSelect: 'none' }}
+                <div key={player.id} onClick={() => !hasVoted && castVote(player)} style={{ position: 'relative', overflow: 'hidden', padding: '9px 12px', borderRadius: 11, border: my ? '1.5px solid rgba(167,139,250,.55)' : '1.5px solid var(--surface-2)', background: my ? 'rgba(167,139,250,.07)' : 'var(--surface)', cursor: hasVoted ? 'default' : voting ? 'wait' : 'pointer', transition: 'all .18s', userSelect: 'none' }}
                   onMouseEnter={e => { if (!hasVoted) { e.currentTarget.style.borderColor = 'rgba(167,139,250,.35)'; e.currentTarget.style.background = 'rgba(167,139,250,.04)' } }}
-                  onMouseLeave={e => { if (!hasVoted) { e.currentTarget.style.borderColor = my ? 'rgba(167,139,250,.55)' : '#172032'; e.currentTarget.style.background = my ? 'rgba(167,139,250,.07)' : '#131b2b' } }}
+                  onMouseLeave={e => { if (!hasVoted) { e.currentTarget.style.borderColor = my ? 'rgba(167,139,250,.55)' : 'var(--surface-2)'; e.currentTarget.style.background = my ? 'rgba(167,139,250,.07)' : 'var(--surface)' } }}
                 >
-                  {hasVoted && pct > 0 && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${pct}%`, background: my ? 'linear-gradient(90deg,rgba(167,139,250,.2),transparent)' : 'linear-gradient(90deg,rgba(255,255,255,.03),transparent)', borderRadius: 11, transition: 'width .8s cubic-bezier(.4,0,.2,1)', pointerEvents: 'none' }} />}
+                  {hasVoted && pct > 0 && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${pct}%`, background: my ? 'linear-gradient(90deg,rgba(167,139,250,.2),transparent)' : 'linear-gradient(90deg,var(--hover),transparent)', borderRadius: 11, transition: 'width .8s cubic-bezier(.4,0,.2,1)', pointerEvents: 'none' }} />}
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: idx === 0 && totalVotes > 0 ? 'rgba(167,139,250,.2)' : '#172032', fontSize: 10, fontWeight: 800, color: idx === 0 && totalVotes > 0 ? '#a78bfa' : '#334155', border: `1px solid ${idx === 0 && totalVotes > 0 ? 'rgba(167,139,250,.3)' : '#26324a'}` }}>{idx === 0 && totalVotes > 0 ? <Crown size={11} color="#a78bfa" /> : idx + 1}</div>
-                    {player.image_url ? <img src={player.image_url} alt={player.nickname} style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: my ? '2px solid rgba(167,139,250,.4)' : '2px solid #172032' }} /> : <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#172032', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #26324a' }}><User size={15} color="#64748b" /></div>}
+                    <div style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: idx === 0 && totalVotes > 0 ? 'rgba(167,139,250,.2)' : 'var(--surface-2)', fontSize: 10, fontWeight: 800, color: idx === 0 && totalVotes > 0 ? '#a78bfa' : 'var(--text-6)', border: `1px solid ${idx === 0 && totalVotes > 0 ? 'rgba(167,139,250,.3)' : 'var(--line)'}` }}>{idx === 0 && totalVotes > 0 ? <Crown size={11} color="#a78bfa" /> : idx + 1}</div>
+                    {player.image_url ? <img src={player.image_url} alt={player.nickname} style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: my ? '2px solid rgba(167,139,250,.4)' : '2px solid var(--surface-2)' }} /> : <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--surface-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--line)' }}><User size={15} color="var(--text-4)" /></div>}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 11, fontWeight: my ? 800 : 600, color: my ? '#c4b5fd' : '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 100 }}>{player.nickname}</span>
+                        <span style={{ fontSize: 11, fontWeight: my ? 800 : 600, color: my ? '#c4b5fd' : 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 100 }}>{player.nickname}</span>
                         {my && <span style={{ fontSize: 8, padding: '1px 5px', borderRadius: 4, background: 'rgba(167,139,250,.2)', color: '#a78bfa', fontWeight: 700 }}>senin oyun</span>}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
@@ -1165,9 +1165,9 @@ function MVPVoting({ matchId, players, isFinished }) {
                     <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 60 }}>
                       {hasVoted ? (
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 900, color: pct > 0 ? '#a78bfa' : '#26324a', fontVariantNumeric: 'tabular-nums' }}>{pct}%</div>
-                          <div style={{ fontSize: 8, color: '#26324a' }}>{pV} oy</div>
-                          <div style={{ height: 3, borderRadius: 2, background: '#172032', marginTop: 3, width: 50, overflow: 'hidden' }}>
+                          <div style={{ fontSize: 13, fontWeight: 900, color: pct > 0 ? '#a78bfa' : 'var(--line)', fontVariantNumeric: 'tabular-nums' }}>{pct}%</div>
+                          <div style={{ fontSize: 8, color: 'var(--line)' }}>{pV} oy</div>
+                          <div style={{ height: 3, borderRadius: 2, background: 'var(--surface-2)', marginTop: 3, width: 50, overflow: 'hidden' }}>
                             <div style={{ height: '100%', borderRadius: 2, width: `${pct}%`, background: my ? 'linear-gradient(90deg,#a78bfa,#7c3aed)' : '#2d2d4e', transition: 'width .8s cubic-bezier(.4,0,.2,1)' }} />
                           </div>
                         </div>
@@ -1184,7 +1184,7 @@ function MVPVoting({ matchId, players, isFinished }) {
           </div>
         )
       }
-      <div style={{ marginTop: 10, fontSize: 9, color: '#64748b', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+      <div style={{ marginTop: 10, fontSize: 9, color: 'var(--text-4)', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
         {hasVoted ? <><CircleCheck size={11} color="#4ade80" /> Oy kullandınız · {totalVotes} toplam oy</> : <><MousePointerClick size={11} /> Bir oyuncuya tıklayarak oy verin</>}
       </div>
     </div>
@@ -1344,7 +1344,7 @@ export default function MatchDetail() {
   if (error || !match) return (
     <div style={{ textAlign: 'center', padding: '80px 20px', color: '#fff' }}>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><TriangleAlert size={44} color="#FF4655" /></div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: '#64748b', marginBottom: 24 }}>{error || 'Maç bulunamadı.'}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-4)', marginBottom: 24 }}>{error || 'Maç bulunamadı.'}</div>
       <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', background: FEXT.accentGrad, border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>← Geri</button>
     </div>
   )
@@ -1376,13 +1376,13 @@ export default function MatchDetail() {
   })()
 
   return (
-    <div style={{ color: 'white', minHeight: '100vh', background: '#0b0f19' }}>
+    <div style={{ color: 'white', minHeight: '100vh', background: 'var(--bg)' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px 60px' }}>
 
         {/* Geri */}
-        <button onClick={() => navigate(-1)} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20, padding: '7px 14px', background: '#131b2b', border: '1px solid #172032', borderRadius: 9, color: '#64748b', fontSize: 12, cursor: 'pointer' }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = '#334155'; e.currentTarget.style.color = '#cbd5e1' }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = '#172032'; e.currentTarget.style.color = '#64748b' }}
+        <button onClick={() => navigate(-1)} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20, padding: '7px 14px', background: 'var(--surface)', border: '1px solid var(--surface-2)', borderRadius: 9, color: 'var(--text-4)', fontSize: 12, cursor: 'pointer' }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text-6)'; e.currentTarget.style.color = 'var(--text-2)' }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--surface-2)'; e.currentTarget.style.color = 'var(--text-4)' }}
         >← Geri</button>
 
         {/* TR banner */}
@@ -1393,7 +1393,7 @@ export default function MatchDetail() {
         )}
 
         {/* ── Hero ── */}
-        <div style={{ background: 'linear-gradient(135deg,#131b2b,#131b2b)', borderRadius: hasTR ? '0 0 20px 20px' : '20px', border: `2px solid ${isLive ? '#FF4655' : hasTR ? 'rgba(212,175,55,.3)' : gc + '33'}`, padding: '28px 24px 20px', marginBottom: 8, position: 'relative', overflow: 'hidden' }}>
+        <div style={{ background: 'linear-gradient(135deg,var(--surface),var(--surface))', borderRadius: hasTR ? '0 0 20px 20px' : '20px', border: `2px solid ${isLive ? '#FF4655' : hasTR ? 'rgba(212,175,55,.3)' : gc + '33'}`, padding: '28px 24px 20px', marginBottom: 8, position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: 0, left: '25%', right: '25%', height: 1, background: `linear-gradient(90deg,transparent,${gc}44,transparent)` }} />
 
           {/* Badges */}
@@ -1418,7 +1418,7 @@ export default function MatchDetail() {
                   borderRadius={12}
                   imgStyle={{ objectFit: 'contain', filter: isFin && bWon ? 'grayscale(80%)' : 'none' }}
                 />
-                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (aWon ? '#4CAF50' : '#64748b') : '#fff' }}>{aName}{isTurkishTeam(aName) && ' 🇹🇷'}</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (aWon ? '#4CAF50' : 'var(--text-4)') : '#fff' }}>{aName}{isTurkishTeam(aName) && ' 🇹🇷'}</div>
               </div>
               <FavButton teamId={aId} active={favA} onToggle={toggleTeamFollow} />
             </div>
@@ -1426,14 +1426,14 @@ export default function MatchDetail() {
             {/* Skor */}
             <div style={{ textAlign: 'center', minWidth: 100, flexShrink: 0 }}>
               {(isLive || isFin)
-                ? <div style={{ fontSize: 36, fontWeight: 900, color: isLive ? '#FF4655' : '#cbd5e1', letterSpacing: 4, fontVariantNumeric: 'tabular-nums', textShadow: isLive ? '0 0 20px rgba(255,70,85,.4)' : 'none' }}>{dispScores.team_a_score ?? 0}:{dispScores.team_b_score ?? 0}</div>
+                ? <div style={{ fontSize: 36, fontWeight: 900, color: isLive ? '#FF4655' : 'var(--text-2)', letterSpacing: 4, fontVariantNumeric: 'tabular-nums', textShadow: isLive ? '0 0 20px rgba(255,70,85,.4)' : 'none' }}>{dispScores.team_a_score ?? 0}:{dispScores.team_b_score ?? 0}</div>
                 : <div style={{ fontSize: 26, fontWeight: 900, color: FEXT.accentText, letterSpacing: 3 }}>VS</div>
               }
               <div style={{ fontSize: 12, fontWeight: 700, color: isLive ? '#FF4655' : '#4CAF50', marginTop: 4 }}>{isLive ? '● Canlı' : fmtTime(match.scheduled_at)}</div>
-              <div style={{ fontSize: 10, color: '#334155', marginTop: 2 }}>{fmtDate(match.scheduled_at)}</div>
+              <div style={{ fontSize: 10, color: 'var(--text-6)', marginTop: 2 }}>{fmtDate(match.scheduled_at)}</div>
               <div style={{ marginTop: 10, padding: '0 6px', minWidth: 170 }}>
                 <div style={{ fontSize: 9, fontWeight: 800, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 4 }}>AI Win Probability</div>
-                <div style={{ height: 8, borderRadius: 4, overflow: 'hidden', display: 'flex', border: '1px solid #26324a' }}>
+                <div style={{ height: 8, borderRadius: 4, overflow: 'hidden', display: 'flex', border: '1px solid var(--line)' }}>
                   <div style={{ flex: pctA, background: 'linear-gradient(90deg,#4ade80,#22c55e)', borderRadius: '4px 0 0 4px' }} />
                   <div style={{ flex: pctB, background: 'linear-gradient(90deg,#60a5fa,#3b82f6)', borderRadius: '0 4px 4px 0' }} />
                 </div>
@@ -1441,7 +1441,7 @@ export default function MatchDetail() {
                   <span style={{ color: '#4ade80' }}>{aName}: {pctA}%</span>
                   <span style={{ color: '#60a5fa' }}>{pctB}% :{bName}</span>
                 </div>
-                <div style={{ marginTop: 2, fontSize: 9, color: '#334155' }}>Confidence Score: %{aiWin.confidence} · sample: {aiWin.samples}</div>
+                <div style={{ marginTop: 2, fontSize: 9, color: 'var(--text-6)' }}>Confidence Score: %{aiWin.confidence} · sample: {aiWin.samples}</div>
                 <div style={{ marginTop: 6, display: 'flex', justifyContent: 'center' }}>
                   <PredictionAccuracyBadge variant="inline" />
                 </div>
@@ -1458,7 +1458,7 @@ export default function MatchDetail() {
                   borderRadius={12}
                   imgStyle={{ objectFit: 'contain', filter: isFin && aWon ? 'grayscale(80%)' : 'none' }}
                 />
-                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (bWon ? '#4CAF50' : '#64748b') : '#fff' }}>{isTurkishTeam(bName) && '🇹🇷 '}{bName}</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (bWon ? '#4CAF50' : 'var(--text-4)') : '#fff' }}>{isTurkishTeam(bName) && '🇹🇷 '}{bName}</div>
               </div>
               <FavButton teamId={bId} active={favB} onToggle={toggleTeamFollow} />
             </div>
@@ -1482,7 +1482,7 @@ export default function MatchDetail() {
             to={`/tournament/${match.tournament.id}`}
             style={{
               display: 'flex', alignItems: 'center', gap: 12, marginTop: 18, padding: '12px 16px',
-              borderRadius: 14, background: 'linear-gradient(135deg, rgba(255,184,0,.08), #131b2b)',
+              borderRadius: 14, background: 'linear-gradient(135deg, rgba(255,184,0,.08), var(--surface))',
               border: '1px solid rgba(255,184,0,.25)', textDecoration: 'none',
             }}
           >
@@ -1491,7 +1491,7 @@ export default function MatchDetail() {
               <div style={{ fontSize: 14, fontWeight: 800, color: '#f0e0b0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {match.tournament.name}
               </div>
-              <div style={{ fontSize: 11, color: '#94a3b8' }}>Bracket, puan durumu &amp; turnuvanın tüm maçları</div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Bracket, puan durumu &amp; turnuvanın tüm maçları</div>
             </div>
             <span style={{ fontSize: 13, color: '#FFB800', fontWeight: 700, flexShrink: 0 }}>Git →</span>
           </Link>
@@ -1504,7 +1504,7 @@ export default function MatchDetail() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
             {/* Harita Skorları */}
-            <div style={{ background: '#131b2b', borderRadius: 16, border: '1px solid #172032', padding: 18 }}>
+            <div style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--surface-2)', padding: 18 }}>
               <ST Icon={MapIcon} label="Harita Skorları" />
               {loadingDetails ? <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>{[1,2,3].map(i => <Sk key={i} h="44px" r="10px" />)}</div>
                 : maps.length === 0 ? <StatsCoverageNotice compact message="Bu maç için harita bazlı skorlar ve tur detayları yalnızca Tier S/A kapsamındaki maçlarda mevcut." />
@@ -1512,27 +1512,27 @@ export default function MatchDetail() {
                 : (
                   <div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 10, marginBottom: 6, padding: '0 14px' }}>
-                      <div style={{ textAlign: 'right', fontSize: 9, fontWeight: 700, color: '#26324a' }}>{aName}</div>
+                      <div style={{ textAlign: 'right', fontSize: 9, fontWeight: 700, color: 'var(--line)' }}>{aName}</div>
                       <div style={{ minWidth: 80 }} />
-                      <div style={{ fontSize: 9, fontWeight: 700, color: '#26324a' }}>{bName}</div>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--line)' }}>{bName}</div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                       {maps.map((map, i) => <MapRow key={i} map={map} index={i} teamAId={aId} />)}
                     </div>
-                    <div style={{ marginTop: 8, padding: '8px 14px', borderRadius: 9, background: '#0b0f19', border: '1px solid #172032', display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 10 }}>
-                      <div style={{ textAlign: 'right', fontSize: 20, fontWeight: 900, color: aWon ? '#4CAF50' : '#26324a', fontVariantNumeric: 'tabular-nums' }}>{dispScores.team_a_score ?? '—'}</div>
-                      <div style={{ textAlign: 'center', fontSize: 10, color: '#26324a', minWidth: 50 }}>TOPLAM</div>
-                      <div style={{ fontSize: 20, fontWeight: 900, color: bWon ? '#4CAF50' : '#26324a', fontVariantNumeric: 'tabular-nums' }}>{dispScores.team_b_score ?? '—'}</div>
+                    <div style={{ marginTop: 8, padding: '8px 14px', borderRadius: 9, background: 'var(--bg)', border: '1px solid var(--surface-2)', display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 10 }}>
+                      <div style={{ textAlign: 'right', fontSize: 20, fontWeight: 900, color: aWon ? '#4CAF50' : 'var(--line)', fontVariantNumeric: 'tabular-nums' }}>{dispScores.team_a_score ?? '—'}</div>
+                      <div style={{ textAlign: 'center', fontSize: 10, color: 'var(--line)', minWidth: 50 }}>TOPLAM</div>
+                      <div style={{ fontSize: 20, fontWeight: 900, color: bWon ? '#4CAF50' : 'var(--line)', fontVariantNumeric: 'tabular-nums' }}>{dispScores.team_b_score ?? '—'}</div>
                     </div>
                     {mapStats.length > 0 && (
-                      <div style={{ marginTop: 12, background: '#0b0f19', borderRadius: 10, border: '1px solid #172032', padding: 10 }}>
-                        <div style={{ fontSize: 10, fontWeight: 800, color: '#475569', marginBottom: 8, textTransform: 'uppercase' }}>Harita Kazanma Oranları</div>
+                      <div style={{ marginTop: 12, background: 'var(--bg)', borderRadius: 10, border: '1px solid var(--surface-2)', padding: 10 }}>
+                        <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-5)', marginBottom: 8, textTransform: 'uppercase' }}>Harita Kazanma Oranları</div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                           {mapStats.map(m => (
-                            <div key={m.map} style={{ background: '#131b2b', borderRadius: 8, border: '1px solid #172032', padding: '7px 8px' }}>
+                            <div key={m.map} style={{ background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--surface-2)', padding: '7px 8px' }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 10 }}>
                                 <span style={{ color: '#9ca3af', fontWeight: 700 }}>{m.map}</span>
-                                <span style={{ color: '#475569' }}>{m.total} map</span>
+                                <span style={{ color: 'var(--text-5)' }}>{m.total} map</span>
                               </div>
                               <div style={{ height: 6, borderRadius: 4, overflow: 'hidden', display: 'flex' }}>
                                 <div style={{ width: `${m.teamAWinRate}%`, background: '#4ade80' }} />
@@ -1555,7 +1555,7 @@ export default function MatchDetail() {
 
             {/* Oyuncu KDA (hybrid v3 — enriched maçlarda) */}
             {matchPlayerStats.length > 0 && (
-              <div style={{ background: '#131b2b', borderRadius: 16, border: '1px solid #172032', padding: 18 }}>
+              <div style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--surface-2)', padding: 18 }}>
                 <ST Icon={Target} label="Oyuncu Performansı (K/D/A)" />
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
                   <DeepScoutBadge />
@@ -1569,27 +1569,27 @@ export default function MatchDetail() {
             )}
 
             {/* H2H */}
-            <div style={{ background: '#131b2b', borderRadius: 16, border: '1px solid #172032', padding: 18 }}>
+            <div style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--surface-2)', padding: 18 }}>
               <ST Icon={Swords} label="Rekabet Geçmişi (H2H)" />
               {loadingDetails ? <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>{[1,2,3].map(i => <Sk key={i} h="36px" r="8px" />)}</div>
-                : h2h.total === 0 ? <div style={{ textAlign: 'center', padding: 18, color: '#26324a', fontSize: 12 }}>İlk karşılaşmaları</div>
+                : h2h.total === 0 ? <div style={{ textAlign: 'center', padding: 18, color: 'var(--line)', fontSize: 12 }}>İlk karşılaşmaları</div>
                 : (
                   <div>
                     <div style={{ display: 'flex', height: 7, borderRadius: 4, overflow: 'hidden', marginBottom: 8 }}>
                       <div style={{ flex: h2h.teamAWins, background: '#4CAF50', minWidth: h2h.teamAWins > 0 ? 4 : 0 }} />
-                      {h2h.draws > 0 && <div style={{ flex: h2h.draws, background: '#64748b' }} />}
+                      {h2h.draws > 0 && <div style={{ flex: h2h.draws, background: 'var(--text-4)' }} />}
                       <div style={{ flex: h2h.teamBWins, background: '#FF4655', minWidth: h2h.teamBWins > 0 ? 4 : 0 }} />
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, fontSize: 10 }}>
-                      <span style={{ color: h2h.teamAWins >= h2h.teamBWins ? '#4CAF50' : '#475569', fontWeight: 700 }}>{aName} {h2h.teamAWins}G</span>
-                      <span style={{ color: h2h.teamBWins > h2h.teamAWins ? '#4CAF50' : '#475569', fontWeight: 700 }}>{h2h.teamBWins}G {bName}</span>
+                      <span style={{ color: h2h.teamAWins >= h2h.teamBWins ? '#4CAF50' : 'var(--text-5)', fontWeight: 700 }}>{aName} {h2h.teamAWins}G</span>
+                      <span style={{ color: h2h.teamBWins > h2h.teamAWins ? '#4CAF50' : 'var(--text-5)', fontWeight: 700 }}>{h2h.teamBWins}G {bName}</span>
                     </div>
-                    <div style={{ marginBottom: 10, background: '#0b0f19', border: '1px solid #172032', borderRadius: 8, padding: '7px 9px', display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
-                      <span style={{ color: '#64748b' }}>Rekabet Skoru</span>
-                      <span style={{ color: '#e2e8f0', fontWeight: 800 }}>{aName} {h2h.teamAWins} - {h2h.teamBWins} {bName}</span>
+                    <div style={{ marginBottom: 10, background: 'var(--bg)', border: '1px solid var(--surface-2)', borderRadius: 8, padding: '7px 9px', display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
+                      <span style={{ color: 'var(--text-4)' }}>Rekabet Skoru</span>
+                      <span style={{ color: 'var(--text-1)', fontWeight: 800 }}>{aName} {h2h.teamAWins} - {h2h.teamBWins} {bName}</span>
                     </div>
-                    <div style={{ marginBottom: 10, background: '#0b0f19', border: '1px solid #172032', borderRadius: 8, padding: '7px 9px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <span style={{ color: '#64748b', fontSize: 10 }}>Son 5 Form</span>
+                    <div style={{ marginBottom: 10, background: 'var(--bg)', border: '1px solid var(--surface-2)', borderRadius: 8, padding: '7px 9px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <span style={{ color: 'var(--text-4)', fontSize: 10 }}>Son 5 Form</span>
                       <div style={{ display: 'flex', gap: 6 }}>
                         {h2hRecentForm.map((badge, idx) => (
                           <span
@@ -1626,7 +1626,7 @@ export default function MatchDetail() {
             </div>
 
             {/* Maç Bilgisi */}
-            <div style={{ background: '#131b2b', borderRadius: 16, border: '1px solid #172032', padding: 18 }}>
+            <div style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--surface-2)', padding: 18 }}>
               <ST Icon={Info} label="Maç Bilgisi" />
               {[
                 [Gamepad2,     'Oyun',   gName || '—'],
@@ -1635,9 +1635,9 @@ export default function MatchDetail() {
                 [BarChart3,    'Durum',  isFin ? 'Tamamlandı' : isLive ? 'Canlı' : 'Yakında'],
                 [Hash,         'ID',     String(match.id)],
               ].map(([Icon, label, value]) => (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #131b2b' }}>
-                  <span style={{ fontSize: 10, color: '#334155', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon size={11} /> {label}</span>
-                  <span style={{ fontSize: 11, color: '#64748b', textAlign: 'right', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: label === 'ID' ? 'monospace' : 'inherit' }}>{value}</span>
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--surface)' }}>
+                  <span style={{ fontSize: 10, color: 'var(--text-6)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon size={11} /> {label}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-4)', textAlign: 'right', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: label === 'ID' ? 'monospace' : 'inherit' }}>{value}</span>
                 </div>
               ))}
             </div>
@@ -1647,32 +1647,32 @@ export default function MatchDetail() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
             {/* Team A Kadro */}
-            <div style={{ background: '#131b2b', borderRadius: 16, border: '1px solid #172032', padding: 18 }}>
+            <div style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--surface-2)', padding: 18 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                 {aLogo && <img src={aLogo} alt="" style={{ width: 22, height: 22, objectFit: 'contain' }} />}
                 <ST icon="" label={aName + ' Kadro'} />
               </div>
               {loadingDetails ? <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{[1,2,3,4,5].map(i => <Sk key={i} h="50px" r="10px" />)}</div>
-                : players.teamA.length === 0 ? <div style={{ textAlign: 'center', padding: 18, color: '#26324a', fontSize: 12 }}>Kadro verisi yok</div>
+                : players.teamA.length === 0 ? <div style={{ textAlign: 'center', padding: 18, color: 'var(--line)', fontSize: 12 }}>Kadro verisi yok</div>
                 : <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>{players.teamA.map((p, i) => <PlayerCard key={i} player={p} side="left" />)}</div>
               }
             </div>
 
             {/* Team B Kadro */}
-            <div style={{ background: '#131b2b', borderRadius: 16, border: '1px solid #172032', padding: 18 }}>
+            <div style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--surface-2)', padding: 18 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                 {bLogo && <img src={bLogo} alt="" style={{ width: 22, height: 22, objectFit: 'contain' }} />}
                 <ST icon="" label={bName + ' Kadro'} />
               </div>
               {loadingDetails ? <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{[1,2,3,4,5].map(i => <Sk key={i} h="50px" r="10px" />)}</div>
-                : players.teamB.length === 0 ? <div style={{ textAlign: 'center', padding: 18, color: '#26324a', fontSize: 12 }}>Kadro verisi yok</div>
+                : players.teamB.length === 0 ? <div style={{ textAlign: 'center', padding: 18, color: 'var(--line)', fontSize: 12 }}>Kadro verisi yok</div>
                 : <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>{players.teamB.map((p, i) => <PlayerCard key={i} player={p} side="right" />)}</div>
               }
             </div>
 
             {/* MVP Oylaması — MVP_VOTING_ENABLED ile gizli (istatistik altyapısı bekleniyor) */}
             {MVP_VOTING_ENABLED && isFin && (
-              <div style={{ background: '#131b2b', borderRadius: 16, border: '1px solid rgba(167,139,250,.15)', padding: 18 }}>
+              <div style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid rgba(167,139,250,.15)', padding: 18 }}>
                 <ST Icon={Award} label="MVP Oylaması" />
                 <MVPVoting matchId={parseInt(id)} players={players} isFinished={isFin} />
               </div>
@@ -1680,7 +1680,7 @@ export default function MatchDetail() {
           </div>
         </div>
 
-        <div style={{ marginTop: 18, background: '#131b2b', borderRadius: 14, border: '1px solid #172032', padding: 14 }}>
+        <div style={{ marginTop: 18, background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--surface-2)', padding: 14 }}>
           <ST Icon={Compass} label="Gozcu Notu" />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 10 }}>
             <div>
@@ -1734,15 +1734,15 @@ function LiveScoreboard({ teamAName, teamBName, teamABoard, teamBBoard, isLive }
   if (!isLive) return null
 
   const table = (title, rows, accent) => (
-    <div style={{ background: '#131b2b', border: '1px solid #172032', borderRadius: 12, padding: 10 }}>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--surface-2)', borderRadius: 12, padding: 10 }}>
       <div style={{ fontSize: 11, fontWeight: 800, color: accent, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.8px' }}>{title}</div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 40px 40px 40px', gap: 6, fontSize: 9, color: '#475569', marginBottom: 6, padding: '0 4px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 40px 40px 40px', gap: 6, fontSize: 9, color: 'var(--text-5)', marginBottom: 6, padding: '0 4px' }}>
         <span>Oyuncu</span><span style={{ textAlign: 'right' }}>K</span><span style={{ textAlign: 'right' }}>D</span><span style={{ textAlign: 'right' }}>A</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {(rows || []).slice(0, 6).map(p => (
-          <div key={`${title}_${p.player_id}`} style={{ display: 'grid', gridTemplateColumns: '1fr 40px 40px 40px', gap: 6, alignItems: 'center', background: '#131b2b', border: '1px solid #172032', borderRadius: 8, padding: '6px 8px' }}>
-            <span style={{ fontSize: 11, color: '#cbd5e1', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nickname}</span>
+          <div key={`${title}_${p.player_id}`} style={{ display: 'grid', gridTemplateColumns: '1fr 40px 40px 40px', gap: 6, alignItems: 'center', background: 'var(--surface)', border: '1px solid var(--surface-2)', borderRadius: 8, padding: '6px 8px' }}>
+            <span style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nickname}</span>
             <span style={{ textAlign: 'right', fontSize: 11, color: '#4ade80', fontVariantNumeric: 'tabular-nums' }}>{p.kills ?? 0}</span>
             <span style={{ textAlign: 'right', fontSize: 11, color: '#fb7185', fontVariantNumeric: 'tabular-nums' }}>{p.deaths ?? 0}</span>
             <span style={{ textAlign: 'right', fontSize: 11, color: '#93c5fd', fontVariantNumeric: 'tabular-nums' }}>{p.assists ?? 0}</span>
@@ -1753,7 +1753,7 @@ function LiveScoreboard({ teamAName, teamBName, teamABoard, teamBBoard, isLive }
   )
 
   return (
-    <div style={{ marginTop: 16, marginBottom: 4, background: 'linear-gradient(160deg,#170d0f,#131b2b)', borderRadius: 16, border: '1px solid rgba(255,70,85,.25)', padding: 16 }}>
+    <div style={{ marginTop: 16, marginBottom: 4, background: 'linear-gradient(160deg,#170d0f,var(--surface))', borderRadius: 16, border: '1px solid rgba(255,70,85,.25)', padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <div style={{ fontSize: 12, fontWeight: 900, color: '#FF4655', textTransform: 'uppercase', letterSpacing: '1px' }}>Canlı Skor Tablosu</div>
         <div style={{ fontSize: 10, color: '#7a3038' }}>K/D/A anlik performans</div>

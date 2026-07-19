@@ -100,12 +100,12 @@ const TodaySchedule = memo(function TodaySchedule({ matches, liveMatches, onMatc
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '8px 12px', borderRadius: 10, cursor: 'pointer',
-                background: isLive ? 'rgba(255,70,85,.07)' : '#131b2b',
+                background: isLive ? 'rgba(255,70,85,.07)' : 'var(--surface)',
                 border: isLive ? '1px solid rgba(255,70,85,.3)' : '1px solid #232f47',
                 transition: 'all .15s',
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = isLive ? 'rgba(255,70,85,.12)' : '#172032'; e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.5)' : '#2a2a2a' }}
-              onMouseLeave={e => { e.currentTarget.style.background = isLive ? 'rgba(255,70,85,.07)' : '#131b2b'; e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.3)' : '#232f47' }}
+              onMouseEnter={e => { e.currentTarget.style.background = isLive ? 'rgba(255,70,85,.12)' : 'var(--surface-2)'; e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.5)' : '#2a2a2a' }}
+              onMouseLeave={e => { e.currentTarget.style.background = isLive ? 'rgba(255,70,85,.07)' : 'var(--surface)'; e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.3)' : '#232f47' }}
             >
               {/* Saat */}
               <span style={{ fontSize: 11, color: '#555', fontVariantNumeric: 'tabular-nums', flexShrink: 0, width: 38, textAlign: 'center' }}>
@@ -139,7 +139,7 @@ function Sk({ w = '100%', h = '16px', r = '8px' }) {
   return (
     <div style={{
       width: w, height: h, borderRadius: r, flexShrink: 0,
-      background: 'linear-gradient(90deg,#131b2b 25%,#232f47 50%,#131b2b 75%)',
+      background: 'linear-gradient(90deg,var(--surface) 25%,#232f47 50%,var(--surface) 75%)',
       backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite',
     }} />
   )
@@ -399,7 +399,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
         overflowY: 'auto',
         borderRadius: 18,
         border: '1px solid #2b3a58',
-        background: 'radial-gradient(circle at 14% 12%, rgba(255,70,85,.2), transparent 42%), #131b2b',
+        background: 'radial-gradient(circle at 14% 12%, rgba(255,70,85,.2), transparent 42%), var(--surface)',
         boxShadow: '0 28px 70px rgba(0,0,0,.55)',
       }}>
         <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid #202020' }}>
@@ -424,7 +424,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
                   style={{
                     borderRadius: 999,
                     border: `1px solid ${active ? game.color : '#2a2a2a'}`,
-                    background: active ? `${game.color}2b` : '#172032',
+                    background: active ? `${game.color}2b` : 'var(--surface-2)',
                     color: active ? '#fff' : '#cfcfcf',
                     fontSize: 12,
                     fontWeight: 700,
@@ -451,7 +451,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
                 width: '100%',
                 borderRadius: 9,
                 border: '1px solid #2a2a2a',
-                background: '#172032',
+                background: 'var(--surface-2)',
                 color: '#f1f1f1',
                 fontSize: 12,
                 padding: '8px 10px',
@@ -473,7 +473,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
                     textAlign: 'left',
                     borderRadius: 11,
                     border: `1px solid ${active ? '#ff6f7e' : '#262626'}`,
-                    background: active ? 'rgba(255,70,85,.18)' : '#172032',
+                    background: active ? 'rgba(255,70,85,.18)' : 'var(--surface-2)',
                     color: active ? '#ffd9de' : '#cdcdcd',
                     padding: '8px 10px',
                     display: 'flex',
@@ -494,7 +494,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
                   <span style={{ minWidth: 0, display: 'grid', gap: 2 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.name}</span>
                     <span style={{ fontSize: 10, color: active ? '#ffb2bc' : '#8e8e8e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: gameMeta?.color || '#64748b', flexShrink: 0 }} /> {gameMeta?.label || team?.game?.name || 'Unknown Game'}
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: gameMeta?.color || 'var(--text-4)', flexShrink: 0 }} /> {gameMeta?.label || team?.game?.name || 'Unknown Game'}
                     </span>
                   </span>
                 </button>
@@ -529,7 +529,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
             style={{
               borderRadius: 10,
               border: '1px solid #2d2d2d',
-              background: '#172032',
+              background: 'var(--surface-2)',
               color: '#bbb',
               fontSize: 12,
               fontWeight: 700,
@@ -627,10 +627,10 @@ const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
   }
 
   return (
-    <div style={{ marginBottom: 18, borderRadius: 12, border: '1px solid #26324a', background: '#131b2b', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 16px', borderBottom: '1px solid #26324a', background: 'rgba(255,255,255,.02)' }}>
+    <div style={{ marginBottom: 18, borderRadius: 12, border: '1px solid var(--line)', background: 'var(--surface)', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 16px', borderBottom: '1px solid var(--line)', background: 'rgba(255,255,255,.02)' }}>
         <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ff4655', animation: 'liveNeonBlink 1.05s infinite' }} />
-        <span style={{ fontSize: 12, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>
+        <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '1px' }}>
           Son Haberler &amp; Canlı Akış {loading ? '· senkronize ediliyor' : ''}
         </span>
       </div>
@@ -646,9 +646,9 @@ const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
                 overflow: 'hidden',
                 fontSize: 13.5,
                 fontWeight: 500,
-                color: line.href ? '#e2e8f0' : '#94a3b8',
+                color: line.href ? 'var(--text-1)' : 'var(--text-3)',
                 padding: '13px 20px',
-                borderRight: '1px solid rgba(255,255,255,.08)',
+                borderRight: '1px solid var(--hover-strong)',
                 borderTop: 'none',
                 borderBottom: 'none',
                 borderLeft: 'none',
@@ -658,7 +658,7 @@ const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
               }}
               onMouseEnter={e => {
                 if (!line.href) return
-                e.currentTarget.style.background = 'rgba(255,255,255,.08)'
+                e.currentTarget.style.background = 'var(--hover-strong)'
                 e.currentTarget.style.transform = 'translateY(-1px)'
                 e.currentTarget.style.color = '#fff'
               }}
@@ -666,7 +666,7 @@ const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
                 if (!line.href) return
                 e.currentTarget.style.background = 'transparent'
                 e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.color = '#e2e8f0'
+                e.currentTarget.style.color = 'var(--text-1)'
               }}
             >
               {line.text}
@@ -743,7 +743,7 @@ const QuickAccessBar = memo(function QuickAccessBar({ entries, loading, onOpen }
               flexShrink: 0,
               border: entry.isLive ? '1.5px solid rgba(255,70,85,.75)' : '1px solid #2a2a2a',
               boxShadow: entry.isLive ? '0 0 16px rgba(255,70,85,.42)' : 'none',
-              background: '#131b2b',
+              background: 'var(--surface)',
               cursor: 'pointer',
               padding: 0,
               position: 'relative',
@@ -870,9 +870,9 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
         borderRadius: 16,
         /* TR banner varsa üstten 22px fazla boşluk */
         padding: hasTurkish ? '30px 16px 14px' : '14px 16px',
-        background: 'linear-gradient(160deg,#172032,#131b2b)',
+        background: 'linear-gradient(160deg,var(--surface-2),var(--surface))',
         cursor: 'pointer',
-        border: '1px solid #26324a',
+        border: '1px solid var(--line)',
         boxShadow: '0 8px 24px rgba(0,0,0,.35)',
         transition: 'border-color .18s, transform .18s',
         /* üst vurgu şeridi köşe yarıçapına göre kırpılsın (sol-üst kayma fix) */
@@ -881,7 +881,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
         minHeight: 0,
       }}
       onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(194,92,208,.55)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = '#26324a';  e.currentTarget.style.transform = 'translateY(0)' }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line)';  e.currentTarget.style.transform = 'translateY(0)' }}
     >
       {/* Üst ince kırmızı vurgu — yavaş süzülen soft hareket (glow yok) */}
       <div style={{
@@ -918,7 +918,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
           </span>
           <MatchImpactPill match={m} />
           {getBOFormat(m.team_a_score, m.team_b_score, m.number_of_games) && (
-            <span style={{ fontSize: 8, fontWeight: 700, color: '#555', background: 'rgba(255,255,255,.05)', border: '1px solid #2a2a2a', borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 8, fontWeight: 700, color: '#555', background: 'var(--hover)', border: '1px solid #2a2a2a', borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap' }}>
               {getBOFormat(m.team_a_score, m.team_b_score, m.number_of_games)}
             </span>
           )}
@@ -935,7 +935,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
           borderRadius: 7,
           borderLeft: '2px solid rgba(255,70,85,.6)',
           background: 'rgba(255,70,85,.06)',
-          color: '#94a3b8',
+          color: 'var(--text-3)',
           fontSize: 9,
           fontWeight: 700,
           letterSpacing: '.5px',
@@ -993,8 +993,8 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
           flexShrink: 0,
           padding: aggressiveLiveMode ? '5px 10px' : '0 4px',
           borderRadius: aggressiveLiveMode ? 9 : 0,
-          border: aggressiveLiveMode ? '1px solid #26324a' : 'none',
-          background: aggressiveLiveMode ? 'rgba(255,255,255,.03)' : 'transparent',
+          border: aggressiveLiveMode ? '1px solid var(--line)' : 'none',
+          background: aggressiveLiveMode ? 'var(--hover)' : 'transparent',
           boxShadow: 'none',
         }}>
           <div style={{
@@ -1100,22 +1100,22 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
       style={{
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '9px 14px', borderRadius: 12, cursor: 'pointer',
-        background: '#131b2b',
-        border: isLive ? '1px solid rgba(255,70,85,.5)' : '1px solid #26324a',
+        background: 'var(--surface)',
+        border: isLive ? '1px solid rgba(255,70,85,.5)' : '1px solid var(--line)',
         boxShadow: 'none',
         transition: 'background .15s, border-color .15s',
       }}
       onMouseEnter={e => {
-        e.currentTarget.style.background = '#172032'
-        e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.7)' : '#33415d'
+        e.currentTarget.style.background = 'var(--surface-2)'
+        e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.7)' : 'var(--line-2)'
       }}
       onMouseLeave={e => {
-        e.currentTarget.style.background = '#131b2b'
-        e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.5)' : '#26324a'
+        e.currentTarget.style.background = 'var(--surface)'
+        e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.5)' : 'var(--line)'
       }}
     >
       {/* Saat (My Feed'de tarih de görünsün — grup başlığı yok) */}
-      <div style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0, width: showDate ? 66 : 36, textAlign: 'center', fontVariantNumeric: 'tabular-nums', lineHeight: 1.25 }}>
+      <div style={{ fontSize: 10, color: 'var(--text-3)', flexShrink: 0, width: showDate ? 66 : 36, textAlign: 'center', fontVariantNumeric: 'tabular-nums', lineHeight: 1.25 }}>
         {showDate ? fmtWhen(m.scheduled_at) : fmtTime(m.scheduled_at)}
       </div>
 
@@ -1202,17 +1202,17 @@ const ResultRow = memo(function ResultRow({ match: m, onMatchClick }) {
       style={{
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '9px 12px', borderRadius: 12, cursor: 'pointer',
-        background: '#131b2b', border: '1px solid #26324a', transition: 'background .15s, border-color .15s',
+        background: 'var(--surface)', border: '1px solid var(--line)', transition: 'background .15s, border-color .15s',
       }}
-      onMouseEnter={e => { e.currentTarget.style.background = '#172032'; e.currentTarget.style.borderColor = '#33415d' }}
-      onMouseLeave={e => { e.currentTarget.style.background = '#131b2b'; e.currentTarget.style.borderColor = '#26324a' }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-2)'; e.currentTarget.style.borderColor = 'var(--line-2)' }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.borderColor = 'var(--line)' }}
     >
       {/* Tarih/saat — bugünse sadece saat, öncesi "13 Tem HH:MM" */}
-      <span style={{ fontSize: 9.5, color: '#64748b', flexShrink: 0, width: 62, textAlign: 'center', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>
+      <span style={{ fontSize: 9.5, color: 'var(--text-4)', flexShrink: 0, width: 62, textAlign: 'center', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>
         {fmtWhen(m.scheduled_at)}
       </span>
 
-      <span style={{ fontSize: 8, padding: '2px 6px', borderRadius: 4, background: '#232f47', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', flexShrink: 0 }}>
+      <span style={{ fontSize: 8, padding: '2px 6px', borderRadius: 4, background: '#232f47', color: 'var(--text-4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', flexShrink: 0 }}>
         {m.game?.name?.slice(0, 3).toUpperCase() || '—'}
       </span>
 
@@ -1244,7 +1244,7 @@ const ResultRow = memo(function ResultRow({ match: m, onMatchClick }) {
         <span style={{
           flexShrink: 0, fontSize: 9, fontWeight: 800, borderRadius: 5, padding: '2px 6px',
           color: isHero ? '#f0c040' : '#555',
-          background: isHero ? 'rgba(240,192,64,.12)' : '#172032',
+          background: isHero ? 'rgba(240,192,64,.12)' : 'var(--surface-2)',
           border: isHero ? '1px solid rgba(240,192,64,.35)' : '1px solid #2b3a58',
         }}>{tierLetter}</span>
       )}
@@ -2155,7 +2155,7 @@ export default function Dashboard() {
   ], [loading, stats.live, stats.today, stats.total, stats.teams])
 
   return (
-    <div style={{ background: '#0b0f19', minHeight: 'calc(100vh - 58px)' }}>
+    <div style={{ background: 'var(--bg)', minHeight: 'calc(100vh - 58px)' }}>
     <div style={{ maxWidth: 1440, margin: '0 auto', padding: isMobile ? '14px 12px 44px' : '20px 18px 60px', color: 'white' }}>
 
       {globalError && (
@@ -2215,7 +2215,7 @@ export default function Dashboard() {
         padding: '10px 12px',
         borderRadius: 12,
         border: '1px solid #232f47',
-        background: '#131b2b',
+        background: 'var(--surface)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -2234,7 +2234,7 @@ export default function Dashboard() {
           onClick={() => setShowAllTournamentTiers(prev => !prev)}
           style={{
             border: `1px solid ${showAllTournamentTiers ? '#4CAF50' : '#2f2f2f'}`,
-            background: showAllTournamentTiers ? 'rgba(76,175,80,.14)' : '#172032',
+            background: showAllTournamentTiers ? 'rgba(76,175,80,.14)' : 'var(--surface-2)',
             color: showAllTournamentTiers ? '#9ee6a3' : '#c9c9c9',
             borderRadius: 999,
             padding: '7px 14px',
@@ -2288,7 +2288,7 @@ export default function Dashboard() {
           {myFeedMatches.length === 0 ? (
             <div style={{
               padding: '14px 16px', borderRadius: 12,
-              background: '#131b2b', border: '1px solid #232f47',
+              background: 'var(--surface)', border: '1px solid #232f47',
               fontSize: 11, color: '#3a3a3a', textAlign: 'center',
             }}>
               Takip ettiğin takımlar/oyuncular için yakın tarihli maç yok.
@@ -2315,7 +2315,7 @@ export default function Dashboard() {
           <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(255,154,169,.3),transparent)' }} />
         </div>
 
-        <div style={{ border: '1px solid #2b3a58', borderRadius: 14, background: 'radial-gradient(circle at 8% 8%, rgba(200,16,46,.18), transparent 35%), #131b2b', overflow: 'hidden' }}>
+        <div style={{ border: '1px solid #2b3a58', borderRadius: 14, background: 'radial-gradient(circle at 8% 8%, rgba(200,16,46,.18), transparent 35%), var(--surface)', overflow: 'hidden' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1fr .9fr .9fr .9fr', gap: 8, padding: '11px 14px', borderBottom: '1px solid #202020', fontSize: 10, color: '#8b8b8b', textTransform: 'uppercase', letterSpacing: '.6px' }}>
             <div>Sıra</div><div>Oyuncu</div><div>Takım</div><div>Maç</div><div>Ort. Etki</div><div>Form</div>
           </div>
@@ -2385,8 +2385,8 @@ export default function Dashboard() {
             {[1,2,3].map(i => <Sk key={i} h="150px" r="16px" />)}
           </div>
         ) : liveMatches.length === 0 ? (
-          <div style={{ padding: '20px', borderRadius: 16, background: '#131b2b', border: '1px solid #232f47', textAlign: 'center' }}>
-            <div style={{ marginBottom: 6, display: 'flex', justifyContent: 'center' }}><Moon size={22} color="#334155" /></div>
+          <div style={{ padding: '20px', borderRadius: 16, background: 'var(--surface)', border: '1px solid #232f47', textAlign: 'center' }}>
+            <div style={{ marginBottom: 6, display: 'flex', justifyContent: 'center' }}><Moon size={22} color="var(--text-6)" /></div>
             <div style={{ fontSize: 11, color: '#2a2a2a' }}>Şu an canlı maç yok</div>
           </div>
         ) : (
@@ -2490,7 +2490,7 @@ export default function Dashboard() {
                 {[1,2,3,4,5].map(i => <Sk key={i} h="40px" r="12px" />)}
               </div>
             ) : groups.length === 0 ? (
-              <div style={{ padding: '16px', borderRadius: 14, background: '#131b2b', border: '1px solid #232f47', textAlign: 'center', fontSize: 11, color: '#2a2a2a' }}>
+              <div style={{ padding: '16px', borderRadius: 14, background: 'var(--surface)', border: '1px solid #232f47', textAlign: 'center', fontSize: 11, color: '#2a2a2a' }}>
                 Yaklaşan maç bulunamadı
               </div>
             ) : (
@@ -2564,7 +2564,7 @@ export default function Dashboard() {
                     to="/matches"
                     style={{
                       display: 'block', textAlign: 'center', padding: '9px',
-                      borderRadius: 10, background: '#0b0f19', border: '1px solid #232f47',
+                      borderRadius: 10, background: 'var(--bg)', border: '1px solid #232f47',
                       fontSize: 10, color: '#383838', textDecoration: 'none',
                       transition: 'all .15s', marginTop: 10,
                     }}
@@ -2605,7 +2605,7 @@ export default function Dashboard() {
       {/* ── AI Güven Paneli — birleşik (net isabet + son-30 trend), tek satır ── */}
       <div style={{
         marginBottom: 24, padding: '12px 16px', borderRadius: 14,
-        border: '1px solid rgba(148,163,184,.1)', background: '#131b2b',
+        border: '1px solid rgba(148,163,184,.1)', background: 'var(--surface)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
       }}>
         <PredictionAccuracyBadge variant="inline" />
@@ -2636,7 +2636,7 @@ export default function Dashboard() {
           gridRow: isMobile ? 'auto' : '1 / 3',
           padding: isMobile ? '20px 16px' : '28px 24px',
           borderRadius: 20,
-          background: 'linear-gradient(135deg,#172032,#131b2b)',
+          background: 'linear-gradient(135deg,var(--surface-2),var(--surface))',
           border: '1px solid #232f47',
           display: 'flex', flexDirection: 'column', justifyContent: 'center',
         }}>
@@ -2644,7 +2644,7 @@ export default function Dashboard() {
             margin: '2px 0 8px', fontSize: 34, fontWeight: 800, letterSpacing: '-.02em',
             fontFamily: "'Baloo 2','Fredoka',system-ui,sans-serif",
           }}>
-            <span style={{ color: '#F8FAFC' }}>fe</span>
+            <span style={{ color: 'var(--text)' }}>fe</span>
             <span style={{ background: 'linear-gradient(135deg,#DF4888,#8B3AA0 55%,#6A297F)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
               <span style={{ fontSize: '1.22em' }}>X</span>t
             </span>
@@ -2679,7 +2679,7 @@ export default function Dashboard() {
             padding: '14px 12px',
             borderRadius: 16,
             textAlign: 'center',
-            background: 'linear-gradient(135deg,#172032,#131b2b)',
+            background: 'linear-gradient(135deg,var(--surface-2),var(--surface))',
             border: `1px solid ${s.color}1a`,
             display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
             transition: 'border-color .2s',
@@ -2709,7 +2709,7 @@ export default function Dashboard() {
           <Link key={l.to} to={l.to} style={{ textDecoration: 'none' }}>
             <div style={{
               padding: '16px 14px', borderRadius: 16,
-              background: 'linear-gradient(135deg,#172032,#131b2b)',
+              background: 'linear-gradient(135deg,var(--surface-2),var(--surface))',
               border: `1px solid ${l.color}18`,
               transition: 'all .18s', cursor: 'pointer',
             }}
@@ -2719,7 +2719,7 @@ export default function Dashboard() {
                 e.currentTarget.style.transform     = 'translateY(-3px)'
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.background    = 'linear-gradient(135deg,#172032,#131b2b)'
+                e.currentTarget.style.background    = 'linear-gradient(135deg,var(--surface-2),var(--surface))'
                 e.currentTarget.style.borderColor   = `${l.color}18`
                 e.currentTarget.style.transform     = 'translateY(0)'
               }}

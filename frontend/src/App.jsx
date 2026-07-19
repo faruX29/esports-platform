@@ -175,14 +175,14 @@ function NavSearch() {
       <form onSubmit={handleSubmit}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 6,
-          background: focused ? '#172032' : '#131b2b',
-          border: `1.5px solid ${focused ? FEXT.accent : '#26324a'}`,
+          background: focused ? 'var(--surface-2)' : 'var(--surface)',
+          border: `1.5px solid ${focused ? FEXT.accent : 'var(--line)'}`,
           borderRadius: 10, padding: '5px 10px',
           transition: 'all .2s',
           boxShadow: focused ? `0 0 0 3px ${FEXT.accentGlow}` : 'none',
           width: focused ? 'min(260px, 70vw)' : 180,
         }}>
-          <span style={{ color: focused ? FEXT.accent : '#64748b',
+          <span style={{ color: focused ? FEXT.accent : 'var(--text-4)',
             flexShrink: 0, transition: 'color .2s', display: 'inline-flex' }}><Search size={14} /></span>
           <input
             ref={inputRef}
@@ -193,15 +193,15 @@ function NavSearch() {
             placeholder="Ara…"
             style={{
               flex: 1, background: 'none', border: 'none', outline: 'none',
-              color: '#fff', fontSize: 13, minWidth: 0,
+              color: 'var(--text)', fontSize: 13, minWidth: 0,
             }}
           />
           {/* Kısayol rozeti — Mac'te ⌘K, diğerlerinde Ctrl K */}
           {!focused && (
             <span style={{
               fontSize: 9, padding: '2px 5px', borderRadius: 4,
-              background: '#172032', border: '1px solid #26324a',
-              color: '#64748b', flexShrink: 0, fontFamily: 'monospace', whiteSpace: 'nowrap',
+              background: 'var(--surface-2)', border: '1px solid var(--line)',
+              color: 'var(--text-4)', flexShrink: 0, fontFamily: 'monospace', whiteSpace: 'nowrap',
             }}>{IS_MAC ? '⌘K' : 'Ctrl K'}</span>
           )}
           {/* Clear */}
@@ -209,7 +209,7 @@ function NavSearch() {
             <button
               type="button"
               onClick={() => { setQ(''); setResults({ teams: [], players: [], tournaments: [] }); inputRef.current?.focus() }}
-              style={{ background: 'none', border: 'none', color: '#64748b',
+              style={{ background: 'none', border: 'none', color: 'var(--text-4)',
                 cursor: 'pointer', padding: 0, flexShrink: 0, display: 'inline-flex' }}
             ><XIcon size={14} /></button>
           )}
@@ -230,8 +230,8 @@ function NavSearch() {
           ref={dropdownRef}
           style={{
             position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-            width: 320, background: '#131b2b',
-            border: '1px solid #26324a', borderRadius: 14,
+            width: 320, background: 'var(--surface)',
+            border: '1px solid var(--line)', borderRadius: 14,
             boxShadow: '0 12px 40px rgba(0,0,0,.55)',
             overflow: 'hidden', zIndex: 9999,
             animation: 'fadeUp .15s ease',
@@ -239,7 +239,7 @@ function NavSearch() {
         >
           {!hasResults && !loading && (
             <div style={{ padding: '20px', textAlign: 'center',
-              fontSize: 12, color: '#64748b' }}>
+              fontSize: 12, color: 'var(--text-4)' }}>
               "{q}" için sonuç yok
             </div>
           )}
@@ -247,7 +247,7 @@ function NavSearch() {
           {/* Teams */}
           {results.teams.length > 0 && (
             <div>
-              <div style={{ padding: '8px 14px 4px', fontSize: 9, color: '#475569',
+              <div style={{ padding: '8px 14px 4px', fontSize: 9, color: 'var(--text-5)',
                 fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5 }}>
                 <Shield size={11} /> Takımlar
               </div>
@@ -260,22 +260,22 @@ function NavSearch() {
                     padding: '8px 14px', cursor: 'pointer',
                     transition: 'background .12s',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#172032'}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
                   {t.logo_url
                     ? <img src={t.logo_url} alt={t.name}
                         style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0 }} />
                     : <div style={{ width: 26, height: 26, borderRadius: 6,
-                        background: '#172032', flexShrink: 0,
+                        background: 'var(--surface-2)', flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: '#475569' }}><Shield size={13} /></div>
+                        color: 'var(--text-5)' }}><Shield size={13} /></div>
                   }
-                  <span style={{ fontSize: 13, color: '#cbd5e1',
+                  <span style={{ fontSize: 13, color: 'var(--text-2)',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {t.name}
                   </span>
-                  <span style={{ marginLeft: 'auto', fontSize: 10, color: '#334155' }}>→</span>
+                  <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-6)' }}>→</span>
                 </div>
               ))}
             </div>
@@ -283,8 +283,8 @@ function NavSearch() {
 
           {/* Players */}
           {results.players.length > 0 && (
-            <div style={{ borderTop: results.teams.length > 0 ? '1px solid #26324a' : 'none' }}>
-              <div style={{ padding: '8px 14px 4px', fontSize: 9, color: '#475569',
+            <div style={{ borderTop: results.teams.length > 0 ? '1px solid var(--line)' : 'none' }}>
+              <div style={{ padding: '8px 14px 4px', fontSize: 9, color: 'var(--text-5)',
                 fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5 }}>
                 <User size={11} /> Oyuncular
               </div>
@@ -297,7 +297,7 @@ function NavSearch() {
                     padding: '8px 14px', cursor: 'pointer',
                     transition: 'background .12s',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#172032'}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
                   {p.image_url
@@ -305,17 +305,17 @@ function NavSearch() {
                         style={{ width: 26, height: 26, objectFit: 'cover',
                           borderRadius: '50%', flexShrink: 0 }} />
                     : <div style={{ width: 26, height: 26, borderRadius: '50%',
-                        background: '#172032', flexShrink: 0,
+                        background: 'var(--surface-2)', flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: '#475569' }}><User size={13} /></div>
+                        color: 'var(--text-5)' }}><User size={13} /></div>
                   }
-                  <span style={{ fontSize: 13, color: '#cbd5e1',
+                  <span style={{ fontSize: 13, color: 'var(--text-2)',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {p.nickname}
                   </span>
                   {p.role && (
                     <span style={{ marginLeft: 'auto', fontSize: 9, padding: '2px 6px',
-                      borderRadius: 4, background: '#172032', color: '#64748b',
+                      borderRadius: 4, background: 'var(--surface-2)', color: 'var(--text-4)',
                       flexShrink: 0 }}>{p.role}</span>
                   )}
                 </div>
@@ -325,8 +325,8 @@ function NavSearch() {
 
           {/* Tournaments */}
           {results.tournaments.length > 0 && (
-            <div style={{ borderTop: (results.teams.length > 0 || results.players.length > 0) ? '1px solid #26324a' : 'none' }}>
-              <div style={{ padding: '8px 14px 4px', fontSize: 9, color: '#475569',
+            <div style={{ borderTop: (results.teams.length > 0 || results.players.length > 0) ? '1px solid var(--line)' : 'none' }}>
+              <div style={{ padding: '8px 14px 4px', fontSize: 9, color: 'var(--text-5)',
                 fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5 }}>
                 <Trophy size={11} /> Turnuvalar
               </div>
@@ -338,18 +338,18 @@ function NavSearch() {
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '8px 14px', cursor: 'pointer', transition: 'background .12s',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#172032'}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
-                  <div style={{ width: 26, height: 26, borderRadius: 6, background: '#172032', flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}><Trophy size={13} /></div>
-                  <span style={{ fontSize: 13, color: '#cbd5e1',
+                  <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--surface-2)', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}><Trophy size={13} /></div>
+                  <span style={{ fontSize: 13, color: 'var(--text-2)',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {t.name}
                   </span>
                   {t.tier && (
                     <span style={{ marginLeft: 'auto', fontSize: 9, padding: '2px 6px',
-                      borderRadius: 4, background: '#172032', color: '#64748b', flexShrink: 0 }}>
+                      borderRadius: 4, background: 'var(--surface-2)', color: 'var(--text-4)', flexShrink: 0 }}>
                       {String(t.tier).toUpperCase()}
                     </span>
                   )}
@@ -363,18 +363,18 @@ function NavSearch() {
             onMouseDown={handleSubmit}
             style={{
               padding: '10px 14px',
-              borderTop: '1px solid #26324a',
+              borderTop: '1px solid var(--line)',
               display: 'flex', alignItems: 'center', gap: 8,
               cursor: 'pointer', transition: 'background .12s',
             }}
-            onMouseEnter={e => e.currentTarget.style.background = '#172032'}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
           >
             <span style={{ color: FEXT.accentText, display: 'inline-flex' }}><Search size={13} /></span>
-            <span style={{ fontSize: 12, color: '#94a3b8' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
               "<span style={{ color: FEXT.accentText, fontWeight: 700 }}>{q}</span>" için tüm sonuçları gör
             </span>
-            <span style={{ marginLeft: 'auto', fontSize: 10, color: '#475569', display: 'inline-flex', alignItems: 'center', gap: 4 }}>Enter <CornerDownLeft size={11} /></span>
+            <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-5)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>Enter <CornerDownLeft size={11} /></span>
           </div>
         </div>
       )}
@@ -393,7 +393,7 @@ function GameSelectorBar() {
 
   return (
     <div style={{
-      background: '#0b0f19', borderBottom: '1px solid #26324a',
+      background: 'var(--bg)', borderBottom: '1px solid var(--line)',
       overflowX: 'auto', scrollbarWidth: 'none',
     }}>
       <div style={{
@@ -411,24 +411,24 @@ function GameSelectorBar() {
                 display: 'flex', alignItems: 'center', gap: 7,
                 padding: '8px 12px', border: 'none', background: 'transparent',
                 borderBottom: active ? `2px solid ${g.color}` : '2px solid transparent',
-                color: active ? '#fff' : g.soon ? '#475569' : '#94a3b8',
+                color: active ? 'var(--text)' : g.soon ? 'var(--text-5)' : 'var(--text-3)',
                 fontSize: 11, fontWeight: active ? 800 : 600,
                 letterSpacing: '.5px', textTransform: 'uppercase',
                 cursor: g.soon ? 'default' : 'pointer',
                 transition: 'all .15s', whiteSpace: 'nowrap', flexShrink: 0,
               }}
               onMouseEnter={e => { if (!active && !g.soon) e.currentTarget.style.color = g.color }}
-              onMouseLeave={e => { if (!active && !g.soon) e.currentTarget.style.color = '#94a3b8' }}
+              onMouseLeave={e => { if (!active && !g.soon) e.currentTarget.style.color = 'var(--text-3)' }}
             >
               {/* emoji yerine brand-renkli nokta — her oyunun kimliği, kurumsal */}
               <span style={{
                 width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-                background: g.soon ? '#475569' : g.color,
+                background: g.soon ? 'var(--text-5)' : g.color,
               }} />
               <span>{g.shortLabel ?? g.label}</span>
               {g.soon && (
                 <span style={{ fontSize: 8, padding: '1px 4px', borderRadius: 4,
-                  background: '#172032', color: '#64748b', letterSpacing: 0 }}>soon</span>
+                  background: 'var(--surface-2)', color: 'var(--text-4)', letterSpacing: 0 }}>soon</span>
               )}
             </button>
           )
@@ -555,7 +555,7 @@ function RealtimeToastBridge() {
         toastOptions={{
           style: {
             background: 'rgba(18,18,18,.94)',
-            color: '#e2e8f0',
+            color: 'var(--text-1)',
             border: '1px solid rgba(255,255,255,.12)',
             boxShadow: '0 10px 26px rgba(0,0,0,.35)',
             fontSize: 12,
@@ -585,15 +585,15 @@ function RecoveryGate() {
 /* ─── AppShell ──────────────────────────────────────────────────────────────── */
 function AppShell() {
   return (
-    <div style={{ minHeight: '100vh', background: '#0b0f19', color: 'white' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' }}>
       <RecoveryGate />
       <RealtimeToastBridge />
       <NavbarComponent navLinks={NAV_LINKS} SearchComponent={NavSearch} />
       <GameSelectorBar />
       <Suspense fallback={(
         <div style={{ maxWidth: 1440, margin: '0 auto', padding: '18px 16px 26px' }}>
-          <div style={{ height: 12, width: 190, borderRadius: 999, background: '#172032', marginBottom: 14 }} />
-          <div style={{ height: 170, borderRadius: 14, background: 'linear-gradient(90deg,#131b2b 20%,#172032 50%,#131b2b 80%)', backgroundSize: '200% 100%', animation: 'appRouteLoad 1.3s ease-in-out infinite' }} />
+          <div style={{ height: 12, width: 190, borderRadius: 999, background: 'var(--surface-2)', marginBottom: 14 }} />
+          <div style={{ height: 170, borderRadius: 14, background: 'linear-gradient(90deg,var(--surface) 20%,var(--surface-2) 50%,var(--surface) 80%)', backgroundSize: '200% 100%', animation: 'appRouteLoad 1.3s ease-in-out infinite' }} />
           <style>{`@keyframes appRouteLoad { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`}</style>
         </div>
       )}>

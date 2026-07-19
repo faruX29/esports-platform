@@ -72,7 +72,7 @@ export default function FextLogo({ height = 34, wordmark = true, interactive = t
           fontSize: Math.round(height * 1.06), fontWeight: 700, letterSpacing: '-0.01em',
           fontFamily: "'Baloo 2','Fredoka',system-ui,-apple-system,'Segoe UI',sans-serif",
         }}>
-          <span style={{ color: '#F8FAFC' }}>fe</span>
+          <span style={{ color: 'var(--text)' }}>fe</span>
           <span style={{
             background: 'linear-gradient(135deg,#DF4888 0%,#8B3AA0 55%,#6A297F 100%)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',

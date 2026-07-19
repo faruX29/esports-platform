@@ -389,18 +389,18 @@ function FollowAuthPrompt({ onClose }) {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: 380, background: '#131b2b', border: '1px solid #26324a',
+          width: '100%', maxWidth: 380, background: 'var(--surface)', border: '1px solid var(--line)',
           borderRadius: 16, padding: '26px 22px', textAlign: 'center',
           boxShadow: '0 24px 60px rgba(0,0,0,.55)',
         }}
       >
-        <div style={{ fontSize: 16, fontWeight: 900, color: '#f8fafc', marginBottom: 8 }}>
+        <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--text)', marginBottom: 8 }}>
           Hiçbir gelişmeyi kaçırma
         </div>
-        <div style={{ fontSize: 12.5, color: '#94a3b8', lineHeight: 1.65, marginBottom: 20 }}>
-          Takip ettiğin takımların <b style={{ color: '#cbd5e1' }}>canlı maç tahminlerini</b>,
-          anlık <b style={{ color: '#cbd5e1' }}>transfer haberlerini</b> ve maç
-          hatırlatmalarını kaçırma. <b style={{ color: '#f8fafc' }}>5 saniyede</b> ücretsiz
+        <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.65, marginBottom: 20 }}>
+          Takip ettiğin takımların <b style={{ color: 'var(--text-2)' }}>canlı maç tahminlerini</b>,
+          anlık <b style={{ color: 'var(--text-2)' }}>transfer haberlerini</b> ve maç
+          hatırlatmalarını kaçırma. <b style={{ color: 'var(--text)' }}>5 saniyede</b> ücretsiz
           hesabını oluştur.
         </div>
         <div style={{ display: 'grid', gap: 9 }}>
@@ -418,7 +418,7 @@ function FollowAuthPrompt({ onClose }) {
             type="button"
             onClick={() => go('/login')}
             style={{
-              background: '#172032', color: '#cbd5e1', border: '1px solid #26324a',
+              background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--line)',
               borderRadius: 11, padding: '10px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer',
             }}
           >
@@ -428,7 +428,7 @@ function FollowAuthPrompt({ onClose }) {
             type="button"
             onClick={onClose}
             style={{
-              background: 'transparent', color: '#64748b', border: 'none',
+              background: 'transparent', color: 'var(--text-4)', border: 'none',
               padding: '4px', fontSize: 12, cursor: 'pointer',
             }}
           >

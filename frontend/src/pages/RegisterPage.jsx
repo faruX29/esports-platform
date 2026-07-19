@@ -59,16 +59,16 @@ export default function RegisterPage() {
     try { await signInWithGoogle() } catch (err) { setError(err.message || 'Google girişi başarısız.') }
   }
 
-  const inputStyle = { background: '#131b2b', border: '1px solid #26324a', color: '#fff', borderRadius: 11, padding: '11px 12px', minWidth: 0, width: '100%', boxSizing: 'border-box' }
+  const inputStyle = { background: 'var(--surface)', border: '1px solid var(--line)', color: '#fff', borderRadius: 11, padding: '11px 12px', minWidth: 0, width: '100%', boxSizing: 'border-box' }
   const oauthEnabled = DISCORD_ENABLED || GOOGLE_ENABLED
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'radial-gradient(ellipse at 78% 12%, rgba(223,72,136,.16), transparent 45%), radial-gradient(ellipse at 20% 88%, rgba(106,41,127,.14), transparent 45%), #0b0f19' }}>
-      <div style={{ width: 'min(460px, 100%)', borderRadius: 18, border: '1px solid #26324a', background: '#131b2b', overflow: 'hidden', boxShadow: '0 18px 40px rgba(0,0,0,.5)' }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'radial-gradient(ellipse at 78% 12%, rgba(223,72,136,.16), transparent 45%), radial-gradient(ellipse at 20% 88%, rgba(106,41,127,.14), transparent 45%), var(--bg)' }}>
+      <div style={{ width: 'min(460px, 100%)', borderRadius: 18, border: '1px solid var(--line)', background: 'var(--surface)', overflow: 'hidden', boxShadow: '0 18px 40px rgba(0,0,0,.5)' }}>
         <div style={{ height: 4, background: 'linear-gradient(90deg,#DF4888,#8B3AA0 55%,#6A297F)' }} />
         <div style={{ padding: 24 }}>
-          <h1 style={{ margin: 0, fontSize: 26, lineHeight: 1.1, color: '#f8fafc' }}>Kayıt Ol</h1>
-          <p style={{ margin: '6px 0 18px', fontSize: 13, color: '#94a3b8' }}>Takip ettiğin takımların maçları, transferleri ve haberleri tek yerde — profilin bulutta saklansın.</p>
+          <h1 style={{ margin: 0, fontSize: 26, lineHeight: 1.1, color: 'var(--text)' }}>Kayıt Ol</h1>
+          <p style={{ margin: '6px 0 18px', fontSize: 13, color: 'var(--text-3)' }}>Takip ettiğin takımların maçları, transferleri ve haberleri tek yerde — profilin bulutta saklansın.</p>
 
           <form onSubmit={onSubmit} style={{ display: 'grid', gap: 10 }}>
             <input required value={username} onChange={e => setUsername(e.target.value)} placeholder="Kullanıcı adı" autoComplete="username" style={inputStyle} />
@@ -83,13 +83,13 @@ export default function RegisterPage() {
           {oauthEnabled && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0' }}>
-                <div style={{ flex: 1, height: 1, background: '#26324a' }} />
-                <span style={{ fontSize: 11, color: '#64748b' }}>veya</span>
-                <div style={{ flex: 1, height: 1, background: '#26324a' }} />
+                <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
+                <span style={{ fontSize: 11, color: 'var(--text-4)' }}>veya</span>
+                <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
               </div>
               <div style={{ display: 'grid', gap: 8 }}>
                 {GOOGLE_ENABLED && (
-                  <button type="button" onClick={onGoogle} style={{ width: '100%', border: '1px solid #26324a', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#f8fafc', fontWeight: 700, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <button type="button" onClick={onGoogle} style={{ width: '100%', border: '1px solid var(--line)', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: 'var(--text)', fontWeight: 700, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                     <GoogleIcon /> <span style={{ color: '#1f2937' }}>Google ile Kayıt Ol</span>
                   </button>
                 )}
@@ -102,8 +102,8 @@ export default function RegisterPage() {
             </>
           )}
 
-          <div style={{ marginTop: 16, fontSize: 12, color: '#94a3b8' }}>
-            Zaten hesabın var mı? <Link to="/login" style={{ color: '#f8fafc' }}>Giriş yap</Link>
+          <div style={{ marginTop: 16, fontSize: 12, color: 'var(--text-3)' }}>
+            Zaten hesabın var mı? <Link to="/login" style={{ color: 'var(--text)' }}>Giriş yap</Link>
           </div>
         </div>
       </div>

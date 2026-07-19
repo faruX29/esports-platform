@@ -55,19 +55,19 @@ export default function ResetPasswordPage() {
     navigate('/login', { replace: true })
   }
 
-  const inputStyle = { background: '#131b2b', border: '1px solid #26324a', color: '#fff', borderRadius: 11, padding: '11px 12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }
+  const inputStyle = { background: 'var(--surface)', border: '1px solid var(--line)', color: '#fff', borderRadius: 11, padding: '11px 12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'radial-gradient(ellipse at 20% 10%, rgba(223,72,136,.14), transparent 45%), #0b0f19' }}>
-      <div style={{ width: 'min(460px, 100%)', borderRadius: 18, border: '1px solid #26324a', background: '#131b2b', overflow: 'hidden', boxShadow: '0 18px 40px rgba(0,0,0,.5)' }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'radial-gradient(ellipse at 20% 10%, rgba(223,72,136,.14), transparent 45%), var(--bg)' }}>
+      <div style={{ width: 'min(460px, 100%)', borderRadius: 18, border: '1px solid var(--line)', background: 'var(--surface)', overflow: 'hidden', boxShadow: '0 18px 40px rgba(0,0,0,.5)' }}>
         <div style={{ height: 4, background: 'linear-gradient(90deg,#DF4888,#8B3AA0 55%,#6A297F)' }} />
         <div style={{ padding: 24 }}>
-          <h1 style={{ margin: 0, fontSize: 24, color: '#f8fafc' }}>Yeni Şifre Belirle</h1>
+          <h1 style={{ margin: 0, fontSize: 24, color: 'var(--text)' }}>Yeni Şifre Belirle</h1>
           {done ? (
             <p style={{ marginTop: 14, fontSize: 14, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 6 }}><CircleCheck size={15} /> Şifren güncellendi! Yönlendiriliyorsun...</p>
           ) : (
             <>
-              <p style={{ margin: '8px 0 18px', fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>
+              <p style={{ margin: '8px 0 18px', fontSize: 13, color: 'var(--text-3)', lineHeight: 1.6 }}>
                 {ready
                   ? 'Hesabına girebilmen için yeni bir şifre belirle. Bunu tamamlamadan devam edemezsin.'
                   : 'Bağlantı doğrulanıyor... (e-postadaki linkten geldiysen birkaç saniye sürebilir)'}
@@ -78,7 +78,7 @@ export default function ResetPasswordPage() {
                 <button disabled={loading} style={{ marginTop: 4, border: 'none', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#fff', fontWeight: 800, background: 'linear-gradient(135deg,#DF4888,#8B3AA0 55%,#6A297F)', opacity: loading ? 0.6 : 1 }}>{loading ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}</button>
                 {error && <div style={{ fontSize: 12, color: '#FF4655' }}>{error}</div>}
               </form>
-              <button type="button" onClick={onCancel} style={{ marginTop: 14, background: 'transparent', border: 'none', color: '#64748b', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>
+              <button type="button" onClick={onCancel} style={{ marginTop: 14, background: 'transparent', border: 'none', color: 'var(--text-4)', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>
                 Vazgeç ve çıkış yap
               </button>
             </>

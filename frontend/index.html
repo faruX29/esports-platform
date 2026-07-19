@@ -7,6 +7,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0B0F19" />
 
+    <!-- Tema (açık/koyu) — render'dan ÖNCE ayarla ki yanıp sönme olmasın (FOUC yok) -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('fext-theme');
+          if (t !== 'light' && t !== 'dark') {
+            t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+          }
+          document.documentElement.setAttribute('data-theme', t);
+          var m = document.querySelector('meta[name="theme-color"]');
+          if (m) m.setAttribute('content', t === 'light' ? '#f5f7fb' : '#0B0F19');
+        } catch (e) {}
+      })();
+    </script>
+
     <!-- PWA — ana ekrana eklenebilir + bildirim altyapısı (mobil app iskeleti) -->
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />

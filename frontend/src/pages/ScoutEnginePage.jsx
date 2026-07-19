@@ -120,7 +120,7 @@ function buildRealReports(rows) {
 function SampleReportCard({ report, player, real = false }) {
   return (
     <div style={{
-      background: 'linear-gradient(160deg, rgba(20,184,166,.06), #131b2b)',
+      background: 'linear-gradient(160deg, rgba(20,184,166,.06), var(--surface))',
       border: '1px solid rgba(194,92,208,.18)', borderRadius: 16, padding: 16,
       display: 'flex', flexDirection: 'column', gap: 10,
     }}>
@@ -131,7 +131,7 @@ function SampleReportCard({ report, player, real = false }) {
           style={{ border: '1px solid rgba(194,92,208,.25)', flexShrink: 0 }}
         />
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {player?.nickname || 'Örnek Oyuncu'}
           </div>
           <div style={{ fontSize: 11, color: '#8bd9cd' }}>
@@ -148,18 +148,18 @@ function SampleReportCard({ report, player, real = false }) {
 
       <div style={{ display: 'flex', gap: 8 }}>
         {report.metrics.map(([label, val]) => (
-          <div key={label} style={{ flex: 1, background: 'rgba(255,255,255,.03)', border: '1px solid #26324a', borderRadius: 9, padding: '7px 8px', textAlign: 'center' }}>
+          <div key={label} style={{ flex: 1, background: 'var(--hover)', border: '1px solid var(--line)', borderRadius: 9, padding: '7px 8px', textAlign: 'center' }}>
             <div style={{ fontSize: 15, fontWeight: 900, color: '#dffaf5', fontVariantNumeric: 'tabular-nums' }}>{val}</div>
-            <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.4px' }}>{label}</div>
+            <div style={{ fontSize: 9, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px' }}>{label}</div>
           </div>
         ))}
       </div>
 
-      <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6, color: '#cbd5e1' }}>{report.note}</p>
+      <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6, color: 'var(--text-2)' }}>{report.note}</p>
 
-      <div style={{ marginTop: 'auto', fontSize: 9, color: '#475569', letterSpacing: '.6px' }}>
+      <div style={{ marginTop: 'auto', fontSize: 9, color: 'var(--text-5)', letterSpacing: '.6px' }}>
         {real
-          ? <>GERÇEK MAÇ VERİSİ · Data powered by <a href="https://liquipedia.net" target="_blank" rel="noopener noreferrer" style={{ color: '#64748b' }}>Liquipedia</a></>
+          ? <>GERÇEK MAÇ VERİSİ · Data powered by <a href="https://liquipedia.net" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-4)' }}>Liquipedia</a></>
           : <span style={{ textTransform: 'uppercase' }}>Örnek Scout Raporu · İllüstratif</span>}
       </div>
     </div>
@@ -187,7 +187,7 @@ function DepthStrip({ depth }) {
   if (!loading && tiles.length === 0) return null
 
   const tileBox = {
-    background: 'linear-gradient(160deg, rgba(20,184,166,.06), #131b2b)',
+    background: 'linear-gradient(160deg, rgba(20,184,166,.06), var(--surface))',
     border: '1px solid rgba(194,92,208,.16)', borderRadius: 13, padding: '13px 12px', textAlign: 'center',
   }
 
@@ -205,14 +205,14 @@ function DepthStrip({ depth }) {
               <div key={i} style={{ ...tileBox, animation: 'scoutPulse 1.6s ease-in-out infinite' }}>
                 <div style={{ height: 15, marginBottom: 5 }} />
                 <div style={{ height: 22, width: '62%', margin: '0 auto', borderRadius: 6, background: 'rgba(194,92,208,.10)' }} />
-                <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: 6 }}>{lbl}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-5)', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: 6 }}>{lbl}</div>
               </div>
             ))
           : tiles.map(t => (
               <div key={t.label} style={tileBox}>
                 <div style={{ marginBottom: 6, display: 'flex', justifyContent: 'center', opacity: .85 }}>{t.Icon && <t.Icon size={18} color={ACCENT} />}</div>
                 <div style={{ fontSize: 22, fontWeight: 900, color: '#dffaf5', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{t.value}</div>
-                <div style={{ fontSize: 10, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: 6 }}>{t.label}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: 6 }}>{t.label}</div>
               </div>
             ))}
       </div>
@@ -316,7 +316,7 @@ export default function ScoutEnginePage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0b0f19', color: '#e2e8f0' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text-1)' }}>
       <SeoHead
         title="Scout Engine — Ajanslar için Espor Scouting (Private Beta)"
         description="Derin performans analitiği, form takibi ve erken yetenek tespiti. Espor ajansları ve scout'lar için kapalı beta — bekleme listesine katıl."
@@ -327,7 +327,7 @@ export default function ScoutEnginePage() {
         {/* Hero */}
         <section style={{
           borderRadius: 20, border: '1px solid rgba(194,92,208,.2)', overflow: 'hidden',
-          background: `radial-gradient(circle at 85% 10%, rgba(20,184,166,.16), transparent 40%), linear-gradient(160deg,#131b2b,#0b0f19)`,
+          background: `radial-gradient(circle at 85% 10%, rgba(20,184,166,.16), transparent 40%), linear-gradient(160deg,var(--surface),var(--bg))`,
           padding: '34px 24px', marginBottom: 22,
         }}>
           <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase', color: ACCENT, border: `1px solid ${ACCENT}55`, borderRadius: 999, padding: '4px 12px' }}>
@@ -355,10 +355,10 @@ export default function ScoutEnginePage() {
         {/* Features */}
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(230px,1fr))', gap: 12, marginBottom: 26 }}>
           {FEATURES.map(f => (
-            <div key={f.title} style={{ background: '#131b2b', border: '1px solid #26324a', borderRadius: 14, padding: 16 }}>
+            <div key={f.title} style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
               <div style={{ marginBottom: 10, display: 'flex' }}>{f.Icon && <f.Icon size={22} color={ACCENT} />}</div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: '#e2e8f0', marginBottom: 5 }}>{f.title}</div>
-              <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6, color: '#94a3b8' }}>{f.desc}</p>
+              <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-1)', marginBottom: 5 }}>{f.title}</div>
+              <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6, color: 'var(--text-3)' }}>{f.desc}</p>
             </div>
           ))}
         </section>
@@ -367,7 +367,7 @@ export default function ScoutEnginePage() {
         <section style={{ marginBottom: 28 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 6 }}>
             <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>Örnek Scouting Raporları</h2>
-            <span style={{ fontSize: 12, color: realReports.length > 0 ? '#8bd9cd' : '#64748b' }}>
+            <span style={{ fontSize: 12, color: realReports.length > 0 ? '#8bd9cd' : 'var(--text-4)' }}>
               {realReports.length > 0 ? '● Canlı veriden üretildi — illüstratif değil' : "Beta'da her oyuncu için otomatik üretilir"}
             </span>
           </div>
@@ -381,8 +381,8 @@ export default function ScoutEnginePage() {
                 ))}
           </div>
           {realReports.length > 0 && (
-            <p style={{ margin: '12px 2px 0', fontSize: 12, color: '#64748b', lineHeight: 1.6 }}>
-              Bu kartlar 2014'ten bugüne uzanan <b style={{ color: '#94a3b8' }}>33.000+ gerçek maçlık</b> arşiv
+            <p style={{ margin: '12px 2px 0', fontSize: 12, color: 'var(--text-4)', lineHeight: 1.6 }}>
+              Bu kartlar 2014'ten bugüne uzanan <b style={{ color: 'var(--text-3)' }}>33.000+ gerçek maçlık</b> arşiv
               ve hibrit istatistik hattından otomatik süzüldü. Beta'da her oyuncu ve takım için,
               aradığın role ve oyun tarzına göre anında üretilir.
             </p>
@@ -392,10 +392,10 @@ export default function ScoutEnginePage() {
         {/* Waitlist form */}
         <section id="waitlist" style={{
           borderRadius: 18, border: `1px solid ${ACCENT}33`, padding: 24,
-          background: 'linear-gradient(160deg, rgba(20,184,166,.07), #131b2b)',
+          background: 'linear-gradient(160deg, rgba(20,184,166,.07), var(--surface))',
         }}>
           <h2 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 900 }}>Kapalı Beta'ya Erken Erişim</h2>
-          <p style={{ margin: '0 0 18px', fontSize: 13.5, color: '#cbd5e1', maxWidth: 560 }}>
+          <p style={{ margin: '0 0 18px', fontSize: 13.5, color: 'var(--text-2)', maxWidth: 560 }}>
             İlk dalgaya ajanslar ve profesyonel scout'lar davet edilecek. E-postanı bırak,
             sıra sana gelince ilk sen haberdar ol.
           </p>
@@ -409,16 +409,16 @@ export default function ScoutEnginePage() {
               <input
                 type="email" value={email} onChange={e => { setEmail(e.target.value); if (status === 'error') setStatus('idle') }}
                 placeholder="E-posta adresin *"
-                style={{ background: '#172032', border: '1px solid #26324a', borderRadius: 10, color: '#e2e8f0', padding: '11px 13px', fontSize: 14 }}
+                style={{ background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 10, color: 'var(--text-1)', padding: '11px 13px', fontSize: 14 }}
               />
               <input
                 type="text" value={org} onChange={e => setOrg(e.target.value)}
                 placeholder="Organizasyon / takım (opsiyonel)"
-                style={{ background: '#172032', border: '1px solid #26324a', borderRadius: 10, color: '#e2e8f0', padding: '11px 13px', fontSize: 14 }}
+                style={{ background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 10, color: 'var(--text-1)', padding: '11px 13px', fontSize: 14 }}
               />
               <select
                 value={role} onChange={e => setRole(e.target.value)}
-                style={{ background: '#172032', border: '1px solid #26324a', borderRadius: 10, color: '#e2e8f0', padding: '11px 13px', fontSize: 14 }}
+                style={{ background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 10, color: 'var(--text-1)', padding: '11px 13px', fontSize: 14 }}
               >
                 <option value="agency">Ajans / Menajerlik</option>
                 <option value="team">Takım / Org</option>
@@ -437,7 +437,7 @@ export default function ScoutEnginePage() {
               >
                 {status === 'sending' ? 'Gönderiliyor…' : 'Bekleme Listesine Katıl'}
               </button>
-              <span style={{ fontSize: 11, color: '#64748b' }}>Spam yok. Sadece beta daveti ve büyük güncellemeler.</span>
+              <span style={{ fontSize: 11, color: 'var(--text-4)' }}>Spam yok. Sadece beta daveti ve büyük güncellemeler.</span>
             </form>
           )}
         </section>

@@ -75,8 +75,8 @@ function getTierMeta(rawTier) {
   const fallbackKey = String(rawTier || '').trim().toUpperCase()
   return {
     key: fallbackKey,
-    color: '#cbd5e1',
-    bg: 'rgba(255,255,255,.08)',
+    color: 'var(--text-2)',
+    bg: 'var(--hover-strong)',
     border: 'rgba(170,170,170,.35)',
     label: `${fallbackKey}-Tier`,
   }
@@ -581,7 +581,7 @@ function StageListView({ matches, navigate, gc }) {
   const dateKeys = Object.keys(grouped)
   if (dateKeys.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '28px', color: '#64748b' }}>
+      <div style={{ textAlign: 'center', padding: '28px', color: 'var(--text-4)' }}>
         Bu aşamada listelenecek maç bulunamadı.
       </div>
     )
@@ -593,14 +593,14 @@ function StageListView({ matches, navigate, gc }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {shownKeys.map(dateKey => (
-        <div key={dateKey} style={{ border: '1px solid #172032', borderRadius: 12, background: '#131b2b', padding: 12 }}>
+        <div key={dateKey} style={{ border: '1px solid var(--surface-2)', borderRadius: 12, background: 'var(--surface)', padding: 12 }}>
           <div style={{ fontSize: 11, fontWeight: 800, color: gc, letterSpacing: '.9px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
             <CalendarDays size={12} /> {dateKey}
           </div>
 
           {Object.entries(grouped[dateKey]).map(([roundKey, list]) => (
             <div key={`${dateKey}-${roundKey}`} style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 10, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.8px' }}>
+              <div style={{ fontSize: 10, color: 'var(--text-4)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.8px' }}>
                 {roundKey}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 10 }}>
@@ -618,7 +618,7 @@ function StageListView({ matches, navigate, gc }) {
           onClick={() => setVisibleDates(v => v + 12)}
           style={{
             alignSelf: 'center', marginTop: 4, padding: '10px 20px', borderRadius: 10,
-            border: '1px solid #26324a', background: '#131b2b', color: '#cbd5e1',
+            border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-2)',
             fontSize: 13, fontWeight: 700, cursor: 'pointer',
           }}
         >
@@ -649,7 +649,7 @@ function Sk({ w = '100%', h = '16px', r = '8px', style = {} }) {
   return (
     <div style={{
       width: w, height: h, borderRadius: r, flexShrink: 0,
-      background: 'linear-gradient(90deg,#131b2b 25%,#172032 50%,#131b2b 75%)',
+      background: 'linear-gradient(90deg,var(--surface) 25%,var(--surface-2) 50%,var(--surface) 75%)',
       backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite',
       ...style,
     }} />
@@ -661,12 +661,12 @@ function Sk({ w = '100%', h = '16px', r = '8px', style = {} }) {
 function ST({ Icon, label, right }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-      {Icon && <Icon size={15} color="#94a3b8" />}
-      <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b',
+      {Icon && <Icon size={15} color="var(--text-3)" />}
+      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-4)',
         letterSpacing: '1.5px', textTransform: 'uppercase' }}>
         {label}
       </span>
-      <div style={{ flex: 1, height: 1, background: '#172032' }} />
+      <div style={{ flex: 1, height: 1, background: 'var(--surface-2)' }} />
       {right}
     </div>
   )
@@ -689,9 +689,9 @@ const TeamAv = memo(function TeamAv({ src, name, size = 36 }) {
   return (
     <div style={{
       width: size, height: size, flexShrink: 0, borderRadius: 8,
-      background: 'linear-gradient(135deg,#172032,#26324a)',
+      background: 'linear-gradient(135deg,var(--surface-2),var(--line))',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: size * 0.32, fontWeight: 800, color: '#475569',
+      fontSize: size * 0.32, fontWeight: 800, color: 'var(--text-5)',
     }}>{initials}</div>
   )
 })
@@ -732,21 +732,21 @@ function aggregateTopPerformers(rows) {
 function TopPerformers({ rows, navigate }) {
   if (!rows?.length) return null
   return (
-    <div style={{ background: '#0b0f19', borderRadius: 16, border: '1px solid #172032', padding: '16px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr 44px 60px 44px', gap: 8, padding: '0 8px 8px', fontSize: 10, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.6px', borderBottom: '1px solid #172032' }}>
+    <div style={{ background: 'var(--bg)', borderRadius: 16, border: '1px solid var(--surface-2)', padding: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr 44px 60px 44px', gap: 8, padding: '0 8px 8px', fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.6px', borderBottom: '1px solid var(--surface-2)' }}>
         <div>#</div><div>Oyuncu</div><div style={{ textAlign: 'right' }}>K/D</div><div style={{ textAlign: 'right' }}>K/D/A</div><div style={{ textAlign: 'right' }}>ACS</div>
       </div>
       {rows.map((p, i) => (
-        <div key={p.pid} style={{ display: 'grid', gridTemplateColumns: '20px 1fr 44px 60px 44px', gap: 8, alignItems: 'center', padding: '8px', borderBottom: i === rows.length - 1 ? 'none' : '1px solid #131b2b', fontSize: 12 }}>
-          <div style={{ color: i < 3 ? '#FFD700' : '#64748b', fontWeight: 800 }}>{i + 1}</div>
-          <div style={{ color: '#e2e8f0', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nickname}</div>
+        <div key={p.pid} style={{ display: 'grid', gridTemplateColumns: '20px 1fr 44px 60px 44px', gap: 8, alignItems: 'center', padding: '8px', borderBottom: i === rows.length - 1 ? 'none' : '1px solid var(--surface)', fontSize: 12 }}>
+          <div style={{ color: i < 3 ? '#FFD700' : 'var(--text-4)', fontWeight: 800 }}>{i + 1}</div>
+          <div style={{ color: 'var(--text-1)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nickname}</div>
           <div style={{ textAlign: 'right', fontWeight: 800, color: p.kd >= 1 ? '#4ade80' : '#ff6a7f', fontVariantNumeric: 'tabular-nums' }}>{p.kd.toFixed(2)}</div>
-          <div style={{ textAlign: 'right', color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>{p.k}/{p.d}/{p.a}</div>
-          <div style={{ textAlign: 'right', color: p.acs != null ? '#5eead4' : '#334155', fontWeight: 700 }}>{p.acs ?? '—'}</div>
+          <div style={{ textAlign: 'right', color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums' }}>{p.k}/{p.d}/{p.a}</div>
+          <div style={{ textAlign: 'right', color: p.acs != null ? '#5eead4' : 'var(--text-6)', fontWeight: 700 }}>{p.acs ?? '—'}</div>
         </div>
       ))}
-      <div style={{ marginTop: 8, fontSize: 9, color: '#475569', textAlign: 'right' }}>
-        Data powered by <a href="https://liquipedia.net" target="_blank" rel="noopener noreferrer" style={{ color: '#64748b' }}>Liquipedia</a>
+      <div style={{ marginTop: 8, fontSize: 9, color: 'var(--text-5)', textAlign: 'right' }}>
+        Data powered by <a href="https://liquipedia.net" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-4)' }}>Liquipedia</a>
       </div>
     </div>
   )
@@ -797,9 +797,9 @@ function StandingsTable({ matches, navigate }) {
             {['#', 'Takım', 'W', 'L', 'W%', 'Map W', 'Map L'].map(h => (
               <th key={h} style={{
                 padding: '7px 12px', textAlign: h === 'Takım' ? 'left' : 'center',
-                fontSize: 10, color: '#475569', fontWeight: 700,
+                fontSize: 10, color: 'var(--text-5)', fontWeight: 700,
                 letterSpacing: '1px', textTransform: 'uppercase',
-                borderBottom: '1px solid #172032',
+                borderBottom: '1px solid var(--surface-2)',
               }}>{h}</th>
             ))}
           </tr>
@@ -810,7 +810,7 @@ function StandingsTable({ matches, navigate }) {
             const pct    = total > 0 ? Math.round((t.w / total) * 100) : 0
             const isTR   = isTurkishTeam(t.name)
             const isTop3 = i < 3
-            const medalColors = ['#f0c040', '#cbd5e1', '#cd7f32']
+            const medalColors = ['#f0c040', 'var(--text-2)', '#cd7f32']
             return (
               <tr
                 key={t.id}
@@ -819,18 +819,18 @@ function StandingsTable({ matches, navigate }) {
               >
                 {/* Rank */}
                 <td style={{ padding: '10px 12px', textAlign: 'center',
-                  background: '#131b2b', borderRadius: '10px 0 0 10px',
-                  borderLeft: isTop3 ? `3px solid ${['#FFD700','#cbd5e1','#CD7F32'][i]}` : '3px solid transparent',
+                  background: 'var(--surface)', borderRadius: '10px 0 0 10px',
+                  borderLeft: isTop3 ? `3px solid ${['#FFD700','var(--text-2)','#CD7F32'][i]}` : '3px solid transparent',
                 }}>
                   {isTop3 ? <Medal size={16} color={medalColors[i]} strokeWidth={2.2} /> : <span style={{ fontSize: 14 }}>{i + 1}</span>}
                 </td>
 
                 {/* Team */}
-                <td style={{ padding: '10px 12px', background: '#131b2b', minWidth: 160 }}>
+                <td style={{ padding: '10px 12px', background: 'var(--surface)', minWidth: 160 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <TeamAv src={t.logo} name={t.name} size={28} />
                     <span style={{ fontSize: 13, fontWeight: 700,
-                      color: isTR ? '#FFD700' : '#e2e8f0' }}>
+                      color: isTR ? '#FFD700' : 'var(--text-1)' }}>
                       {t.name}{isTR && ' 🇹🇷'}
                     </span>
                   </div>
@@ -838,32 +838,32 @@ function StandingsTable({ matches, navigate }) {
 
                 {/* W */}
                 <td style={{ padding: '10px 12px', textAlign: 'center',
-                  background: '#131b2b',
+                  background: 'var(--surface)',
                   fontSize: 14, fontWeight: 800, color: '#4CAF50' }}>{t.w}</td>
 
                 {/* L */}
                 <td style={{ padding: '10px 12px', textAlign: 'center',
-                  background: '#131b2b',
+                  background: 'var(--surface)',
                   fontSize: 14, fontWeight: 800, color: '#FF4655' }}>{t.l}</td>
 
                 {/* W% */}
-                <td style={{ padding: '10px 12px', background: '#131b2b', minWidth: 100 }}>
+                <td style={{ padding: '10px 12px', background: 'var(--surface)', minWidth: 100 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <div style={{ flex: 1, height: 5, borderRadius: 3,
-                      background: '#172032', overflow: 'hidden' }}>
+                      background: 'var(--surface-2)', overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${pct}%`,
                         background: pct >= 60 ? '#4CAF50' : pct >= 40 ? '#FF8C00' : '#FF4655',
                         transition: 'width .6s ease', borderRadius: 3 }} />
                     </div>
-                    <span style={{ fontSize: 11, color: '#94a3b8', minWidth: 28 }}>{pct}%</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-3)', minWidth: 28 }}>{pct}%</span>
                   </div>
                 </td>
 
                 {/* Map W / L */}
                 <td style={{ padding: '10px 12px', textAlign: 'center',
-                  background: '#131b2b', fontSize: 12, color: '#4CAF50' }}>{t.mw}</td>
+                  background: 'var(--surface)', fontSize: 12, color: '#4CAF50' }}>{t.mw}</td>
                 <td style={{ padding: '10px 12px', textAlign: 'center',
-                  background: '#131b2b', borderRadius: '0 10px 10px 0',
+                  background: 'var(--surface)', borderRadius: '0 10px 10px 0',
                   fontSize: 12, color: '#FF4655' }}>{t.ml}</td>
               </tr>
             )
@@ -891,7 +891,7 @@ const LOWER_ROUND_ORDER = [
   'Lower Round 1', 'Lower Round 2', 'Lower Semifinals', 'Lower Finals',
 ]
 const ROUND_LABELS = {
-  'Round of 16':     { Icon: Swords, color: '#64748b', short: 'R16'    },
+  'Round of 16':     { Icon: Swords, color: 'var(--text-4)', short: 'R16'    },
   'Upper Round 1':   { Icon: Swords, color: '#6b7280', short: 'UBR1'   },
   'Upper Round 2':   { Icon: Swords, color: '#6b7280', short: 'UBR2'   },
   'Upper Round 3':   { Icon: Swords, color: '#6b7280', short: 'UBR3'   },
@@ -900,8 +900,8 @@ const ROUND_LABELS = {
   'Semi-finals':     { Icon: Flame,  color: '#FF8C00', short: 'SF'     },
   'Upper Finals':    { Icon: Trophy, color: '#f59e0b', short: 'UBF'    },
   'Grand final':     { Icon: Crown,  color: '#FFD700', short: 'GF'     },
-  'Lower Round 1':    { Icon: Route, color: '#94a3b8', short: 'LB R1'  },
-  'Lower Round 2':    { Icon: Route, color: '#94a3b8', short: 'LB R2'  },
+  'Lower Round 1':    { Icon: Route, color: 'var(--text-3)', short: 'LB R1'  },
+  'Lower Round 2':    { Icon: Route, color: 'var(--text-3)', short: 'LB R2'  },
   'Lower Semifinals': { Icon: Swords, color: '#60a5fa', short: 'LB SF'  },
   'Lower Finals':     { Icon: Flag,  color: '#38bdf8', short: 'LB F'   },
 }
@@ -976,7 +976,7 @@ const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, gc, highl
           ? '1.5px solid rgba(255,70,85,.6)'
           : highlightPath
           ? '1.5px solid rgba(255,70,85,.55)'
-          : hov ? `1.5px solid ${gc}88` : '1.5px solid #26324a',
+          : hov ? `1.5px solid ${gc}88` : '1.5px solid var(--line)',
         boxShadow: m.status === 'running'
           ? '0 0 14px rgba(255,70,85,.2)'
           : highlightPath
@@ -984,8 +984,8 @@ const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, gc, highl
           : hov ? `0 4px 16px ${gc}20` : 'none',
         cursor: canNavigate ? 'pointer' : 'default',
         background: isVirtual
-          ? 'linear-gradient(162deg, #131b2b 0%, #0b0f19 100%)'
-          : 'linear-gradient(162deg, #131b2b 0%, #0b0f19 100%)',
+          ? 'linear-gradient(162deg, var(--surface) 0%, var(--bg) 100%)'
+          : 'linear-gradient(162deg, var(--surface) 0%, var(--bg) 100%)',
         transition: 'all .18s',
         width: BRACKET_CARD_W,
         height: BRACKET_CARD_H,
@@ -1047,7 +1047,7 @@ const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, gc, highl
           fontSize: 8,
           fontWeight: 700,
           letterSpacing: '.35px',
-          color: '#94a3b8',
+          color: 'var(--text-3)',
           background: 'rgba(0,0,0,.34)',
           border: '1px solid rgba(120,120,120,.25)',
           borderRadius: 6,
@@ -1069,7 +1069,7 @@ const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, gc, highl
             display: 'flex', alignItems: 'center', gap: 7,
             padding: '0 10px',
             background: side.won ? 'rgba(76,175,80,.08)' : 'transparent',
-            borderBottom: i === 0 ? '1px solid #131b2b' : 'none',
+            borderBottom: i === 0 ? '1px solid var(--surface)' : 'none',
             minHeight: 0,
           }}
         >
@@ -1077,23 +1077,23 @@ const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, gc, highl
           <div style={{ width: 20, height: 20, flexShrink: 0 }}>
             {side.name === 'TBD'
               ? <div style={{ width: 20, height: 20, borderRadius: 4,
-                  border: '1px dashed #26324a', background: '#131b2b',
+                  border: '1px dashed var(--line)', background: 'var(--surface)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: 8, color: '#172032', fontWeight: 700 }}>?</span>
+                  <span style={{ fontSize: 8, color: 'var(--surface-2)', fontWeight: 700 }}>?</span>
                 </div>
               : side.logo
                 ? <img src={side.logo} alt={side.name}
                     style={{ width: 20, height: 20, objectFit: 'contain' }} />
                 : <div style={{ width: 20, height: 20, borderRadius: 4,
-                    background: '#172032', display: 'flex', alignItems: 'center',
-                    justifyContent: 'center', fontSize: 9, color: '#475569' }}>?</div>
+                    background: 'var(--surface-2)', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', fontSize: 9, color: 'var(--text-5)' }}>?</div>
             }
           </div>
 
           {/* Name */}
           <span style={{
             flex: 1, fontSize: 11, fontWeight: side.won ? 800 : 400,
-            color: side.won ? '#e2e8f0' : side.name === 'TBD' ? '#334155' : '#94a3b8',
+            color: side.won ? 'var(--text-1)' : side.name === 'TBD' ? 'var(--text-6)' : 'var(--text-3)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {side.isTR && '🇹🇷 '}{side.name}
@@ -1103,7 +1103,7 @@ const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, gc, highl
           {m.status === 'finished' && (
             <span style={{
               fontSize: 14, fontWeight: 900, flexShrink: 0,
-              color: side.won ? '#4CAF50' : '#334155',
+              color: side.won ? '#4CAF50' : 'var(--text-6)',
               minWidth: 14, textAlign: 'right',
             }}>
               {side.score ?? 0}
@@ -1389,7 +1389,7 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
   }
 
   if (roundKeys.length === 0) return (
-    <div style={{ textAlign: 'center', padding: '32px', color: '#334155', fontSize: 13 }}>
+    <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-6)', fontSize: 13 }}>
       Playoff verisi bulunamadı.
     </div>
   )
@@ -1399,7 +1399,7 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
 
   return (
     <div>
-      <div style={{ fontSize: 10, color: '#475569', marginBottom: 8, textAlign: 'right' }}>
+      <div style={{ fontSize: 10, color: 'var(--text-5)', marginBottom: 8, textAlign: 'right' }}>
         Drag to scroll →
       </div>
       <div style={{
@@ -1519,7 +1519,7 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
                     fontSize: 10, fontWeight: 800,
                     color: meta.color, letterSpacing: '1px', textTransform: 'uppercase',
                   }}>{col.rk}</span>
-                  <span style={{ fontSize: 9, color: '#475569' }}>({col.cards.length})</span>
+                  <span style={{ fontSize: 9, color: 'var(--text-5)' }}>({col.cards.length})</span>
                 </div>
 
                 {/* Cards — each absolutely placed at its computed Y */}
@@ -1542,7 +1542,7 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
 
       {bracketSide === 'upper' && prepared.thirdPlace && (
         <div style={{ marginTop: 14 }}>
-          <div style={{ fontSize: 10, color: '#64748b', marginBottom: 8, letterSpacing: '.8px', textTransform: 'uppercase' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-4)', marginBottom: 8, letterSpacing: '.8px', textTransform: 'uppercase' }}>
             3rd Place Decider
           </div>
           <div style={{ width: BRACKET_CARD_W }}>
@@ -1577,12 +1577,12 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
       style={{
         position: 'relative', overflow: 'hidden',
         borderRadius: 14, cursor: 'pointer',
-        background: '#131b2b',
+        background: 'var(--surface)',
         border: isLive
           ? '1.5px solid rgba(255,70,85,.6)'
           : hasTR
           ? '1.5px solid rgba(200,16,46,.4)'
-          : '1.5px solid #172032',
+          : '1.5px solid var(--surface-2)',
         boxShadow: isLive ? '0 0 16px rgba(255,70,85,.18)' : 'none',
         transition: 'all .18s',
       }}
@@ -1594,7 +1594,7 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
       onMouseLeave={e => {
         e.currentTarget.style.borderColor = isLive
           ? 'rgba(255,70,85,.6)'
-          : hasTR ? 'rgba(200,16,46,.4)' : '#172032'
+          : hasTR ? 'rgba(200,16,46,.4)' : 'var(--surface-2)'
         e.currentTarget.style.transform   = 'none'
         e.currentTarget.style.boxShadow   = isLive ? '0 0 16px rgba(255,70,85,.18)' : 'none'
       }}
@@ -1633,7 +1633,7 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
         {/* Top: game + status + round */}
         <div style={{ display: 'flex', justifyContent: 'space-between',
           alignItems: 'center', marginBottom: 10 }}>
-          <span style={{ fontSize: 10, color: '#64748b' }}>
+          <span style={{ fontSize: 10, color: 'var(--text-4)' }}>
             {m.game?.name ?? ''}
           </span>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -1661,7 +1661,7 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
             gap: 8, justifyContent: 'flex-end', overflow: 'hidden' }}>
             <span style={{
               fontSize: 13, fontWeight: aWon ? 800 : 500,
-              color: aWon ? '#e2e8f0' : '#64748b',
+              color: aWon ? 'var(--text-1)' : 'var(--text-4)',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
               {isTRA && '🇹🇷 '}{m.team_a?.name ?? '?'}
@@ -1675,18 +1675,18 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
             {m.status === 'finished' ? (
               <>
                 <span style={{ fontSize: 18, fontWeight: 900,
-                  color: aWon ? '#4CAF50' : '#64748b' }}>
+                  color: aWon ? '#4CAF50' : 'var(--text-4)' }}>
                   {m.team_a_score ?? '—'}
                 </span>
-                <span style={{ fontSize: 11, color: '#334155' }}>:</span>
+                <span style={{ fontSize: 11, color: 'var(--text-6)' }}>:</span>
                 <span style={{ fontSize: 18, fontWeight: 900,
-                  color: bWon ? '#4CAF50' : '#64748b' }}>
+                  color: bWon ? '#4CAF50' : 'var(--text-4)' }}>
                   {m.team_b_score ?? '—'}
                 </span>
               </>
             ) : (
               <span style={{ fontSize: 11, fontWeight: 700,
-                color: isLive ? '#FF4655' : '#475569' }}>
+                color: isLive ? '#FF4655' : 'var(--text-5)' }}>
                 {isLive ? 'LIVE' : 'VS'}
               </span>
             )}
@@ -1698,7 +1698,7 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
             <TeamAv src={m.team_b?.logo_url} name={m.team_b?.name} size={28} />
             <span style={{
               fontSize: 13, fontWeight: bWon ? 800 : 500,
-              color: bWon ? '#e2e8f0' : '#64748b',
+              color: bWon ? 'var(--text-1)' : 'var(--text-4)',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
               {isTRB && '🇹🇷 '}{m.team_b?.name ?? '?'}
@@ -1707,8 +1707,8 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
         </div>
 
         {/* Date */}
-        <div style={{ marginTop: 10, fontSize: 10, color: '#334155',
-          textAlign: 'center', borderTop: '1px solid #131b2b', paddingTop: 8,
+        <div style={{ marginTop: 10, fontSize: 10, color: 'var(--text-6)',
+          textAlign: 'center', borderTop: '1px solid var(--surface)', paddingTop: 8,
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
           <CalendarDays size={11} /> {fmtDateTime(getMatchTimestamp(m))}
         </div>
@@ -1977,7 +1977,7 @@ export default function TournamentPage() {
       <div style={{
         position: 'relative', overflow: 'hidden',
         borderRadius: '0 0 24px 24px',
-        background: 'linear-gradient(160deg,#131b2b 0%,#131b2b 100%)',
+        background: 'linear-gradient(160deg,var(--surface) 0%,var(--surface) 100%)',
         borderBottom: isTR
           ? '1px solid rgba(200,16,46,.4)'
           : `1px solid ${gc}33`,
@@ -2016,12 +2016,12 @@ export default function TournamentPage() {
           <button
             onClick={() => navigate(-1)}
             style={{
-              background: 'rgba(255,255,255,.06)', border: '1px solid #26324a',
-              borderRadius: 8, color: '#94a3b8', padding: '5px 12px',
+              background: 'rgba(255,255,255,.06)', border: '1px solid var(--line)',
+              borderRadius: 8, color: 'var(--text-3)', padding: '5px 12px',
               fontSize: 12, cursor: 'pointer', transition: 'all .15s',
             }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = '#475569' }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = '#26324a' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'var(--text-5)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.borderColor = 'var(--line)' }}
           >← Geri</button>
 
           {/* Live indicator */}
@@ -2055,7 +2055,7 @@ export default function TournamentPage() {
             {tournament.region && (
               <span style={{
                 padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700,
-                background: 'rgba(255,255,255,.06)', border: '1px solid #334155', color: '#cbd5e1',
+                background: 'rgba(255,255,255,.06)', border: '1px solid var(--text-6)', color: 'var(--text-2)',
                 display: 'inline-flex', alignItems: 'center', gap: 5,
               }}>
                 <MapPin size={11} /> {String(tournament.region).toUpperCase()}
@@ -2097,12 +2097,12 @@ export default function TournamentPage() {
           {/* Title */}
           <h1 style={{
             margin: '0 0 10px', fontSize: 28, fontWeight: 900, lineHeight: 1.15,
-            color: '#e2e8f0',
+            color: 'var(--text-1)',
           }}>{tournamentDisplayName}</h1>
 
           {/* Meta row */}
           <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginBottom: 14,
-            fontSize: 12, color: '#64748b' }}>
+            fontSize: 12, color: 'var(--text-4)' }}>
             {(tournament.begin_at || tournament.end_at) && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><CalendarDays size={12} /> {fmtDate(tournament.begin_at)}
                 {tournament.end_at && ` — ${fmtDate(tournament.end_at)}`}
@@ -2133,10 +2133,10 @@ export default function TournamentPage() {
         {TOURNAMENT_DEBUG && <div style={{
           marginBottom: 16,
           display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-          background: '#131b2b', border: '1px solid #26324a', borderRadius: 12,
+          background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12,
           padding: '8px 10px',
         }}>
-          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: '#64748b' }}>
+          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--text-4)' }}>
             Dev View Override
           </span>
           {[{ id: 'auto', label: 'Auto' }, { id: 'list', label: 'List View' }, { id: 'bracket', label: 'Bracket View' }].map(opt => {
@@ -2148,16 +2148,16 @@ export default function TournamentPage() {
                 style={{
                   padding: '6px 11px', borderRadius: 8, border: 'none', cursor: 'pointer',
                   fontSize: 12, fontWeight: 700,
-                  background: active ? FEXT.accentSoftBg : '#131b2b',
-                  color: active ? FEXT.accentText : '#64748b',
-                  outline: active ? `1px solid ${FEXT.accentBorder}` : '1px solid #26324a',
+                  background: active ? FEXT.accentSoftBg : 'var(--surface)',
+                  color: active ? FEXT.accentText : 'var(--text-4)',
+                  outline: active ? `1px solid ${FEXT.accentBorder}` : '1px solid var(--line)',
                 }}
               >
                 {opt.label}
               </button>
             )
           })}
-          <span style={{ marginLeft: 'auto', fontSize: 11, color: '#64748b' }}>
+          <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-4)' }}>
             Current: {effectiveViewMode === 'bracket' ? 'Bracket' : 'List'}
           </span>
         </div>}
@@ -2187,24 +2187,24 @@ export default function TournamentPage() {
             <ST Icon={Trophy} label="Playoff Ağacı"
               right={
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 10, color: '#475569' }}>Zoom</span>
+                  <span style={{ fontSize: 10, color: 'var(--text-5)' }}>Zoom</span>
                   <button
                     onClick={() => setBracketZoom(prev => clampBracketZoom(prev - 0.1))}
-                    style={{ width: 24, height: 24, borderRadius: 7, border: '1px solid #26324a', background: '#131b2b', color: '#cbd5e1', cursor: 'pointer' }}
+                    style={{ width: 24, height: 24, borderRadius: 7, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-2)', cursor: 'pointer' }}
                     title="Zoom out"
                   >
                     -
                   </button>
                   <button
                     onClick={() => setBracketZoom(1)}
-                    style={{ padding: '0 8px', height: 24, borderRadius: 7, border: '1px solid #26324a', background: '#131b2b', color: '#cbd5e1', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}
+                    style={{ padding: '0 8px', height: 24, borderRadius: 7, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-2)', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}
                     title="Reset zoom"
                   >
                     {Math.round(bracketZoom * 100)}%
                   </button>
                   <button
                     onClick={() => setBracketZoom(prev => clampBracketZoom(prev + 0.1))}
-                    style={{ width: 24, height: 24, borderRadius: 7, border: '1px solid #26324a', background: '#131b2b', color: '#cbd5e1', cursor: 'pointer' }}
+                    style={{ width: 24, height: 24, borderRadius: 7, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-2)', cursor: 'pointer' }}
                     title="Zoom in"
                   >
                     +
@@ -2214,8 +2214,8 @@ export default function TournamentPage() {
             />
             {/* Bracket containers */}
             <div style={{
-              background: '#0b0f19', borderRadius: 16,
-              border: '1px solid #172032', padding: '16px',
+              background: 'var(--bg)', borderRadius: 16,
+              border: '1px solid var(--surface-2)', padding: '16px',
               overflowX: 'auto',
             }}>
               {hasLiquipediaBracket ? (
@@ -2267,7 +2267,7 @@ export default function TournamentPage() {
 
                   {isDoubleElim && lowerBracketMatches.length > 0 && (
                     <>
-                      <div style={{ height: 1, background: 'linear-gradient(90deg,transparent,#26324a,transparent)', margin: '12px 0 14px' }} />
+                      <div style={{ height: 1, background: 'linear-gradient(90deg,transparent,var(--line),transparent)', margin: '12px 0 14px' }} />
 
                       <div>
                         <div style={{
@@ -2299,11 +2299,11 @@ export default function TournamentPage() {
             <ST
               Icon={ClipboardList}
               label={stageMode.hasLeagueStyle ? 'Stage Matches (Swiss / Groups / Round Robin)' : 'Stage Match List'}
-              right={<span style={{ fontSize: 10, color: '#475569' }}>Tarih ve round bazli</span>}
+              right={<span style={{ fontSize: 10, color: 'var(--text-5)' }}>Tarih ve round bazli</span>}
             />
             <div style={{
-              background: '#0b0f19', borderRadius: 16,
-              border: '1px solid #172032', padding: '16px',
+              background: 'var(--bg)', borderRadius: 16,
+              border: '1px solid var(--surface-2)', padding: '16px',
             }}>
               <StageListView matches={matches} navigate={navigate} gc={gc} />
             </div>
@@ -2327,8 +2327,8 @@ export default function TournamentPage() {
                     display: 'flex', alignItems: 'center', gap: 8,
                     padding: '8px 18px', borderRadius: 12, border: 'none',
                     cursor: 'pointer', fontSize: 13, fontWeight: active ? 800 : 500,
-                    background: active ? `${gc}22` : '#131b2b',
-                    color: active ? gc : '#64748b',
+                    background: active ? `${gc}22` : 'var(--surface)',
+                    color: active ? gc : 'var(--text-4)',
                     outline: active ? `1.5px solid ${gc}55` : 'none',
                     transition: 'all .18s',
                   }}
@@ -2337,8 +2337,8 @@ export default function TournamentPage() {
                   {t.label}
                   <span style={{
                     padding: '2px 7px', borderRadius: 10, fontSize: 11,
-                    background: active ? `${gc}30` : '#172032',
-                    color: active ? gc : '#475569', fontWeight: 800,
+                    background: active ? `${gc}30` : 'var(--surface-2)',
+                    color: active ? gc : 'var(--text-5)', fontWeight: 800,
                   }}>{t.count}</span>
                 </button>
               )
@@ -2348,12 +2348,12 @@ export default function TournamentPage() {
           {/* Match Grid */}
           {(activeTab === 'upcoming' ? upcomingMatches : pastMatches).length === 0 ? (
             <div style={{ textAlign: 'center', padding: '48px',
-              color: '#334155', background: '#131b2b', borderRadius: 16,
-              border: '1px dashed #172032' }}>
+              color: 'var(--text-6)', background: 'var(--surface)', borderRadius: 16,
+              border: '1px dashed var(--surface-2)' }}>
               <div style={{ marginBottom: 10, display: 'flex', justifyContent: 'center' }}>
-                {activeTab === 'upcoming' ? <CalendarDays size={34} color="#334155" /> : <ClipboardList size={34} color="#334155" />}
+                {activeTab === 'upcoming' ? <CalendarDays size={34} color="var(--text-6)" /> : <ClipboardList size={34} color="var(--text-6)" />}
               </div>
-              <div style={{ fontSize: 14, color: '#64748b' }}>
+              <div style={{ fontSize: 14, color: 'var(--text-4)' }}>
                 {activeTab === 'upcoming' ? 'Planlanmış maç yok' : 'Geçmiş maç yok'}
               </div>
             </div>
@@ -2388,7 +2388,7 @@ function StatChips({ chips }) {
           {s.Icon && <s.Icon size={13} color={s.color} />}
           <span style={{ fontSize: 14, fontWeight: 900, color: s.color,
             fontVariantNumeric: 'tabular-nums' }}>{s.value}</span>
-          <span style={{ fontSize: 10, color: '#64748b' }}>{s.label}</span>
+          <span style={{ fontSize: 10, color: 'var(--text-4)' }}>{s.label}</span>
         </div>
       ))}
     </div>

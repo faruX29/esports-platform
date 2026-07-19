@@ -78,7 +78,7 @@ function ArchiveCard({ row, isMobile }) {
         display: 'block',
         textDecoration: 'none',
         color: 'inherit',
-        background: 'linear-gradient(180deg,#131b2b 0%,#0b0f19 100%)',
+        background: 'linear-gradient(180deg,var(--surface) 0%,var(--bg) 100%)',
         border: '1px solid #1f1f22',
         borderRadius: 14,
         padding: 12,
@@ -92,23 +92,23 @@ function ArchiveCard({ row, isMobile }) {
         compact
       />
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '10px 0 6px' }}>
-        <span style={{ fontSize: 10, color: '#e2e8f0', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, padding: '3px 7px', borderRadius: 999, background: `${visuals.gameColor}22`, border: `1px solid ${visuals.gameColor}55` }}>
+        <span style={{ fontSize: 10, color: 'var(--text-1)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, padding: '3px 7px', borderRadius: 999, background: `${visuals.gameColor}22`, border: `1px solid ${visuals.gameColor}55` }}>
           {typeTag(row)}
         </span>
-        <span style={{ fontSize: 10, color: '#e2e8f0', padding: '3px 7px', borderRadius: 999, background: 'rgba(255,255,255,.04)', border: '1px solid #26324a' }}>
+        <span style={{ fontSize: 10, color: 'var(--text-1)', padding: '3px 7px', borderRadius: 999, background: 'rgba(255,255,255,.04)', border: '1px solid var(--line)' }}>
           {visuals.gameLabel}
         </span>
-        <span style={{ fontSize: 10, color: '#cbd5e1', padding: '3px 7px', borderRadius: 999, background: 'rgba(255,255,255,.03)', border: '1px solid #26324a' }}>
+        <span style={{ fontSize: 10, color: 'var(--text-2)', padding: '3px 7px', borderRadius: 999, background: 'var(--hover)', border: '1px solid var(--line)' }}>
           Tier {visuals.tier}
         </span>
       </div>
       <h3 style={{ margin: '0 0 6px', fontSize: 16, lineHeight: 1.3 }}>{row.title}</h3>
       {row.summary && (
-        <p style={{ margin: 0, color: '#cbd5e1', fontSize: 13, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        <p style={{ margin: 0, color: 'var(--text-2)', fontSize: 13, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {row.summary}
         </p>
       )}
-      <div style={{ marginTop: 8, fontSize: 11, color: '#64748b' }}>{fmtDate(row.created_at)}</div>
+      <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-4)' }}>{fmtDate(row.created_at)}</div>
     </Link>
   )
 }
@@ -177,7 +177,7 @@ export default function NewsArchivePage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0b0f19', color: '#e2e8f0' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text-1)' }}>
       <SeoHead
         title={`Haber Arşivi${page > 1 ? ` — Sayfa ${page}` : ''}`}
         description="Tüm e-spor haberleri, maç önizlemeleri ve transfer gelişmeleri — Valorant, CS2 ve LoL için kronolojik arşiv."
@@ -187,7 +187,7 @@ export default function NewsArchivePage() {
         <div style={{ marginBottom: 16 }}>
           <Link to="/news" style={{ fontSize: 12, color: '#9db4ff', textDecoration: 'none' }}>‹ Günün Bülteni</Link>
           <h1 style={{ margin: '8px 0 4px', fontSize: isMobile ? 26 : 34 }}>Haber Arşivi</h1>
-          <p style={{ margin: 0, color: '#94a3b8', fontSize: isMobile ? 13 : 14 }}>
+          <p style={{ margin: 0, color: 'var(--text-3)', fontSize: isMobile ? 13 : 14 }}>
             {total > 0 ? `${total} haber` : 'Tüm e-spor haberleri tek arşivde'} · maç sonuçları, önizlemeler ve transferler.
           </p>
         </div>
@@ -199,7 +199,7 @@ export default function NewsArchivePage() {
               const active = tab.id === game
               return (
                 <button key={tab.id} onClick={() => setParam({ oyun: tab.id, sayfa: 1 })}
-                  style={{ padding: '7px 13px', borderRadius: 999, border: active ? '1px solid #C8102E' : '1px solid #26324a', background: active ? 'rgba(200,16,46,.18)' : '#131b2b', color: active ? '#fff' : '#94a3b8', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                  style={{ padding: '7px 13px', borderRadius: 999, border: active ? '1px solid #C8102E' : '1px solid var(--line)', background: active ? 'rgba(200,16,46,.18)' : 'var(--surface)', color: active ? '#fff' : 'var(--text-3)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                   {tab.label}
                 </button>
               )
@@ -210,7 +210,7 @@ export default function NewsArchivePage() {
               const active = tab.id === type
               return (
                 <button key={tab.id} onClick={() => setParam({ tur: tab.id, sayfa: 1 })}
-                  style={{ padding: '6px 12px', borderRadius: 999, border: active ? '1px solid #5eead4' : '1px solid #26324a', background: active ? 'rgba(94,234,212,.14)' : '#131b2b', color: active ? '#ddfffb' : '#94a3b8', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                  style={{ padding: '6px 12px', borderRadius: 999, border: active ? '1px solid #5eead4' : '1px solid var(--line)', background: active ? 'rgba(94,234,212,.14)' : 'var(--surface)', color: active ? '#ddfffb' : 'var(--text-3)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
                   {tab.label}
                 </button>
               )
@@ -218,10 +218,10 @@ export default function NewsArchivePage() {
           </div>
         </div>
 
-        {loading && <div style={{ color: '#94a3b8', fontSize: 13 }}>Arşiv yükleniyor...</div>}
+        {loading && <div style={{ color: 'var(--text-3)', fontSize: 13 }}>Arşiv yükleniyor...</div>}
 
         {!loading && rows.length === 0 && (
-          <div style={{ color: '#64748b', fontSize: 13 }}>Bu filtre için haber bulunamadı.</div>
+          <div style={{ color: 'var(--text-4)', fontSize: 13 }}>Bu filtre için haber bulunamadı.</div>
         )}
 
         <div style={{ display: 'grid', gap: 12, gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill,minmax(280px,1fr))' }}>
@@ -235,20 +235,20 @@ export default function NewsArchivePage() {
           <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             {page > 1 ? (
               <Link to={`?${new URLSearchParams({ ...(game !== 'all' && { oyun: game }), ...(type !== 'all' && { tur: type }), ...(page - 1 > 1 && { sayfa: page - 1 }) }).toString()}`}
-                style={{ border: '1px solid #334155', background: '#172032', color: '#e2e8f0', borderRadius: 8, padding: '6px 12px', textDecoration: 'none' }}>
+                style={{ border: '1px solid var(--text-6)', background: 'var(--surface-2)', color: 'var(--text-1)', borderRadius: 8, padding: '6px 12px', textDecoration: 'none' }}>
                 ‹ Önceki
               </Link>
             ) : (
-              <span style={{ border: '1px solid #26324a', background: '#131b2b', color: '#64748b', borderRadius: 8, padding: '6px 12px' }}>‹ Önceki</span>
+              <span style={{ border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-4)', borderRadius: 8, padding: '6px 12px' }}>‹ Önceki</span>
             )}
-            <span style={{ fontSize: 12, color: '#94a3b8' }}>Sayfa {page} / {totalPages}</span>
+            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Sayfa {page} / {totalPages}</span>
             {page < totalPages ? (
               <Link to={`?${new URLSearchParams({ ...(game !== 'all' && { oyun: game }), ...(type !== 'all' && { tur: type }), sayfa: page + 1 }).toString()}`}
-                style={{ border: '1px solid #334155', background: '#172032', color: '#e2e8f0', borderRadius: 8, padding: '6px 12px', textDecoration: 'none' }}>
+                style={{ border: '1px solid var(--text-6)', background: 'var(--surface-2)', color: 'var(--text-1)', borderRadius: 8, padding: '6px 12px', textDecoration: 'none' }}>
                 Sonraki ›
               </Link>
             ) : (
-              <span style={{ border: '1px solid #26324a', background: '#131b2b', color: '#64748b', borderRadius: 8, padding: '6px 12px' }}>Sonraki ›</span>
+              <span style={{ border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-4)', borderRadius: 8, padding: '6px 12px' }}>Sonraki ›</span>
             )}
           </div>
         )}

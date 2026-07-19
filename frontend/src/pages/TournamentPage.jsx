@@ -23,6 +23,7 @@ import {
   MapPin, Compass, Wallet, RefreshCw, CircleCheck, BarChart3, ClipboardList,
   Radio, Star, TriangleAlert, Zap, Target,
 } from 'lucide-react'
+import { FEXT } from '../theme'
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 
@@ -1617,7 +1618,7 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
       {/* TR stripe */}
       {hasTR && (
         <div style={{
-          background: 'linear-gradient(90deg,#C8102E,#a00d25 40%,#001f6d)',
+          background: 'linear-gradient(90deg,#DF4888,#8B3AA0 55%,#6A297F)',
           padding: '3px 14px',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
         }}>
@@ -1951,7 +1952,7 @@ export default function TournamentPage() {
       </div>
       <button
         onClick={() => navigate(-1)}
-        style={{ padding: '10px 24px', background: '#FF4655', border: 'none',
+        style={{ padding: '10px 24px', background: FEXT.accentGrad, border: 'none',
           borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}
       >← Geri</button>
     </div>
@@ -1998,7 +1999,7 @@ export default function TournamentPage() {
         {/* TR stripe */}
         {isTR && (
           <div style={{
-            background: 'linear-gradient(90deg,#C8102E,#a00d25 40%,#001f6d)',
+            background: 'linear-gradient(90deg,#DF4888,#8B3AA0 55%,#6A297F)',
             padding: '4px 0',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}>
@@ -2147,9 +2148,9 @@ export default function TournamentPage() {
                 style={{
                   padding: '6px 11px', borderRadius: 8, border: 'none', cursor: 'pointer',
                   fontSize: 12, fontWeight: 700,
-                  background: active ? 'rgba(255,70,85,.18)' : '#131b2b',
-                  color: active ? '#FF4655' : '#64748b',
-                  outline: active ? '1px solid rgba(255,70,85,.45)' : '1px solid #26324a',
+                  background: active ? FEXT.accentSoftBg : '#131b2b',
+                  color: active ? FEXT.accentText : '#64748b',
+                  outline: active ? `1px solid ${FEXT.accentBorder}` : '1px solid #26324a',
                 }}
               >
                 {opt.label}

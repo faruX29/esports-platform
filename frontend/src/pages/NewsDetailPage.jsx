@@ -23,6 +23,7 @@ import { cleanDisplayName } from '../utils/nameCleaner'
 import { buildNewsSlug, parseNewsRef } from '../utils/newsSlug'
 import { getEsportsName } from '../utils/esportsName'
 import { X as XIcon, MessageSquare } from 'lucide-react'
+import { FEXT } from '../theme'
 
 function isMissingTableError(error, tableName) {
   const code = error?.code || ''
@@ -124,7 +125,7 @@ function mapTransferRowToStory(row) {
     visuals: {
       gameId: row.game_slug || null,
       gameLabel: (row.game_slug || 'ESPORTS').toUpperCase(),
-      gameColor: '#C8102E',
+      gameColor: FEXT.accent,
       tier: normalizeTier(row.tier),
       tournamentName: row.tournament_name || 'Transfer Haberi',
       turkish: false,
@@ -150,7 +151,7 @@ function mapTournamentRowToStory(row) {
     visuals: {
       gameId: row.game_slug || null,
       gameLabel: (row.game_slug || 'ESPORTS').toUpperCase(),
-      gameColor: '#C8102E',
+      gameColor: FEXT.accent,
       tier: normalizeTier(row.tier),
       tournamentName: row.tournament_name || 'Turnuva',
       turkish: false,
@@ -259,7 +260,7 @@ function AIProbabilityBar({ story }) {
       </div>
 
       <div style={{ height: 10, borderRadius: 999, overflow: 'hidden', display: 'flex', background: '#131b2b' }}>
-        <div style={{ width: `${pctA}%`, background: aFavored ? 'linear-gradient(90deg,#C8102E,#ff4d6d)' : 'linear-gradient(90deg,#334155,#475569)', transition: 'width 0.4s ease' }} />
+        <div style={{ width: `${pctA}%`, background: aFavored ? 'linear-gradient(90deg,#8B3AA0,#DF4888)' : 'linear-gradient(90deg,#334155,#475569)', transition: 'width 0.4s ease' }} />
         <div style={{ flex: 1, background: !aFavored ? 'linear-gradient(270deg,#1d4ed8,#60a5fa)' : 'linear-gradient(270deg,#26324a,#334155)', transition: 'flex 0.4s ease' }} />
       </div>
 
@@ -1169,9 +1170,9 @@ export default function NewsDetailPage() {
                   onClick={() => setSortMode(key)}
                   style={{
                     fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 999,
-                    border: sortMode === key ? '1px solid #FF4655' : '1px solid #26324a',
-                    background: sortMode === key ? 'rgba(255,70,85,.12)' : 'transparent',
-                    color: sortMode === key ? '#FF4655' : '#64748b',
+                    border: sortMode === key ? `1px solid ${FEXT.accent}` : '1px solid #26324a',
+                    background: sortMode === key ? FEXT.accentSoftBg : 'transparent',
+                    color: sortMode === key ? FEXT.accentText : '#64748b',
                     cursor: 'pointer', letterSpacing: '.3px',
                   }}
                 >{label}</button>
@@ -1223,9 +1224,9 @@ export default function NewsDetailPage() {
                 ? <div style={{ fontSize: 11, color: '#94a3b8' }}>Yorumun hesabinla paylasilir.</div>
                 : <div style={{ fontSize: 11, color: '#94a3b8' }}>
                     Yorum yazmak icin{' '}
-                    <Link to="/login" style={{ color: '#FF4655', textDecoration: 'none', fontWeight: 600 }}>giris yap</Link>
+                    <Link to="/login" style={{ color: FEXT.accentText, textDecoration: 'none', fontWeight: 600 }}>giriş yap</Link>
                     {' '}veya{' '}
-                    <Link to="/register" style={{ color: '#FF4655', textDecoration: 'none', fontWeight: 600 }}>kayit ol</Link>.
+                    <Link to="/register" style={{ color: FEXT.accentText, textDecoration: 'none', fontWeight: 600 }}>kayıt ol</Link>.
                   </div>
               }
             </form>

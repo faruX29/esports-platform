@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { getBOFormat }                              from '../utils/matchFormat'
 import { deriveWinnerTeamId, correctedScores }      from '../utils/matchResult'
+import { FEXT }                                     from '../theme'
 
 // MVP Oylaması şimdilik GİZLİ (kurucu kararı 2026-07-16): gerçek oyuncu istatistiği
 // altyapısı olmadan oy "en popüler oyuncu" yarışına dönüşüyor (düşük performanslı ama
@@ -902,7 +903,7 @@ function PlayerCard({ player, side = 'left' }) {
       onClick={() => clickable && navigate(`/player/${player.id}`)}
       title={clickable ? `${player.nickname} profilini gör` : undefined}
       style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 10, background: '#131b2b', border: '1px solid #172032', flexDirection: r ? 'row-reverse' : 'row', transition: 'border-color .15s,background .15s', cursor: clickable ? 'pointer' : 'default' }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = clickable ? '#FF4655' : '#26324a'; e.currentTarget.style.background = clickable ? '#172032' : '#131b2b' }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = clickable ? FEXT.accent : '#26324a'; e.currentTarget.style.background = clickable ? '#172032' : '#131b2b' }}
       onMouseLeave={e => { e.currentTarget.style.borderColor = '#172032'; e.currentTarget.style.background = '#131b2b' }}
     >
       {player.image_url
@@ -1344,7 +1345,7 @@ export default function MatchDetail() {
     <div style={{ textAlign: 'center', padding: '80px 20px', color: '#fff' }}>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><TriangleAlert size={44} color="#FF4655" /></div>
       <div style={{ fontSize: 18, fontWeight: 700, color: '#64748b', marginBottom: 24 }}>{error || 'Maç bulunamadı.'}</div>
-      <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', background: '#FF4655', border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>← Geri</button>
+      <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', background: FEXT.accentGrad, border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>← Geri</button>
     </div>
   )
 
@@ -1426,7 +1427,7 @@ export default function MatchDetail() {
             <div style={{ textAlign: 'center', minWidth: 100, flexShrink: 0 }}>
               {(isLive || isFin)
                 ? <div style={{ fontSize: 36, fontWeight: 900, color: isLive ? '#FF4655' : '#cbd5e1', letterSpacing: 4, fontVariantNumeric: 'tabular-nums', textShadow: isLive ? '0 0 20px rgba(255,70,85,.4)' : 'none' }}>{dispScores.team_a_score ?? 0}:{dispScores.team_b_score ?? 0}</div>
-                : <div style={{ fontSize: 26, fontWeight: 900, color: '#FF4655', letterSpacing: 3 }}>VS</div>
+                : <div style={{ fontSize: 26, fontWeight: 900, color: FEXT.accentText, letterSpacing: 3 }}>VS</div>
               }
               <div style={{ fontSize: 12, fontWeight: 700, color: isLive ? '#FF4655' : '#4CAF50', marginTop: 4 }}>{isLive ? '● Canlı' : fmtTime(match.scheduled_at)}</div>
               <div style={{ fontSize: 10, color: '#334155', marginTop: 2 }}>{fmtDate(match.scheduled_at)}</div>

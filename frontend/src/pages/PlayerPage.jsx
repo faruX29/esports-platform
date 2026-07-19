@@ -19,6 +19,7 @@ import { isTurkishTeam } from '../constants'
 import { useUser } from '../context/UserContext'
 import { summarizePlayerMatchStats, metricBars } from '../utils/playerMetrics'
 import { deriveWinnerTeamId, correctedScores } from '../utils/matchResult'
+import { FEXT } from '../theme'
 import {
   Brain, ClipboardList, Target, Swords, Skull, Handshake, Crosshair, Map as MapIcon,
   Compass, Sparkles, TriangleAlert, Star, MapPin, CircleCheck, X as XIcon, BarChart3,
@@ -79,7 +80,7 @@ function StatBox({ Icon, value, label, color = '#fff', sub }) {
 }
 
 // ─── Progress bar ────────────────────────────────────────────────────────────
-function ProgressBar({ pct, color = '#FF4655', label, value }) {
+function ProgressBar({ pct, color = FEXT.accent, label, value }) {
   return (
     <div style={{ marginBottom: 10 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4 }}>
@@ -201,8 +202,8 @@ function ProfessionalStatsPanel({ stats, isMobile = false }) {
 
       <div style={{
         borderRadius: 14,
-        border: '1px solid rgba(255,70,85,.28)',
-        background: 'linear-gradient(155deg, rgba(255,70,85,.12), rgba(0,0,0,.78))',
+        border: '1px solid rgba(194,92,208,.28)',
+        background: 'linear-gradient(155deg, rgba(194,92,208,.12), rgba(0,0,0,.78))',
         padding: isMobile ? '12px 11px' : '14px 14px',
       }}>
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,minmax(0,1fr))' : 'repeat(4,minmax(0,1fr))', gap: 10, marginBottom: 12 }}>
@@ -240,7 +241,7 @@ function PlayerHeroAvatar({ src, name, size = 120, isTR }) {
   const [err, setErr] = useState(false)
   const initials = (name || '?').split(/[\s_]/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
 
-  const borderColor = isTR ? '#C8102E' : '#FF4655'
+  const borderColor = isTR ? '#C8102E' : FEXT.accent
 
   if (src && !err) {
     return (
@@ -838,7 +839,7 @@ function PlayerSignatureElements({ items = [] }) {
       <SectionTitle Icon={Sparkles} label="Player Signature" />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 10 }}>
         {items.map((item, idx) => (
-          <div key={`${item.type}_${item.name}_${idx}`} style={{ borderRadius: 12, border: '1px solid rgba(255,70,85,.22)', background: 'linear-gradient(130deg, rgba(255,70,85,.1), rgba(10,10,10,.92))', padding: '10px 11px', display: 'flex', alignItems: 'center', gap: 9 }}>
+          <div key={`${item.type}_${item.name}_${idx}`} style={{ borderRadius: 12, border: '1px solid rgba(194,92,208,.22)', background: 'linear-gradient(130deg, rgba(194,92,208,.1), rgba(10,10,10,.92))', padding: '10px 11px', display: 'flex', alignItems: 'center', gap: 9 }}>
             {item.image
               ? <img src={item.image} alt={item.name} style={{ width: 30, height: 30, objectFit: 'contain', borderRadius: 8, background: '#131b2b', border: '1px solid #26324a' }} />
               : <div style={{ width: 30, height: 30, borderRadius: 8, background: '#131b2b', border: '1px solid #26324a', display: 'grid', placeItems: 'center' }}>{item.type === 'Weapon' ? <Crosshair size={16} color="#ffd089" /> : <Sparkles size={16} color="#9fe7ff" />}</div>}
@@ -1000,7 +1001,7 @@ export default function PlayerPage() {
     <div style={{ textAlign: 'center', padding: 80, color: '#FF4655' }}>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><TriangleAlert size={42} color="#FF4655" /></div>
       <div style={{ fontSize: 16, marginBottom: 20 }}>{error ?? 'Oyuncu bulunamadı'}</div>
-      <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', background: '#FF4655', border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
+      <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', background: FEXT.accentGrad, border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
         ← Geri
       </button>
     </div>
@@ -1123,7 +1124,7 @@ export default function PlayerPage() {
                   background: '#131b2b', border: '1.5px solid #26324a',
                   transition: 'border-color .15s', maxWidth: 280,
                 }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = '#FF4655'}
+                onMouseEnter={e => e.currentTarget.style.borderColor = FEXT.accent}
                 onMouseLeave={e => e.currentTarget.style.borderColor = '#26324a'}
               >
                 <InitialsImage src={team.logo_url} name={team.name} width={28} height={28} borderRadius={6} />

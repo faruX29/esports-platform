@@ -12,6 +12,7 @@ import {
   Handshake, CalendarDays, ClipboardList, TriangleAlert, Video, AtSign,
   Globe, Music, Gamepad2, Link as LinkIcon, Clock, Info,
 } from 'lucide-react'
+import { FEXT } from '../theme'
 
 // ── Yardımcılar ───────────────────────────────────────────────────────────────
 function calcTeamRating(wins, total) {
@@ -588,7 +589,7 @@ export default function TeamPage() {
     <div style={{ textAlign: 'center', padding: '60px', color: '#FF4655' }}>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><TriangleAlert size={38} color="#FF4655" /></div>
       <div style={{ fontSize: 16, marginBottom: 20 }}>{error ?? 'Takım bulunamadı'}</div>
-      <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', background: '#FF4655', border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
+      <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', background: FEXT.accentGrad, border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
         ← Geri
       </button>
     </div>
@@ -726,7 +727,7 @@ export default function TeamPage() {
           <StatBox Icon={CircleCheck} value={wins}                   label="Galibiyet"   color="#4CAF50"  />
           <StatBox Icon={XIcon}       value={losses}                 label="Mağlubiyet"  color="#FF4655"  />
           {draws > 0 && <StatBox Icon={Handshake} value={draws}      label="Beraberlik (Bo2)" color="#FFB800" />}
-          <StatBox Icon={Clock}       value={upcomingMatches.length} label="Yaklaşan"    color="#FFB800"  />
+          <StatBox Icon={Clock}       value={upcomingMatches.length} label="Yaklaşan"    color="#94a3b8"  />
           <StatBox Icon={Users}       value={players.length}         label="Oyuncu"      color="#818cf8"  />
         </div>
 
@@ -749,15 +750,15 @@ export default function TeamPage() {
               <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '8px 18px', borderRadius: 10,
-                border: active ? '1.5px solid #FF4655' : '1.5px solid #172032',
-                background: active ? 'rgba(255,70,85,.15)' : '#131b2b',
-                color: active ? '#FF4655' : '#64748b',
+                border: active ? `1.5px solid ${FEXT.accent}` : '1.5px solid #172032',
+                background: active ? FEXT.accentSoftBg : '#131b2b',
+                color: active ? FEXT.accentText : '#64748b',
                 fontSize: 13, fontWeight: active ? 800 : 500,
                 cursor: 'pointer', transition: 'all .18s',
               }}>
                 {t.Icon && <t.Icon size={14} />}
                 {t.label}
-                <span style={{ fontSize: 11, padding: '1px 6px', borderRadius: 6, background: active ? 'rgba(255,70,85,.2)' : '#172032', color: active ? '#FF4655' : '#64748b' }}>
+                <span style={{ fontSize: 11, padding: '1px 6px', borderRadius: 6, background: active ? FEXT.accentSoftBg : '#172032', color: active ? FEXT.accentText : '#64748b' }}>
                   {t.count}
                 </span>
               </button>
@@ -815,9 +816,9 @@ export default function TeamPage() {
                     return (
                       <button key={g} onClick={() => setGameFilter(g)} style={{
                         padding: '6px 12px', borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                        border: active ? '1px solid #FF4655' : '1px solid #26324a',
-                        background: active ? 'rgba(255,70,85,.15)' : '#131b2b',
-                        color: active ? '#FF4655' : '#94a3b8',
+                        border: active ? `1px solid ${FEXT.accent}` : '1px solid #26324a',
+                        background: active ? FEXT.accentSoftBg : '#131b2b',
+                        color: active ? FEXT.accentText : '#94a3b8',
                       }}>
                         {g === 'all' ? `Tümü (${source.length})` : `${g} (${source.filter(m => m.game?.name === g).length})`}
                       </button>

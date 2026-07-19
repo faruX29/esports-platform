@@ -21,6 +21,7 @@ import NewsCover, { scoreFromHero } from '../components/NewsCover'
 import { cleanDisplayName } from '../utils/nameCleaner'
 import { buildNewsSlug } from '../utils/newsSlug'
 import { MessageSquare, Library } from 'lucide-react'
+import { FEXT } from '../theme'
 
 const GAME_FILTERS = GAMES.filter(game => !game.soon && game.id !== 'all' && ['valorant', 'cs2', 'lol'].includes(game.id))
 const CATEGORY_TABS = [
@@ -111,7 +112,7 @@ function articleRowToStory(row) {
     visuals: {
       gameId,
       gameLabel: game?.shortLabel || game?.label || 'ESPORTS',
-      gameColor: game?.color || '#C8102E',
+      gameColor: game?.color || FEXT.accent,
       gameIcon: game?.icon || null,
       tournamentName: row.tournament_name || 'Ana Sahne',
       tier,
@@ -590,7 +591,7 @@ export default function NewsPage() {
       />
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: isMobile ? '14px 10px 34px' : '22px 16px 48px' }}>
         <div style={{ borderRadius: 18, border: '1px solid #172032', overflow: 'hidden', marginBottom: 18, background: 'linear-gradient(180deg,#0b0f19 0%,#131b2b 100%)' }}>
-          <div style={{ background: 'linear-gradient(90deg,#C8102E,#8c0e20 45%,#e2e8f0)', color: '#fff', fontSize: 11, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase', textAlign: 'center', padding: 8 }}>
+          <div style={{ background: FEXT.accentGrad, color: '#fff', fontSize: 11, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase', textAlign: 'center', padding: 8 }}>
             Esports News Desk
           </div>
           <div style={{ padding: 18, background: 'radial-gradient(circle at 78% 20%, rgba(198,27,51,.18), transparent 36%), radial-gradient(circle at 10% 12%, rgba(255,255,255,.05), transparent 24%), #131b2b' }}>

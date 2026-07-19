@@ -19,6 +19,8 @@ import {
   Search, MapPin, CalendarDays, Shield, User, Trophy, Inbox, RefreshCw, X as XIcon,
   Check, SlidersHorizontal, ChevronLeft, Gamepad2,
 } from 'lucide-react'
+import { FEXT } from '../theme'
+import { GAME_COLORS } from '../theme'
 
 // Arama sonucunda takım/oyuncunun HANGİ oyun olduğu görünmeli (yoksa aynı isimli
 // farklı oyun takımları karışıyor). Küçük renkli oyun etiketi.
@@ -52,7 +54,7 @@ const TIER_META = {
   C: { color: '#818cf8', bg: 'rgba(129,140,248,.15)',label: 'C · Qualifier' },
 }
 const GAME_META = {
-  valorant:         { color: '#FF4655', label: 'VALORANT'         },
+  valorant:         { color: GAME_COLORS.valorant, label: 'VALORANT'         },
   'counter-strike': { color: '#F0A500', label: 'CS2'             },
   cs2:              { color: '#F0A500', label: 'CS2'             },
   lol:              { color: '#C89B3C', label: 'League of Legends' },
@@ -401,7 +403,7 @@ function YearTimeline({ activeYear, onChange, counts }) {
             {/* Count label */}
             <div style={{
               fontSize: 10, fontWeight: 700,
-              color: active ? '#FF4655' : '#334155',
+              color: active ? FEXT.accentText : '#334155',
               marginBottom: 6, transition: 'color .2s', height: 16,
             }}>
               {cnt > 0 ? `${cnt.toLocaleString('tr-TR')} maç` : ''}
@@ -414,23 +416,23 @@ function YearTimeline({ activeYear, onChange, counts }) {
                 width: active ? 52 : 44, height: active ? 52 : 44,
                 borderRadius: '50%', border: 'none',
                 background: active
-                  ? 'linear-gradient(135deg,#FF4655,#FF8C00)'
+                  ? FEXT.accentGrad
                   : '#131b2b',
                 outline: active
-                  ? '3px solid rgba(255,70,85,.3)'
+                  ? `3px solid ${FEXT.accentGlow}`
                   : '2px solid #26324a',
                 color: active ? '#fff' : '#64748b',
                 fontSize: active ? 14 : 13,
                 fontWeight: active ? 900 : 600,
                 cursor: 'pointer',
                 transition: 'all .22s cubic-bezier(.34,1.56,.64,1)',
-                boxShadow: active ? '0 0 20px rgba(255,70,85,.4)' : 'none',
+                boxShadow: active ? `0 0 20px ${FEXT.accentGlow}` : 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
               onMouseEnter={e => {
                 if (!active) {
-                  e.currentTarget.style.outline = '2px solid #FF4655'
-                  e.currentTarget.style.color   = '#FF4655'
+                  e.currentTarget.style.outline = `2px solid ${FEXT.accent}`
+                  e.currentTarget.style.color   = FEXT.accentText
                 }
               }}
               onMouseLeave={e => {
@@ -442,7 +444,7 @@ function YearTimeline({ activeYear, onChange, counts }) {
             >{y}</button>
 
             {active && (
-              <div style={{ fontSize: 9, color: '#FF4655',
+              <div style={{ fontSize: 9, color: FEXT.accentText,
                 marginTop: 6, fontWeight: 800, letterSpacing: '1px' }}>
                 SEÇİLİ
               </div>
@@ -1006,17 +1008,17 @@ export default function SearchPage() {
         <div style={{
           position: 'absolute', inset: 0, pointerEvents: 'none',
           background: 'radial-gradient(ellipse at 50% 0%,' +
-            'rgba(255,70,85,.08) 0%,transparent 65%)',
+            'rgba(194,92,208,.1) 0%,transparent 65%)',
         }} />
 
         <div style={{ maxWidth: 680, margin: '0 auto', position: 'relative' }}>
           <h1 style={{
             textAlign: 'center', margin: '0 0 6px',
             fontSize: 28, fontWeight: 900,
-            background: 'linear-gradient(135deg,#FF4655,#F0A500)',
+            background: FEXT.accentGrad,
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          }}><Search size={26} color="#FF4655" /> Global Search</h1>
+          }}><Search size={26} color={FEXT.accent} /> Global Search</h1>
 
           <p style={{ textAlign: 'center', color: '#334155', fontSize: 13, margin: '0 0 24px' }}>
             Takımlar, oyuncular, turnuvalar — hepsi bir arada
@@ -1043,8 +1045,8 @@ export default function SearchPage() {
                 transition: 'border-color .2s, box-shadow .2s',
               }}
               onFocus={e => {
-                e.target.style.borderColor = '#FF4655'
-                e.target.style.boxShadow   = '0 0 0 3px rgba(255,70,85,.12)'
+                e.target.style.borderColor = FEXT.accent
+                e.target.style.boxShadow   = `0 0 0 3px ${FEXT.accentGlow}`
               }}
               onBlur={e => {
                 e.target.style.borderColor = '#172032'
@@ -1097,7 +1099,7 @@ export default function SearchPage() {
             <div style={{ textAlign: 'center', marginTop: 12, fontSize: 12,
               color: '#475569', animation: 'fadeUp .3s ease' }}>
               {totalResults > 0 ? (
-                <><span style={{ color: '#FF4655', fontWeight: 700 }}>{totalResults}</span>
+                <><span style={{ color: FEXT.accentText, fontWeight: 700 }}>{totalResults}</span>
                 {' '}sonuç — "{debouncedQ}"</>
               ) : (
                 <span>"{debouncedQ}" için sonuç bulunamadı</span>

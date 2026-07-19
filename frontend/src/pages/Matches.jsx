@@ -10,7 +10,7 @@ import { useGame, GAMES }                   from '../context/GameContext'
 import { getFavorites, addFavorite, removeFavorite, isFavorite } from '../utils/favoritesHelper'
 import { isTurkishTeam }                   from '../constants'
 import { normalizeGameId }                  from '../utils/gameUtils'
-import { FEXT }                             from '../theme'
+import { FEXT, statusStyle }                from '../theme'
 import { getBOFormat }                       from '../utils/matchFormat'
 import { correctedScores }                   from '../utils/matchResult'
 import InitialsImage                        from '../components/InitialsImage'
@@ -156,7 +156,7 @@ function Countdown({ target }) {
   const h = Math.floor((diff % 86400000) / 3600000)
   const m = Math.floor((diff % 3600000) / 60000)
   const label = d > 0 ? `${d}g ${h}s` : h > 0 ? `${h}s ${m}dk` : `${m}dk`
-  return <span style={{ fontSize: 10, color: '#FFB800', fontWeight: 700, whiteSpace: 'nowrap' }}>⏱ {label}</span>
+  return <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, whiteSpace: 'nowrap' }}>⏱ {label}</span>
 }
 
 function Matches() {
@@ -477,11 +477,8 @@ function Matches() {
 
   function closeModal()    { setShowModal(false); setSelectedMatch(null) }
   function getStatusBadge(status) {
-    return {
-      not_started: { text: 'Upcoming', color: '#FFB800', bg: 'rgba(255,184,0,.1)' },
-      running:     { text: 'LIVE',     color: '#FF4655', bg: 'rgba(255,70,85,.2)' },
-      finished:    { text: 'Finished', color: '#4CAF50', bg: 'rgba(76,175,80,.1)' },
-    }[status] ?? { text: 'Upcoming', color: '#FFB800', bg: 'rgba(255,184,0,.1)' }
+    const s = statusStyle(status)
+    return status === 'finished' ? { ...s, text: 'Finished' } : s
   }
 
   // ── Game filtresi debug banner ──────────────────────────────────
@@ -724,7 +721,7 @@ function Matches() {
       {/* Stats chips */}
       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 22 }}>
         {liveCount > 0 && <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: '#FF4655', background: 'rgba(255,70,85,.15)', border: '1px solid #FF465555', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Radio size={13} /> {liveCount} Live</div>}
-        <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: '#FFB800', background: 'rgba(255,184,0,.12)', border: '1px solid #FFB80055', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Clock size={13} /> {upcomingCount} Upcoming</div>
+        <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: '#94a3b8', background: 'rgba(148,163,184,.12)', border: '1px solid #94a3b855', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Clock size={13} /> {upcomingCount} Upcoming</div>
         <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: '#94a3b8', background: 'rgba(255,255,255,.05)', border: '1px solid #33415d', display: 'inline-flex', alignItems: 'center', gap: 6 }}><BarChart3 size={13} /> {totalCount.toLocaleString()} Total</div>
         {favorites.length > 0 && <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: '#FFD700', background: 'rgba(255,215,0,.12)', border: '1px solid #FFD70055', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Star size={13} fill="#FFD700" /> {favorites.length} Fav</div>}
         <div style={{ color: '#475569', fontSize: 11, display: 'flex', alignItems: 'center' }}>

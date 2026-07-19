@@ -9,6 +9,7 @@ import InitialsImage from '../components/InitialsImage'
 import { normalizeGameId } from '../utils/gameUtils'
 import { DeepScoutBadge } from '../components/ScoutSignals'
 import { X as XIcon, SearchX, Star } from 'lucide-react'
+import { FEXT } from '../theme'
 
 function toNum(v) {
   const n = Number(v)
@@ -573,7 +574,7 @@ export default function PlayersPage() {
         position: 'absolute',
         inset: 0,
         pointerEvents: 'none',
-        background: 'radial-gradient(circle at 10% 10%, rgba(200,16,46,.18), transparent 36%), radial-gradient(circle at 90% 4%, rgba(255,255,255,.06), transparent 28%)',
+        background: 'radial-gradient(circle at 10% 10%, rgba(194,92,208,.18), transparent 36%), radial-gradient(circle at 90% 4%, rgba(255,255,255,.06), transparent 28%)',
       }} />
 
       <div style={{ position: 'relative', zIndex: 1 }}>
@@ -731,7 +732,7 @@ export default function PlayersPage() {
                   alignItems: 'center',
                   padding: '12px 14px',
                   borderBottom: '1px solid #172032',
-                  background: idx < 3 ? 'linear-gradient(90deg, rgba(200,16,46,.11), transparent 58%)' : 'transparent',
+                  background: idx < 3 ? 'linear-gradient(90deg, rgba(194,92,208,.11), transparent 58%)' : 'transparent',
                 }}
               >
                 <div
@@ -787,8 +788,8 @@ export default function PlayersPage() {
                       height: 30,
                       width: 30,
                       borderRadius: 8,
-                      border: followed ? '1px solid #FF4655' : '1px solid #334155',
-                      background: followed ? 'rgba(255,70,85,.16)' : '#131b2b',
+                      border: followed ? `1px solid ${FEXT.accent}` : '1px solid #334155',
+                      background: followed ? FEXT.accentSoftBg : '#131b2b',
                       color: followed ? '#fff' : '#94a3b8',
                       cursor: 'pointer', display: 'grid', placeItems: 'center',
                     }}

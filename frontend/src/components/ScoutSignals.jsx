@@ -10,7 +10,7 @@ import { Link } from 'react-router-dom'
 
 import { Satellite } from 'lucide-react'
 
-const TEAL = '#5eead4'
+const TEAL = '#C25CD0'  // feXt moru (eski teal → marka tutarlılığı)
 
 /* Gerçek deep-scout verisi olan panellerin üstüne konan premium rozet. */
 export function DeepScoutBadge({ label = 'Deep Scout Analitiği Aktif', source = 'Liquipedia', style }) {
@@ -20,7 +20,7 @@ export function DeepScoutBadge({ label = 'Deep Scout Analitiği Aktif', source =
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 6,
         fontSize: 10, fontWeight: 800, letterSpacing: '.3px',
-        color: '#04201b', background: TEAL,
+        color: '#fff', background: TEAL,
         borderRadius: 999, padding: '3px 10px', whiteSpace: 'nowrap',
         boxShadow: `0 0 14px ${TEAL}44`,
         ...style,
@@ -44,17 +44,17 @@ export function StatsCoverageNotice({
       style={{
         borderRadius: 14,
         border: `1px solid ${TEAL}2e`,
-        background: `linear-gradient(150deg, rgba(20,184,166,.08), rgba(13,13,15,.92))`,
+        background: `linear-gradient(150deg, rgba(194,92,208,.08), var(--surface))`,
         padding: compact ? '12px 14px' : '16px 18px',
         ...style,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 7 }}>
         <Satellite size={17} />
-        <span style={{ fontSize: 13, fontWeight: 800, color: '#d7fbf4', letterSpacing: '.3px' }}>{title}</span>
+        <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', letterSpacing: '.3px' }}>{title}</span>
         <span style={{
           marginLeft: 'auto', fontSize: 9, fontWeight: 800, letterSpacing: '.5px',
-          color: '#8bd9cd', border: `1px solid ${TEAL}44`, borderRadius: 999, padding: '2px 8px', textTransform: 'uppercase',
+          color: '#D08BE0', border: `1px solid ${TEAL}44`, borderRadius: 999, padding: '2px 8px', textTransform: 'uppercase',
         }}>
           Tier S/A
         </span>

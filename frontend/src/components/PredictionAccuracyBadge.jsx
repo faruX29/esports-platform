@@ -58,9 +58,9 @@ export default function PredictionAccuracyBadge({ variant = 'card' }) {
         title={`Genel isabet %${overall} · ${(stats.total || 0).toLocaleString('tr-TR')} maçta ölçüldü`}
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
-          fontSize: 11, fontWeight: 700, color: '#93f5ea',
+          fontSize: 11, fontWeight: 700, color: 'var(--ai)',
           padding: '4px 9px', borderRadius: 999,
-          background: 'rgba(20,184,166,.12)', border: '1px solid rgba(94,234,212,.28)',
+          background: 'rgba(194,92,208,.12)', border: '1px solid rgba(194,92,208,.28)',
         }}
       >
         <Target size={12} strokeWidth={2.4} />
@@ -71,15 +71,15 @@ export default function PredictionAccuracyBadge({ variant = 'card' }) {
 
   return (
     <div style={{
-      border: '1px solid rgba(94,234,212,.22)',
-      background: 'linear-gradient(130deg, rgba(20,184,166,.12), rgba(16,16,16,.92))',
+      border: '1px solid rgba(194,92,208,.22)',
+      background: 'linear-gradient(130deg, rgba(194,92,208,.12), rgba(16,16,16,.92))',
       borderRadius: 14,
       padding: '14px 16px',
       display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
     }}>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <span style={{ fontSize: 32, fontWeight: 900, color: '#ddfffb', lineHeight: 1 }}>%{confPct}</span>
-        <span style={{ fontSize: 10, color: '#93f5ea', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginTop: 4 }}>
+        <span style={{ fontSize: 10, color: 'var(--ai)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginTop: 4 }}>
           Net isabet
         </span>
       </div>

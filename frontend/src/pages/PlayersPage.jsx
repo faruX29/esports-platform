@@ -106,7 +106,7 @@ function GameFilterTabs({ activeGame, setActiveGame }) {
               borderRadius: 999,
               border: active ? `1px solid ${game.color}` : '1px solid var(--line)',
               background: active ? `${game.color}22` : 'var(--surface)',
-              color: active ? '#ffffff' : 'var(--text-3)',
+              color: active ? game.color : 'var(--text-3)',
               fontSize: 12,
               fontWeight: 700,
               letterSpacing: '.2px',
@@ -585,7 +585,7 @@ export default function PlayersPage() {
         <p style={{ margin: '8px 0 16px', color: 'var(--text-2)', fontSize: 13 }}>
           Seçili oyuna göre oyuncuları K/D, ACS ve Impact'e göre sıralayın.
           {metricsSource === 'player_match_stats'
-            ? <span style={{ color: '#5eead4' }}> · Gerçek maç istatistikleri</span>
+            ? <span style={{ color: '#C25CD0' }}> · Gerçek maç istatistikleri</span>
             : <span style={{ color: 'var(--text-4)' }}> · Takım bazlı tahmin</span>}
         </p>
 
@@ -605,7 +605,7 @@ export default function PlayersPage() {
         {compareMode && (
           <div style={{
             border: '1px solid var(--line)',
-            background: '#101010d9',
+            background: 'var(--surface)',
             borderRadius: 14,
             padding: 14,
             marginBottom: 14,
@@ -632,7 +632,7 @@ export default function PlayersPage() {
 
         <div style={{
           border: '1px solid var(--line)',
-          background: '#131b2bd9',
+          background: 'var(--surface)',
           borderRadius: 14,
           padding: 14,
           marginBottom: 14,
@@ -776,7 +776,7 @@ export default function PlayersPage() {
                 </div>
 
                 <div style={{ fontWeight: 700 }}>{fmt(player.kd)}</div>
-                <div style={{ fontWeight: 700, color: player.acs != null ? '#5eead4' : 'var(--text-5)' }}>{player.acs != null ? player.acs : '—'}</div>
+                <div style={{ fontWeight: 700, color: player.acs != null ? '#C25CD0' : 'var(--text-5)' }}>{player.acs != null ? player.acs : '—'}</div>
                 <div style={{ fontWeight: 700, color: player.hsPct > 0 ? 'var(--text-1)' : 'var(--text-5)' }}>{player.hsPct > 0 ? `${Math.round(player.hsPct)}%` : '—'}</div>
                 <div style={{ fontWeight: 700 }}>{Math.round(player.winRate)}%</div>
                 <div style={{ color: '#ff9aa9', fontWeight: 800 }}>{Math.round(player.impact)}</div>
@@ -790,7 +790,7 @@ export default function PlayersPage() {
                       borderRadius: 8,
                       border: followed ? `1px solid ${FEXT.accent}` : '1px solid var(--text-6)',
                       background: followed ? FEXT.accentSoftBg : 'var(--surface)',
-                      color: followed ? '#fff' : 'var(--text-3)',
+                      color: followed ? FEXT.accentText : 'var(--text-3)',
                       cursor: 'pointer', display: 'grid', placeItems: 'center',
                     }}
                     title={followed ? 'Takibi birak' : 'Takip et'}

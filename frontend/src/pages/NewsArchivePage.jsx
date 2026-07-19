@@ -199,7 +199,7 @@ export default function NewsArchivePage() {
               const active = tab.id === game
               return (
                 <button key={tab.id} onClick={() => setParam({ oyun: tab.id, sayfa: 1 })}
-                  style={{ padding: '7px 13px', borderRadius: 999, border: active ? '1px solid #C8102E' : '1px solid var(--line)', background: active ? 'rgba(200,16,46,.18)' : 'var(--surface)', color: active ? '#fff' : 'var(--text-3)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                  style={{ padding: '7px 13px', borderRadius: 999, border: active ? '1px solid #C25CD0' : '1px solid var(--line)', background: active ? 'rgba(194,92,208,.16)' : 'var(--surface)', color: active ? '#D08BE0' : 'var(--text-3)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                   {tab.label}
                 </button>
               )
@@ -210,7 +210,7 @@ export default function NewsArchivePage() {
               const active = tab.id === type
               return (
                 <button key={tab.id} onClick={() => setParam({ tur: tab.id, sayfa: 1 })}
-                  style={{ padding: '6px 12px', borderRadius: 999, border: active ? '1px solid #5eead4' : '1px solid var(--line)', background: active ? 'rgba(94,234,212,.14)' : 'var(--surface)', color: active ? '#ddfffb' : 'var(--text-3)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                  style={{ padding: '6px 12px', borderRadius: 999, border: active ? '1px solid #C25CD0' : '1px solid var(--line)', background: active ? 'rgba(194,92,208,.14)' : 'var(--surface)', color: active ? '#ddfffb' : 'var(--text-3)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
                   {tab.label}
                 </button>
               )

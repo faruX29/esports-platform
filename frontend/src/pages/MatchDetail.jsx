@@ -584,7 +584,7 @@ function KdaColumn({ rows, teamName, gc }) {
           return (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface)', border: '1px solid var(--surface-2)', borderRadius: 8, padding: '6px 9px' }}>
               <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.player?.nickname || '?'}</span>
-              {acs != null && <span title="ACS" style={{ fontSize: 10, color: '#5eead4', fontWeight: 700, minWidth: 30, textAlign: 'right' }}>{acs}</span>}
+              {acs != null && <span title="ACS" style={{ fontSize: 10, color: '#C25CD0', fontWeight: 700, minWidth: 30, textAlign: 'right' }}>{acs}</span>}
               <span style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums', color: 'var(--text-2)', minWidth: 62, textAlign: 'right' }}>
                 {r.kills}<span style={{ color: 'var(--text-5)' }}>/</span>{r.deaths}<span style={{ color: 'var(--text-5)' }}>/</span>{r.assists}
               </span>
@@ -839,7 +839,7 @@ function CommunityPredictionPool({ matchId, teamAName, teamBName, aiWin, isFinis
 
 /* ─── RoleBadge ─────────────────────────────────────────────────────────────── */
 const ROLES = {
-  igl:    { c: '#a78bfa', bg: 'rgba(139,92,246,.2)',   l: 'IGL'   },
+  igl:    { c: 'var(--ai)', bg: 'rgba(139,92,246,.2)',   l: 'IGL'   },
   awp:    { c: '#38bdf8', bg: 'rgba(56,189,248,.15)',  l: 'AWP'   },
   sniper: { c: '#38bdf8', bg: 'rgba(56,189,248,.15)',  l: 'AWP'   },
   support:{ c: '#4ade80', bg: 'rgba(74,222,128,.15)',  l: 'Supp'  },
@@ -950,7 +950,7 @@ function WinProbabilityBar({ teamAName, teamBName, teamAPct, teamBPct }) {
   }, [safeA])
 
   return (
-    <div style={{ border: '1px solid rgba(94,234,212,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(20,184,166,.12), rgba(12,12,12,.9))', padding: '10px 11px' }}>
+    <div style={{ border: '1px solid rgba(194,92,208,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(194,92,208,.12), rgba(12,12,12,.9))', padding: '10px 11px' }}>
       <div style={{ fontSize: 10, color: '#8be9dd', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 6 }}>
         Win Probability
       </div>
@@ -1112,14 +1112,14 @@ function MVPVoting({ matchId, players, isFinished }) {
     <div style={{ background: 'linear-gradient(160deg,#110d1a,var(--surface))', borderRadius: 18, border: '1px solid rgba(167,139,250,.2)', padding: 20, position: 'relative', overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#a78bfa,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Award size={16} color="#fff" /></div>
+          <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,var(--ai),#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Award size={16} color="#fff" /></div>
           <div>
             <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>Maçın Adamı</div>
             <div style={{ fontSize: 9, color: '#3a3a5a' }}>Her maç için 1 oy hakkı</div>
           </div>
         </div>
         {loadingV ? <Sk w="50px" h="20px" r="6px" /> : (
-          <div style={{ textAlign: 'right' }}><div style={{ fontSize: 18, fontWeight: 900, color: '#a78bfa' }}>{totalVotes}</div><div style={{ fontSize: 8, color: 'var(--line)', textTransform: 'uppercase', letterSpacing: '.5px' }}>oy</div></div>
+          <div style={{ textAlign: 'right' }}><div style={{ fontSize: 18, fontWeight: 900, color: 'var(--ai)' }}>{totalVotes}</div><div style={{ fontSize: 8, color: 'var(--line)', textTransform: 'uppercase', letterSpacing: '.5px' }}>oy</div></div>
         )}
       </div>
       {justVoted && <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 9, background: 'rgba(74,222,128,.1)', border: '1px solid rgba(74,222,128,.3)', display: 'flex', alignItems: 'center', gap: 8 }}><PartyPopper size={14} color="#4ade80" /><span style={{ fontSize: 12, fontWeight: 700, color: '#4ade80' }}>Oyunuz kaydedildi!</span></div>}
@@ -1128,10 +1128,10 @@ function MVPVoting({ matchId, players, isFinished }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, marginBottom: 14, background: 'rgba(167,139,250,.08)', border: '1px solid rgba(167,139,250,.2)' }}>
           {top.image_url ? <img src={top.image_url} alt={top.nickname} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(167,139,250,.4)', flexShrink: 0 }} /> : <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--surface-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><User size={18} color="var(--text-4)" /></div>}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: '#a78bfa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}><Crown size={12} color="#FFD700" /> {top.nickname}</div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--ai)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}><Crown size={12} color="#FFD700" /> {top.nickname}</div>
             <div style={{ fontSize: 9, color: 'var(--text-5)' }}>Şu an lider · {topV} oy</div>
           </div>
-          <div style={{ fontSize: 15, fontWeight: 900, color: '#a78bfa' }}>{totalVotes > 0 ? Math.round(topV / totalVotes * 100) : 0}%</div>
+          <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--ai)' }}>{totalVotes > 0 ? Math.round(topV / totalVotes * 100) : 0}%</div>
         </div>
       )}
       {loadingV
@@ -1150,12 +1150,12 @@ function MVPVoting({ matchId, players, isFinished }) {
                 >
                   {hasVoted && pct > 0 && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${pct}%`, background: my ? 'linear-gradient(90deg,rgba(167,139,250,.2),transparent)' : 'linear-gradient(90deg,var(--hover),transparent)', borderRadius: 11, transition: 'width .8s cubic-bezier(.4,0,.2,1)', pointerEvents: 'none' }} />}
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: idx === 0 && totalVotes > 0 ? 'rgba(167,139,250,.2)' : 'var(--surface-2)', fontSize: 10, fontWeight: 800, color: idx === 0 && totalVotes > 0 ? '#a78bfa' : 'var(--text-6)', border: `1px solid ${idx === 0 && totalVotes > 0 ? 'rgba(167,139,250,.3)' : 'var(--line)'}` }}>{idx === 0 && totalVotes > 0 ? <Crown size={11} color="#a78bfa" /> : idx + 1}</div>
+                    <div style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: idx === 0 && totalVotes > 0 ? 'rgba(167,139,250,.2)' : 'var(--surface-2)', fontSize: 10, fontWeight: 800, color: idx === 0 && totalVotes > 0 ? 'var(--ai)' : 'var(--text-6)', border: `1px solid ${idx === 0 && totalVotes > 0 ? 'rgba(167,139,250,.3)' : 'var(--line)'}` }}>{idx === 0 && totalVotes > 0 ? <Crown size={11} color="var(--ai)" /> : idx + 1}</div>
                     {player.image_url ? <img src={player.image_url} alt={player.nickname} style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: my ? '2px solid rgba(167,139,250,.4)' : '2px solid var(--surface-2)' }} /> : <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--surface-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--line)' }}><User size={15} color="var(--text-4)" /></div>}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 11, fontWeight: my ? 800 : 600, color: my ? '#c4b5fd' : 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 100 }}>{player.nickname}</span>
-                        {my && <span style={{ fontSize: 8, padding: '1px 5px', borderRadius: 4, background: 'rgba(167,139,250,.2)', color: '#a78bfa', fontWeight: 700 }}>senin oyun</span>}
+                        {my && <span style={{ fontSize: 8, padding: '1px 5px', borderRadius: 4, background: 'rgba(167,139,250,.2)', color: 'var(--ai)', fontWeight: 700 }}>senin oyun</span>}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
                         <RoleBadge role={player.role} />
@@ -1165,14 +1165,14 @@ function MVPVoting({ matchId, players, isFinished }) {
                     <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 60 }}>
                       {hasVoted ? (
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 900, color: pct > 0 ? '#a78bfa' : 'var(--line)', fontVariantNumeric: 'tabular-nums' }}>{pct}%</div>
+                          <div style={{ fontSize: 13, fontWeight: 900, color: pct > 0 ? 'var(--ai)' : 'var(--line)', fontVariantNumeric: 'tabular-nums' }}>{pct}%</div>
                           <div style={{ fontSize: 8, color: 'var(--line)' }}>{pV} oy</div>
                           <div style={{ height: 3, borderRadius: 2, background: 'var(--surface-2)', marginTop: 3, width: 50, overflow: 'hidden' }}>
-                            <div style={{ height: '100%', borderRadius: 2, width: `${pct}%`, background: my ? 'linear-gradient(90deg,#a78bfa,#7c3aed)' : '#2d2d4e', transition: 'width .8s cubic-bezier(.4,0,.2,1)' }} />
+                            <div style={{ height: '100%', borderRadius: 2, width: `${pct}%`, background: my ? 'linear-gradient(90deg,var(--ai),#7c3aed)' : '#2d2d4e', transition: 'width .8s cubic-bezier(.4,0,.2,1)' }} />
                           </div>
                         </div>
                       ) : (
-                        <div style={{ padding: '4px 8px', borderRadius: 7, fontSize: 10, fontWeight: 700, background: 'rgba(167,139,250,.1)', color: '#a78bfa', border: '1px solid rgba(167,139,250,.2)', opacity: voting ? 0.5 : 1, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        <div style={{ padding: '4px 8px', borderRadius: 7, fontSize: 10, fontWeight: 700, background: 'rgba(167,139,250,.1)', color: 'var(--ai)', border: '1px solid rgba(167,139,250,.2)', opacity: voting ? 0.5 : 1, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                           {voting ? <Clock size={11} /> : <Vote size={11} />} Oy Ver
                         </div>
                       )}
@@ -1432,7 +1432,7 @@ export default function MatchDetail() {
               <div style={{ fontSize: 12, fontWeight: 700, color: isLive ? '#FF4655' : '#4CAF50', marginTop: 4 }}>{isLive ? '● Canlı' : fmtTime(match.scheduled_at)}</div>
               <div style={{ fontSize: 10, color: 'var(--text-6)', marginTop: 2 }}>{fmtDate(match.scheduled_at)}</div>
               <div style={{ marginTop: 10, padding: '0 6px', minWidth: 170 }}>
-                <div style={{ fontSize: 9, fontWeight: 800, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 4 }}>AI Win Probability</div>
+                <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--ai)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 4 }}>AI Win Probability</div>
                 <div style={{ height: 8, borderRadius: 4, overflow: 'hidden', display: 'flex', border: '1px solid var(--line)' }}>
                   <div style={{ flex: pctA, background: 'linear-gradient(90deg,#4ade80,#22c55e)', borderRadius: '4px 0 0 4px' }} />
                   <div style={{ flex: pctB, background: 'linear-gradient(90deg,#60a5fa,#3b82f6)', borderRadius: '0 4px 4px 0' }} />
@@ -1753,7 +1753,7 @@ function LiveScoreboard({ teamAName, teamBName, teamABoard, teamBBoard, isLive }
   )
 
   return (
-    <div style={{ marginTop: 16, marginBottom: 4, background: 'linear-gradient(160deg,#170d0f,var(--surface))', borderRadius: 16, border: '1px solid rgba(255,70,85,.25)', padding: 16 }}>
+    <div style={{ marginTop: 16, marginBottom: 4, background: 'linear-gradient(160deg,var(--surface),var(--surface))', borderRadius: 16, border: '1px solid rgba(255,70,85,.25)', padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <div style={{ fontSize: 12, fontWeight: 900, color: '#FF4655', textTransform: 'uppercase', letterSpacing: '1px' }}>Canlı Skor Tablosu</div>
         <div style={{ fontSize: 10, color: '#7a3038' }}>K/D/A anlik performans</div>

@@ -24,7 +24,10 @@ export function scoreFromHero(heroScore) {
  */
 export default function NewsCover({ visuals, score = '', height = 180, compact = false }) {
   const v = visuals || {}
-  const accent = v.gameColor || '#C8102E'
+  // Kapak aksanı = feXt moru (glow + orta dikey çizgi). Eskiden oyun rengiydi →
+  // Valorant'ta kırmızı dikey çizgi çıkıyordu; marka tutarlılığı için mor sabit.
+  // Oyun kimliği üstteki etiketle (v.gameLabel) zaten belli.
+  const accent = '#C25CD0'
   const logoSize = compact ? 52 : 76
   const teamA = v.teamA || {}
   const teamB = v.teamB || {}

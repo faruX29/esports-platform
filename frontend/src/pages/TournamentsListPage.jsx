@@ -213,7 +213,7 @@ export default function TournamentsListPage() {
           borderRadius: 999,
           padding: 3,
           gap: 4,
-          background: 'linear-gradient(120deg, rgba(194,92,208,.18), rgba(19,27,43,.95))',
+          background: 'linear-gradient(120deg, rgba(194,92,208,.18), var(--surface-2))',
           border: '1px solid rgba(194,92,208,.28)',
           boxShadow: '0 0 16px rgba(194,92,208,.14)',
         }}>

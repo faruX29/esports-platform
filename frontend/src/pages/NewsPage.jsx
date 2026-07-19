@@ -197,18 +197,18 @@ function ScoutNoteCard({ item, compact = false }) {
   return (
     <div style={{
       marginTop: compact ? 9 : 12,
-      border: '1px solid rgba(94,234,212,.22)',
-      background: 'linear-gradient(130deg, rgba(20,184,166,.12), rgba(16,16,16,.92))',
+      border: '1px solid rgba(194,92,208,.22)',
+      background: 'linear-gradient(130deg, rgba(194,92,208,.12), var(--surface))',
       borderRadius: 11,
       padding: compact ? '8px 9px' : '10px 11px',
     }}>
-      <div style={{ fontSize: 10, color: '#93f5ea', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.9px', marginBottom: 6 }}>
+      <div style={{ fontSize: 10, color: 'var(--ai)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.9px', marginBottom: 6 }}>
         Gozcu Notu
       </div>
       <div style={{ display: 'grid', gap: 4 }}>
         {rows.map((row, idx) => (
           <div key={`${row.label}-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: compact ? 11 : 12 }}>
-            <span style={{ color: '#9dd8d0' }}>{row.label}</span>
+            <span style={{ color: 'var(--text-3)' }}>{row.label}</span>
             <span style={{ color: '#ddfffb', fontWeight: 700, textAlign: 'right' }}>{row.value}</span>
           </div>
         ))}
@@ -228,7 +228,7 @@ function NewsCard({ item, likes, liked, comments, onLike, canInteract, onOpenDet
         border: '1px solid #1f1f22',
         borderRadius: 18,
         padding: 16,
-        boxShadow: visuals.turkish ? '0 18px 40px rgba(200,16,46,.08)' : 'none',
+        boxShadow: visuals.turkish ? '0 18px 40px rgba(194,92,208,.08)' : 'none',
         position: 'relative',
         overflow: 'hidden',
         cursor: 'pointer',
@@ -239,7 +239,7 @@ function NewsCard({ item, likes, liked, comments, onLike, canInteract, onOpenDet
         inset: 0,
         pointerEvents: 'none',
         background: visuals.turkish
-          ? 'radial-gradient(circle at 10% 10%, rgba(200,16,46,.18), transparent 34%)'
+          ? 'radial-gradient(circle at 10% 10%, rgba(194,92,208,.18), transparent 34%)'
           : 'radial-gradient(circle at 85% 0%, var(--hover), transparent 28%)',
       }} />
 
@@ -257,7 +257,7 @@ function NewsCard({ item, likes, liked, comments, onLike, canInteract, onOpenDet
             <span style={{ fontSize: 10, color: 'var(--text-1)', padding: '4px 8px', borderRadius: 999, background: 'rgba(255,255,255,.04)', border: '1px solid var(--line)' }}>
               {visuals.gameLabel}
             </span>
-            <span style={{ fontSize: 10, color: HERO_TIERS.has(visuals.tier) ? '#ffb3bd' : 'var(--text-2)', padding: '4px 8px', borderRadius: 999, background: HERO_TIERS.has(visuals.tier) ? 'rgba(200,16,46,.18)' : 'var(--hover)', border: HERO_TIERS.has(visuals.tier) ? '1px solid rgba(200,16,46,.35)' : '1px solid var(--line)' }}>
+            <span style={{ fontSize: 10, color: HERO_TIERS.has(visuals.tier) ? 'var(--ai)' : 'var(--text-2)', padding: '4px 8px', borderRadius: 999, background: HERO_TIERS.has(visuals.tier) ? 'rgba(194,92,208,.18)' : 'var(--hover)', border: HERO_TIERS.has(visuals.tier) ? '1px solid rgba(194,92,208,.35)' : '1px solid var(--line)' }}>
               Tier {visuals.tier}
             </span>
           </div>
@@ -272,7 +272,7 @@ function NewsCard({ item, likes, liked, comments, onLike, canInteract, onOpenDet
           <h3 style={{ margin: 0, fontSize: 19, lineHeight: 1.3 }}>{item.title}</h3>
         </div>
 
-        <div style={{ fontSize: 14, color: '#f0d3d8', marginBottom: 8, fontWeight: 700 }}>{item.heroScore}</div>
+        <div style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 8, fontWeight: 700 }}>{item.heroScore}</div>
         <p style={{ margin: 0, color: 'var(--text-2)', lineHeight: 1.6 }}>{item.summary}</p>
 
         <ScoutNoteCard item={item} compact />
@@ -614,7 +614,7 @@ export default function NewsPage() {
                       borderRadius: 999,
                       border: active ? `1px solid ${color}` : '1px solid var(--line)',
                       background: active ? `${color}22` : 'var(--surface)',
-                      color: active ? '#ffffff' : 'var(--text-3)',
+                      color: active ? color : 'var(--text-3)',
                       fontSize: 12,
                       fontWeight: 700,
                       letterSpacing: '.2px',
@@ -652,7 +652,7 @@ export default function NewsPage() {
               {hero.isForYou ? 'Manset · For You' : 'Manset'}
             </div>
             <article onClick={() => openStoryDetail(hero)} style={{ borderRadius: 18, padding: isMobile ? 14 : 20, border: '1px solid var(--line)', background: 'linear-gradient(145deg,var(--surface),var(--surface))', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
-              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: hero.visuals.turkish ? 'radial-gradient(circle at 12% 18%, rgba(200,16,46,.22), transparent 34%)' : 'radial-gradient(circle at 90% 10%, var(--hover), transparent 24%)' }} />
+              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: hero.visuals.turkish ? 'radial-gradient(circle at 12% 18%, rgba(194,92,208,.22), transparent 34%)' : 'radial-gradient(circle at 90% 10%, var(--hover), transparent 24%)' }} />
               <div style={{ position: 'relative', zIndex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -661,13 +661,13 @@ export default function NewsPage() {
                         For You
                       </span>
                     )}
-                    <span style={{ fontSize: 10, color: '#ffd2d8', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.1, padding: '5px 9px', borderRadius: 999, background: 'rgba(200,16,46,.18)', border: '1px solid rgba(200,16,46,.38)' }}>
+                    <span style={{ fontSize: 10, color: 'var(--ai)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.1, padding: '5px 9px', borderRadius: 999, background: 'rgba(194,92,208,.18)', border: '1px solid rgba(194,92,208,.38)' }}>
                       Manset
                     </span>
                     <span style={{ fontSize: 10, color: 'var(--text-1)', padding: '5px 9px', borderRadius: 999, background: `${hero.visuals.gameColor}22`, border: `1px solid ${hero.visuals.gameColor}55` }}>
                       {hero.visuals.gameLabel}
                     </span>
-                    <span style={{ fontSize: 10, color: '#f7b6bf', padding: '5px 9px', borderRadius: 999, background: 'rgba(200,16,46,.18)', border: '1px solid rgba(200,16,46,.34)' }}>
+                    <span style={{ fontSize: 10, color: 'var(--ai)', padding: '5px 9px', borderRadius: 999, background: 'rgba(194,92,208,.18)', border: '1px solid rgba(194,92,208,.34)' }}>
                       Tier {hero.visuals.tier}
                     </span>
                   </div>
@@ -679,7 +679,7 @@ export default function NewsPage() {
                 </div>
                 <div style={{ minWidth: 0, marginBottom: 12 }}>
                   <h2 style={{ margin: '0 0 8px', fontSize: isMobile ? 24 : 32, lineHeight: 1.1 }}>{hero.title}</h2>
-                  <div style={{ color: '#f0d3d8', fontSize: 17, fontWeight: 700 }}>{hero.heroScore}</div>
+                  <div style={{ color: 'var(--text-2)', fontSize: 17, fontWeight: 700 }}>{hero.heroScore}</div>
                 </div>
 
                 <p style={{ margin: 0, color: 'var(--text-1)', lineHeight: 1.7 }}>{hero.summary}</p>

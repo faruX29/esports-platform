@@ -742,7 +742,7 @@ function TopPerformers({ rows, navigate }) {
           <div style={{ color: 'var(--text-1)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nickname}</div>
           <div style={{ textAlign: 'right', fontWeight: 800, color: p.kd >= 1 ? '#4ade80' : '#ff6a7f', fontVariantNumeric: 'tabular-nums' }}>{p.kd.toFixed(2)}</div>
           <div style={{ textAlign: 'right', color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums' }}>{p.k}/{p.d}/{p.a}</div>
-          <div style={{ textAlign: 'right', color: p.acs != null ? '#5eead4' : 'var(--text-6)', fontWeight: 700 }}>{p.acs ?? '—'}</div>
+          <div style={{ textAlign: 'right', color: p.acs != null ? '#C25CD0' : 'var(--text-6)', fontWeight: 700 }}>{p.acs ?? '—'}</div>
         </div>
       ))}
       <div style={{ marginTop: 8, fontSize: 9, color: 'var(--text-5)', textAlign: 'right' }}>

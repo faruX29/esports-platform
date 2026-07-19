@@ -31,6 +31,8 @@
   --shadow:       rgba(0,0,0,.5);
   --nav-bg:       rgba(11,15,25,.82);
   --nav-border:   rgba(38,50,74,.6);
+  --ai:           #a78bfa;   /* AI tahmin moru (bar + %) */
+  --track:        #334155;   /* boş bar/ray zemini */
   color-scheme: dark;
 }
 
@@ -53,6 +55,8 @@
   --shadow:       rgba(15,23,42,.14);
   --nav-bg:       rgba(245,247,251,.85);
   --nav-border:   rgba(203,213,225,.7);
+  --ai:           #7c3aed;   /* aydınlıkta okunur derin mor */
+  --track:        #e2e8f0;
   color-scheme: light;
 }
 

@@ -101,29 +101,29 @@ const TodaySchedule = memo(function TodaySchedule({ matches, liveMatches, onMatc
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '8px 12px', borderRadius: 10, cursor: 'pointer',
                 background: isLive ? 'rgba(255,70,85,.07)' : 'var(--surface)',
-                border: isLive ? '1px solid rgba(255,70,85,.3)' : '1px solid #232f47',
+                border: isLive ? '1px solid rgba(255,70,85,.3)' : '1px solid var(--line)',
                 transition: 'all .15s',
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = isLive ? 'rgba(255,70,85,.12)' : 'var(--surface-2)'; e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.5)' : '#2a2a2a' }}
-              onMouseLeave={e => { e.currentTarget.style.background = isLive ? 'rgba(255,70,85,.07)' : 'var(--surface)'; e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.3)' : '#232f47' }}
+              onMouseEnter={e => { e.currentTarget.style.background = isLive ? 'rgba(255,70,85,.12)' : 'var(--surface-2)'; e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.5)' : 'var(--line-2)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = isLive ? 'rgba(255,70,85,.07)' : 'var(--surface)'; e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.3)' : 'var(--line)' }}
             >
               {/* Saat */}
-              <span style={{ fontSize: 11, color: '#555', fontVariantNumeric: 'tabular-nums', flexShrink: 0, width: 38, textAlign: 'center' }}>
+              <span style={{ fontSize: 11, color: 'var(--text-6)', fontVariantNumeric: 'tabular-nums', flexShrink: 0, width: 38, textAlign: 'center' }}>
                 {isLive
                   ? <span style={{ color: '#FF4655', fontWeight: 800, animation: 'livePulse 1.2s infinite' }}>● LIVE</span>
                   : fmtTime(m.scheduled_at)
                 }
               </span>
               {/* Game */}
-              <span style={{ fontSize: 8, padding: '2px 5px', borderRadius: 4, background: '#232f47', color: '#444', fontWeight: 700, letterSpacing: '.4px', flexShrink: 0 }}>
+              <span style={{ fontSize: 8, padding: '2px 5px', borderRadius: 4, background: 'var(--line)', color: 'var(--text-6)', fontWeight: 700, letterSpacing: '.4px', flexShrink: 0 }}>
                 {gameShort}
               </span>
               {/* Teams */}
               <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: '#ccc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {tA} <span style={{ color: '#333' }}>vs</span> {tB}
+                {tA} <span style={{ color: 'var(--track)' }}>vs</span> {tB}
               </span>
               {/* Tournament */}
-              <span style={{ fontSize: 9, color: '#2a2a2a', flexShrink: 0, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>
+              <span style={{ fontSize: 9, color: 'var(--line-2)', flexShrink: 0, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>
                 {m.tournament?.name || ''}
               </span>
             </div>
@@ -139,7 +139,7 @@ function Sk({ w = '100%', h = '16px', r = '8px' }) {
   return (
     <div style={{
       width: w, height: h, borderRadius: r, flexShrink: 0,
-      background: 'linear-gradient(90deg,var(--surface) 25%,#232f47 50%,var(--surface) 75%)',
+      background: 'linear-gradient(90deg,var(--surface) 25%,var(--line) 50%,var(--surface) 75%)',
       backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite',
     }} />
   )
@@ -402,7 +402,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
         background: 'radial-gradient(circle at 14% 12%, rgba(255,70,85,.2), transparent 42%), var(--surface)',
         boxShadow: '0 28px 70px rgba(0,0,0,.55)',
       }}>
-        <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid #202020' }}>
+        <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid var(--surface-2)' }}>
           <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.9px', color: '#ff9ba5', textTransform: 'uppercase' }}>
             Takip Tercihleri
           </div>
@@ -413,7 +413,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
         </div>
 
         <div style={{ padding: '14px 16px 18px' }}>
-          <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 8 }}>Oyunlar</div>
+          <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 8 }}>Oyunlar</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 18 }}>
             {PREFERENCE_GAMES.map(game => {
               const active = selectedGames.includes(game.id)
@@ -423,9 +423,9 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
                   onClick={() => toggleGame(game.id)}
                   style={{
                     borderRadius: 999,
-                    border: `1px solid ${active ? game.color : '#2a2a2a'}`,
+                    border: `1px solid ${active ? game.color : 'var(--line-2)'}`,
                     background: active ? `${game.color}2b` : 'var(--surface-2)',
-                    color: active ? '#fff' : '#cfcfcf',
+                    color: active ? game.color : 'var(--text-3)',
                     fontSize: 12,
                     fontWeight: 700,
                     padding: '7px 11px',
@@ -439,7 +439,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
             })}
           </div>
 
-          <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 8 }}>
+          <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 8 }}>
             {searchActive ? 'Arama Sonuclari' : 'Populer Takimlar'}
           </div>
           <div style={{ marginBottom: 10 }}>
@@ -450,7 +450,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
               style={{
                 width: '100%',
                 borderRadius: 9,
-                border: '1px solid #2a2a2a',
+                border: '1px solid var(--line-2)',
                 background: 'var(--surface-2)',
                 color: '#f1f1f1',
                 fontSize: 12,
@@ -506,12 +506,12 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
               </div>
             )}
             {searchActive && !searching && displayedTeams.length === 0 && (
-              <div style={{ gridColumn: '1 / -1', fontSize: 12, color: '#777', border: '1px dashed #262626', borderRadius: 10, padding: '12px 10px', textAlign: 'center' }}>
+              <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--text-5)', border: '1px dashed #262626', borderRadius: 10, padding: '12px 10px', textAlign: 'center' }}>
                 "{teamSearch.trim()}" icin takim bulunamadi.
               </div>
             )}
             {!searchActive && !loading && (!popularTeams || popularTeams.length === 0) && (
-              <div style={{ gridColumn: '1 / -1', fontSize: 12, color: '#777', border: '1px dashed #262626', borderRadius: 10, padding: '12px 10px', textAlign: 'center' }}>
+              <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--text-5)', border: '1px dashed #262626', borderRadius: 10, padding: '12px 10px', textAlign: 'center' }}>
                 Takim onerileri yuklenemedi. Yukaridan arayarak takim ekleyebilirsin.
               </div>
             )}
@@ -530,7 +530,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
               borderRadius: 10,
               border: '1px solid #2d2d2d',
               background: 'var(--surface-2)',
-              color: '#bbb',
+              color: 'var(--text-3)',
               fontSize: 12,
               fontWeight: 700,
               padding: '8px 12px',
@@ -741,7 +741,7 @@ const QuickAccessBar = memo(function QuickAccessBar({ entries, loading, onOpen }
               height: 42,
               borderRadius: '50%',
               flexShrink: 0,
-              border: entry.isLive ? '1.5px solid rgba(255,70,85,.75)' : '1px solid #2a2a2a',
+              border: entry.isLive ? '1.5px solid rgba(255,70,85,.75)' : '1px solid var(--line-2)',
               boxShadow: entry.isLive ? '0 0 16px rgba(255,70,85,.42)' : 'none',
               background: 'var(--surface)',
               cursor: 'pointer',
@@ -811,26 +811,26 @@ function WinBar({ predA, predB, confidence }) {
   const isHot = confidence != null && confidence > 0.80
 
   return (
-    <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid #232f47' }}>
+    <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--line)' }}>
       {/* İnce progress bar */}
       <div style={{
         display: 'flex', height: 3, borderRadius: 2,
-        overflow: 'hidden', background: '#232f47',
+        overflow: 'hidden', background: 'var(--line)',
         marginBottom: 3,
       }}>
-        <div style={{ width: `${pctA}%`, background: aFav ? '#a78bfa' : '#333', transition: 'width .5s' }} />
-        <div style={{ width: `${pctB}%`, background: !aFav ? '#a78bfa' : '#333', transition: 'width .5s' }} />
+        <div style={{ width: `${pctA}%`, background: aFav ? 'var(--ai)' : 'var(--track)', transition: 'width .5s' }} />
+        <div style={{ width: `${pctB}%`, background: !aFav ? 'var(--ai)' : 'var(--track)', transition: 'width .5s' }} />
       </div>
 
       {/* Yüzde + AI etiketi */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 8, color: aFav ? '#a78bfa' : '#383838', fontWeight: aFav ? 700 : 400 }}>
+        <span style={{ fontSize: 8, color: aFav ? 'var(--ai)' : 'var(--text-5)', fontWeight: aFav ? 700 : 400 }}>
           {pctA}%
         </span>
-        <span style={{ fontSize: 8, color: isHot ? '#ff8c42' : '#2a2a2a', fontWeight: isHot ? 700 : 400, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+        <span style={{ fontSize: 8, color: isHot ? '#ff8c42' : 'var(--line-2)', fontWeight: isHot ? 700 : 400, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
           {isHot && <Flame size={9} strokeWidth={2.5} />}AI
         </span>
-        <span style={{ fontSize: 8, color: !aFav ? '#a78bfa' : '#383838', fontWeight: !aFav ? 700 : 400 }}>
+        <span style={{ fontSize: 8, color: !aFav ? 'var(--ai)' : 'var(--text-5)', fontWeight: !aFav ? 700 : 400 }}>
           {pctB}%
         </span>
       </div>
@@ -918,7 +918,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
           </span>
           <MatchImpactPill match={m} />
           {getBOFormat(m.team_a_score, m.team_b_score, m.number_of_games) && (
-            <span style={{ fontSize: 8, fontWeight: 700, color: '#555', background: 'var(--hover)', border: '1px solid #2a2a2a', borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-6)', background: 'var(--hover)', border: '1px solid var(--line-2)', borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap' }}>
               {getBOFormat(m.team_a_score, m.team_b_score, m.number_of_games)}
             </span>
           )}
@@ -1005,11 +1005,11 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
             textShadow: 'none',
           }}>
             {m.team_a_score ?? 0}
-            <span style={{ color: '#2a2a2a', margin: '0 3px' }}>:</span>
+            <span style={{ color: 'var(--line-2)', margin: '0 3px' }}>:</span>
             {m.team_b_score ?? 0}
           </div>
           <div style={{
-            fontSize: 8, color: '#2a2a2a', marginTop: 3,
+            fontSize: 8, color: 'var(--line-2)', marginTop: 3,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 72,
           }}>
             {m.tournament?.name || ''}
@@ -1120,7 +1120,7 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
       </div>
 
       {/* Oyun etiketi */}
-      <span style={{ fontSize: 8, padding: '2px 6px', borderRadius: 4, background: '#232f47', color: '#444', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', flexShrink: 0 }}>
+      <span style={{ fontSize: 8, padding: '2px 6px', borderRadius: 4, background: 'var(--line)', color: 'var(--text-6)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', flexShrink: 0 }}>
         {m.game?.name?.slice(0, 3).toUpperCase() || '—'}
       </span>
 
@@ -1147,12 +1147,12 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
           objectFit='contain'
         />
         <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: turkA ? '#ff6b7a' : '#bbb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: turkA ? '#ff6b7a' : 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
             {m.team_a?.name || '?'}{turkA && ' 🇹🇷'}
           </span>
           {formA.length > 0 && <FormStrip form={formA} />}
         </div>
-        <span style={{ fontSize: 9, color: '#2a2a2a', flexShrink: 0 }}>vs</span>
+        <span style={{ fontSize: 9, color: 'var(--line-2)', flexShrink: 0 }}>vs</span>
         <InitialsImage
           src={m.team_b?.logo_url}
           alt={m.team_b?.name || ''}
@@ -1163,7 +1163,7 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
           objectFit='contain'
         />
         <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: turkB ? '#ff6b7a' : '#bbb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: turkB ? '#ff6b7a' : 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
             {m.team_b?.name || '?'}{turkB && ' 🇹🇷'}
           </span>
           {formB.length > 0 && <FormStrip form={formB} />}
@@ -1171,7 +1171,7 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
       </div>
 
       {/* Turnuva */}
-      <div style={{ fontSize: 9, color: '#2a2a2a', flexShrink: 0, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>
+      <div style={{ fontSize: 9, color: 'var(--line-2)', flexShrink: 0, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>
         {m.tournament?.name || ''}
       </div>
 
@@ -1212,7 +1212,7 @@ const ResultRow = memo(function ResultRow({ match: m, onMatchClick }) {
         {fmtWhen(m.scheduled_at)}
       </span>
 
-      <span style={{ fontSize: 8, padding: '2px 6px', borderRadius: 4, background: '#232f47', color: 'var(--text-4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', flexShrink: 0 }}>
+      <span style={{ fontSize: 8, padding: '2px 6px', borderRadius: 4, background: 'var(--line)', color: 'var(--text-4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', flexShrink: 0 }}>
         {m.game?.name?.slice(0, 3).toUpperCase() || '—'}
       </span>
 
@@ -1226,9 +1226,9 @@ const ResultRow = memo(function ResultRow({ match: m, onMatchClick }) {
 
       {/* Skor */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, fontVariantNumeric: 'tabular-nums', fontWeight: 900, fontSize: 15 }}>
-        <span style={{ color: aWon ? '#4CAF50' : '#666' }}>{cs.team_a_score ?? '–'}</span>
-        <span style={{ color: '#333', fontSize: 11 }}>:</span>
-        <span style={{ color: bWon ? '#4CAF50' : '#666' }}>{cs.team_b_score ?? '–'}</span>
+        <span style={{ color: aWon ? '#4CAF50' : 'var(--text-5)' }}>{cs.team_a_score ?? '–'}</span>
+        <span style={{ color: 'var(--track)', fontSize: 11 }}>:</span>
+        <span style={{ color: bWon ? '#4CAF50' : 'var(--text-5)' }}>{cs.team_b_score ?? '–'}</span>
       </div>
 
       {/* Team B */}
@@ -1243,7 +1243,7 @@ const ResultRow = memo(function ResultRow({ match: m, onMatchClick }) {
       {tierLetter && (
         <span style={{
           flexShrink: 0, fontSize: 9, fontWeight: 800, borderRadius: 5, padding: '2px 6px',
-          color: isHero ? '#f0c040' : '#555',
+          color: isHero ? '#f0c040' : 'var(--text-6)',
           background: isHero ? 'rgba(240,192,64,.12)' : 'var(--surface-2)',
           border: isHero ? '1px solid rgba(240,192,64,.35)' : '1px solid #2b3a58',
         }}>{tierLetter}</span>
@@ -2214,7 +2214,7 @@ export default function Dashboard() {
         marginBottom: 18,
         padding: '10px 12px',
         borderRadius: 12,
-        border: '1px solid #232f47',
+        border: '1px solid var(--line)',
         background: 'var(--surface)',
         display: 'flex',
         alignItems: 'center',
@@ -2226,7 +2226,7 @@ export default function Dashboard() {
           <div style={{ fontSize: 11, fontWeight: 800, color: '#c4c4c4', letterSpacing: '.8px', textTransform: 'uppercase' }}>
             Tournament Tier Filter
           </div>
-          <div style={{ fontSize: 11, color: '#666', marginTop: 3 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-5)', marginTop: 3 }}>
             {showAllTournamentTiers ? 'Tüm turnuvalar gösteriliyor' : 'Sadece S-Tier ve A-Tier'}
           </div>
         </div>
@@ -2288,8 +2288,8 @@ export default function Dashboard() {
           {myFeedMatches.length === 0 ? (
             <div style={{
               padding: '14px 16px', borderRadius: 12,
-              background: 'var(--surface)', border: '1px solid #232f47',
-              fontSize: 11, color: '#3a3a3a', textAlign: 'center',
+              background: 'var(--surface)', border: '1px solid var(--line)',
+              fontSize: 11, color: 'var(--text-6)', textAlign: 'center',
             }}>
               Takip ettiğin takımlar/oyuncular için yakın tarihli maç yok.
             </div>
@@ -2316,13 +2316,13 @@ export default function Dashboard() {
         </div>
 
         <div style={{ border: '1px solid #2b3a58', borderRadius: 14, background: 'radial-gradient(circle at 8% 8%, rgba(200,16,46,.18), transparent 35%), var(--surface)', overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1fr .9fr .9fr .9fr', gap: 8, padding: '11px 14px', borderBottom: '1px solid #202020', fontSize: 10, color: '#8b8b8b', textTransform: 'uppercase', letterSpacing: '.6px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1fr .9fr .9fr .9fr', gap: 8, padding: '11px 14px', borderBottom: '1px solid var(--surface-2)', fontSize: 10, color: '#8b8b8b', textTransform: 'uppercase', letterSpacing: '.6px' }}>
             <div>Sıra</div><div>Oyuncu</div><div>Takım</div><div>Maç</div><div>Ort. Etki</div><div>Form</div>
           </div>
-          {dreamLoading && <div style={{ padding: 14, color: '#777', fontSize: 12 }}>Dream Team hesaplanıyor...</div>}
-          {!dreamLoading && dreamTeam.length === 0 && <div style={{ padding: 14, color: '#777', fontSize: 12 }}>Haftalık oyuncu verisi bulunamadı.</div>}
+          {dreamLoading && <div style={{ padding: 14, color: 'var(--text-5)', fontSize: 12 }}>Dream Team hesaplanıyor...</div>}
+          {!dreamLoading && dreamTeam.length === 0 && <div style={{ padding: 14, color: 'var(--text-5)', fontSize: 12 }}>Haftalık oyuncu verisi bulunamadı.</div>}
           {!dreamLoading && dreamTeam.map((p, idx) => (
-            <div key={p.id} onClick={() => navigate(`/player/${p.id}`)} style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1fr .9fr .9fr .9fr', gap: 8, alignItems: 'center', padding: '11px 14px', borderBottom: '1px solid #232f47', cursor: 'pointer', background: idx === 0 ? 'linear-gradient(90deg, rgba(200,16,46,.22), transparent 62%)' : 'transparent' }}>
+            <div key={p.id} onClick={() => navigate(`/player/${p.id}`)} style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1fr .9fr .9fr .9fr', gap: 8, alignItems: 'center', padding: '11px 14px', borderBottom: '1px solid var(--line)', cursor: 'pointer', background: idx === 0 ? 'linear-gradient(90deg, rgba(200,16,46,.22), transparent 62%)' : 'transparent' }}>
               <div style={{ fontWeight: 800, color: '#f4f4f4' }}>#{idx + 1}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                 <InitialsImage
@@ -2333,7 +2333,7 @@ export default function Dashboard() {
                   height={28}
                   borderRadius='50%'
                   objectFit='cover'
-                  style={{ border: '1px solid #333' }}
+                  style={{ border: '1px solid var(--track)' }}
                 />
                 <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nickname || 'Unknown'}</span>
               </div>
@@ -2347,7 +2347,7 @@ export default function Dashboard() {
                   borderRadius={6}
                   objectFit='contain'
                 />
-                <span style={{ fontSize: 11, color: '#bbb', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.team?.name || 'Free Agent'}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.team?.name || 'Free Agent'}</span>
               </div>
               <div style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{p.sampleMatches}</div>
               <div style={{ fontWeight: 800, color: '#ff9aa9', fontVariantNumeric: 'tabular-nums' }}>{p.avgImpact.toFixed(2)}</div>
@@ -2374,9 +2374,9 @@ export default function Dashboard() {
           <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(255,70,85,.3),transparent)' }} />
           <Link
             to="/matches"
-            style={{ fontSize: 10, color: '#383838', textDecoration: 'none', transition: 'color .15s' }}
-            onMouseEnter={e => e.currentTarget.style.color = '#888'}
-            onMouseLeave={e => e.currentTarget.style.color = '#383838'}
+            style={{ fontSize: 10, color: 'var(--text-5)', textDecoration: 'none', transition: 'color .15s' }}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--text-4)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-5)'}
           >Tümü →</Link>
         </div>
 
@@ -2385,9 +2385,9 @@ export default function Dashboard() {
             {[1,2,3].map(i => <Sk key={i} h="150px" r="16px" />)}
           </div>
         ) : liveMatches.length === 0 ? (
-          <div style={{ padding: '20px', borderRadius: 16, background: 'var(--surface)', border: '1px solid #232f47', textAlign: 'center' }}>
+          <div style={{ padding: '20px', borderRadius: 16, background: 'var(--surface)', border: '1px solid var(--line)', textAlign: 'center' }}>
             <div style={{ marginBottom: 6, display: 'flex', justifyContent: 'center' }}><Moon size={22} color="var(--text-6)" /></div>
-            <div style={{ fontSize: 11, color: '#2a2a2a' }}>Şu an canlı maç yok</div>
+            <div style={{ fontSize: 11, color: 'var(--line-2)' }}>Şu an canlı maç yok</div>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill,minmax(230px,1fr))', gap: 12 }}>
@@ -2418,9 +2418,9 @@ export default function Dashboard() {
             <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(240,192,64,.3),transparent)' }} />
             <Link
               to="/matches?tab=past"
-              style={{ fontSize: 10, color: '#383838', textDecoration: 'none', transition: 'color .15s' }}
-              onMouseEnter={e => e.currentTarget.style.color = '#888'}
-              onMouseLeave={e => e.currentTarget.style.color = '#383838'}
+              style={{ fontSize: 10, color: 'var(--text-5)', textDecoration: 'none', transition: 'color .15s' }}
+              onMouseEnter={e => e.currentTarget.style.color = 'var(--text-4)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'var(--text-5)'}
             >Tümü →</Link>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -2479,9 +2479,9 @@ export default function Dashboard() {
               <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(76,175,80,.3),transparent)' }} />
               <Link
                 to="/matches"
-                style={{ fontSize: 10, color: '#383838', textDecoration: 'none', transition: 'color .15s' }}
-                onMouseEnter={e => e.currentTarget.style.color = '#888'}
-                onMouseLeave={e => e.currentTarget.style.color = '#383838'}
+                style={{ fontSize: 10, color: 'var(--text-5)', textDecoration: 'none', transition: 'color .15s' }}
+                onMouseEnter={e => e.currentTarget.style.color = 'var(--text-4)'}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-5)'}
               >Tümü →</Link>
             </div>
 
@@ -2490,7 +2490,7 @@ export default function Dashboard() {
                 {[1,2,3,4,5].map(i => <Sk key={i} h="40px" r="12px" />)}
               </div>
             ) : groups.length === 0 ? (
-              <div style={{ padding: '16px', borderRadius: 14, background: 'var(--surface)', border: '1px solid #232f47', textAlign: 'center', fontSize: 11, color: '#2a2a2a' }}>
+              <div style={{ padding: '16px', borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--line)', textAlign: 'center', fontSize: 11, color: 'var(--line-2)' }}>
                 Yaklaşan maç bulunamadı
               </div>
             ) : (
@@ -2504,15 +2504,15 @@ export default function Dashboard() {
                     }}>
                       <span style={{
                         fontSize: 9, fontWeight: 900, letterSpacing: '.8px',
-                        textTransform: 'uppercase', color: g.key === todayStr ? '#4CAF50' : '#333',
+                        textTransform: 'uppercase', color: g.key === todayStr ? '#4CAF50' : 'var(--track)',
                         background: g.key === todayStr ? 'rgba(76,175,80,.1)' : 'transparent',
                         border: g.key === todayStr ? '1px solid rgba(76,175,80,.25)' : '1px solid transparent',
                         padding: '2px 8px', borderRadius: 6, flexShrink: 0,
                       }}>
                         {g.label}
                       </span>
-                      <div style={{ flex: 1, height: 1, background: g.key === todayStr ? 'rgba(76,175,80,.15)' : '#232f47' }} />
-                      <span style={{ fontSize: 9, color: '#2a2a2a', flexShrink: 0 }}>{g.matches.length} maç</span>
+                      <div style={{ flex: 1, height: 1, background: g.key === todayStr ? 'rgba(76,175,80,.15)' : 'var(--line)' }} />
+                      <span style={{ fontSize: 9, color: 'var(--line-2)', flexShrink: 0 }}>{g.matches.length} maç</span>
                     </div>
 
                     {(() => {
@@ -2529,12 +2529,12 @@ export default function Dashboard() {
                             <button
                               onClick={() => setExpandedScheduleGroups(prev => new Set([...prev, g.key]))}
                               style={{
-                                background: 'none', border: '1px solid #232f47', borderRadius: 8,
-                                color: '#3a3a3a', fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                                background: 'none', border: '1px solid var(--line)', borderRadius: 8,
+                                color: 'var(--text-6)', fontSize: 10, fontWeight: 600, cursor: 'pointer',
                                 padding: '7px 0', width: '100%', transition: 'all .15s',
                               }}
-                              onMouseEnter={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#888' }}
-                              onMouseLeave={e => { e.currentTarget.style.borderColor = '#232f47'; e.currentTarget.style.color = '#3a3a3a' }}
+                              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--line-2)'; e.currentTarget.style.color = 'var(--text-4)' }}
+                              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line)'; e.currentTarget.style.color = 'var(--text-6)' }}
                             >
                               +{hidden} maç daha göster
                             </button>
@@ -2543,12 +2543,12 @@ export default function Dashboard() {
                             <button
                               onClick={() => setExpandedScheduleGroups(prev => { const s = new Set(prev); s.delete(g.key); return s })}
                               style={{
-                                background: 'none', border: '1px solid #232f47', borderRadius: 8,
-                                color: '#3a3a3a', fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                                background: 'none', border: '1px solid var(--line)', borderRadius: 8,
+                                color: 'var(--text-6)', fontSize: 10, fontWeight: 600, cursor: 'pointer',
                                 padding: '7px 0', width: '100%', transition: 'all .15s',
                               }}
-                              onMouseEnter={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#888' }}
-                              onMouseLeave={e => { e.currentTarget.style.borderColor = '#232f47'; e.currentTarget.style.color = '#3a3a3a' }}
+                              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--line-2)'; e.currentTarget.style.color = 'var(--text-4)' }}
+                              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line)'; e.currentTarget.style.color = 'var(--text-6)' }}
                             >
                               Daralt ↑
                             </button>
@@ -2564,12 +2564,12 @@ export default function Dashboard() {
                     to="/matches"
                     style={{
                       display: 'block', textAlign: 'center', padding: '9px',
-                      borderRadius: 10, background: 'var(--bg)', border: '1px solid #232f47',
-                      fontSize: 10, color: '#383838', textDecoration: 'none',
+                      borderRadius: 10, background: 'var(--bg)', border: '1px solid var(--line)',
+                      fontSize: 10, color: 'var(--text-5)', textDecoration: 'none',
                       transition: 'all .15s', marginTop: 10,
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#888' }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = '#232f47'; e.currentTarget.style.color = '#383838' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--line-2)'; e.currentTarget.style.color = 'var(--text-4)' }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line)'; e.currentTarget.style.color = 'var(--text-5)' }}
                   >
                     Tüm program →
                   </Link>
@@ -2581,13 +2581,13 @@ export default function Dashboard() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                       <span style={{
                         fontSize: 9, fontWeight: 800, letterSpacing: '.6px', textTransform: 'uppercase',
-                        color: '#3a3a3a', padding: '2px 8px', borderRadius: 6,
+                        color: 'var(--text-6)', padding: '2px 8px', borderRadius: 6,
                         border: '1px solid #2b3a58',
                       }}>
                         ⟳ Sonuç Bekleniyor
                       </span>
-                      <div style={{ flex: 1, height: 1, background: '#232f47' }} />
-                      <span style={{ fontSize: 9, color: '#252525' }}>veri gecikmesi</span>
+                      <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
+                      <span style={{ fontSize: 9, color: 'var(--surface-2)' }}>veri gecikmesi</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 3, opacity: 0.45 }}>
                       {stale.map(m => (
@@ -2637,7 +2637,7 @@ export default function Dashboard() {
           padding: isMobile ? '20px 16px' : '28px 24px',
           borderRadius: 20,
           background: 'linear-gradient(135deg,var(--surface-2),var(--surface))',
-          border: '1px solid #232f47',
+          border: '1px solid var(--line)',
           display: 'flex', flexDirection: 'column', justifyContent: 'center',
         }}>
           <h1 style={{
@@ -2649,7 +2649,7 @@ export default function Dashboard() {
               <span style={{ fontSize: '1.22em' }}>X</span>t
             </span>
           </h1>
-          <p style={{ margin: '0 0 16px', fontSize: 11, color: '#444', lineHeight: 1.6 }}>
+          <p style={{ margin: '0 0 16px', fontSize: 11, color: 'var(--text-6)', lineHeight: 1.6 }}>
             Canli sonuclar · PandaScore verileri
           </p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -2691,7 +2691,7 @@ export default function Dashboard() {
             <div style={{ fontSize: 22, fontWeight: 900, color: s.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
               {s.value}
             </div>
-            <div style={{ fontSize: 9, color: '#383838', textTransform: 'uppercase', letterSpacing: '.6px', marginTop: 4 }}>
+            <div style={{ fontSize: 9, color: 'var(--text-5)', textTransform: 'uppercase', letterSpacing: '.6px', marginTop: 4 }}>
               {s.label}
             </div>
           </div>
@@ -2703,7 +2703,7 @@ export default function Dashboard() {
         {[
           { to: '/matches',  Icon: CalendarDays, label: 'Maç Takvimi', sub: 'Yaklaşan & Biten',  color: '#FF4655' },
           { to: '/tournaments', Icon: Trophy, label: 'Turnuvalar', sub: 'Aktif ve Geçmiş',  color: '#FFB800' },
-          { to: '/scout',    Icon: FlaskConical, label: 'Scout Engine', sub: 'B2B · Private Beta', color: '#5eead4' },
+          { to: '/scout',    Icon: FlaskConical, label: 'Scout Engine', sub: 'B2B · Private Beta', color: '#C25CD0' },
           { to: '/news',     Icon: Newspaper, label: 'Haberler',    sub: 'Son gelişmeler',     color: '#4CAF50' },
         ].map(l => (
           <Link key={l.to} to={l.to} style={{ textDecoration: 'none' }}>
@@ -2726,7 +2726,7 @@ export default function Dashboard() {
             >
               <l.Icon size={20} strokeWidth={2} color={l.color} style={{ marginBottom: 7 }} />
               <div style={{ fontSize: 12, fontWeight: 700, color: l.color, marginBottom: 3 }}>{l.label}</div>
-              <div style={{ fontSize: 10, color: '#2a2a2a' }}>{l.sub}</div>
+              <div style={{ fontSize: 10, color: 'var(--line-2)' }}>{l.sub}</div>
             </div>
           </Link>
         ))}

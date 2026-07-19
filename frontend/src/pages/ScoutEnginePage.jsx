@@ -120,7 +120,7 @@ function buildRealReports(rows) {
 function SampleReportCard({ report, player, real = false }) {
   return (
     <div style={{
-      background: 'linear-gradient(160deg, rgba(20,184,166,.06), var(--surface))',
+      background: 'linear-gradient(160deg, rgba(194,92,208,.06), var(--surface))',
       border: '1px solid rgba(194,92,208,.18)', borderRadius: 16, padding: 16,
       display: 'flex', flexDirection: 'column', gap: 10,
     }}>
@@ -134,7 +134,7 @@ function SampleReportCard({ report, player, real = false }) {
           <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {player?.nickname || 'Örnek Oyuncu'}
           </div>
-          <div style={{ fontSize: 11, color: '#8bd9cd' }}>
+          <div style={{ fontSize: 11, color: 'var(--ai)' }}>
             {report.role}{report.game ? ` · ${report.game}` : ''}{player?.team_name ? ` · ${player.team_name}` : ''}
           </div>
         </div>
@@ -149,7 +149,7 @@ function SampleReportCard({ report, player, real = false }) {
       <div style={{ display: 'flex', gap: 8 }}>
         {report.metrics.map(([label, val]) => (
           <div key={label} style={{ flex: 1, background: 'var(--hover)', border: '1px solid var(--line)', borderRadius: 9, padding: '7px 8px', textAlign: 'center' }}>
-            <div style={{ fontSize: 15, fontWeight: 900, color: '#dffaf5', fontVariantNumeric: 'tabular-nums' }}>{val}</div>
+            <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', fontVariantNumeric: 'tabular-nums' }}>{val}</div>
             <div style={{ fontSize: 9, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px' }}>{label}</div>
           </div>
         ))}
@@ -187,7 +187,7 @@ function DepthStrip({ depth }) {
   if (!loading && tiles.length === 0) return null
 
   const tileBox = {
-    background: 'linear-gradient(160deg, rgba(20,184,166,.06), var(--surface))',
+    background: 'linear-gradient(160deg, rgba(194,92,208,.06), var(--surface))',
     border: '1px solid rgba(194,92,208,.16)', borderRadius: 13, padding: '13px 12px', textAlign: 'center',
   }
 
@@ -195,7 +195,7 @@ function DepthStrip({ depth }) {
     <section style={{ marginBottom: 26 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
         <span style={{ width: 7, height: 7, borderRadius: '50%', background: ACCENT, boxShadow: `0 0 8px ${ACCENT}`, flexShrink: 0, animation: 'scoutPulse 1.6s ease-in-out infinite' }} />
-        <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#8bd9cd' }}>
+        <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--ai)' }}>
           Canlı arşiv — şu an bu derinlikte çalışıyor
         </span>
       </div>
@@ -211,7 +211,7 @@ function DepthStrip({ depth }) {
           : tiles.map(t => (
               <div key={t.label} style={tileBox}>
                 <div style={{ marginBottom: 6, display: 'flex', justifyContent: 'center', opacity: .85 }}>{t.Icon && <t.Icon size={18} color={ACCENT} />}</div>
-                <div style={{ fontSize: 22, fontWeight: 900, color: '#dffaf5', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{t.value}</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{t.value}</div>
                 <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: 6 }}>{t.label}</div>
               </div>
             ))}
@@ -327,7 +327,7 @@ export default function ScoutEnginePage() {
         {/* Hero */}
         <section style={{
           borderRadius: 20, border: '1px solid rgba(194,92,208,.2)', overflow: 'hidden',
-          background: `radial-gradient(circle at 85% 10%, rgba(20,184,166,.16), transparent 40%), linear-gradient(160deg,var(--surface),var(--bg))`,
+          background: `radial-gradient(circle at 85% 10%, rgba(194,92,208,.16), transparent 40%), linear-gradient(160deg,var(--surface),var(--bg))`,
           padding: '34px 24px', marginBottom: 22,
         }}>
           <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase', color: ACCENT, border: `1px solid ${ACCENT}55`, borderRadius: 999, padding: '4px 12px' }}>
@@ -367,7 +367,7 @@ export default function ScoutEnginePage() {
         <section style={{ marginBottom: 28 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 6 }}>
             <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>Örnek Scouting Raporları</h2>
-            <span style={{ fontSize: 12, color: realReports.length > 0 ? '#8bd9cd' : 'var(--text-4)' }}>
+            <span style={{ fontSize: 12, color: realReports.length > 0 ? 'var(--ai)' : 'var(--text-4)' }}>
               {realReports.length > 0 ? '● Canlı veriden üretildi — illüstratif değil' : "Beta'da her oyuncu için otomatik üretilir"}
             </span>
           </div>
@@ -392,7 +392,7 @@ export default function ScoutEnginePage() {
         {/* Waitlist form */}
         <section id="waitlist" style={{
           borderRadius: 18, border: `1px solid ${ACCENT}33`, padding: 24,
-          background: 'linear-gradient(160deg, rgba(20,184,166,.07), var(--surface))',
+          background: 'linear-gradient(160deg, rgba(194,92,208,.07), var(--surface))',
         }}>
           <h2 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 900 }}>Kapalı Beta'ya Erken Erişim</h2>
           <p style={{ margin: '0 0 18px', fontSize: 13.5, color: 'var(--text-2)', maxWidth: 560 }}>

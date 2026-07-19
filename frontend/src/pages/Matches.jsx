@@ -935,7 +935,7 @@ function Matches() {
                           style={{
                             display: 'inline-flex', alignItems: 'center', gap: 4,
                             fontSize: 10, fontWeight: 700,
-                            color: '#a78bfa', background: 'rgba(167,139,250,.12)',
+                            color: 'var(--ai)', background: 'rgba(167,139,250,.12)',
                             border: '1px solid rgba(167,139,250,.35)',
                             borderRadius: 6, padding: '2px 8px',
                             textDecoration: 'none',

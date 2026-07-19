@@ -142,7 +142,7 @@ function GameFilterTabs({ activeGame, setActiveGame }) {
               borderRadius: 999,
               border: active ? `1px solid ${game.color}` : '1px solid var(--line)',
               background: active ? `${game.color}22` : 'var(--surface)',
-              color: active ? '#ffffff' : 'var(--text-3)',
+              color: active ? game.color : 'var(--text-3)',
               fontSize: 12,
               fontWeight: 700,
               letterSpacing: '.2px',
@@ -313,17 +313,17 @@ export default function RankingsPage() {
           gap: 12,
           marginBottom: 16,
         }}>
-          <div style={{ background: '#131b2bd9', border: '1px solid var(--line)', borderRadius: 14, padding: 14 }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14, padding: 14 }}>
             <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Lider</div>
             <div style={{ marginTop: 4, fontWeight: 800, fontSize: 18 }}>{top?.team?.name || '—'}</div>
             <div style={{ marginTop: 2, fontSize: 12, color: '#d74a61' }}>{top ? `${top.rating} Puan` : 'Veri bekleniyor'}</div>
           </div>
-          <div style={{ background: '#131b2bd9', border: '1px solid var(--line)', borderRadius: 14, padding: 14 }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14, padding: 14 }}>
             <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Listelenen Takim</div>
             <div style={{ marginTop: 4, fontWeight: 800, fontSize: 22 }}>{filtered.length}</div>
             <div style={{ marginTop: 2, fontSize: 12, color: 'var(--text-1)' }}>Min. 6 mac · gercek turnuva</div>
           </div>
-          <div style={{ background: '#131b2bd9', border: '1px solid var(--line)', borderRadius: 14, padding: 14 }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14, padding: 14 }}>
             <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Model</div>
             <div style={{ marginTop: 4, fontWeight: 800, fontSize: 16 }}>Power = Form × Tier × Güncellik</div>
             <div style={{ marginTop: 2, fontSize: 12, color: 'var(--text-1)' }}>Kalite: karşılaşılan tier (güncellik ağırlıklı)</div>
@@ -486,7 +486,7 @@ export default function RankingsPage() {
                       borderRadius: 8,
                       border: followed ? `1px solid ${FEXT.accent}` : '1px solid var(--line)',
                       background: followed ? FEXT.accentSoftBg : 'var(--surface)',
-                      color: followed ? '#fff' : 'var(--text-3)',
+                      color: followed ? FEXT.accentText : 'var(--text-3)',
                       cursor: 'pointer',
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     }}

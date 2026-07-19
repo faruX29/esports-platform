@@ -210,7 +210,7 @@ function ProfessionalStatsPanel({ stats, isMobile = false }) {
           <ProMetricCard label="KDA" value={stats.kda.toFixed(2)} sub={`K/D ${stats.kd.toFixed(2)}`} accent={kdaColor} />
           <ProMetricCard label="Kazanma Oranı" value={`${Math.round(stats.winRate)}%`} sub={`${stats.sampleMatches} örnek maç`} accent={wrColor} />
           {useAcs
-            ? <ProMetricCard label="ACS" value={stats.acs} sub="Combat Score" accent="#5eead4" />
+            ? <ProMetricCard label="ACS" value={stats.acs} sub="Combat Score" accent="#C25CD0" />
             : <ProMetricCard label="Headshot" value={`${Math.round(stats.hsPct)}%`} sub="Precision" accent={hsColor} />}
           <ProMetricCard label="Impact" value={Math.round(stats.impact)} sub="Scout Score" accent={impactColor} />
         </div>
@@ -225,7 +225,7 @@ function ProfessionalStatsPanel({ stats, isMobile = false }) {
           <ProgressBar pct={Math.min(100, stats.kda * 42)} color={kdaColor} label="KDA Pressure" value={stats.kda.toFixed(2)} />
           <ProgressBar pct={stats.winRate} color={wrColor} label="Kazanma Oranı" value={`${Math.round(stats.winRate)}%`} />
           {useAcs
-            ? <ProgressBar pct={Math.min(100, (stats.acs / 350) * 100)} color="#5eead4" label="ACS" value={String(stats.acs)} />
+            ? <ProgressBar pct={Math.min(100, (stats.acs / 350) * 100)} color="#C25CD0" label="ACS" value={String(stats.acs)} />
             : <ProgressBar pct={stats.hsPct} color={hsColor} label="Headshot %" value={`${Math.round(stats.hsPct)}%`} />}
           <ProgressBar pct={Math.min(100, stats.avgKills * 10)} color="#9ad8ff" label="Avg Kills / Match" value={stats.avgKills.toFixed(1)} />
           <ProgressBar pct={Math.min(100, stats.avgAssists * 12)} color="#cab0ff" label="Avg Assists / Match" value={stats.avgAssists.toFixed(1)} />
@@ -839,7 +839,7 @@ function PlayerSignatureElements({ items = [] }) {
       <SectionTitle Icon={Sparkles} label="Player Signature" />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 10 }}>
         {items.map((item, idx) => (
-          <div key={`${item.type}_${item.name}_${idx}`} style={{ borderRadius: 12, border: '1px solid rgba(194,92,208,.22)', background: 'linear-gradient(130deg, rgba(194,92,208,.1), rgba(10,10,10,.92))', padding: '10px 11px', display: 'flex', alignItems: 'center', gap: 9 }}>
+          <div key={`${item.type}_${item.name}_${idx}`} style={{ borderRadius: 12, border: '1px solid rgba(194,92,208,.22)', background: 'linear-gradient(130deg, rgba(194,92,208,.1), var(--surface))', padding: '10px 11px', display: 'flex', alignItems: 'center', gap: 9 }}>
             {item.image
               ? <img src={item.image} alt={item.name} style={{ width: 30, height: 30, objectFit: 'contain', borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--line)' }} />
               : <div style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--line)', display: 'grid', placeItems: 'center' }}>{item.type === 'Weapon' ? <Crosshair size={16} color="#ffd089" /> : <Sparkles size={16} color="#9fe7ff" />}</div>}
@@ -1226,7 +1226,7 @@ export default function PlayerPage() {
               color={(individualStats?.impact ?? analytics.impactScore) >= 70 ? '#4CAF50' : (individualStats?.impact ?? analytics.impactScore) >= 45 ? '#818cf8' : '#FF4655'}
             />
             {individualStats && <StatBox Icon={Zap} value={individualStats.kd.toFixed(2)} label="K/D" color="#ff6a7f" />}
-            {individualStats?.acs != null && <StatBox Icon={Flame} value={individualStats.acs} label="ACS" color="#5eead4" />}
+            {individualStats?.acs != null && <StatBox Icon={Flame} value={individualStats.acs} label="ACS" color="#C25CD0" />}
             {individualStats && individualStats.hsPct > 0 && <StatBox Icon={Crosshair} value={`${Math.round(individualStats.hsPct)}%`} label="HS%" color="var(--text-1)" />}
           </div>
         )}

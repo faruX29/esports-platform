@@ -1054,7 +1054,7 @@ const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, gc, highl
             background: '#FF4655', boxShadow: '0 0 0 0 rgba(255,70,85,.7)',
             animation: 'livePulse 1.2s infinite',
           }} />
-          Live
+          CANLI
         </div>
       )}
 
@@ -1577,7 +1577,7 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
       {bracketSide === 'upper' && prepared.thirdPlace && (
         <div style={{ marginTop: 14 }}>
           <div style={{ fontSize: 10, color: 'var(--text-4)', marginBottom: 8, letterSpacing: '.8px', textTransform: 'uppercase' }}>
-            3rd Place Decider
+            3.'lük Maçı
           </div>
           <div style={{ width: BRACKET_CARD_W }}>
             <BracketMatchCard
@@ -1645,7 +1645,7 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
             background: '#FF4655', boxShadow: '0 0 0 0 rgba(255,70,85,.7)',
             animation: 'livePulse 1.2s infinite',
           }} />
-          Live
+          CANLI
         </div>
       )}
 
@@ -1721,7 +1721,7 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
             ) : (
               <span style={{ fontSize: 11, fontWeight: 700,
                 color: isLive ? '#FF4655' : 'var(--text-5)' }}>
-                {isLive ? 'LIVE' : 'VS'}
+                {isLive ? 'CANLI' : 'VS'}
               </span>
             )}
           </div>
@@ -2101,7 +2101,7 @@ export default function TournamentPage() {
               background: 'rgba(255,70,85,.15)', border: '1px solid rgba(255,70,85,.5)',
               color: '#FF4655', animation: 'pulse 1.2s infinite',
               display: 'inline-flex', alignItems: 'center', gap: 5,
-            }}><span style={{ width: 7, height: 7, borderRadius: '50%', background: '#FF4655' }} /> LIVE</span>
+            }}><span style={{ width: 7, height: 7, borderRadius: '50%', background: '#FF4655' }} /> CANLI</span>
           )}
         </div>
 
@@ -2189,9 +2189,9 @@ export default function TournamentPage() {
           {/* Kompakt Stat Chips */}
           <StatChips chips={[
             { Icon: Gamepad2,    label: 'Maç',      value: matches.length,                              color: '#818cf8' },
-            { Icon: CircleCheck, label: 'Upcoming', value: upcomingMatches.length,                      color: '#4CAF50' },
+            { Icon: CircleCheck, label: 'Yaklaşan', value: upcomingMatches.length,                      color: '#4CAF50' },
             { Icon: CircleCheck, label: 'Bitti',    value: pastMatches.length,                          color: '#FF8C00' },
-            { Icon: Radio,       label: 'Live',     value: matches.filter(m => m.status === 'running').length, color: '#FF4655' },
+            { Icon: Radio,       label: 'Canlı',    value: matches.filter(m => m.status === 'running').length, color: '#FF4655' },
           ]} />
         </div>
       </div>
@@ -2385,7 +2385,7 @@ export default function TournamentPage() {
           {/* Tabs */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
             {[
-              { key: 'upcoming', label: 'Upcoming / Live', Icon: Radio, count: upcomingMatches.length },
+              { key: 'upcoming', label: 'Yaklaşan / Canlı', Icon: Radio, count: upcomingMatches.length },
               { key: 'past',     label: 'Geçmiş Sonuçlar', Icon: CircleCheck, count: pastMatches.length     },
             ].map(t => {
               const active = activeTab === t.key

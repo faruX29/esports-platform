@@ -374,7 +374,7 @@ function MatchCard({ match, teamId, navigate }) {
 
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           {isLive && (
-            <span style={{ fontSize: 10, fontWeight: 800, color: '#FF4655', animation: 'pulse 1.5s infinite', display: 'inline-flex', alignItems: 'center', gap: 4 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF4655' }} /> LIVE</span>
+            <span style={{ fontSize: 10, fontWeight: 800, color: '#FF4655', animation: 'pulse 1.5s infinite', display: 'inline-flex', alignItems: 'center', gap: 4 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF4655' }} /> CANLI</span>
           )}
           {isFin && (
             <span style={{

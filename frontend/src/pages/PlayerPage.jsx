@@ -200,7 +200,7 @@ function ProfessionalStatsPanel({ stats, isMobile = false }) {
 
   return (
     <div style={{ marginBottom: 24 }}>
-      <SectionTitle Icon={Brain} label="Professional Stats Panel" />
+      <SectionTitle Icon={Brain} label="Profesyonel İstatistik Paneli" />
 
       <div style={{
         borderRadius: 14,
@@ -212,9 +212,9 @@ function ProfessionalStatsPanel({ stats, isMobile = false }) {
           <ProMetricCard label="KDA" value={stats.kda.toFixed(2)} sub={`K/D ${stats.kd.toFixed(2)}`} accent={kdaColor} />
           <ProMetricCard label="Kazanma Oranı" value={`${Math.round(stats.winRate)}%`} sub={`${stats.sampleMatches} örnek maç`} accent={wrColor} />
           {useAcs
-            ? <ProMetricCard label="ACS" value={stats.acs} sub="Combat Score" accent="#C25CD0" />
-            : <ProMetricCard label="Headshot" value={`${Math.round(stats.hsPct)}%`} sub="Precision" accent={hsColor} />}
-          <ProMetricCard label="Impact" value={Math.round(stats.impact)} sub="Scout Score" accent={impactColor} />
+            ? <ProMetricCard label="ACS" value={stats.acs} sub="Dövüş Skoru" accent="#C25CD0" />
+            : <ProMetricCard label="Kafa Vuruşu" value={`${Math.round(stats.hsPct)}%`} sub="İsabet" accent={hsColor} />}
+          <ProMetricCard label="Etki" value={Math.round(stats.impact)} sub="Scout Skoru" accent={impactColor} />
         </div>
 
         <div style={{
@@ -229,9 +229,9 @@ function ProfessionalStatsPanel({ stats, isMobile = false }) {
           {useAcs
             ? <ProgressBar pct={Math.min(100, (stats.acs / 350) * 100)} color="#C25CD0" label="ACS" value={String(stats.acs)} />
             : <ProgressBar pct={stats.hsPct} color={hsColor} label="Headshot %" value={`${Math.round(stats.hsPct)}%`} />}
-          <ProgressBar pct={Math.min(100, stats.avgKills * 10)} color="#9ad8ff" label="Avg Kills / Match" value={stats.avgKills.toFixed(1)} />
-          <ProgressBar pct={Math.min(100, stats.avgAssists * 12)} color="#cab0ff" label="Avg Assists / Match" value={stats.avgAssists.toFixed(1)} />
-          <ProgressBar pct={Math.max(0, 100 - Math.min(100, stats.avgDeaths * 10))} color="var(--text-1)" label="Death Control" value={stats.avgDeaths.toFixed(1)} />
+          <ProgressBar pct={Math.min(100, stats.avgKills * 10)} color="#9ad8ff" label="Maç Başı Öldürme" value={stats.avgKills.toFixed(1)} />
+          <ProgressBar pct={Math.min(100, stats.avgAssists * 12)} color="#cab0ff" label="Maç Başı Asist" value={stats.avgAssists.toFixed(1)} />
+          <ProgressBar pct={Math.max(0, 100 - Math.min(100, stats.avgDeaths * 10))} color="var(--text-1)" label="Ölüm Kontrolü" value={stats.avgDeaths.toFixed(1)} />
         </div>
       </div>
     </div>
@@ -390,7 +390,7 @@ function ScoutPanel({ analytics, individual }) {
 
   return (
     <div style={{ marginBottom: 24 }}>
-      <SectionTitle Icon={ClipboardList} label="Scout Analytics" />
+      <SectionTitle Icon={ClipboardList} label="Scout Analitiği" />
 
       {/* Impact + W/L */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
@@ -446,15 +446,15 @@ function ScoutPanel({ analytics, individual }) {
             <Target size={13} /> Individual Performance (Player Match Stats)
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(100px,1fr))', gap: 10, marginBottom: 12 }}>
-            <StatBox Icon={Swords} value={individual.totalKills} label="Kills" color="#ff6a7f" />
-            <StatBox Icon={Skull} value={individual.totalDeaths} label="Deaths" color="var(--text-1)" />
-            <StatBox Icon={Handshake} value={individual.totalAssists} label="Assists" color="#93c5fd" />
+            <StatBox Icon={Swords} value={individual.totalKills} label="Öldürme" color="#ff6a7f" />
+            <StatBox Icon={Skull} value={individual.totalDeaths} label="Ölüm" color="var(--text-1)" />
+            <StatBox Icon={Handshake} value={individual.totalAssists} label="Asist" color="#93c5fd" />
             <StatBox Icon={Crosshair} value={`${Math.round(individual.hsPct)}%`} label="HS%" color="#fff" />
           </div>
-          <ProgressBar pct={individualBars.kdBar} color="#ff6a7f" label="K/D Ratio" value={individual.kd.toFixed(2)} />
-          <ProgressBar pct={individualBars.hsBar} color="var(--text-1)" label="Headshot Rate" value={`${Math.round(individual.hsPct)}%`} />
+          <ProgressBar pct={individualBars.kdBar} color="#ff6a7f" label="K/D Oranı" value={individual.kd.toFixed(2)} />
+          <ProgressBar pct={individualBars.hsBar} color="var(--text-1)" label="Kafa Vuruşu Oranı" value={`${Math.round(individual.hsPct)}%`} />
           <ProgressBar pct={individualBars.winBar} color="#4CAF50" label="Kazanma Oranı" value={`${Math.round(individual.winRate)}%`} />
-          <ProgressBar pct={individualBars.impactBar} color="#ff9aa9" label="Impact Score" value={`${Math.round(individual.impact)}`} />
+          <ProgressBar pct={individualBars.impactBar} color="#ff9aa9" label="Etki Skoru" value={`${Math.round(individual.impact)}`} />
         </div>
       )}
 
@@ -649,7 +649,7 @@ function CareerTimeline({ entries }) {
 
   return (
     <div style={{ marginBottom: 24 }}>
-      <SectionTitle Icon={Compass} label="Career Timeline" />
+      <SectionTitle Icon={Compass} label="Kariyer Zaman Çizelgesi" />
       <div style={{
         position: 'relative',
         paddingLeft: 18,
@@ -1240,7 +1240,7 @@ export default function PlayerPage() {
             <StatBox
               Icon={Target}
               value={Math.round(individualStats?.impact ?? analytics.impactScore)}
-              label="Impact"
+              label="Etki"
               color={(individualStats?.impact ?? analytics.impactScore) >= 70 ? '#4CAF50' : (individualStats?.impact ?? analytics.impactScore) >= 45 ? '#818cf8' : '#FF4655'}
             />
             {individualStats && <StatBox Icon={Zap} value={individualStats.kd.toFixed(2)} label="K/D" color="#ff6a7f" />}

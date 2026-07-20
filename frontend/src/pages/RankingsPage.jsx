@@ -325,7 +325,7 @@ export default function RankingsPage() {
           </div>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14, padding: 14 }}>
             <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Model</div>
-            <div style={{ marginTop: 4, fontWeight: 800, fontSize: 16 }}>Power = Form × Tier × Güncellik</div>
+            <div style={{ marginTop: 4, fontWeight: 800, fontSize: 16 }}>Güç = Form × Tier × Güncellik</div>
             <div style={{ marginTop: 2, fontSize: 12, color: 'var(--text-1)' }}>Kalite: karşılaşılan tier (güncellik ağırlıklı)</div>
           </div>
         </div>
@@ -361,7 +361,7 @@ export default function RankingsPage() {
               { key: 'power', label: 'Power' },
               { key: 'impact', label: 'Kalite' },
               { key: 'winrate', label: 'Kazanma Oranı' },
-              { key: 'wins', label: 'Wins' },
+              { key: 'wins', label: 'Galibiyet' },
             ].map(btn => {
               const active = sortKey === btn.key
               return (

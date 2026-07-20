@@ -27,13 +27,13 @@ const SAMPLE_REPORTS = [
     role: 'Duelist', game: 'VALORANT',
     verdict: 'Yüksek Tavan',
     note: 'Agresif giriş oyuncusu. Pistol round dönüşüm oranı lig ortalamasının %18 üstünde; clutch durumlarda soğukkanlı. Yapı oturmuş takımda patlama potansiyeli yüksek.',
-    metrics: [['Impact', '1.24'], ['K/D', '1.31'], ['Opening WR', '%58']],
+    metrics: [['Etki', '1.24'], ['K/D', '1.31'], ['Opening WR', '%58']],
   },
   {
     role: 'IGL / Controller', game: 'VALORANT',
     verdict: 'İstikrar Çapası',
     note: 'Düşük varyanslı, takım odaklı oyuncu. Bireysel istatistikleri orta seviye ama harita kontrolü ve util kullanımı elit. Genç kadroya liderlik için ideal.',
-    metrics: [['Impact', '0.98'], ['Util/round', '3.4'], ['Map WR', '%61']],
+    metrics: [['Etki', '0.98'], ['Util/round', '3.4'], ['Map WR', '%61']],
   },
   {
     role: 'AWPer', game: 'CS2',
@@ -401,7 +401,7 @@ export default function ScoutEnginePage() {
           </p>
 
           {status === 'done' ? (
-            <div style={{ border: '1px solid #23442e', background: '#102117', color: '#9fe2b7', borderRadius: 12, padding: '14px 16px', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ border: '1px solid rgba(70,182,88,.4)', background: 'rgba(70,182,88,.12)', color: '#3d9950', borderRadius: 12, padding: '14px 16px', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
               <CircleCheck size={16} /> {doneMsg || 'Listeye eklendin! Beta açıldığında e-posta ile haber vereceğiz.'}
             </div>
           ) : (

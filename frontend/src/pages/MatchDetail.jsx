@@ -1439,7 +1439,7 @@ export default function MatchDetail() {
             {match.tournament && <Link to={`/tournament/${match.tournament.id}`} style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 600, background: 'rgba(255,184,0,.1)', color: '#FFB800', border: '1px solid rgba(255,184,0,.3)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Trophy size={11} /> {match.tournament.name}</Link>}
             {roundLabel(match) && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: FEXT.accentSoftBg, color: FEXT.accentText, border: `1px solid ${FEXT.accentBorder}` }}>{roundLabel(match)}</span>}
             {boFormat && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: 'rgba(96,165,250,.12)', color: '#60a5fa', border: '1px solid rgba(96,165,250,.3)' }}>{boFormat}</span>}
-            {isLive && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 800, background: 'rgba(255,70,85,.2)', color: '#FF4655', border: '1px solid rgba(255,70,85,.4)', animation: 'pulse 1.2s infinite' }}>● LIVE</span>}
+            {isLive && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 800, background: 'rgba(255,70,85,.2)', color: '#FF4655', border: '1px solid rgba(255,70,85,.4)', animation: 'pulse 1.2s infinite' }}>● CANLI</span>}
             {isFin  && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: 'rgba(76,175,80,.1)', color: '#4CAF50', border: '1px solid rgba(76,175,80,.3)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><CircleCheck size={11} /> Tamamlandı</span>}
           </div>
 

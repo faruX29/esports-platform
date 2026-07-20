@@ -111,7 +111,7 @@ const TodaySchedule = memo(function TodaySchedule({ matches, liveMatches, onMatc
               {/* Saat */}
               <span style={{ fontSize: 11, color: 'var(--text-6)', fontVariantNumeric: 'tabular-nums', flexShrink: 0, width: 38, textAlign: 'center' }}>
                 {isLive
-                  ? <span style={{ color: '#FF4655', fontWeight: 800, animation: 'livePulse 1.2s infinite' }}>● LIVE</span>
+                  ? <span style={{ color: '#FF4655', fontWeight: 800, animation: 'livePulse 1.2s infinite' }}>● CANLI</span>
                   : fmtTime(m.scheduled_at)
                 }
               </span>

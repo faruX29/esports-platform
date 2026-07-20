@@ -159,11 +159,11 @@ function CompareCard({ player, onClear }) {
         <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>K/D</div><div style={{ fontSize: 15, fontWeight: 800 }}>{fmt(player.kd)}</div></div>
         <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>HS%</div><div style={{ fontSize: 15, fontWeight: 800 }}>{Math.round(player.hsPct)}%</div></div>
         <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>Kaz.%</div><div style={{ fontSize: 15, fontWeight: 800 }}>{Math.round(player.winRate)}%</div></div>
-        <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>Impact</div><div style={{ fontSize: 15, fontWeight: 800, color: '#ff9aa9' }}>{Math.round(player.impact)}</div></div>
+        <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>Etki</div><div style={{ fontSize: 15, fontWeight: 800, color: '#ff9aa9' }}>{Math.round(player.impact)}</div></div>
       </div>
 
       <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
-        {[{ label: 'K/D', value: bars.kdBar, color: '#ff6a7f' }, { label: 'HS', value: bars.hsBar, color: 'var(--text-1)' }, { label: 'Win', value: bars.winBar, color: '#7cd97f' }, { label: 'Impact', value: bars.impactBar, color: '#ff9aa9' }].map(row => (
+        {[{ label: 'K/D', value: bars.kdBar, color: '#ff6a7f' }, { label: 'HS', value: bars.hsBar, color: 'var(--text-1)' }, { label: 'Gal', value: bars.winBar, color: '#7cd97f' }, { label: 'Etki', value: bars.impactBar, color: '#ff9aa9' }].map(row => (
           <div key={row.label}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-3)', marginBottom: 3 }}><span>{row.label}</span><span>{Math.round(row.value)}</span></div>
             <div style={{ height: 5, borderRadius: 4, background: 'var(--surface-2)', overflow: 'hidden' }}>
@@ -664,7 +664,7 @@ export default function PlayersPage() {
               onChange={e => setSortKey(e.target.value)}
               style={{ height: 38, borderRadius: 12, border: '1px solid var(--text-6)', background: 'var(--surface)', color: 'var(--text)', padding: '0 10px' }}
             >
-              <option value='impact'>Impact Score</option>
+              <option value='impact'>Etki Skoru</option>
               <option value='kd'>K/D</option>
               <option value='acs'>ACS</option>
               <option value='hs'>Headshot %</option>

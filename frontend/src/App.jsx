@@ -577,10 +577,10 @@ function RealtimeToastBridge() {
         gutter={10}
         toastOptions={{
           style: {
-            background: 'rgba(18,18,18,.94)',
+            background: 'var(--surface-2)',
             color: 'var(--text-1)',
-            border: '1px solid rgba(255,255,255,.12)',
-            boxShadow: '0 10px 26px rgba(0,0,0,.35)',
+            border: '1px solid var(--line-2)',
+            boxShadow: '0 10px 26px var(--shadow)',
             fontSize: 12,
           },
         }}

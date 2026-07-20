@@ -1130,7 +1130,7 @@ function Matches() {
                           </span>
                           {g.isLive && (
                             <span style={{ fontSize: 9, fontWeight: 800, color: '#FFB800', background: 'rgba(255,184,0,.12)', border: '1px solid rgba(255,184,0,.3)', padding: '1px 6px', borderRadius: 4 }}>
-                              ● LIVE
+                              ● CANLI
                             </span>
                           )}
                           {/* Tur skoru */}

@@ -1200,13 +1200,13 @@ export default function NewsDetailPage() {
           </div>
 
           {commentWarning && !forumComingSoon && (
-            <div style={{ marginBottom: 10, borderRadius: 10, border: '1px solid #3a2f19', background: '#1a1408', color: '#ddb66d', padding: '8px 10px', fontSize: 12 }}>
+            <div style={{ marginBottom: 10, borderRadius: 10, border: '1px solid rgba(221,182,109,.4)', background: 'rgba(221,182,109,.12)', color: '#b6893b', padding: '8px 10px', fontSize: 12 }}>
               {commentWarning}
             </div>
           )}
 
           {commentSuccess && !forumComingSoon && (
-            <div style={{ marginBottom: 10, borderRadius: 10, border: '1px solid #23442e', background: '#102117', color: '#9fe2b7', padding: '8px 10px', fontSize: 12 }}>
+            <div style={{ marginBottom: 10, borderRadius: 10, border: '1px solid rgba(70,182,88,.4)', background: 'rgba(70,182,88,.12)', color: '#3d9950', padding: '8px 10px', fontSize: 12 }}>
               {commentSuccess}
             </div>
           )}
@@ -1236,7 +1236,7 @@ export default function NewsDetailPage() {
                   disabled={!commentInput.trim() || commentSubmitting || (!canInteract && !forumFallback)}
                   style={{ border: '1px solid var(--text-6)', background: 'var(--surface-2)', color: 'var(--text-1)', borderRadius: 8, padding: '8px 12px', fontSize: 12, cursor: (!canInteract && !forumFallback) ? 'not-allowed' : 'pointer', opacity: (!canInteract && !forumFallback) ? 0.5 : 1 }}
                 >
-                  {commentSubmitting ? 'Gonderiliyor...' : 'Yorumu Gonder'}
+                  {commentSubmitting ? 'Gönderiliyor...' : 'Yorumu Gönder'}
                 </button>
               </div>
               {canInteract
@@ -1350,7 +1350,7 @@ export default function NewsDetailPage() {
                           autoFocus
                           style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, color: 'var(--text-1)', padding: '7px 10px', fontSize: 12 }}
                         />
-                        <button type="button" onClick={() => submitReply(comment.id)} disabled={!replyText.trim()} style={{ border: '1px solid #2f6846', background: '#10281a', color: '#8de3af', borderRadius: 8, padding: '0 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Gönder</button>
+                        <button type="button" onClick={() => submitReply(comment.id)} disabled={!replyText.trim()} style={{ border: '1px solid rgba(70,182,88,.45)', background: 'rgba(70,182,88,.15)', color: '#3d9950', borderRadius: 8, padding: '0 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Gönder</button>
                       </div>
                     )}
 

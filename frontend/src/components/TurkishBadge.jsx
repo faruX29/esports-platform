@@ -25,10 +25,10 @@ export default function TurkishBadge({ compact = false, style = {} }) {
       }}
     >
       <svg viewBox="0 0 24 24" width={px} height={px} fill="currentColor" aria-hidden="true">
-        {/* Hilal: dış daire (merkez ~11) eksi sağa kaydırılmış iç daire → ay */}
-        <path fillRule="evenodd" clipRule="evenodd" d="M2 12a9 9 0 1 0 18 0 9 9 0 1 0-18 0ZM7.4 12a7 7 0 1 0 14 0 7 7 0 1 0-14 0Z" />
+        {/* Hilal: dış daire eksi sağa kaydırılmış iç daire (evenodd) */}
+        <path fillRule="evenodd" clipRule="evenodd" d="M1.5 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0ZM6.2 12a7 7 0 1 0 14 0a7 7 0 1 0-14 0Z" />
         {/* Yıldız (hilalin ağzında) */}
-        <path d="M17 9.4 17.59 11.19 19.47 11.2 17.95 12.31 18.53 14.1 17 13 15.47 14.1 16.05 12.31 14.53 11.2 16.41 11.19Z" />
+        <path d="M16.20 9.00 L16.91 11.03 L19.05 11.07 L17.34 12.37 L17.96 14.43 L16.20 13.20 L14.44 14.43 L15.06 12.37 L13.35 11.07 L15.49 11.03 Z" />
       </svg>
       TR
     </span>

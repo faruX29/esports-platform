@@ -691,14 +691,14 @@ function Matches() {
                     : isHotPick
                     ? '1.5px solid rgba(255,100,50,.5)'
                     : hasTurkish
-                    ? '1.5px solid rgba(212,175,55,.5)'
+                    ? '1.5px solid rgba(224,69,94,.5)'
                     : '1.5px solid var(--line)',
                   boxShadow: isLive
                     ? '0 0 20px rgba(255,70,85,.2)'
                     : isHotPick
                     ? '0 0 14px rgba(255,100,50,.12)'
                     : hasTurkish
-                    ? '0 0 14px rgba(212,175,55,.08)'
+                    ? '0 0 14px rgba(224,69,94,.10)'
                     : 'none',
                   cursor: 'pointer',
                   transition: 'transform .2s cubic-bezier(.34,1.56,.64,1), box-shadow .2s, border-color .2s',
@@ -710,8 +710,8 @@ function Matches() {
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.transform   = 'none'
-                  e.currentTarget.style.boxShadow   = isLive ? '0 0 20px rgba(255,70,85,.2)' : isHotPick ? '0 0 14px rgba(255,100,50,.12)' : hasTurkish ? '0 0 14px rgba(212,175,55,.08)' : 'none'
-                  e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.6)' : isHotPick ? 'rgba(255,100,50,.5)' : hasTurkish ? 'rgba(212,175,55,.5)' : 'var(--line)'
+                  e.currentTarget.style.boxShadow   = isLive ? '0 0 20px rgba(255,70,85,.2)' : isHotPick ? '0 0 14px rgba(255,100,50,.12)' : hasTurkish ? '0 0 14px rgba(224,69,94,.10)' : 'none'
+                  e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.6)' : isHotPick ? 'rgba(255,100,50,.5)' : hasTurkish ? 'rgba(224,69,94,.5)' : 'var(--line)'
                 }}
               >
                 <div style={{ padding: 0 }}>
@@ -774,7 +774,7 @@ function Matches() {
                         style={{ margin: '0 auto 8px' }}
                         imgStyle={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.5))' }}
                       />
-                      <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.3, wordBreak: 'break-word', color: turkA ? '#FFD700' : 'white' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.3, wordBreak: 'break-word', color: turkA ? '#E0455E' : 'var(--text-1)' }}>
                         {match.team_a?.name}
                       </div>
                       {activeTab === 'past' && match.team_a_score != null && (
@@ -809,7 +809,7 @@ function Matches() {
                         style={{ margin: '0 auto 8px' }}
                         imgStyle={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.5))' }}
                       />
-                      <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.3, wordBreak: 'break-word', color: turkB ? '#FFD700' : 'white' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.3, wordBreak: 'break-word', color: turkB ? '#E0455E' : 'var(--text-1)' }}>
                         {match.team_b?.name}
                       </div>
                       {activeTab === 'past' && match.team_b_score != null && (

@@ -11,7 +11,7 @@
 import { next } from '@vercel/edge'
 
 export const config = {
-  matcher: ['/news/:path*', '/match/:path*'],
+  matcher: ['/news/:path*', '/match/:path*', '/team/:path*', '/player/:path*', '/tournament/:path*'],
 }
 
 // Geniş kapsam: isimli crawler'lar + jenerik önizleme/araç token'ları. Gerçek
@@ -55,16 +55,21 @@ function parseNewsRef(slug) {
   return null
 }
 
-async function sbFetch(path) {
+async function sbFetchAll(path) {
   const base = process.env.VITE_SUPABASE_URL
   const key = process.env.VITE_SUPABASE_ANON_KEY
-  if (!base || !key) return null
+  if (!base || !key) return []
   const res = await fetch(`${base}/rest/v1/${path}`, {
     headers: { apikey: key, Authorization: `Bearer ${key}` },
   })
-  if (!res.ok) return null
+  if (!res.ok) return []
   const rows = await res.json()
-  return Array.isArray(rows) ? rows[0] || null : rows
+  return Array.isArray(rows) ? rows : (rows ? [rows] : [])
+}
+
+async function sbFetch(path) {
+  const rows = await sbFetchAll(path)
+  return rows[0] || null
 }
 
 function ogImageUrl(origin, p) {
@@ -85,26 +90,42 @@ function predHook(pa, pb, aName, bName) {
   return `AI: %${Math.round(favProb * 100)} ${fav}`
 }
 
-function htmlDoc({ title, desc, url, img, type = 'article' }) {
+function htmlDoc({ title, desc, url, img, type = 'article', jsonLd = null, body = '' }) {
   const t = esc(title), d = esc(desc), u = esc(url), i = esc(img)
+  const imgTags = i ? `<meta property="og:image" content="${i}"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta name="twitter:image" content="${i}"/>` : ''
+  const ld = jsonLd ? `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>` : ''
+  const bodyHtml = body || `<h1>${t}</h1><p>${d}</p><a href="${u}">${t}</a>`
   return `<!DOCTYPE html><html lang="tr"><head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>${t}</title>
 <meta name="description" content="${d}"/>
+<link rel="canonical" href="${u}"/>
 <meta property="og:type" content="${type}"/>
 <meta property="og:site_name" content="feXt"/>
 <meta property="og:title" content="${t}"/>
 <meta property="og:description" content="${d}"/>
 <meta property="og:url" content="${u}"/>
-<meta property="og:image" content="${i}"/>
-<meta property="og:image:width" content="1200"/>
-<meta property="og:image:height" content="630"/>
-<meta name="twitter:card" content="summary_large_image"/>
+${imgTags}
+<meta name="twitter:card" content="${i ? 'summary_large_image' : 'summary'}"/>
 <meta name="twitter:title" content="${t}"/>
 <meta name="twitter:description" content="${d}"/>
-<meta name="twitter:image" content="${i}"/>
-</head><body><a href="${u}">${t}</a></body></html>`
+${ld}
+</head><body>${bodyHtml}</body></html>`
+}
+
+// Maç listesi → SEO gövde linkleri (Googlebot iç linkleri takip eder → tarama derinliği)
+function matchListHtml(origin, rows, heading) {
+  if (!rows.length) return ''
+  const items = rows.map(m => {
+    const an = m.team_a?.name || '?', bn = m.team_b?.name || '?'
+    const sc = (m.team_a_score != null && m.team_b_score != null) ? ` ${m.team_a_score}-${m.team_b_score} ` : ' vs '
+    return `<li><a href="${origin}/match/${m.id}">${esc(an)}${sc}${esc(bn)}</a></li>`
+  }).join('')
+  return `<h2>${esc(heading)}</h2><ul>${items}</ul>`
 }
 
 async function buildForMatch(id, origin, url) {
@@ -126,7 +147,13 @@ async function buildForMatch(id, origin, url) {
   })
   const title = `${a} vs ${b}${row.tournament?.name ? ' · ' + row.tournament.name : ''}`
   const desc = p ? `${p} · feXt AI analizi ve canlı skor.` : 'feXt — AI analizi, canlı skor ve istatistikler.'
-  return htmlDoc({ title, desc, url, img })
+  const jsonLd = {
+    '@context': 'https://schema.org', '@type': 'SportsEvent', name: `${a} vs ${b}`, sport: 'Esports',
+    competitor: [{ '@type': 'SportsTeam', name: a }, { '@type': 'SportsTeam', name: b }],
+    superEvent: row.tournament?.name ? { '@type': 'SportsEvent', name: row.tournament.name } : undefined,
+    url,
+  }
+  return htmlDoc({ title, desc, url, img, jsonLd })
 }
 
 async function buildForNews(ref, origin, url) {
@@ -146,7 +173,59 @@ async function buildForNews(ref, origin, url) {
     a: row.team_a_name, b: row.team_b_name, la: row.team_a_logo, lb: row.team_b_logo,
     s: scoreFromHero(row.hero_score), g: gm.label, t: row.tier, tn: row.tournament_name, c: gm.accent,
   })
-  return htmlDoc({ title: row.title || 'feXt', desc: row.summary || '', url, img })
+  const jsonLd = {
+    '@context': 'https://schema.org', '@type': 'NewsArticle',
+    headline: row.title || '', description: row.summary || '', inLanguage: 'tr-TR',
+    author: { '@type': 'Organization', name: 'feXt' },
+    publisher: { '@type': 'Organization', name: 'feXt', logo: { '@type': 'ImageObject', url: `${origin}/icons/icon-512.png` } },
+    mainEntityOfPage: url,
+  }
+  return htmlDoc({ title: row.title || 'feXt', desc: row.summary || '', url, img, jsonLd })
+}
+
+const ENC = encodeURIComponent
+const MATCH_SEL = 'id,team_a_score,team_b_score,scheduled_at,team_a:teams!matches_team_a_id_fkey(name),team_b:teams!matches_team_b_id_fkey(name)'
+
+async function buildForTeam(id, origin, url) {
+  const team = await sbFetch(`teams?id=eq.${ENC(id)}&select=${ENC('name,logo_url,game:games(name,slug)')}&limit=1`)
+  if (!team) return null
+  const name = team.name || 'Takım'
+  const gm = gameMeta(team.game?.slug)
+  const matches = await sbFetchAll(`matches?or=(team_a_id.eq.${ENC(id)},team_b_id.eq.${ENC(id)})&status=eq.finished&select=${ENC(MATCH_SEL)}&order=scheduled_at.desc&limit=10`)
+  const title = `${name} — Kadro, Maçlar ve İstatistikler`
+  const desc = `${name} espor takımı (${gm.label}): son maç sonuçları, kazanma oranı, transferler ve istatistikler — feXt.`
+  const jsonLd = { '@context': 'https://schema.org', '@type': 'SportsTeam', name, sport: 'Esports', logo: team.logo_url || undefined, url }
+  const body = `<h1>${esc(name)}</h1><p>${esc(desc)}</p>${matchListHtml(origin, matches, 'Son Maçlar')}`
+  return htmlDoc({ title, desc, url, img: '', type: 'profile', jsonLd, body })
+}
+
+async function buildForPlayer(id, origin, url) {
+  const p = await sbFetch(`players?id=eq.${ENC(id)}&select=${ENC('nickname,role,nationality,image_url,team:teams(id,name)')}&limit=1`)
+  if (!p) return null
+  const nick = p.nickname || 'Oyuncu'
+  const teamName = p.team?.name
+  const title = `${nick} — Espor Oyuncu Profili`
+  const desc = `${nick}${teamName ? ` (${teamName})` : ''} espor oyuncu profili: rol, KDA, kazanma oranı, kariyer ve istatistikler — feXt.`
+  const jsonLd = {
+    '@context': 'https://schema.org', '@type': 'Person', name: nick, jobTitle: 'Espor Oyuncusu',
+    nationality: p.nationality || undefined, image: p.image_url || undefined,
+    memberOf: teamName ? { '@type': 'SportsTeam', name: teamName } : undefined, url,
+  }
+  const teamLink = p.team?.id ? `<p>Takım: <a href="${origin}/team/${p.team.id}">${esc(teamName)}</a></p>` : ''
+  const body = `<h1>${esc(nick)}</h1><p>${esc(desc)}</p>${p.role ? `<p>Rol: ${esc(p.role)}</p>` : ''}${teamLink}`
+  return htmlDoc({ title, desc, url, img: '', type: 'profile', jsonLd, body })
+}
+
+async function buildForTournament(id, origin, url) {
+  const t = await sbFetch(`tournaments?id=eq.${ENC(id)}&select=${ENC('name,tier,begin_at,end_at')}&limit=1`)
+  if (!t) return null
+  const name = t.name || 'Turnuva'
+  const matches = await sbFetchAll(`matches?tournament_id=eq.${ENC(id)}&select=${ENC(MATCH_SEL)}&order=scheduled_at.desc&limit=15`)
+  const title = `${name} — Fikstür, Puan Durumu ve Sonuçlar`
+  const desc = `${name} espor turnuvası: maç programı, sonuçlar ve puan durumu — feXt.`
+  const jsonLd = { '@context': 'https://schema.org', '@type': 'SportsEvent', name, sport: 'Esports', startDate: t.begin_at || undefined, endDate: t.end_at || undefined, url }
+  const body = `<h1>${esc(name)}</h1><p>${esc(desc)}</p>${matchListHtml(origin, matches, 'Maçlar')}`
+  return htmlDoc({ title, desc, url, img: '', type: 'article', jsonLd, body })
 }
 
 export default async function middleware(req) {
@@ -161,12 +240,18 @@ export default async function middleware(req) {
     const path = url.pathname
 
     let html = null
+    const seg = path.split('/')[2]
     if (path.startsWith('/match/')) {
-      const id = path.split('/')[2]
-      if (id) html = await buildForMatch(id, origin, req.url)
+      if (seg) html = await buildForMatch(seg, origin, req.url)
     } else if (path.startsWith('/news/') && path !== '/news/archive') {
-      const ref = parseNewsRef(path.split('/')[2])
+      const ref = parseNewsRef(seg)
       if (ref) html = await buildForNews(ref, origin, req.url)
+    } else if (path.startsWith('/team/')) {
+      if (seg) html = await buildForTeam(seg, origin, req.url)
+    } else if (path.startsWith('/player/')) {
+      if (seg) html = await buildForPlayer(seg, origin, req.url)
+    } else if (path.startsWith('/tournament/')) {
+      if (seg) html = await buildForTournament(seg, origin, req.url)
     }
 
     if (html) {

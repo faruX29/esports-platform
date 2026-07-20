@@ -200,10 +200,15 @@ async function buildForTeam(id, origin, url) {
 }
 
 async function buildForPlayer(id, origin, url) {
-  const p = await sbFetch(`players?id=eq.${ENC(id)}&select=${ENC('nickname,role,nationality,image_url,team:teams(id,name)')}&limit=1`)
+  // NOT: players↔teams FK yok; players.team_pandascore_id === teams.id (ayrı sorgu).
+  const p = await sbFetch(`players?id=eq.${ENC(id)}&select=${ENC('nickname,role,nationality,image_url,team_pandascore_id')}&limit=1`)
   if (!p) return null
   const nick = p.nickname || 'Oyuncu'
-  const teamName = p.team?.name
+  let team = null
+  if (p.team_pandascore_id != null) {
+    team = await sbFetch(`teams?id=eq.${ENC(p.team_pandascore_id)}&select=id,name&limit=1`)
+  }
+  const teamName = team?.name
   const title = `${nick} — Espor Oyuncu Profili`
   const desc = `${nick}${teamName ? ` (${teamName})` : ''} espor oyuncu profili: rol, KDA, kazanma oranı, kariyer ve istatistikler — feXt.`
   const jsonLd = {
@@ -211,7 +216,7 @@ async function buildForPlayer(id, origin, url) {
     nationality: p.nationality || undefined, image: p.image_url || undefined,
     memberOf: teamName ? { '@type': 'SportsTeam', name: teamName } : undefined, url,
   }
-  const teamLink = p.team?.id ? `<p>Takım: <a href="${origin}/team/${p.team.id}">${esc(teamName)}</a></p>` : ''
+  const teamLink = team?.id ? `<p>Takım: <a href="${origin}/team/${team.id}">${esc(teamName)}</a></p>` : ''
   const body = `<h1>${esc(nick)}</h1><p>${esc(desc)}</p>${p.role ? `<p>Rol: ${esc(p.role)}</p>` : ''}${teamLink}`
   return htmlDoc({ title, desc, url, img: '', type: 'profile', jsonLd, body })
 }

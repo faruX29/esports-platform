@@ -1399,7 +1399,6 @@ export default function Dashboard() {
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const nowIso = new Date().toISOString()
       const upcomingFloorIso = new Date(Date.now() - (6 * 60 * 60 * 1000)).toISOString()
       const upcomingCeilIso = new Date(Date.now() + (UPCOMING_WINDOW_DAYS * 24 * 60 * 60 * 1000)).toISOString()
 
@@ -1817,7 +1816,6 @@ export default function Dashboard() {
     async function fetchTickerFeed() {
       setTickerLoading(true)
       try {
-        const nowIso = new Date().toISOString()
         const upcomingFloorIso = new Date(Date.now() - (6 * 60 * 60 * 1000)).toISOString()
         const upcomingCeilIso = new Date(Date.now() + (UPCOMING_WINDOW_DAYS * 24 * 60 * 60 * 1000)).toISOString()
         const selectStr = `

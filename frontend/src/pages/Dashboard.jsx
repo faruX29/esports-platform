@@ -440,13 +440,13 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
           </div>
 
           <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 8 }}>
-            {searchActive ? 'Arama Sonuclari' : 'Populer Takimlar'}
+            {searchActive ? 'Arama Sonuçları' : 'Popüler Takımlar'}
           </div>
           <div style={{ marginBottom: 10 }}>
             <input
               value={teamSearch}
               onChange={event => setTeamSearch(event.target.value)}
-              placeholder='Tum takimlarda ara... (min 2 harf)'
+              placeholder='Tüm takımlarda ara... (min. 2 harf)'
               style={{
                 width: '100%',
                 borderRadius: 9,
@@ -603,7 +603,7 @@ const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
     : [
       { id: 'boot_live', text: '🔴 LIVE ticker baglaniyor...', href: null },
       { id: 'boot_news', text: '📰 Son haberler hazirlaniyor...', href: null },
-      { id: 'boot_scout', text: '🧭 Scout sinyalleri yukleniyor...', href: null },
+      { id: 'boot_scout', text: '🧭 Scout sinyalleri yükleniyor...', href: null },
     ]
   const speedSeconds = Math.min(75, Math.max(24, lines.length * 4.2))
 
@@ -2148,15 +2148,15 @@ export default function Dashboard() {
 
   /* ── Stat tile tanımları ── */
   const statTiles = useMemo(() => [
-    { Icon: Radio,    value: loading ? '…' : stats.live,  label: 'Canli',    color: '#FF4655' },
+    { Icon: Radio,    value: loading ? '…' : stats.live,  label: 'Canlı',    color: '#FF4655' },
     { Icon: Clock,    value: loading ? '…' : stats.today, label: 'Bugün',    color: '#FFB800' },
     { Icon: Gamepad2, value: loading ? '…' : stats.total, label: 'Toplam',   color: '#6366f1' },
-    { Icon: Shield,   value: loading ? '…' : stats.teams, label: 'Takimlar', color: '#4CAF50' },
+    { Icon: Shield,   value: loading ? '…' : stats.teams, label: 'Takımlar', color: '#4CAF50' },
   ], [loading, stats.live, stats.today, stats.total, stats.teams])
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: 'calc(100vh - 58px)' }}>
-    <div style={{ maxWidth: 1440, margin: '0 auto', padding: isMobile ? '14px 12px 44px' : '20px 18px 60px', color: 'white' }}>
+    <div style={{ maxWidth: 1440, margin: '0 auto', padding: isMobile ? '14px 12px 44px' : '20px 18px 60px', color: 'var(--text-1)' }}>
 
       {globalError && (
         <div style={{

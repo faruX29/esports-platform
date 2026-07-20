@@ -79,7 +79,7 @@ function getArticleStoryTag(variant) {
   if (variant === 'transfer') return 'Transfer'
   if (variant === 'tournament') return 'Turnuva Özeti'
   if (variant === 'preview') return 'Önizleme'
-  if (variant === 'upset') return 'Surpriz Sonuc'
+  if (variant === 'upset') return 'Sürpriz Sonuç'
   if (variant === 'stomp') return 'Skor Haberi'
   if (variant === 'close') return 'Seri Ozeti'
   return 'Gundem'
@@ -169,7 +169,7 @@ function buildScoutRows(item) {
     const scoreLabel = source.impactScore != null ? ` (${Number(source.impactScore).toFixed(0)} puan)` : ''
     rows.push({
       label: 'MVP Sinyali',
-      value: `${source.impactTeam || 'Takim'}${scoreLabel}`,
+      value: `${source.impactTeam || 'Takım'}${scoreLabel}`,
     })
   }
 

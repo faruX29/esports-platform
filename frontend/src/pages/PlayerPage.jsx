@@ -223,7 +223,7 @@ function ProfessionalStatsPanel({ stats, isMobile = false }) {
           background: 'rgba(0,0,0,.32)',
           padding: '10px 10px 8px',
         }}>
-          <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 10 }}>Round-by-round efficiency proxy</div>
+          <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 10 }}>Tur bazında verimlilik göstergesi</div>
           <ProgressBar pct={Math.min(100, stats.kda * 42)} color={kdaColor} label="KDA Pressure" value={stats.kda.toFixed(2)} />
           <ProgressBar pct={stats.winRate} color={wrColor} label="Kazanma Oranı" value={`${Math.round(stats.winRate)}%`} />
           {useAcs
@@ -420,7 +420,7 @@ function ScoutPanel({ analytics, individual }) {
 
         {/* W/L record */}
         <div style={{ flex: '1 1 130px', background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--surface-2)', padding: '14px 16px' }}>
-          <div style={{ fontSize: 11, color: 'var(--text-5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10 }}>Record</div>
+          <div style={{ fontSize: 11, color: 'var(--text-5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10 }}>Galibiyet-Mağlubiyet</div>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 22, fontWeight: 900, color: '#4CAF50' }}>{wonMatches}</div>

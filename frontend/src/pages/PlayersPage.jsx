@@ -158,7 +158,7 @@ function CompareCard({ player, onClear }) {
       <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
         <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>K/D</div><div style={{ fontSize: 15, fontWeight: 800 }}>{fmt(player.kd)}</div></div>
         <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>HS%</div><div style={{ fontSize: 15, fontWeight: 800 }}>{Math.round(player.hsPct)}%</div></div>
-        <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>Win%</div><div style={{ fontSize: 15, fontWeight: 800 }}>{Math.round(player.winRate)}%</div></div>
+        <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>Kaz.%</div><div style={{ fontSize: 15, fontWeight: 800 }}>{Math.round(player.winRate)}%</div></div>
         <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>Impact</div><div style={{ fontSize: 15, fontWeight: 800, color: '#ff9aa9' }}>{Math.round(player.impact)}</div></div>
       </div>
 
@@ -579,7 +579,7 @@ export default function PlayersPage() {
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <h1 style={{ margin: 0, fontSize: 30, letterSpacing: '.5px' }}>Player Scout Engine</h1>
+          <h1 style={{ margin: 0, fontSize: 30, letterSpacing: '.5px' }}>Oyuncu Keşif Motoru</h1>
           {metricsSource === 'player_match_stats' && <DeepScoutBadge />}
         </div>
         <p style={{ margin: '8px 0 16px', color: 'var(--text-2)', fontSize: 13 }}>
@@ -696,14 +696,14 @@ export default function PlayersPage() {
             textTransform: 'uppercase',
             letterSpacing: '.5px',
           }}>
-            <div>Player</div>
-            <div>Team</div>
+            <div>Oyuncu</div>
+            <div>Takım</div>
             <div>K/D</div>
             <div>ACS</div>
             <div>HS%</div>
-            <div>Win%</div>
-            <div>Impact</div>
-            <div>Follow</div>
+            <div>Kaz.%</div>
+            <div>Etki</div>
+            <div>Takip</div>
           </div>
 
             {loading && <div style={{ padding: 18, color: 'var(--text-3)', fontSize: 13 }}>Oyuncular yukleniyor...</div>}

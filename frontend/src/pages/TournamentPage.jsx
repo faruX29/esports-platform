@@ -1947,7 +1947,7 @@ export default function TournamentPage() {
 
   // ── Error ─────────────────────────────────────────────────────
   if (error || !tournament) return (
-    <div style={{ maxWidth: 600, margin: '60px auto', textAlign: 'center', color: 'white' }}>
+    <div style={{ maxWidth: 600, margin: '60px auto', textAlign: 'center', color: 'var(--text-1)' }}>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={86} dim /></div>
       <div style={{ fontSize: 18, color: '#FF4655', marginBottom: 8 }}>
         {error ?? 'Turnuva bulunamadı'}
@@ -2021,7 +2021,7 @@ export default function TournamentPage() {
           }}>
             <span>🇹🇷</span>
             <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '2px',
-              color: '#fff', textTransform: 'uppercase' }}>Turkish Tournament</span>
+              color: '#fff', textTransform: 'uppercase' }}>Türk Turnuvası</span>
             <span>🇹🇷</span>
           </div>
         )}
@@ -2105,7 +2105,7 @@ export default function TournamentPage() {
                 color: '#818cf8',
                 display: 'inline-flex', alignItems: 'center', gap: 5,
               }}>
-                {format === 'roundrobin' ? <><RefreshCw size={11} /> Round Robin</> : <><Trophy size={11} /> Elimination</>}
+                {format === 'roundrobin' ? <><RefreshCw size={11} /> Lig Usulü</> : <><Trophy size={11} /> Eleme</>}
               </span>
             )}
           </div>
@@ -2207,21 +2207,21 @@ export default function TournamentPage() {
                   <button
                     onClick={() => setBracketZoom(prev => clampBracketZoom(prev - 0.1))}
                     style={{ width: 24, height: 24, borderRadius: 7, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-2)', cursor: 'pointer' }}
-                    title="Zoom out"
+                    title="Uzaklaştır"
                   >
                     -
                   </button>
                   <button
                     onClick={() => setBracketZoom(1)}
                     style={{ padding: '0 8px', height: 24, borderRadius: 7, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-2)', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}
-                    title="Reset zoom"
+                    title="Yakınlaştırmayı sıfırla"
                   >
                     {Math.round(bracketZoom * 100)}%
                   </button>
                   <button
                     onClick={() => setBracketZoom(prev => clampBracketZoom(prev + 0.1))}
                     style={{ width: 24, height: 24, borderRadius: 7, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-2)', cursor: 'pointer' }}
-                    title="Zoom in"
+                    title="Yakınlaştır"
                   >
                     +
                   </button>

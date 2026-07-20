@@ -619,7 +619,7 @@ export default function NewsDetailPage() {
 
       const matchId = ref.id
       if (!matchId) {
-        setError('Gecerli bir haber kimligi bulunamadi.')
+        setError('Geçerli bir haber kimliği bulunamadı.')
         setLoading(false)
         return
       }
@@ -1004,7 +1004,7 @@ export default function NewsDetailPage() {
   if (error || !story) {
     return (
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px', color: 'var(--text-1)' }}>
-        <div style={{ marginBottom: 14, color: '#ff8c9a' }}>{error || 'Haber bulunamadi.'}</div>
+        <div style={{ marginBottom: 14, color: '#ff8c9a' }}>{error || 'Haber bulunamadı.'}</div>
         <Link to='/news' style={{ color: '#ffb3bd' }}>Haber akisina don</Link>
       </div>
     )
@@ -1122,7 +1122,7 @@ export default function NewsDetailPage() {
             <div style={{ padding: '14px 16px 16px' }}>
               <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', marginBottom: 12 }}>
                 <div style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '9px 10px', background: 'var(--surface)' }}>
-                  <div style={{ fontSize: 10, color: 'var(--text-4)', marginBottom: 3 }}>Match ID</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-4)', marginBottom: 3 }}>Maç ID</div>
                   <div style={{ fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{story.matchId || '-'}</div>
                 </div>
                 <div style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '9px 10px', background: 'var(--surface)' }}>
@@ -1150,7 +1150,7 @@ export default function NewsDetailPage() {
               <div style={{ border: '1px solid var(--surface-2)', borderRadius: 10, overflow: 'hidden' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', padding: '8px 10px', fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.8px', background: 'var(--surface)', borderBottom: '1px solid var(--surface-2)' }}>
                   <div>Takım</div>
-                  <div style={{ textAlign: 'right' }}>Score Metric</div>
+                  <div style={{ textAlign: 'right' }}>Skor Metriği</div>
                 </div>
                 {statsRows.length === 0 && (
                   <div style={{ padding: '10px', color: 'var(--text-4)', fontSize: 12 }}>Ek match_stats verisi bulunamadı.</div>
@@ -1221,7 +1221,7 @@ export default function NewsDetailPage() {
                   if (commentWarning) setCommentWarning('')
                   if (commentSuccess) setCommentSuccess('')
                 }}
-                placeholder='Mac analizi veya gorusunu yaz...'
+                placeholder='Maç analizi veya görüşünü yaz...'
                 rows={3}
                 style={{ resize: 'vertical', minHeight: 86, borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-1)', padding: '10px 12px', fontSize: 13 }}
               />

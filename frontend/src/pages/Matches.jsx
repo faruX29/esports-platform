@@ -680,7 +680,7 @@ function Matches() {
           <input
             type="text" placeholder="Takım veya turnuva ara..."
             value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-            style={{ width: '100%', padding: '8px 36px 8px 34px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'white', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+            style={{ width: '100%', padding: '8px 36px 8px 34px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
           />
           {searchQuery && (
             <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', display: 'inline-flex' }}><XIcon size={15} /></button>
@@ -1001,7 +1001,7 @@ function Matches() {
 
             <div style={{ backgroundColor: 'var(--bg)', borderRadius: 10, padding: 20, marginBottom: 20 }}>
               <div style={{ marginBottom: 15 }}>
-                <div style={{ color: 'var(--text-3)', fontSize: 14, marginBottom: 5, display: 'flex', alignItems: 'center', gap: 6 }}><Trophy size={14} /> Tournament</div>
+                <div style={{ color: 'var(--text-3)', fontSize: 14, marginBottom: 5, display: 'flex', alignItems: 'center', gap: 6 }}><Trophy size={14} /> Turnuva</div>
                 <div style={{ fontSize: 16, fontWeight: 'bold' }}>{selectedMatch.tournament?.name ?? '—'}</div>
               </div>
               <div style={{ marginBottom: 15 }}>
@@ -1135,7 +1135,7 @@ function Matches() {
 
             {/* Rosters */}
             {loadingModalPlayers ? (
-              <div style={{ textAlign: 'center', color: 'var(--text-4)', padding: 20 }}>Loading rosters...</div>
+              <div style={{ textAlign: 'center', color: 'var(--text-4)', padding: 20 }}>Kadrolar yükleniyor...</div>
             ) : (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ color: 'var(--text-3)', fontSize: 13, fontWeight: 'bold', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: 7 }}><Users size={14} /> Rosters</div>
@@ -1145,7 +1145,7 @@ function Matches() {
                     <div key={label}>
                       <div style={{ fontSize: 13, fontWeight: 'bold', color: 'var(--text-2)', marginBottom: 8, textAlign: 'center' }}>{label}</div>
                       {(players || []).length === 0
-                        ? <div style={{ fontSize: 12, color: 'var(--text-4)', textAlign: 'center' }}>No data</div>
+                        ? <div style={{ fontSize: 12, color: 'var(--text-4)', textAlign: 'center' }}>Veri yok</div>
                         : (players || []).map((p, i) => (
                           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, padding: 6, background: 'var(--surface)', borderRadius: 8 }}>
                             {p.image_url ? <img src={p.image_url} alt={p.nickname} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} /> : <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--surface-2)' }} />}

@@ -314,7 +314,7 @@ function TournamentCard({ t, navigate, highlighted }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
         }}>
           <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '1.5px',
-            color: '#fff', textTransform: 'uppercase' }}>🇹🇷 Turkish Event</span>
+            color: '#fff', textTransform: 'uppercase' }}>🇹🇷 Türk Etkinliği</span>
         </div>
       )}
 
@@ -991,7 +991,7 @@ export default function SearchPage() {
 
   // ── Render ────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'white', position: 'relative' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text-1)', position: 'relative' }}>
 
       <style>{`
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
@@ -1041,7 +1041,7 @@ export default function SearchPage() {
                 width: '100%', boxSizing: 'border-box',
                 padding: '16px 48px 16px 46px',
                 borderRadius: 14, fontSize: 16,
-                background: 'var(--surface)', color: 'white',
+                background: 'var(--surface)', color: 'var(--text)',
                 border: '2px solid var(--surface-2)', outline: 'none',
                 transition: 'border-color .2s, box-shadow .2s',
               }}

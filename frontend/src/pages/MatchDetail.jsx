@@ -776,7 +776,7 @@ function CommunityPredictionPool({ matchId, teamAName, teamBName, aiWin, isFinis
             >
               <div style={{ fontSize: 12, fontWeight: 800 }}>{team.name}</div>
               <div style={{ marginTop: 3, fontSize: 10, color: selected ? '#c8b4ff' : 'var(--text-4)' }}>
-                {selected ? 'Secimin bu takim' : 'Tahminini sec'}
+                {selected ? 'Seçimin bu takım' : 'Tahminini seç'}
               </div>
             </button>
           )
@@ -1335,7 +1335,7 @@ export default function MatchDetail() {
 
   /* ── Loading / error ── */
   if (loadingMatch) return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 20px', color: '#fff' }}>
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 20px', color: 'var(--text-1)' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <Sk h="200px" r="20px" />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}><Sk h="300px" r="18px" /><Sk h="300px" r="18px" /></div>
@@ -1344,7 +1344,7 @@ export default function MatchDetail() {
     </div>
   )
   if (error || !match) return (
-    <div style={{ textAlign: 'center', padding: '80px 20px', color: '#fff' }}>
+    <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--text-1)' }}>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={86} dim /></div>
       <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-4)', marginBottom: 24 }}>{error || 'Maç bulunamadı.'}</div>
       <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', background: FEXT.accentGrad, border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>← Geri</button>
@@ -1410,7 +1410,7 @@ export default function MatchDetail() {
         {/* TR banner */}
         {hasTR && (
           <div style={{ background: 'linear-gradient(90deg,#C8102E,#a00d25 40%,#001f6d)', borderRadius: '16px 16px 0 0', padding: 6, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
-            <span>🇹🇷</span><span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 2, color: '#fff', textTransform: 'uppercase' }}>Turkish Pride</span><span>🇹🇷</span>
+            <span>🇹🇷</span><span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 2, color: '#fff', textTransform: 'uppercase' }}>Türk Gururu</span><span>🇹🇷</span>
           </div>
         )}
 
@@ -1723,7 +1723,7 @@ export default function MatchDetail() {
 
             <div style={{ border: '1px solid rgba(255,184,0,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(255,184,0,.12), rgba(12,12,12,.9))', padding: '10px 11px' }}>
               <div style={{ fontSize: 10, color: '#ffd67d', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5 }}>MVP Projection</div>
-              <div style={{ fontSize: 12, color: '#fff0cb' }}>{scoutMvp ? `${scoutMvp.nickname} (${scoutMvp.teamName})` : 'Canli board verisi bekleniyor'}</div>
+              <div style={{ fontSize: 12, color: '#fff0cb' }}>{scoutMvp ? `${scoutMvp.nickname} (${scoutMvp.teamName})` : 'Canlı veri bekleniyor'}</div>
               <div style={{ marginTop: 4, fontSize: 11, color: '#d2bf8f' }}>{scoutMvp ? `K/D/A: ${scoutMvp.kills || 0}/${scoutMvp.deaths || 0}/${scoutMvp.assists || 0}` : 'Model sadece takim seviyesinde calisiyor'}</div>
             </div>
           </div>

@@ -344,7 +344,7 @@ export default function RankingsPage() {
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder='Takim ara...'
+              placeholder='Takım ara...'
               style={{
                 height: 34,
                 minWidth: 180,
@@ -406,13 +406,13 @@ export default function RankingsPage() {
             textTransform: 'uppercase',
             letterSpacing: '.5px',
           }}>
-            <div>Rank</div>
-            <div>Team</div>
-            <div>Record</div>
+            <div>Sıra</div>
+            <div>Takım</div>
+            <div>G-M</div>
             <div>Kazanma Oranı</div>
             <div>Kalite</div>
-            <div>Power</div>
-            <div>Follow</div>
+            <div>Güç</div>
+            <div>Takip</div>
           </div>
 
             {loading && (
@@ -472,7 +472,7 @@ export default function RankingsPage() {
 
                 <div style={{ fontWeight: 700 }}>{formatPercent(row.winRate)}</div>
                 <div style={{ color: '#ff9aa9', fontWeight: 700 }}>{Math.round(row.impactScore)}</div>
-                <div style={{ color: '#ffffff', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{row.rating}</div>
+                <div style={{ color: 'var(--text-1)', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{row.rating}</div>
 
                 <div>
                   <button

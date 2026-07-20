@@ -4,6 +4,7 @@ import { supabase } from '../supabaseClient'
 import { GAMES, useGame } from '../context/GameContext'
 import { normalizeGameId } from '../utils/gameUtils'
 import InitialsImage from '../components/InitialsImage'
+import GameLogo, { GAME_ICON_PATHS } from '../components/GameLogo'
 
 // Kanonik oyuna ait TÜM game_id'ler (mükerrer kayıtlar dahil: CS2 2/8, LoL 3/9).
 function resolveGameIds(activeGame, games) {
@@ -19,7 +20,7 @@ function resolveGameIds(activeGame, games) {
 function gameMeta(game) {
   const canonical = normalizeGameId(game?.slug ?? game?.name)
   const g = GAMES.find(x => x.id === canonical)
-  return { label: g?.shortLabel || g?.label || game?.name || 'Esports', color: g?.color || 'var(--text-3)' }
+  return { id: canonical, label: g?.shortLabel || g?.label || game?.name || 'Esports', color: g?.color || 'var(--text-3)' }
 }
 
 const TIER_COLORS = { S: '#F0A500', A: '#C0C7D0', B: '#7f8c9a', C: 'var(--text-4)', D: 'var(--text-5)' }
@@ -304,7 +305,7 @@ export default function TournamentsListPage() {
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontSize: 11, color: 'var(--text-3)' }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: gm.color, fontWeight: 700 }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: gm.color }} /> {gm.label}
+                    {GAME_ICON_PATHS[gm.id] ? <GameLogo game={gm.id} size={13} color={gm.color} /> : <span style={{ width: 6, height: 6, borderRadius: '50%', background: gm.color }} />} {gm.label}
                   </span>
                   {item.region && <span>· {item.region}</span>}
                 </div>

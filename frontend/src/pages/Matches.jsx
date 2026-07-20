@@ -856,7 +856,7 @@ function Matches() {
                       {roundLabel(match) && (
                         <span style={{ fontSize: 10, fontWeight: 700, color: FEXT.accentText, background: FEXT.accentSoftBg, border: `1px solid ${FEXT.accentBorder}`, borderRadius: 6, padding: '2px 7px', whiteSpace: 'nowrap' }}>{roundLabel(match)}</span>
                       )}
-                      {match.stream_url && (
+                      {match.stream_url && match.status !== 'finished' && (
                         <a
                           href={match.stream_url}
                           target="_blank"

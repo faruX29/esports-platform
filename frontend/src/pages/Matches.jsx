@@ -3,7 +3,7 @@
  * GameContext filtresi → Supabase sorgusuna taşındı (client-side değil)
  * Pagination: 50/sayfa, count:exact
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, useSearchParams }     from 'react-router-dom'
 import { supabase, subscribeToMatchesUpdates } from '../supabaseClient'
 import { useGame, GAMES }                   from '../context/GameContext'
@@ -186,6 +186,7 @@ function Matches() {
   const [dateFrom, setDateFrom]                   = useState('')   // Past tab: tarih aralığı
   const [dateTo, setDateTo]                       = useState('')
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
+  const [tournamentFilter, setTournamentFilter]   = useState('')   // yüklü maçlardan turnuvaya göre daralt
   const [lastUpdate, setLastUpdate]               = useState(new Date())
   const [autoRefresh, setAutoRefresh]             = useState(false)
   const [gameNames, setGameNames]                 = useState([])   // DB'deki gerçek game isimleri
@@ -242,7 +243,7 @@ function Matches() {
 
   useEffect(() => {
     applyFilters()
-  }, [matches, searchQuery])
+  }, [matches, searchQuery, tournamentFilter])
   // NOT: activeGame artık burada YOK — filtre Supabase sorgusunda yapılıyor
 
   useEffect(() => {
@@ -429,6 +430,11 @@ function Matches() {
       )
     }
 
+    // Turnuva (yüklü maçlar arasından)
+    if (tournamentFilter) {
+      filtered = filtered.filter(m => String(m.tournament?.id ?? '') === tournamentFilter)
+    }
+
     // NOT: Favoriler filtresi artık SUNUCU tarafında (buildQuery) — burada yok.
     setFilteredMatches(filtered)
   }
@@ -527,6 +533,16 @@ function Matches() {
   const totalPages    = Math.ceil(totalCount / PAGE_SIZE)
   const liveCount     = filteredMatches.filter(m => m.status === 'running').length
   const upcomingCount = filteredMatches.filter(m => m.status === 'not_started').length
+
+  // Yüklü maçlardaki ayrı turnuvalar (dropdown filtresi için)
+  const tournamentOptions = useMemo(() => {
+    const map = new Map()
+    for (const m of matches) {
+      const t = m.tournament
+      if (t?.id != null && !map.has(String(t.id))) map.set(String(t.id), t.name || '—')
+    }
+    return [...map.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, 'tr'))
+  }, [matches])
 
   // ── Pagination Bar ──────────────────────────────────────────────
   function PaginationBar() {
@@ -649,7 +665,7 @@ function Matches() {
           { key: 'upcoming', label: 'Yaklaşan',       Icon: Clock },
           { key: 'past',     label: 'Geçmiş',         Icon: CircleCheck },
         ].map(t => (
-          <button key={t.key} onClick={() => { setActiveTab(t.key); setSortBy(t.key === 'past' ? 'date-desc' : 'date-asc') }} style={{
+          <button key={t.key} onClick={() => { setActiveTab(t.key); setSortBy(t.key === 'past' ? 'date-desc' : 'date-asc'); setTournamentFilter('') }} style={{
             padding: '9px 22px', borderRadius: 12, border: 'none', cursor: 'pointer',
             fontSize: 13, fontWeight: activeTab === t.key ? 700 : 500,
             background: activeTab === t.key
@@ -693,6 +709,15 @@ function Matches() {
           <option value="date-asc">En Erken Önce</option>
           <option value="date-desc">En Yeni Önce</option>
         </select>
+
+        {tournamentOptions.length > 1 && (
+          <select value={tournamentFilter} onChange={e => setTournamentFilter(e.target.value)} title="Turnuvaya göre filtrele" style={{ padding: '8px 12px', borderRadius: 8, border: tournamentFilter ? `1px solid ${FEXT.accentBorder}` : '1px solid var(--line)', background: tournamentFilter ? FEXT.accentSoftBg : 'var(--surface)', color: tournamentFilter ? FEXT.accentText : 'var(--text-2)', fontSize: 13, outline: 'none', cursor: 'pointer', maxWidth: 220 }}>
+            <option value="">Tüm turnuvalar</option>
+            {tournamentOptions.map(t => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+        )}
 
         {activeTab === 'past' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }} title="Geçmiş arşivinde döneme atla (örn. 2018 maçları)">

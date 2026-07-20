@@ -5,7 +5,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from
 import { GameProvider, useGame, GAMES } from './context/GameContext'
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
 import toast, { Toaster } from 'react-hot-toast'
-import { UserProvider } from './context/UserContext'
+import { UserProvider, useUser } from './context/UserContext'
 import { AuthProvider } from './context/AuthContext'
 import { Analytics } from '@vercel/analytics/react'
 import { useAuth } from './context/AuthContext'
@@ -440,7 +440,10 @@ function GameSelectorBar() {
 
 function RealtimeToastBridge() {
   const { user, profile } = useAuth()
+  const { followedTeamIds } = useUser()
   const shownRef = useRef(new Map())
+  const followedRef = useRef([])
+  useEffect(() => { followedRef.current = (followedTeamIds || []).map(Number) }, [followedTeamIds])
 
   const canManualTest = !!(
     import.meta.env.DEV
@@ -466,8 +469,27 @@ function RealtimeToastBridge() {
   useEffect(() => {
     requestBrowserNotificationPermission({ allowPrompt: true })
 
-    const unsubscribe = subscribeToMatchesUpdates(payload => {
-      const notification = buildMatchRealtimeNotification(payload)
+    const unsubscribe = subscribeToMatchesUpdates(async payload => {
+      const row = payload?.new || {}
+      const aId = Number(row.team_a_id), bId = Number(row.team_b_id)
+
+      // SADECE FAVORİLER: maç, takip edilen bir takımı içermiyorsa bildirme.
+      const followed = followedRef.current
+      if (!followed.length) return
+      if (!followed.includes(aId) && !followed.includes(bId)) return
+
+      // Bu güncelleme aslında bir bildirim üretiyor mu? (isim çekmeden önce ucuz kontrol)
+      if (!buildMatchRealtimeNotification(payload)) return
+
+      // Realtime payload isim taşımaz → iki takımın adını çek (okunur metin için).
+      let teamNames = new Map()
+      try {
+        const ids = [aId, bId].filter(Number.isFinite)
+        const { data } = await supabase.from('teams').select('id,name').in('id', ids)
+        teamNames = new Map((data || []).map(t => [t.id, t.name]))
+      } catch { /* isim gelmezse "Takım A/B" fallback */ }
+
+      const notification = buildMatchRealtimeNotification(payload, { teamNames })
       if (!notification) return
 
       const now = Date.now()
@@ -482,7 +504,7 @@ function RealtimeToastBridge() {
         }
       }
 
-      const text = `${notification.title} ${notification.message}`
+      const text = `${notification.title} · ${notification.message}`
       const options = {
         duration: notification.variant === 'live' ? 2800 : 3600,
       }

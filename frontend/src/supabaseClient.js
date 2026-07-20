@@ -201,11 +201,13 @@ export function buildManualTestNotification(kind = 'start') {
 	})
 }
 
-export function buildMatchRealtimeNotification(payload) {
+export function buildMatchRealtimeNotification(payload, opts = {}) {
 	const nextRow = payload?.new ?? {}
 	const prevRow = payload?.old ?? {}
 	if (!nextRow?.id) return null
 
+	// teamNames: id→isim haritası (realtime payload isim taşımaz → çağıran verir).
+	const teamNames = opts.teamNames instanceof Map ? opts.teamNames : new Map()
 	const nextStatus = normalizeStatus(nextRow?.status)
 	const prevStatus = normalizeStatus(prevRow?.status)
 	const teamAScore = toInt(nextRow?.team_a_score, 0)
@@ -215,23 +217,33 @@ export function buildMatchRealtimeNotification(payload) {
 		prevRow?.team_b_score !== nextRow?.team_b_score
 	const statusChanged = prevStatus !== nextStatus
 
+	const aName = teamNames.get(nextRow?.team_a_id) || 'Takım A'
+	const bName = teamNames.get(nextRow?.team_b_id) || 'Takım B'
+	const vsLine = `${aName} vs ${bName}`
+	const scoreLine = `${aName} ${teamAScore}-${teamBScore} ${bName}`
+
 	let title = ''
+	let message = ''
 	let variant = 'info'
 	let browserEligible = false
 
 	if (statusChanged && nextStatus === 'finished') {
-		title = 'MAC BITTI!'
+		title = 'Maç bitti'
+		message = scoreLine
 		variant = 'success'
 		browserEligible = true
 	} else if (statusChanged && nextStatus === 'running') {
-		title = 'MAC BASLADI!'
+		title = 'Maç başladı'
+		message = vsLine
 		variant = 'info'
 		browserEligible = true
 	} else if (scoreChanged && nextStatus === 'running') {
-		title = 'GOL! SKOR GUNCELLENDI'
+		title = 'Skor güncellendi'
+		message = scoreLine
 		variant = 'live'
 	} else if (scoreChanged && nextStatus === 'finished') {
-		title = 'SKOR KESINLESTI'
+		title = 'Skor kesinleşti'
+		message = scoreLine
 		variant = 'success'
 	} else {
 		return null
@@ -239,12 +251,5 @@ export function buildMatchRealtimeNotification(payload) {
 
 	const dedupeKey = `${nextRow.id}_${nextStatus}_${teamAScore}_${teamBScore}_${title}`
 
-	return {
-		title,
-		message: `Mac #${nextRow.id} · ${teamAScore}:${teamBScore}`,
-		matchId: nextRow.id,
-		variant,
-		dedupeKey,
-		browserEligible,
-	}
+	return { title, message, matchId: nextRow.id, variant, dedupeKey, browserEligible }
 }

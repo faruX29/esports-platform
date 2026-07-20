@@ -19,6 +19,7 @@ import {
 } from './supabaseClient'
 
 import ProtectedRoute from './components/ProtectedRoute'
+import ErrorBoundary from './components/ErrorBoundary'
 import NavbarComponent from './components/Navbar'
 import Footer from './components/Footer'
 import GameLogo, { GAME_ICON_PATHS } from './components/GameLogo'
@@ -618,6 +619,7 @@ function ScrollToTop() {
 
 /* ─── AppShell ──────────────────────────────────────────────────────────────── */
 function AppShell() {
+  const { pathname } = useLocation()
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' }}>
       <ScrollToTop />
@@ -625,6 +627,7 @@ function AppShell() {
       <RealtimeToastBridge />
       <NavbarComponent navLinks={NAV_LINKS} SearchComponent={NavSearch} />
       <GameSelectorBar />
+      <ErrorBoundary resetKey={pathname}>
       <Suspense fallback={(
         <div style={{ maxWidth: 1440, margin: '0 auto', padding: '18px 16px 26px' }}>
           <div style={{ height: 12, width: 190, borderRadius: 999, background: 'var(--surface-2)', marginBottom: 14 }} />
@@ -654,6 +657,7 @@ function AppShell() {
           <Route path="/settings"                 element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
         </Routes>
       </Suspense>
+      </ErrorBoundary>
       <Footer />
     </div>
   )

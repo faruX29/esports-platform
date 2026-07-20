@@ -16,6 +16,8 @@ import { cleanDisplayName }                           from '../utils/nameCleaner
 import { getBOFormat }                                from '../utils/matchFormat'
 import { DeepScoutBadge }                             from '../components/ScoutSignals'
 import { deriveWinnerTeamId }                         from '../utils/matchResult'
+import { roundLabel }                                 from '../utils/roundLabel'
+import { isUncertainPrediction }                      from '../utils/prediction'
 import { normalizeGameId }                            from '../utils/gameUtils'
 import { GAMES }                                      from '../context/GameContext'
 import {
@@ -763,6 +765,7 @@ function StandingsTable({ matches, navigate }) {
       if (!map[team.id]) map[team.id] = {
         id: team.id, name: team.name, logo: team.logo_url,
         w: 0, l: 0, mw: 0, ml: 0,  // match wins/losses, map wins/losses
+        history: [],               // {date, result:'W'|'L'|'D'} — son-5 form için
       }
     }
     for (const m of matches) {
@@ -772,12 +775,18 @@ function StandingsTable({ matches, navigate }) {
       // Skor-öncelikli kazanan (winner_id ~%1.2 maçta skorla çelişir). Beraberlik (Bo2 1:1)
       // → W/L SAYMA (eski kod her 'aWon değil'i team_b galibiyeti sayıyordu = beraberlik bug'ı).
       const winner = deriveWinnerTeamId(m)
+      const t = m.scheduled_at ? new Date(m.scheduled_at).getTime() : 0
       if (winner != null) {
-        if (winner === Number(m.team_a.id) || winner === Number(m.team_a_id)) {
+        const aWon = winner === Number(m.team_a.id) || winner === Number(m.team_a_id)
+        if (aWon) {
           map[m.team_a.id].w++; map[m.team_b.id].l++
+          map[m.team_a.id].history.push({ t, result: 'W' }); map[m.team_b.id].history.push({ t, result: 'L' })
         } else {
           map[m.team_b.id].w++; map[m.team_a.id].l++
+          map[m.team_b.id].history.push({ t, result: 'W' }); map[m.team_a.id].history.push({ t, result: 'L' })
         }
+      } else {
+        map[m.team_a.id].history.push({ t, result: 'D' }); map[m.team_b.id].history.push({ t, result: 'D' })
       }
       // map scores
       if (m.team_a_score != null) map[m.team_a.id].mw += m.team_a_score
@@ -786,6 +795,11 @@ function StandingsTable({ matches, navigate }) {
       if (m.team_a_score != null) map[m.team_b.id].ml += m.team_a_score
     }
     return Object.values(map)
+      .map(t => ({
+        ...t,
+        // en son 5 maç, soldan sağa eskiden yeniye
+        form: t.history.sort((a, b) => a.t - b.t).slice(-5).map(h => h.result),
+      }))
       .sort((a, b) => b.w - a.w || a.l - b.l)
   }, [matches])
 
@@ -796,7 +810,7 @@ function StandingsTable({ matches, navigate }) {
       <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 4px' }}>
         <thead>
           <tr>
-            {['#', 'Takım', 'W', 'L', 'W%', 'Map W', 'Map L'].map(h => (
+            {['#', 'Takım', 'W', 'L', 'W%', 'Form', 'Map W', 'Map L'].map(h => (
               <th key={h} style={{
                 padding: '7px 12px', textAlign: h === 'Takım' ? 'left' : 'center',
                 fontSize: 10, color: 'var(--text-5)', fontWeight: 700,
@@ -859,6 +873,24 @@ function StandingsTable({ matches, navigate }) {
                     </div>
                     <span style={{ fontSize: 11, color: 'var(--text-3)', minWidth: 28 }}>{pct}%</span>
                   </div>
+                </td>
+
+                {/* Form (son 5) */}
+                <td style={{ padding: '10px 12px', textAlign: 'center', background: 'var(--surface)' }}>
+                  {t.form.length > 0 ? (
+                    <div style={{ display: 'inline-flex', gap: 3 }}>
+                      {t.form.map((r, fi) => {
+                        const c = r === 'W' ? '#4CAF50' : r === 'L' ? '#FF4655' : 'var(--text-5)'
+                        return (
+                          <span key={fi} title={r === 'W' ? 'Galibiyet' : r === 'L' ? 'Mağlubiyet' : 'Beraberlik'} style={{
+                            width: 16, height: 16, borderRadius: 4, fontSize: 9, fontWeight: 800,
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            color: c, background: `${c}22`, border: `1px solid ${c}55`,
+                          }}>{r}</span>
+                        )
+                      })}
+                    </div>
+                  ) : <span style={{ fontSize: 11, color: 'var(--text-6)' }}>—</span>}
                 </td>
 
                 {/* Map W / L */}
@@ -1626,7 +1658,7 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
         }}>
           <span style={{ fontSize: 9, fontWeight: 800, color: '#fff',
             letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-            🇹🇷 Turkish Pride
+            🇹🇷 Türk Gururu
           </span>
         </div>
       )}
@@ -1646,11 +1678,11 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
                 {getBOFormat(m.team_a_score, m.team_b_score, m.number_of_games)}
               </span>
             )}
-            {m.round_info && (
+            {roundLabel(m) && (
               <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 8,
                 background: `${gc}18`, border: `1px solid ${gc}44`, color: gc,
                 fontWeight: 700 }}>
-                {m.round_info}
+                {roundLabel(m)}
               </span>
             )}
           </div>
@@ -1707,6 +1739,28 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
             </span>
           </div>
         </div>
+
+        {/* AI tahmin çubuğu — yaklaşan/canlı maçlar (bitmişte skor zaten var) */}
+        {m.status !== 'finished' && m.prediction_team_a != null && m.prediction_team_b != null && (() => {
+          const predUncertain = isUncertainPrediction(m.prediction_team_a, m.prediction_team_b, m.prediction_confidence)
+          const pA = Math.round(m.prediction_team_a * 100)
+          return (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ height: 5, borderRadius: 3, background: 'var(--surface-2)', overflow: 'hidden' }}>
+                <div style={{ width: `${pA}%`, height: '100%', background: predUncertain ? 'var(--track)' : 'linear-gradient(90deg,#667eea,#764ba2)', transition: 'width .5s' }} />
+              </div>
+              {predUncertain ? (
+                <div style={{ fontSize: 9, color: 'var(--text-4)', marginTop: 3, textAlign: 'center', fontWeight: 700, letterSpacing: '.4px' }}>AI · BELİRSİZ</div>
+              ) : (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, marginTop: 3, fontWeight: 700 }}>
+                  <span style={{ color: m.prediction_team_a >= m.prediction_team_b ? '#818cf8' : 'var(--text-5)' }}>%{pA}</span>
+                  <span style={{ color: 'var(--text-6)' }}>AI</span>
+                  <span style={{ color: m.prediction_team_b > m.prediction_team_a ? '#818cf8' : 'var(--text-5)' }}>%{100 - pA}</span>
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {/* Date */}
         <div style={{ marginTop: 10, fontSize: 10, color: 'var(--text-6)',

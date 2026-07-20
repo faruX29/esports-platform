@@ -378,6 +378,11 @@ export function UserProvider({ children }) {
 function FollowAuthPrompt({ onClose }) {
   const navigate = useNavigate()
   function go(path) { onClose(); navigate(path) }
+  useEffect(() => {
+    const onKey = e => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
   return (
     <div
       onClick={onClose}
@@ -388,6 +393,9 @@ function FollowAuthPrompt({ onClose }) {
     >
       <div
         onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Hesap oluştur"
         style={{
           width: '100%', maxWidth: 380, background: 'var(--surface)', border: '1px solid var(--line)',
           borderRadius: 16, padding: '26px 22px', textAlign: 'center',

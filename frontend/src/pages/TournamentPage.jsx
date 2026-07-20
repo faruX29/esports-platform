@@ -24,6 +24,7 @@ import {
   Radio, Star, TriangleAlert, Zap, Target,
 } from 'lucide-react'
 import { FEXT } from '../theme'
+import Mascot from '../components/Mascot'
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 
@@ -1946,7 +1947,7 @@ export default function TournamentPage() {
   // ── Error ─────────────────────────────────────────────────────
   if (error || !tournament) return (
     <div style={{ maxWidth: 600, margin: '60px auto', textAlign: 'center', color: 'white' }}>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><TriangleAlert size={42} color="#FF4655" /></div>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={86} dim /></div>
       <div style={{ fontSize: 18, color: '#FF4655', marginBottom: 8 }}>
         {error ?? 'Turnuva bulunamadı'}
       </div>

@@ -13,6 +13,7 @@ import {
   Globe, Music, Gamepad2, Link as LinkIcon, Clock, Info,
 } from 'lucide-react'
 import { FEXT } from '../theme'
+import Mascot from '../components/Mascot'
 
 // ── Yardımcılar ───────────────────────────────────────────────────────────────
 function calcTeamRating(wins, total) {
@@ -587,7 +588,7 @@ export default function TeamPage() {
 
   if (error || !team) return (
     <div style={{ textAlign: 'center', padding: '60px', color: '#FF4655' }}>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><TriangleAlert size={38} color="#FF4655" /></div>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={86} dim /></div>
       <div style={{ fontSize: 16, marginBottom: 20 }}>{error ?? 'Takım bulunamadı'}</div>
       <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', background: FEXT.accentGrad, border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
         ← Geri

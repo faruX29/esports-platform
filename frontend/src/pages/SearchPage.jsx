@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { FEXT } from '../theme'
 import { GAME_COLORS } from '../theme'
+import Mascot from '../components/Mascot'
 
 // Arama sonucunda takım/oyuncunun HANGİ oyun olduğu görünmeli (yoksa aynı isimli
 // farklı oyun takımları karışıyor). Küçük renkli oyun etiketi.
@@ -1180,7 +1181,7 @@ export default function SearchPage() {
               {isEmpty && (
                 <div style={{ textAlign: 'center', padding: '60px',
                   color: 'var(--text-6)', animation: 'fadeUp .3s ease' }}>
-                  <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'center' }}><Inbox size={42} color="var(--text-6)" /></div>
+                  <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'center' }}><Mascot size={78} dim /></div>
                   <div style={{ fontSize: 16, color: 'var(--text-5)' }}>Sonuç bulunamadı</div>
                   <div style={{ fontSize: 12, color: 'var(--line)', marginBottom: 20 }}>
                     Farklı bir ifade deneyin veya filtreleri kaldırın

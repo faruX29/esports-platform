@@ -20,6 +20,7 @@ import { useUser } from '../context/UserContext'
 import { summarizePlayerMatchStats, metricBars } from '../utils/playerMetrics'
 import { deriveWinnerTeamId, correctedScores } from '../utils/matchResult'
 import { FEXT } from '../theme'
+import Mascot from '../components/Mascot'
 import {
   Brain, ClipboardList, Target, Swords, Skull, Handshake, Crosshair, Map as MapIcon,
   Compass, Sparkles, TriangleAlert, Star, MapPin, CircleCheck, X as XIcon, BarChart3,
@@ -999,7 +1000,7 @@ export default function PlayerPage() {
 
   if (error || !player) return (
     <div style={{ textAlign: 'center', padding: 80, color: '#FF4655' }}>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><TriangleAlert size={42} color="#FF4655" /></div>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={86} dim /></div>
       <div style={{ fontSize: 16, marginBottom: 20 }}>{error ?? 'Oyuncu bulunamadı'}</div>
       <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', background: FEXT.accentGrad, border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
         ← Geri

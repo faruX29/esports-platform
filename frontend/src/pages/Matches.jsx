@@ -11,6 +11,7 @@ import { useUser } from '../context/UserContext'
 import { isTurkishTeam }                   from '../constants'
 import { normalizeGameId }                  from '../utils/gameUtils'
 import { FEXT, statusStyle }                from '../theme'
+import Mascot                               from '../components/Mascot'
 import { getBOFormat }                       from '../utils/matchFormat'
 import { correctedScores }                   from '../utils/matchResult'
 import InitialsImage                        from '../components/InitialsImage'
@@ -733,7 +734,7 @@ function Matches() {
       {/* Match Grid */}
       {filteredMatches.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-4)' }}>
-          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>{activeTab === 'live' ? <Radio size={44} color="var(--line-2)" /> : <Inbox size={44} color="var(--line-2)" />}</div>
+          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={88} dim /></div>
           <h3 style={{ margin: 0, color: 'var(--text-5)' }}>
             {activeTab === 'live' ? 'Şu an canlı maç yok' : 'Maç bulunamadı'}
           </h3>

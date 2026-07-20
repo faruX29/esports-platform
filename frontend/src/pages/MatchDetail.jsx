@@ -20,6 +20,7 @@ import {
 import { getBOFormat }                              from '../utils/matchFormat'
 import { deriveWinnerTeamId, correctedScores }      from '../utils/matchResult'
 import { FEXT }                                     from '../theme'
+import Mascot from '../components/Mascot'
 
 // MVP Oylaması şimdilik GİZLİ (kurucu kararı 2026-07-16): gerçek oyuncu istatistiği
 // altyapısı olmadan oy "en popüler oyuncu" yarışına dönüşüyor (düşük performanslı ama
@@ -1343,7 +1344,7 @@ export default function MatchDetail() {
   )
   if (error || !match) return (
     <div style={{ textAlign: 'center', padding: '80px 20px', color: '#fff' }}>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><TriangleAlert size={44} color="#FF4655" /></div>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={86} dim /></div>
       <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-4)', marginBottom: 24 }}>{error || 'Maç bulunamadı.'}</div>
       <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', background: FEXT.accentGrad, border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>← Geri</button>
     </div>

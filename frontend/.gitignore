@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Test/gecici gorseller
+_icons.png
+_badge.png
+_*_test.mjs

@@ -20,6 +20,7 @@ import { normalizeGameId }                  from '../utils/gameUtils'
 import { getBOFormat }                       from '../utils/matchFormat'
 import { FEXT, statusStyle }                 from '../theme'
 import { correctedScores }                   from '../utils/matchResult'
+import { isUncertainPrediction }             from '../utils/prediction'
 import PredictionAccuracyBadge              from '../components/PredictionAccuracyBadge'
 
 const MVP_HIDE_DREAM_TEAM = true
@@ -807,8 +808,10 @@ function WinBar({ predA, predB, confidence }) {
   const total = (predA + predB) || 1
   const pctA  = Math.round((predA / total) * 100)
   const pctB  = 100 - pctA
-  const aFav  = pctA > pctB
-  const isHot = confidence != null && confidence > 0.80
+  const uncertain = isUncertainPrediction(predA, predB, confidence)
+  const aFav  = !uncertain && pctA > pctB
+  const bFav  = !uncertain && pctB > pctA
+  const isHot = !uncertain && confidence != null && confidence > 0.80
 
   return (
     <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--line)' }}>
@@ -819,19 +822,19 @@ function WinBar({ predA, predB, confidence }) {
         marginBottom: 3,
       }}>
         <div style={{ width: `${pctA}%`, background: aFav ? 'var(--ai)' : 'var(--track)', transition: 'width .5s' }} />
-        <div style={{ width: `${pctB}%`, background: !aFav ? 'var(--ai)' : 'var(--track)', transition: 'width .5s' }} />
+        <div style={{ width: `${pctB}%`, background: bFav ? 'var(--ai)' : 'var(--track)', transition: 'width .5s' }} />
       </div>
 
       {/* Yüzde + AI etiketi */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: 8, color: aFav ? 'var(--ai)' : 'var(--text-5)', fontWeight: aFav ? 700 : 400 }}>
-          {pctA}%
+          {uncertain ? '' : `${pctA}%`}
         </span>
-        <span style={{ fontSize: 8, color: isHot ? '#ff8c42' : 'var(--line-2)', fontWeight: isHot ? 700 : 400, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-          {isHot && <Flame size={9} strokeWidth={2.5} />}AI
+        <span style={{ fontSize: 8, color: uncertain ? 'var(--text-4)' : (isHot ? '#ff8c42' : 'var(--line-2)'), fontWeight: uncertain || isHot ? 700 : 400, display: 'inline-flex', alignItems: 'center', gap: 2, letterSpacing: uncertain ? '.4px' : 0 }}>
+          {isHot && <Flame size={9} strokeWidth={2.5} />}{uncertain ? 'AI · Belirsiz' : 'AI'}
         </span>
-        <span style={{ fontSize: 8, color: !aFav ? 'var(--ai)' : 'var(--text-5)', fontWeight: !aFav ? 700 : 400 }}>
-          {pctB}%
+        <span style={{ fontSize: 8, color: bFav ? 'var(--ai)' : 'var(--text-5)', fontWeight: bFav ? 700 : 400 }}>
+          {uncertain ? '' : `${pctB}%`}
         </span>
       </div>
     </div>

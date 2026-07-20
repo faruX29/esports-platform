@@ -14,6 +14,8 @@ import { FEXT, statusStyle }                from '../theme'
 import Mascot                               from '../components/Mascot'
 import { getBOFormat }                       from '../utils/matchFormat'
 import { correctedScores }                   from '../utils/matchResult'
+import { isUncertainPrediction }             from '../utils/prediction'
+import { roundLabel }                        from '../utils/roundLabel'
 import InitialsImage                        from '../components/InitialsImage'
 import {
   CalendarDays, Clock, CircleCheck, Radio, Search, Star, RefreshCw, Repeat,
@@ -325,7 +327,7 @@ function Matches() {
             id, status, scheduled_at,
             team_a_id, team_b_id, winner_id,
             team_a_score, team_b_score,
-            number_of_games, stream_url, game_id,
+            number_of_games, stream_url, game_id, round_info, stage_name, bracket_type,
             prediction_team_a, prediction_team_b, prediction_confidence,
             team_a:teams!matches_team_a_id_fkey(id, name, logo_url, acronym),
             team_b:teams!matches_team_b_id_fkey(id, name, logo_url, acronym),
@@ -828,9 +830,15 @@ function Matches() {
                       )}
                       {/* Prediction % */}
                       {match.prediction_team_a != null && (
-                        <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: 'rgba(102,126,234,.2)', border: '1px solid rgba(102,126,234,.5)', color: '#818cf8', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          <Sparkles size={11} /> {Math.round(Math.max(match.prediction_team_a, match.prediction_team_b) * 100)}%
-                        </span>
+                        isUncertainPrediction(match.prediction_team_a, match.prediction_team_b, match.prediction_confidence) ? (
+                          <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: 'var(--hover)', border: '1px solid var(--line-2)', color: 'var(--text-3)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <Sparkles size={11} /> Belirsiz
+                          </span>
+                        ) : (
+                          <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: 'rgba(102,126,234,.2)', border: '1px solid rgba(102,126,234,.5)', color: '#818cf8', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <Sparkles size={11} /> {Math.round(Math.max(match.prediction_team_a, match.prediction_team_b) * 100)}%
+                          </span>
+                        )
                       )}
                       <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: statusBadge.bg, border: `1px solid ${statusBadge.color}44`, color: statusBadge.color, animation: isLive ? 'pulse 1.5s infinite' : 'none' }}>
                         {statusBadge.text}
@@ -905,21 +913,28 @@ function Matches() {
                   </div>
 
                   {/* AI Win Bar */}
-                  {match.prediction_team_a != null && match.prediction_team_b != null && (
+                  {match.prediction_team_a != null && match.prediction_team_b != null && (() => {
+                    const predUncertain = isUncertainPrediction(match.prediction_team_a, match.prediction_team_b, match.prediction_confidence)
+                    return (
                     <div style={{ marginBottom: 10 }}>
                       <div style={{ height: 6, borderRadius: 3, background: 'var(--surface)', overflow: 'hidden', position: 'relative' }}>
-                        <div style={{ width: `${Math.round(match.prediction_team_a * 100)}%`, height: '100%', background: 'linear-gradient(90deg,#667eea,#764ba2)', transition: 'width .5s' }} />
+                        <div style={{ width: `${Math.round(match.prediction_team_a * 100)}%`, height: '100%', background: predUncertain ? 'var(--track)' : 'linear-gradient(90deg,#667eea,#764ba2)', transition: 'width .5s' }} />
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-5)', marginTop: 3 }}>
-                        <span style={{ color: match.prediction_team_a >= match.prediction_team_b ? '#818cf8' : 'var(--text-5)' }}>
-                          {Math.round(match.prediction_team_a * 100)}%
-                        </span>
-                        <span style={{ color: match.prediction_team_b > match.prediction_team_a ? '#818cf8' : 'var(--text-5)' }}>
-                          {Math.round(match.prediction_team_b * 100)}%
-                        </span>
-                      </div>
+                      {predUncertain ? (
+                        <div style={{ fontSize: 10, color: 'var(--text-4)', marginTop: 3, textAlign: 'center', fontWeight: 700 }}>AI · Belirsiz</div>
+                      ) : (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-5)', marginTop: 3 }}>
+                          <span style={{ color: match.prediction_team_a >= match.prediction_team_b ? '#818cf8' : 'var(--text-5)' }}>
+                            {Math.round(match.prediction_team_a * 100)}%
+                          </span>
+                          <span style={{ color: match.prediction_team_b > match.prediction_team_a ? '#818cf8' : 'var(--text-5)' }}>
+                            {Math.round(match.prediction_team_b * 100)}%
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  )}
+                    )
+                  })()}
 
                   {/* Bottom row */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--surface-2)', paddingTop: 10, gap: 8 }}>
@@ -927,6 +942,9 @@ function Matches() {
                       <Trophy size={12} style={{ flexShrink: 0 }} /> {match.tournament?.name ?? '—'}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                      {roundLabel(match) && (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: FEXT.accentText, background: FEXT.accentSoftBg, border: `1px solid ${FEXT.accentBorder}`, borderRadius: 6, padding: '2px 7px', whiteSpace: 'nowrap' }}>{roundLabel(match)}</span>
+                      )}
                       {match.stream_url && (
                         <a
                           href={match.stream_url}

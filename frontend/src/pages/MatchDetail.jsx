@@ -19,6 +19,8 @@ import {
 } from 'lucide-react'
 import { getBOFormat }                              from '../utils/matchFormat'
 import { deriveWinnerTeamId, correctedScores }      from '../utils/matchResult'
+import { isUncertainPrediction }                    from '../utils/prediction'
+import { roundLabel }                               from '../utils/roundLabel'
 import { FEXT }                                     from '../theme'
 import Mascot from '../components/Mascot'
 import SeoHead from '../components/SeoHead'
@@ -944,6 +946,7 @@ function WinProbabilityBar({ teamAName, teamBName, teamAPct, teamBPct }) {
   const total = normalizedA + normalizedB
   const safeA = total > 0 ? Math.round((normalizedA / total) * 100) : 50
   const safeB = 100 - safeA
+  const uncertain = isUncertainPrediction(safeA, safeB)
   const [animatedA, setAnimatedA] = useState(50)
 
   useEffect(() => {
@@ -952,23 +955,34 @@ function WinProbabilityBar({ teamAName, teamBName, teamAPct, teamBPct }) {
   }, [safeA])
 
   return (
-    <div style={{ border: '1px solid rgba(194,92,208,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(194,92,208,.12), rgba(12,12,12,.9))', padding: '10px 11px' }}>
-      <div style={{ fontSize: 10, color: '#8be9dd', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 6 }}>
-        Win Probability
+    <div style={{ border: '1px solid rgba(194,92,208,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(194,92,208,.12), var(--surface))', padding: '10px 11px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        <div style={{ fontSize: 10, color: '#8be9dd', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px' }}>
+          Kazanma Olasılığı
+        </div>
+        {uncertain && (
+          <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', background: 'var(--hover)', border: '1px solid var(--line-2)', borderRadius: 6, padding: '1px 6px', letterSpacing: '.4px' }}>BELİRSİZ</span>
+        )}
       </div>
 
       <div style={{ position: 'relative', height: 14, borderRadius: 999, overflow: 'hidden', background: 'var(--bg)', border: '1px solid var(--surface-2)', marginBottom: 7 }}>
-        <div style={{ width: `${animatedA}%`, height: '100%', background: 'linear-gradient(90deg,#4ade80,#22c55e)', transition: 'width .7s cubic-bezier(.22,.61,.36,1)' }} />
+        <div style={{ width: `${animatedA}%`, height: '100%', background: uncertain ? 'linear-gradient(90deg,var(--text-6),var(--text-5))' : 'linear-gradient(90deg,#4ade80,#22c55e)', transition: 'width .7s cubic-bezier(.22,.61,.36,1)' }} />
         <div style={{ position: 'absolute', top: -1, left: `${animatedA}%`, width: 2, height: 16, background: '#fff', boxShadow: '0 0 10px rgba(255,255,255,.6)', transform: 'translateX(-1px)', animation: 'winBoundaryPulse 1.4s ease-in-out infinite' }} />
         <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
-          <div style={{ width: `${100 - animatedA}%`, marginLeft: 'auto', background: 'linear-gradient(90deg,#fb7185,#FF4655)', opacity: .88, transition: 'width .7s cubic-bezier(.22,.61,.36,1)' }} />
+          <div style={{ width: `${100 - animatedA}%`, marginLeft: 'auto', background: uncertain ? 'linear-gradient(90deg,var(--text-5),var(--text-6))' : 'linear-gradient(90deg,#fb7185,#FF4655)', opacity: .88, transition: 'width .7s cubic-bezier(.22,.61,.36,1)' }} />
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 11, fontWeight: 800 }}>
-        <span style={{ color: '#86efac', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{teamAName} %{animatedA}</span>
-        <span style={{ color: '#fda4af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{teamBName} %{safeB}</span>
-      </div>
+      {uncertain ? (
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textAlign: 'center' }}>
+          Model iki takımı başa baş görüyor
+        </div>
+      ) : (
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 11, fontWeight: 800 }}>
+          <span style={{ color: '#86efac', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{teamAName} %{animatedA}</span>
+          <span style={{ color: '#fda4af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{teamBName} %{safeB}</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -1361,6 +1375,7 @@ export default function MatchDetail() {
   const hasTR = isTurkishTeam(aName) || isTurkishTeam(bName)
   const pctA  = aiWin.teamA
   const pctB  = aiWin.teamB
+  const predUncertain = isUncertainPrediction(pctA, pctB)
   // Seri kazananı winner_id ÖNCELİKLİ (güvenilir alan); skorlar ~%1.2 maçta ters-atanmış.
   const seriesWinner = isFin ? deriveWinnerTeamId(match) : null
   const aWon  = seriesWinner != null && seriesWinner === Number(aId)
@@ -1422,6 +1437,7 @@ export default function MatchDetail() {
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
             <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: `${gc}22`, color: gc, border: `1px solid ${gc}44` }}>{gameShort(gName)} · {gName}</span>
             {match.tournament && <Link to={`/tournament/${match.tournament.id}`} style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 600, background: 'rgba(255,184,0,.1)', color: '#FFB800', border: '1px solid rgba(255,184,0,.3)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Trophy size={11} /> {match.tournament.name}</Link>}
+            {roundLabel(match) && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: FEXT.accentSoftBg, color: FEXT.accentText, border: `1px solid ${FEXT.accentBorder}` }}>{roundLabel(match)}</span>}
             {boFormat && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: 'rgba(96,165,250,.12)', color: '#60a5fa', border: '1px solid rgba(96,165,250,.3)' }}>{boFormat}</span>}
             {isLive && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 800, background: 'rgba(255,70,85,.2)', color: '#FF4655', border: '1px solid rgba(255,70,85,.4)', animation: 'pulse 1.2s infinite' }}>● LIVE</span>}
             {isFin  && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: 'rgba(76,175,80,.1)', color: '#4CAF50', border: '1px solid rgba(76,175,80,.3)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><CircleCheck size={11} /> Tamamlandı</span>}
@@ -1454,16 +1470,20 @@ export default function MatchDetail() {
               <div style={{ fontSize: 12, fontWeight: 700, color: isLive ? '#FF4655' : '#4CAF50', marginTop: 4 }}>{isLive ? '● Canlı' : fmtTime(match.scheduled_at)}</div>
               <div style={{ fontSize: 10, color: 'var(--text-6)', marginTop: 2 }}>{fmtDate(match.scheduled_at)}</div>
               <div style={{ marginTop: 10, padding: '0 6px', minWidth: 170 }}>
-                <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--ai)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 4 }}>AI Win Probability</div>
+                <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--ai)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>AI Kazanma Olasılığı{predUncertain && <span style={{ color: 'var(--text-3)', fontWeight: 800 }}>· Belirsiz</span>}</div>
                 <div style={{ height: 8, borderRadius: 4, overflow: 'hidden', display: 'flex', border: '1px solid var(--line)' }}>
-                  <div style={{ flex: pctA, background: 'linear-gradient(90deg,#4ade80,#22c55e)', borderRadius: '4px 0 0 4px' }} />
-                  <div style={{ flex: pctB, background: 'linear-gradient(90deg,#60a5fa,#3b82f6)', borderRadius: '0 4px 4px 0' }} />
+                  <div style={{ flex: pctA, background: predUncertain ? 'var(--text-6)' : 'linear-gradient(90deg,#4ade80,#22c55e)', borderRadius: '4px 0 0 4px' }} />
+                  <div style={{ flex: pctB, background: predUncertain ? 'var(--text-5)' : 'linear-gradient(90deg,#60a5fa,#3b82f6)', borderRadius: '0 4px 4px 0' }} />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3, fontSize: 10, fontWeight: 800 }}>
-                  <span style={{ color: '#4ade80' }}>{aName}: {pctA}%</span>
-                  <span style={{ color: '#60a5fa' }}>{pctB}% :{bName}</span>
-                </div>
-                <div style={{ marginTop: 2, fontSize: 9, color: 'var(--text-6)' }}>Confidence Score: %{aiWin.confidence} · sample: {aiWin.samples}</div>
+                {predUncertain ? (
+                  <div style={{ marginTop: 3, fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textAlign: 'center' }}>Model başa baş görüyor</div>
+                ) : (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3, fontSize: 10, fontWeight: 800 }}>
+                    <span style={{ color: '#4ade80' }}>{aName}: {pctA}%</span>
+                    <span style={{ color: '#60a5fa' }}>{pctB}% :{bName}</span>
+                  </div>
+                )}
+                <div style={{ marginTop: 2, fontSize: 9, color: 'var(--text-6)' }}>Güven Skoru: %{aiWin.confidence} · örneklem: {aiWin.samples}</div>
                 <div style={{ marginTop: 6, display: 'flex', justifyContent: 'center' }}>
                   <PredictionAccuracyBadge variant="inline" />
                 </div>
@@ -1703,7 +1723,7 @@ export default function MatchDetail() {
         </div>
 
         <div style={{ marginTop: 18, background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--surface-2)', padding: 14 }}>
-          <ST Icon={Compass} label="Gozcu Notu" />
+          <ST Icon={Compass} label="Gözcü Notu" />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 10 }}>
             <div>
               <WinProbabilityBar
@@ -1712,19 +1732,19 @@ export default function MatchDetail() {
                 teamAPct={pctA}
                 teamBPct={pctB}
               />
-              <div style={{ marginTop: 5, fontSize: 11, color: '#9bc4bf' }}>Confidence: %{aiWin.confidence} (sample {aiWin.samples})</div>
+              <div style={{ marginTop: 5, fontSize: 11, color: '#9bc4bf' }}>Güven: %{aiWin.confidence} (örneklem {aiWin.samples})</div>
             </div>
 
-            <div style={{ border: '1px solid rgba(196,181,253,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(124,58,237,.12), rgba(12,12,12,.9))', padding: '10px 11px' }}>
-              <div style={{ fontSize: 10, color: '#c8b4ff', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5 }}>Map Profile</div>
+            <div style={{ border: '1px solid rgba(196,181,253,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(124,58,237,.12), var(--surface))', padding: '10px 11px' }}>
+              <div style={{ fontSize: 10, color: '#c8b4ff', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5 }}>Harita Profili</div>
               <div style={{ fontSize: 12, color: '#efeaff' }}>{mapStats.length > 0 ? `${mapStats[0].map} en fazla oynanan harita` : 'Yeterli map tarihi yok'}</div>
               <div style={{ marginTop: 4, fontSize: 11, color: '#b6acd6' }}>{mapStats.length > 0 ? `${mapStats[0].total} ornek uzerinden ${aName} ${mapStats[0].teamAWinRate}% - ${mapStats[0].teamBWinRate}% ${bName}` : 'Tahmin neutral modda'}</div>
             </div>
 
-            <div style={{ border: '1px solid rgba(255,184,0,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(255,184,0,.12), rgba(12,12,12,.9))', padding: '10px 11px' }}>
-              <div style={{ fontSize: 10, color: '#ffd67d', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5 }}>MVP Projection</div>
+            <div style={{ border: '1px solid rgba(255,184,0,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(255,184,0,.12), var(--surface))', padding: '10px 11px' }}>
+              <div style={{ fontSize: 10, color: '#ffd67d', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5 }}>MVP Tahmini</div>
               <div style={{ fontSize: 12, color: '#fff0cb' }}>{scoutMvp ? `${scoutMvp.nickname} (${scoutMvp.teamName})` : 'Canlı veri bekleniyor'}</div>
-              <div style={{ marginTop: 4, fontSize: 11, color: '#d2bf8f' }}>{scoutMvp ? `K/D/A: ${scoutMvp.kills || 0}/${scoutMvp.deaths || 0}/${scoutMvp.assists || 0}` : 'Model sadece takim seviyesinde calisiyor'}</div>
+              <div style={{ marginTop: 4, fontSize: 11, color: '#d2bf8f' }}>{scoutMvp ? `K/D/A: ${scoutMvp.kills || 0}/${scoutMvp.deaths || 0}/${scoutMvp.assists || 0}` : 'Model sadece takım seviyesinde çalışıyor'}</div>
             </div>
           </div>
         </div>

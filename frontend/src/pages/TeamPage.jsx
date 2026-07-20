@@ -7,6 +7,7 @@ import { useUser }                          from '../context/UserContext'
 import InitialsImage                        from '../components/InitialsImage'
 import { getBOFormat }                       from '../utils/matchFormat'
 import { deriveWinnerTeamId, matchOutcome, correctedScores } from '../utils/matchResult'
+import { isUncertainPrediction } from '../utils/prediction'
 import {
   Radio, CircleCheck, X as XIcon, Trophy, Star, MapPin, Flame, Swords, Users,
   Handshake, CalendarDays, ClipboardList, TriangleAlert, Video, AtSign,
@@ -430,14 +431,25 @@ function MatchCard({ match, teamId, navigate }) {
       {/* AI Win bar */}
       {hasPred && (
         <div style={{ marginBottom: 8 }}>
-          <div style={{ height: 4, borderRadius: 2, background: 'var(--surface)', overflow: 'hidden' }}>
-            <div style={{ width: `${Math.round(myPred * 100)}%`, height: '100%', background: 'linear-gradient(90deg,#667eea,#764ba2)' }} />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginTop: 3, color: 'var(--text-5)' }}>
-            <span style={{ color: myPred >= oppPred ? '#818cf8' : 'var(--text-5)' }}>{Math.round(myPred * 100)}%</span>
-            <span style={{ color: 'var(--text-5)' }}>AI</span>
-            <span style={{ color: oppPred > myPred ? '#818cf8' : 'var(--text-5)' }}>{Math.round(oppPred * 100)}%</span>
-          </div>
+          {isUncertainPrediction(myPred, oppPred, match.prediction_confidence) ? (
+            <>
+              <div style={{ height: 4, borderRadius: 2, background: 'var(--surface)', overflow: 'hidden' }}>
+                <div style={{ width: '50%', height: '100%', background: 'var(--track)' }} />
+              </div>
+              <div style={{ fontSize: 10, marginTop: 3, color: 'var(--text-4)', textAlign: 'center', fontWeight: 700 }}>AI · Belirsiz</div>
+            </>
+          ) : (
+            <>
+              <div style={{ height: 4, borderRadius: 2, background: 'var(--surface)', overflow: 'hidden' }}>
+                <div style={{ width: `${Math.round(myPred * 100)}%`, height: '100%', background: 'linear-gradient(90deg,#667eea,#764ba2)' }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginTop: 3, color: 'var(--text-5)' }}>
+                <span style={{ color: myPred >= oppPred ? '#818cf8' : 'var(--text-5)' }}>{Math.round(myPred * 100)}%</span>
+                <span style={{ color: 'var(--text-5)' }}>AI</span>
+                <span style={{ color: oppPred > myPred ? '#818cf8' : 'var(--text-5)' }}>{Math.round(oppPred * 100)}%</span>
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -446,6 +458,19 @@ function MatchCard({ match, teamId, navigate }) {
         <div style={{ fontSize: 10, color: 'var(--text-6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
           <Trophy size={11} style={{ flexShrink: 0 }} /> {match.tournament?.name ?? '—'}
         </div>
+        {match.stream_url && (
+          <a
+            href={match.stream_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: 'var(--ai)', background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.35)', borderRadius: 6, padding: '2px 7px', textDecoration: 'none', flexShrink: 0 }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(167,139,250,.22)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(167,139,250,.12)'}
+          >
+            <Video size={11} /> Yayın
+          </a>
+        )}
         <div style={{ fontSize: 10, color: 'var(--text-5)', flexShrink: 0 }}>
           {new Date(match.scheduled_at).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
         </div>
@@ -480,7 +505,7 @@ export default function TeamPage() {
         supabase.from('matches').select(`
           id, status, scheduled_at,
           team_a_id, team_b_id, winner_id,
-          team_a_score, team_b_score, number_of_games,
+          team_a_score, team_b_score, number_of_games, stream_url,
           prediction_team_a, prediction_team_b, prediction_confidence,
           team_a:teams!matches_team_a_id_fkey(id, name, logo_url),
           team_b:teams!matches_team_b_id_fkey(id, name, logo_url),

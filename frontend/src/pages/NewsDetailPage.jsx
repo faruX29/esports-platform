@@ -24,6 +24,7 @@ import { buildNewsSlug, parseNewsRef } from '../utils/newsSlug'
 import { getEsportsName } from '../utils/esportsName'
 import { X as XIcon, MessageSquare } from 'lucide-react'
 import { FEXT } from '../theme'
+import { isUncertainPrediction } from '../utils/prediction'
 
 function isMissingTableError(error, tableName) {
   const code = error?.code || ''
@@ -221,7 +222,9 @@ function AIProbabilityBar({ story }) {
   const pctB = (predB / total) * 100
   const teamA = story.visuals?.teamA || {}
   const teamB = story.visuals?.teamB || {}
-  const aFavored = predA >= predB
+  const uncertain = isUncertainPrediction(predA, predB)
+  const aFavored = !uncertain && predA >= predB
+  const bFavored = !uncertain && predB > predA
 
   return (
     <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid #1a2a3a', background: 'linear-gradient(145deg,#0a1520,var(--surface))', padding: 16 }}>
@@ -244,11 +247,11 @@ function AIProbabilityBar({ story }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           <span style={{ fontSize: 15, fontWeight: 800, color: aFavored ? '#86efac' : '#9ca3af' }}>{pctA.toFixed(1)}%</span>
           <span style={{ fontSize: 11, color: 'var(--text-6)' }}>:</span>
-          <span style={{ fontSize: 15, fontWeight: 800, color: !aFavored ? '#86efac' : '#9ca3af' }}>{pctB.toFixed(1)}%</span>
+          <span style={{ fontSize: 15, fontWeight: 800, color: bFavored ? '#86efac' : '#9ca3af' }}>{pctB.toFixed(1)}%</span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flex: '1 1 0', justifyContent: 'flex-end' }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: !aFavored ? 'var(--text-1)' : 'var(--text-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: bFavored ? 'var(--text-1)' : 'var(--text-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {teamB.name}
           </span>
           <InitialsImage
@@ -261,11 +264,11 @@ function AIProbabilityBar({ story }) {
 
       <div style={{ height: 10, borderRadius: 999, overflow: 'hidden', display: 'flex', background: 'var(--surface)' }}>
         <div style={{ width: `${pctA}%`, background: aFavored ? 'linear-gradient(90deg,#8B3AA0,#DF4888)' : 'linear-gradient(90deg,var(--text-6),var(--text-5))', transition: 'width 0.4s ease' }} />
-        <div style={{ flex: 1, background: !aFavored ? 'linear-gradient(270deg,#1d4ed8,#60a5fa)' : 'linear-gradient(270deg,var(--line),var(--text-6))', transition: 'flex 0.4s ease' }} />
+        <div style={{ flex: 1, background: bFavored ? 'linear-gradient(270deg,#1d4ed8,#60a5fa)' : 'linear-gradient(270deg,var(--line),var(--text-6))', transition: 'flex 0.4s ease' }} />
       </div>
 
       <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-5)', textAlign: 'center' }}>
-        Model öngörüsü — favori tarafın rengi vurgulanır
+        {uncertain ? 'Model iki takımı başa baş görüyor' : 'Model öngörüsü — favori tarafın rengi vurgulanır'}
       </div>
     </section>
   )

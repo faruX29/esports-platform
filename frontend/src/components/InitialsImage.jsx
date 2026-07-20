@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 function buildInitials(name, max = 2) {
   const cleaned = String(name || '')
     .trim()
-    .replace(/[\-_]+/g, ' ')
+    .replace(/[-_]+/g, ' ')
 
   if (!cleaned) return '?'
 

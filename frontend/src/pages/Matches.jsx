@@ -3,7 +3,7 @@
  * GameContext filtresi → Supabase sorgusuna taşındı (client-side değil)
  * Pagination: 50/sayfa, count:exact
  */
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useSearchParams }     from 'react-router-dom'
 import { supabase, subscribeToMatchesUpdates } from '../supabaseClient'
 import { useGame, GAMES }                   from '../context/GameContext'
@@ -518,6 +518,17 @@ function Matches() {
     )
   }
 
+  // Yüklü maçlardaki ayrı turnuvalar (dropdown filtresi için).
+  // NOT: hook → erken return'lerden ÖNCE olmalı (rules-of-hooks).
+  const tournamentOptions = useMemo(() => {
+    const map = new Map()
+    for (const m of matches) {
+      const t = m.tournament
+      if (t?.id != null && !map.has(String(t.id))) map.set(String(t.id), t.name || '—')
+    }
+    return [...map.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, 'tr'))
+  }, [matches])
+
   // ── Loading / Error ─────────────────────────────────────────────
   if (loading && matches.length === 0) {
     return (
@@ -543,16 +554,6 @@ function Matches() {
   const totalPages    = Math.ceil(totalCount / PAGE_SIZE)
   const liveCount     = filteredMatches.filter(m => m.status === 'running').length
   const upcomingCount = filteredMatches.filter(m => m.status === 'not_started').length
-
-  // Yüklü maçlardaki ayrı turnuvalar (dropdown filtresi için)
-  const tournamentOptions = useMemo(() => {
-    const map = new Map()
-    for (const m of matches) {
-      const t = m.tournament
-      if (t?.id != null && !map.has(String(t.id))) map.set(String(t.id), t.name || '—')
-    }
-    return [...map.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, 'tr'))
-  }, [matches])
 
   // ── Pagination Bar ──────────────────────────────────────────────
   function PaginationBar() {
@@ -676,7 +677,7 @@ function Matches() {
           { key: 'past',     label: 'Geçmiş',         Icon: CircleCheck },
         ].map(t => (
           <button key={t.key} onClick={() => { setActiveTab(t.key); setSortBy(t.key === 'past' ? 'date-desc' : 'date-asc'); setTournamentFilter('') }} style={{
-            padding: '9px 22px', borderRadius: 12, border: 'none', cursor: 'pointer',
+            padding: '9px 22px', borderRadius: 12, cursor: 'pointer',
             fontSize: 13, fontWeight: activeTab === t.key ? 700 : 500,
             background: activeTab === t.key
               ? (t.isLive ? '#FF4655' : FEXT.accent)

@@ -25,14 +25,6 @@ function calcTeamRating(wins, total) {
   return Math.round(wr * 100 * 0.6 + Math.min(total, 100) * 0.4)
 }
 
-function fmtDate(d) {
-  if (!d) return '—'
-  return new Date(d).toLocaleString('tr-TR', {
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
-
 // skeleton
 function Sk({ w = '100%', h = '16px', r = '8px' }) {
   return <div style={{ width: w, height: h, borderRadius: r, background: 'linear-gradient(90deg,var(--surface) 25%,var(--surface-2) 50%,var(--surface) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />

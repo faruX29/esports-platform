@@ -36,14 +36,6 @@ const PLAYER_SIGNATURE_ENABLED = false
 
 // ─── Yardımcılar ────────────────────────────────────────────────────────────
 
-function fmtDate(d) {
-  if (!d) return '—'
-  return new Date(d).toLocaleString('tr-TR', {
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
-
 function fmtDuration(sec) {
   if (!sec) return '—'
   const m = Math.floor(sec / 60)

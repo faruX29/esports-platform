@@ -3,94 +3,6 @@ import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
-import { createContext, useContext, useState } from 'react'
-
-/**
- * GameContext.jsx
- * Global oyun filtresi — tüm sayfalarda (Dashboard, Matches, Rankings) ortak kullanılır.
- *
- * Kullanım:
- *   const { activeGame, setActiveGame } = useGame()
- *   activeGame: 'all' | 'valorant' | 'cs2' | 'lol'
- *
- * GAMES dizisi Navbar'daki GameSelectorBar tarafından render edilir.
- */
-export const GAMES = [
-  {
-    id:         'all',
-    label:      'All Games',
-    shortLabel: 'All',
-    icon:       '🎮',
-    color:      '#aaaaaa',
-    soon:       false,
-    /* Supabase'de game_name sütununda eşleşecek alt dizeler */
-    patterns:   [],
-  },
-  {
-    id:         'valorant',
-    label:      'VALORANT',
-    shortLabel: 'VAL',
-    icon:       '⚡',
-    color:      '#FF4655',
-    soon:       false,
-    patterns:   ['valorant'],
-  },
-  {
-    id:         'cs2',
-    label:      'Counter-Strike 2',
-    shortLabel: 'CS2',
-    icon:       '🎯',
-    color:      '#F0A500',
-    soon:       false,
-    patterns:   ['counter-strike', 'cs-go', 'cs2', 'counter strike'],
-  },
-  {
-    id:         'lol',
-    label:      'League of Legends',
-    shortLabel: 'LoL',
-    icon:       '🏆',
-    color:      '#C89B3C',
-    soon:       false,
-    patterns:   ['league of legends', 'league-of-legends'],
-  },
-  {
-    id:         'dota2',
-    label:      'Dota 2',
-    shortLabel: 'Dota2',
-    icon:       '🔮',
-    color:      '#9d2226',
-    soon:       true,
-    patterns:   ['dota'],
-  },
-]
-
-/* ── Yardımcı: verilen oyun adı aktif filtreye uyuyor mu? ───────────────────── */
-export function gameMatchesFilter(gameName = '', activeGameId) {
-  if (!activeGameId || activeGameId === 'all') return true
-  const game = GAMES.find(g => g.id === activeGameId)
-  if (!game || game.patterns.length === 0) return true
-  const lower = gameName.toLowerCase()
-  return game.patterns.some(p => lower.includes(p))
-}
-
-/* ── Context ────────────────────────────────────────────────────────────────── */
-const GameContext = createContext(null)
-
-export function GameProvider({ children }) {
-  const [activeGame, setActiveGame] = useState('all')
-
-  return (
-    <GameContext.Provider value={{ activeGame, setActiveGame, games: GAMES }}>
-      {children}
-    </GameContext.Provider>
-  )
-}
-
-export function useGame() {
-  const ctx = useContext(GameContext)
-  if (!ctx) throw new Error('useGame must be used inside <GameProvider>')
-  return ctx
-}
 
 export default defineConfig([
   globalIgnores(['dist']),
@@ -112,6 +24,13 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+    },
+  },
+  {
+    // Vercel Edge/serverless fonksiyonları Node/Edge ortamında çalışır → process, vb.
+    files: ['api/**/*.js', 'middleware.js'],
+    languageOptions: {
+      globals: { ...globals.node },
     },
   },
 ])

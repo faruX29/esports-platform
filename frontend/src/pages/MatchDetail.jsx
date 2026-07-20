@@ -437,11 +437,9 @@ function buildTacticalScoutReport({
   const recent = (h2hMatches || []).slice(0, 5)
   let teamAWins = 0
   let teamBWins = 0
-  let draws = 0
 
   for (const match of recent) {
     if (match?.winner_id == null) {
-      draws += 1
       continue
     }
     if (idEq(match.winner_id, teamAId)) teamAWins += 1

@@ -296,7 +296,6 @@ function computeRecordFromMatches(matchRows, teamId) {
 function MatchRow({ match, teamId, isMobile = false }) {
   const navigate = useNavigate()
   const isA      = match.team_a_id === teamId
-  const myTeam   = isA ? match.team_a : match.team_b
   const opp      = isA ? match.team_b : match.team_a
   const cs       = correctedScores(match)
   const myScore  = isA ? cs.team_a_score  : cs.team_b_score
@@ -373,7 +372,7 @@ function ScoutPanel({ analytics, individual }) {
   if (!analytics) return null
 
   const {
-    totalMatches, wonMatches, lostMatches,
+    wonMatches, lostMatches,
     overallWinRate, mapWinRates, avgWinLen, avgLossLen, impactScore,
   } = analytics
 

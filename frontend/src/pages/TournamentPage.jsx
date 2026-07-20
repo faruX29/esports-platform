@@ -446,23 +446,15 @@ function buildLiquipediaBracketStages(tournament) {
   const count = focus.length
   let qfCount = 0
   let sfCount = 0
-  let gfCount = 0
 
   if (count >= 7) {
-    qfCount = 4; sfCount = 2; gfCount = 1
-  } else if (count === 6) {
-    qfCount = 3; sfCount = 2; gfCount = 1
-  } else if (count === 5) {
-    qfCount = 2; sfCount = 2; gfCount = 1
-  } else if (count === 4) {
-    qfCount = 2; sfCount = 1; gfCount = 1
-  } else if (count === 3) {
-    qfCount = 1; sfCount = 1; gfCount = 1
-  } else if (count === 2) {
-    qfCount = 0; sfCount = 1; gfCount = 1
-  } else {
-    qfCount = 0; sfCount = 0; gfCount = 1
-  }
+    qfCount = 4; sfCount = 2  } else if (count === 6) {
+    qfCount = 3; sfCount = 2  } else if (count === 5) {
+    qfCount = 2; sfCount = 2  } else if (count === 4) {
+    qfCount = 2; sfCount = 1  } else if (count === 3) {
+    qfCount = 1; sfCount = 1  } else if (count === 2) {
+    qfCount = 0; sfCount = 1  } else {
+    qfCount = 0; sfCount = 0  }
 
   return focus.map((m, idx) => {
     const stage = idx < qfCount
@@ -734,7 +726,7 @@ function aggregateTopPerformers(rows) {
     .slice(0, 8)
 }
 
-function TopPerformers({ rows, navigate }) {
+function TopPerformers({ rows }) {
   if (!rows?.length) return null
   return (
     <div style={{ background: 'var(--bg)', borderRadius: 16, border: '1px solid var(--surface-2)', padding: '16px' }}>

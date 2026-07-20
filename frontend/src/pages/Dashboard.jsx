@@ -1288,7 +1288,6 @@ export default function Dashboard() {
   const [dreamLoading, setDreamLoading] = useState(false)
   const [stats,           setStats]           = useState({ total: 0, live: 0, today: 0, teams: 0 })
   const [accuracyRows, setAccuracyRows] = useState([])
-  const [accuracyLoading, setAccuracyLoading] = useState(false)
   const [loading,         setLoading]         = useState(true)
   const [globalError, setGlobalError] = useState('')
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 920)
@@ -1502,7 +1501,6 @@ export default function Dashboard() {
     let cancelled = false
 
     async function fetchFinishedAccuracyRows() {
-      setAccuracyLoading(true)
       try {
         const selectColumns = 'id,status,winner_id,team_a_id,team_b_id,prediction_team_a,prediction_team_b,prediction_confidence'
 
@@ -1523,8 +1521,6 @@ export default function Dashboard() {
       } catch (e) {
         showGlobalConnectionWarning('Dashboard accuracy fetch', e)
         if (!cancelled) setAccuracyRows([])
-      } finally {
-        if (!cancelled) setAccuracyLoading(false)
       }
     }
 
@@ -2105,11 +2101,6 @@ export default function Dashboard() {
 
   const accuracySummary = useMemo(
     () => calculatePredictionAccuracy(accuracyRows),
-    [accuracyRows],
-  )
-
-  const trendSampleSize = useMemo(
-    () => accuracyRows.length,
     [accuracyRows],
   )
 

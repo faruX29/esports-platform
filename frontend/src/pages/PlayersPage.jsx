@@ -651,6 +651,7 @@ export default function PlayersPage() {
             {search && (
               <button
                 onClick={() => setSearch('')}
+                aria-label="Aramayı temizle"
                 style={{ position: 'absolute', right: 8, top: 7, width: 24, height: 24, borderRadius: 8, border: '1px solid var(--text-6)', background: 'var(--surface-2)', color: 'var(--text-3)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
               >
                 <XIcon size={13} />

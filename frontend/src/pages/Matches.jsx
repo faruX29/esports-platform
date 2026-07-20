@@ -701,7 +701,7 @@ function Matches() {
             style={{ width: '100%', padding: '8px 36px 8px 34px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', display: 'inline-flex' }}><XIcon size={15} /></button>
+            <button onClick={() => setSearchQuery('')} aria-label="Aramayı temizle" style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', display: 'inline-flex' }}><XIcon size={15} /></button>
           )}
         </div>
 
@@ -1012,7 +1012,7 @@ function Matches() {
       {showModal && selectedMatch && (
         <div onClick={closeModal} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: 20 }}>
           <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'var(--surface-2)', borderRadius: 15, padding: 30, maxWidth: 600, width: '100%', maxHeight: '90vh', overflowY: 'auto', border: `2px solid ${FEXT.accent}`, position: 'relative' }}>
-            <button onClick={closeModal} style={{ position: 'absolute', top: 15, right: 15, background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 30, cursor: 'pointer' }}>×</button>
+            <button onClick={closeModal} aria-label="Kapat" style={{ position: 'absolute', top: 15, right: 15, background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 30, cursor: 'pointer' }}>×</button>
 
             <div style={{ display: 'inline-block', padding: '5px 15px', background: FEXT.accentGrad, borderRadius: 20, fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase', marginBottom: 20 }}>
               {gameDisplayName(selectedMatch.game)}

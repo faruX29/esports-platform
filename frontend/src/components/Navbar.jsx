@@ -132,7 +132,8 @@ export default function Navbar({ navLinks, SearchComponent }) {
         {isMobile && (
           <button
             onClick={() => setMenuOpen(prev => !prev)}
-            aria-label='Menu'
+            aria-label={menuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
+            aria-expanded={menuOpen}
             style={{
               marginLeft: 'auto',
               width: 36,

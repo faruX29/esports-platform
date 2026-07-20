@@ -605,10 +605,22 @@ function RecoveryGate() {
   return null
 }
 
+/* Sayfa (pathname) değişince pencereyi başa sar — SPA'da yeni sayfaya gidince
+   eski scroll konumu kalıyordu. Yalnız pathname'e bağlı → filtre/sekme sorgu
+   parametresi değişimi scroll'u sıfırlamaz. */
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [pathname])
+  return null
+}
+
 /* ─── AppShell ──────────────────────────────────────────────────────────────── */
 function AppShell() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' }}>
+      <ScrollToTop />
       <RecoveryGate />
       <RealtimeToastBridge />
       <NavbarComponent navLinks={NAV_LINKS} SearchComponent={NavSearch} />

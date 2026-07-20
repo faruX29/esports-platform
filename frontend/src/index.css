@@ -112,3 +112,28 @@ button { font-family: inherit; }
 /* Global yardımcı animasyonlar (lucide spinner + canlı nabız) */
 @keyframes spin  { to { transform: rotate(360deg); } }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+
+/* Erişilebilirlik: hareket hassasiyeti olan kullanıcılar için animasyonları
+   ve geçişleri kıs (canlı nabız/spin/kayma dahil). Sadece OS'ta "reduce motion"
+   açık olanları etkiler. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Erişilebilirlik: klavyeyle gezen kullanıcılar için görünür odak halkası.
+   :focus-visible sadece klavye odağında görünür (fare tıklamasında değil). */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--ai);
+  outline-offset: 2px;
+  border-radius: 4px;
+}

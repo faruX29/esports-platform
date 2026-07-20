@@ -1057,6 +1057,7 @@ export default function SearchPage() {
             {query && (
               <button
                 onClick={() => { setQuery(''); setTeams([]); setPlayers([]); setSearchDone(false) }}
+                aria-label="Aramayı temizle"
                 style={{
                   position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
                   background: 'none', border: 'none', color: 'var(--text-4)', fontSize: 18,

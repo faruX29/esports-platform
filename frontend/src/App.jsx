@@ -622,11 +622,13 @@ function AppShell() {
   const { pathname } = useLocation()
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' }}>
+      <a href="#main-content" className="skip-link">İçeriğe geç</a>
       <ScrollToTop />
       <RecoveryGate />
       <RealtimeToastBridge />
       <NavbarComponent navLinks={NAV_LINKS} SearchComponent={NavSearch} />
       <GameSelectorBar />
+      <main id="main-content">
       <ErrorBoundary resetKey={pathname}>
       <Suspense fallback={(
         <div style={{ maxWidth: 1440, margin: '0 auto', padding: '18px 16px 26px' }}>
@@ -658,6 +660,7 @@ function AppShell() {
         </Routes>
       </Suspense>
       </ErrorBoundary>
+      </main>
       <Footer />
     </div>
   )

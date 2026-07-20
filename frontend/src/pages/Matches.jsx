@@ -487,6 +487,15 @@ function Matches() {
   }
 
   function closeModal()    { setShowModal(false); setSelectedMatch(null) }
+
+  // Modal açıkken Escape ile kapat (klavye/erişilebilirlik)
+  useEffect(() => {
+    if (!showModal) return
+    const onKey = e => { if (e.key === 'Escape') closeModal() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showModal])
+
   function getStatusBadge(status) {
     return statusStyle(status)
   }
@@ -1012,7 +1021,7 @@ function Matches() {
       {/* Modal — değişmedi, aynı kalıyor */}
       {showModal && selectedMatch && (
         <div onClick={closeModal} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: 20 }}>
-          <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'var(--surface-2)', borderRadius: 15, padding: 30, maxWidth: 600, width: '100%', maxHeight: '90vh', overflowY: 'auto', border: `2px solid ${FEXT.accent}`, position: 'relative' }}>
+          <div onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Maç detayları" style={{ backgroundColor: 'var(--surface-2)', borderRadius: 15, padding: 30, maxWidth: 600, width: '100%', maxHeight: '90vh', overflowY: 'auto', border: `2px solid ${FEXT.accent}`, position: 'relative' }}>
             <button onClick={closeModal} aria-label="Kapat" style={{ position: 'absolute', top: 15, right: 15, background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 30, cursor: 'pointer' }}>×</button>
 
             <div style={{ display: 'inline-block', padding: '5px 15px', background: FEXT.accentGrad, borderRadius: 20, fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase', marginBottom: 20 }}>

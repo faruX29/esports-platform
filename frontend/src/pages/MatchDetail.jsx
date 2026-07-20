@@ -22,6 +22,7 @@ import { deriveWinnerTeamId, correctedScores }      from '../utils/matchResult'
 import { isUncertainPrediction }                    from '../utils/prediction'
 import { roundLabel }                               from '../utils/roundLabel'
 import { clickableProps }                           from '../utils/a11y'
+import TurkishBadge                                 from '../components/TurkishBadge'
 import { FEXT }                                     from '../theme'
 import Mascot from '../components/Mascot'
 import SeoHead from '../components/SeoHead'
@@ -1421,15 +1422,8 @@ export default function MatchDetail() {
           onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--surface-2)'; e.currentTarget.style.color = 'var(--text-4)' }}
         >← Geri</button>
 
-        {/* TR banner */}
-        {hasTR && (
-          <div style={{ background: 'linear-gradient(90deg,#C8102E,#a00d25 40%,#001f6d)', borderRadius: '16px 16px 0 0', padding: 6, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
-            <span>🇹🇷</span><span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 2, color: '#fff', textTransform: 'uppercase' }}>Bizim Takım</span><span>🇹🇷</span>
-          </div>
-        )}
-
         {/* ── Hero ── */}
-        <div style={{ background: 'linear-gradient(135deg,var(--surface),var(--surface))', borderRadius: hasTR ? '0 0 20px 20px' : '20px', border: `2px solid ${isLive ? '#FF4655' : hasTR ? 'rgba(212,175,55,.3)' : gc + '33'}`, padding: '28px 24px 20px', marginBottom: 8, position: 'relative', overflow: 'hidden' }}>
+        <div style={{ background: 'linear-gradient(135deg,var(--surface),var(--surface))', borderRadius: '20px', border: `2px solid ${isLive ? '#FF4655' : gc + '33'}`, padding: '28px 24px 20px', marginBottom: 8, position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: 0, left: '25%', right: '25%', height: 1, background: `linear-gradient(90deg,transparent,${gc}44,transparent)` }} />
 
           {/* Badges */}
@@ -1437,6 +1431,7 @@ export default function MatchDetail() {
             <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: `${gc}22`, color: gc, border: `1px solid ${gc}44` }}>{gameShort(gName)} · {gName}</span>
             {match.tournament && <Link to={`/tournament/${match.tournament.id}`} style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 600, background: 'rgba(255,184,0,.1)', color: '#FFB800', border: '1px solid rgba(255,184,0,.3)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Trophy size={11} /> {match.tournament.name}</Link>}
             {roundLabel(match) && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: FEXT.accentSoftBg, color: FEXT.accentText, border: `1px solid ${FEXT.accentBorder}` }}>{roundLabel(match)}</span>}
+            {hasTR && <TurkishBadge />}
             {boFormat && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: 'rgba(96,165,250,.12)', color: '#60a5fa', border: '1px solid rgba(96,165,250,.3)' }}>{boFormat}</span>}
             {isLive && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 800, background: 'rgba(255,70,85,.2)', color: '#FF4655', border: '1px solid rgba(255,70,85,.4)', animation: 'pulse 1.2s infinite' }}>● CANLI</span>}
             {isFin  && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: 'rgba(76,175,80,.1)', color: '#4CAF50', border: '1px solid rgba(76,175,80,.3)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><CircleCheck size={11} /> Tamamlandı</span>}

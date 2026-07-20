@@ -17,6 +17,7 @@ import { correctedScores }                   from '../utils/matchResult'
 import { isUncertainPrediction }             from '../utils/prediction'
 import { roundLabel }                        from '../utils/roundLabel'
 import { clickableProps }                    from '../utils/a11y'
+import TurkishBadge                          from '../components/TurkishBadge'
 import InitialsImage                        from '../components/InitialsImage'
 import {
   CalendarDays, Clock, CircleCheck, Radio, Search, Star, RefreshCw, Repeat,
@@ -720,11 +721,7 @@ function Matches() {
                       <span style={{ padding: '2px 9px', borderRadius: 6, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', background: 'var(--surface-2)', border: '1px solid var(--line)', color: 'var(--text-4)' }}>
                         {gameDisplayName(match.game)}
                       </span>
-                      {hasTurkish && (
-                        <span style={{ padding: '2px 7px', borderRadius: 6, fontSize: 9, fontWeight: 800, letterSpacing: '.5px', background: 'rgba(212,175,55,.14)', border: '1px solid rgba(212,175,55,.45)', color: '#e8c766', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                          🇹🇷 TR
-                        </span>
-                      )}
+                      {hasTurkish && <TurkishBadge compact />}
                     </div>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                       {/* Bo Format */}

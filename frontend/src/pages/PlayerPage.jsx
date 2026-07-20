@@ -20,6 +20,7 @@ import { useUser } from '../context/UserContext'
 import { summarizePlayerMatchStats, metricBars } from '../utils/playerMetrics'
 import { deriveWinnerTeamId, correctedScores } from '../utils/matchResult'
 import { clickableProps } from '../utils/a11y'
+import TurkishBadge from '../components/TurkishBadge'
 import { FEXT } from '../theme'
 import Mascot from '../components/Mascot'
 import SeoHead from '../components/SeoHead'
@@ -1117,11 +1118,7 @@ export default function PlayerPage() {
                   {liquipediaMeta.age} yaş
                 </span>
               )}
-              {isTR && (
-                <span style={{ padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800, background: 'rgba(200,16,46,.2)', border: '1px solid rgba(200,16,46,.5)', color: '#ff6b7a' }}>
-                  🇹🇷 Turkish Pro
-                </span>
-              )}
+              {isTR && <TurkishBadge />}
             </div>
 
             {/* Takım linki */}

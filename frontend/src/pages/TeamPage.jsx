@@ -9,6 +9,7 @@ import { getBOFormat }                       from '../utils/matchFormat'
 import { deriveWinnerTeamId, matchOutcome, correctedScores } from '../utils/matchResult'
 import { isUncertainPrediction } from '../utils/prediction'
 import { clickableProps } from '../utils/a11y'
+import TurkishBadge from '../components/TurkishBadge'
 import {
   Radio, CircleCheck, X as XIcon, Trophy, Star, MapPin, Flame, Swords, Users,
   Handshake, CalendarDays, ClipboardList, TriangleAlert, Video, AtSign,
@@ -720,11 +721,7 @@ export default function TeamPage() {
                   <MapPin size={12} /> {team.location}
                 </span>
               )}
-              {isTR && (
-                <span style={{ padding: '3px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800, background: 'rgba(200,16,46,.2)', border: '1px solid rgba(200,16,46,.5)', color: '#ff6b7a' }}>
-                  🇹🇷 Turkish Team
-                </span>
-              )}
+              {isTR && <TurkishBadge />}
               <span style={{ padding: '3px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700, background: 'rgba(99,102,241,.15)', border: '1px solid rgba(99,102,241,.4)', color: '#818cf8', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                 <Star size={12} fill="#818cf8" /> Rating {rating}
               </span>

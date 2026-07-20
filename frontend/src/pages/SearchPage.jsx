@@ -16,6 +16,7 @@ import { isTurkishTeam }                             from '../constants'
 import { GAMES }                                     from '../context/GameContext'
 import { normalizeGameId }                           from '../utils/gameUtils'
 import { clickableProps }                            from '../utils/a11y'
+import TurkishBadge                                  from '../components/TurkishBadge'
 import {
   Search, MapPin, CalendarDays, Shield, User, Trophy, Inbox, RefreshCw, X as XIcon,
   Check, SlidersHorizontal, ChevronLeft, Gamepad2,
@@ -307,15 +308,9 @@ function TournamentCard({ t, navigate, highlighted }) {
         background: `radial-gradient(ellipse at 50% 0%,${gm.color}22 0%,transparent 70%)`,
       }} />
 
-      {/* TR stripe */}
       {isTR && (
-        <div style={{
-          background: 'linear-gradient(90deg,#C8102E,#a00d25 40%,#001f6d)',
-          padding: '4px 14px', marginBottom: 12,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-        }}>
-          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '1.5px',
-            color: '#fff', textTransform: 'uppercase' }}>🇹🇷 Türk Etkinliği</span>
+        <div style={{ marginBottom: 10 }}>
+          <TurkishBadge compact />
         </div>
       )}
 

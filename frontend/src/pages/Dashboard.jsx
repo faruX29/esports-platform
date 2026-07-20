@@ -16,6 +16,7 @@ import { isStoryFollowedTeam, prioritizeStoriesForYou } from '../utils/newsPerso
 import { calculatePredictionAccuracy } from '../utils/accuracyTracker'
 import { memo }                             from 'react'
 import InitialsImage                        from '../components/InitialsImage'
+import TurkishBadge                          from '../components/TurkishBadge'
 import { normalizeGameId }                  from '../utils/gameUtils'
 import { getBOFormat }                       from '../utils/matchFormat'
 import { FEXT, statusStyle }                 from '../theme'
@@ -872,8 +873,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
       style={{
         position: 'relative',
         borderRadius: 16,
-        /* TR banner varsa üstten 22px fazla boşluk */
-        padding: hasTurkish ? '30px 16px 14px' : '14px 16px',
+        padding: '14px 16px',
         background: 'linear-gradient(160deg,var(--surface-2),var(--surface))',
         cursor: 'pointer',
         border: '1px solid var(--line)',
@@ -895,21 +895,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
         animation: 'liveAccentDrift 5.5s ease-in-out infinite alternate',
       }} />
 
-      {/* TR banner */}
-      {hasTurkish && (
-        <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0, height: 22,
-          borderRadius: '14px 14px 0 0',
-          background: 'linear-gradient(90deg,#E30A17,#c40911)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-        }}>
-          <span style={{ fontSize: 9, fontWeight: 800, color: 'white', letterSpacing: '.8px', textTransform: 'uppercase' }}>
-            🇹🇷 Turkish
-          </span>
-        </div>
-      )}
-
-      {/* Oyun + LIVE */}
+      {/* Oyun + CANLI */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
           <span style={{
@@ -926,6 +912,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
               {getBOFormat(m.team_a_score, m.team_b_score, m.number_of_games)}
             </span>
           )}
+          {hasTurkish && <TurkishBadge compact />}
         </div>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 800, color: '#ff7683' }}>
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#FF4655', animation: 'liveNeonBlink 1.05s infinite' }} />

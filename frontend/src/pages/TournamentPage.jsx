@@ -19,6 +19,7 @@ import { deriveWinnerTeamId }                         from '../utils/matchResult
 import { roundLabel }                                 from '../utils/roundLabel'
 import { isUncertainPrediction }                      from '../utils/prediction'
 import { clickableProps }                             from '../utils/a11y'
+import TurkishBadge                                   from '../components/TurkishBadge'
 import { normalizeGameId }                            from '../utils/gameUtils'
 import { GAMES }                                      from '../context/GameContext'
 import {
@@ -1642,21 +1643,7 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
         </div>
       )}
 
-      {/* TR stripe */}
-      {hasTR && (
-        <div style={{
-          background: 'linear-gradient(90deg,#DF4888,#8B3AA0 55%,#6A297F)',
-          padding: '3px 14px',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-        }}>
-          <span style={{ fontSize: 9, fontWeight: 800, color: '#fff',
-            letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-            🇹🇷 Bizim Takım
-          </span>
-        </div>
-      )}
-
-      <div style={{ padding: hasTR ? '12px 16px 14px' : '14px 16px' }}>
+      <div style={{ padding: '14px 16px' }}>
         {/* Top: game + status + round */}
         <div style={{ display: 'flex', justifyContent: 'space-between',
           alignItems: 'center', marginBottom: 10 }}>
@@ -1664,6 +1651,7 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
             {m.game?.name ?? ''}
           </span>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            {hasTR && <TurkishBadge compact />}
             {getBOFormat(m.team_a_score, m.team_b_score, m.number_of_games) && (
               <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 8,
                 background: 'rgba(96,165,250,.12)', border: '1px solid rgba(96,165,250,.3)',
@@ -2059,17 +2047,9 @@ export default function TournamentPage() {
           }} />
         )}
 
-        {/* TR stripe */}
         {isTR && (
-          <div style={{
-            background: 'linear-gradient(90deg,#DF4888,#8B3AA0 55%,#6A297F)',
-            padding: '4px 0',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          }}>
-            <span>🇹🇷</span>
-            <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '2px',
-              color: '#fff', textTransform: 'uppercase' }}>Türk Turnuvası</span>
-            <span>🇹🇷</span>
+          <div style={{ padding: '7px 0 0', display: 'flex', justifyContent: 'center' }}>
+            <TurkishBadge />
           </div>
         )}
 

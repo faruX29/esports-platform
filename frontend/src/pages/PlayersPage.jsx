@@ -614,11 +614,11 @@ export default function PlayersPage() {
               Compare
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 10, marginBottom: 10 }}>
-              <select value={compareAId} onChange={e => setCompareAId(e.target.value)} style={{ height: 36, borderRadius: 10, border: '1px solid var(--text-6)', background: 'var(--surface)', color: '#fff', padding: '0 10px' }}>
+              <select value={compareAId} onChange={e => setCompareAId(e.target.value)} style={{ height: 36, borderRadius: 10, border: '1px solid var(--text-6)', background: 'var(--surface)', color: 'var(--text)', padding: '0 10px' }}>
                 <option value=''>Oyuncu A sec</option>
                 {visiblePlayers.map(p => <option key={p.id} value={p.id}>{p.nickname}</option>)}
               </select>
-              <select value={compareBId} onChange={e => setCompareBId(e.target.value)} style={{ height: 36, borderRadius: 10, border: '1px solid var(--text-6)', background: 'var(--surface)', color: '#fff', padding: '0 10px' }}>
+              <select value={compareBId} onChange={e => setCompareBId(e.target.value)} style={{ height: 36, borderRadius: 10, border: '1px solid var(--text-6)', background: 'var(--surface)', color: 'var(--text)', padding: '0 10px' }}>
                 <option value=''>Oyuncu B sec</option>
                 {visiblePlayers.map(p => <option key={p.id} value={p.id}>{p.nickname}</option>)}
               </select>
@@ -646,7 +646,7 @@ export default function PlayersPage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder='Oyuncu ara (nick veya gerçek isim)...'
-              style={{ height: 38, width: '100%', borderRadius: 12, border: '1px solid var(--text-6)', background: 'var(--surface)', color: '#fff', padding: '0 38px 0 12px', outline: 'none' }}
+              style={{ height: 38, width: '100%', borderRadius: 12, border: '1px solid var(--text-6)', background: 'var(--surface)', color: 'var(--text)', padding: '0 38px 0 12px', outline: 'none' }}
             />
             {search && (
               <button
@@ -662,7 +662,7 @@ export default function PlayersPage() {
             <select
               value={sortKey}
               onChange={e => setSortKey(e.target.value)}
-              style={{ height: 38, borderRadius: 12, border: '1px solid var(--text-6)', background: 'var(--surface)', color: '#fff', padding: '0 10px' }}
+              style={{ height: 38, borderRadius: 12, border: '1px solid var(--text-6)', background: 'var(--surface)', color: 'var(--text)', padding: '0 10px' }}
             >
               <option value='impact'>Impact Score</option>
               <option value='kd'>K/D</option>

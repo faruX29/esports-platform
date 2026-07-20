@@ -55,7 +55,7 @@ export default function ResetPasswordPage() {
     navigate('/login', { replace: true })
   }
 
-  const inputStyle = { background: 'var(--surface)', border: '1px solid var(--line)', color: '#fff', borderRadius: 11, padding: '11px 12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }
+  const inputStyle = { background: 'var(--surface)', border: '1px solid var(--line)', color: 'var(--text)', borderRadius: 11, padding: '11px 12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }
 
   return (
     <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'radial-gradient(ellipse at 20% 10%, rgba(223,72,136,.14), transparent 45%), var(--bg)' }}>

@@ -59,7 +59,7 @@ export default function RegisterPage() {
     try { await signInWithGoogle() } catch (err) { setError(err.message || 'Google girişi başarısız.') }
   }
 
-  const inputStyle = { background: 'var(--surface)', border: '1px solid var(--line)', color: '#fff', borderRadius: 11, padding: '11px 12px', minWidth: 0, width: '100%', boxSizing: 'border-box' }
+  const inputStyle = { background: 'var(--surface)', border: '1px solid var(--line)', color: 'var(--text)', borderRadius: 11, padding: '11px 12px', minWidth: 0, width: '100%', boxSizing: 'border-box' }
   const oauthEnabled = DISCORD_ENABLED || GOOGLE_ENABLED
 
   return (

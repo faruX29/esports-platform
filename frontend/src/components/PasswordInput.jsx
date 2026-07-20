@@ -9,7 +9,7 @@ import { Eye, EyeOff } from 'lucide-react'
 export default function PasswordInput({ style, ...props }) {
   const [show, setShow] = useState(false)
   const base = {
-    background: 'var(--surface)', border: '1px solid var(--line)', color: '#fff',
+    background: 'var(--surface)', border: '1px solid var(--line)', color: 'var(--text)',
     borderRadius: 11, padding: '11px 42px 11px 12px', width: '100%',
     minWidth: 0, boxSizing: 'border-box',
   }

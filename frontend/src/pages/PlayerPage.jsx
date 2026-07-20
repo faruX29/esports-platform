@@ -19,6 +19,7 @@ import { isTurkishTeam } from '../constants'
 import { useUser } from '../context/UserContext'
 import { summarizePlayerMatchStats, metricBars } from '../utils/playerMetrics'
 import { deriveWinnerTeamId, correctedScores } from '../utils/matchResult'
+import { clickableProps } from '../utils/a11y'
 import { FEXT } from '../theme'
 import Mascot from '../components/Mascot'
 import SeoHead from '../components/SeoHead'
@@ -314,7 +315,7 @@ function MatchRow({ match, teamId, isMobile = false }) {
 
   return (
     <div
-      onClick={() => navigate(`/match/${match.id}`)}
+      {...clickableProps(() => navigate(`/match/${match.id}`), { label: 'Maç detayı' })}
       style={{
         display: 'grid',
         gridTemplateColumns: isMobile ? '32px 1fr auto' : '36px 1fr auto auto auto',
@@ -1135,7 +1136,7 @@ export default function PlayerPage() {
             {/* Takım linki */}
             {team ? (
               <div
-                onClick={() => navigate(`/team/${team.id}`)}
+                {...clickableProps(() => navigate(`/team/${team.id}`), { label: `${team.name ?? 'Takım'} sayfası` })}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 10,
                   padding: '8px 14px', borderRadius: 12, cursor: 'pointer',

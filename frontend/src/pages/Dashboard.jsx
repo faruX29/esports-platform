@@ -21,6 +21,7 @@ import { getBOFormat }                       from '../utils/matchFormat'
 import { FEXT, statusStyle }                 from '../theme'
 import { correctedScores }                   from '../utils/matchResult'
 import { isUncertainPrediction }             from '../utils/prediction'
+import { clickableProps }                     from '../utils/a11y'
 import PredictionAccuracyBadge              from '../components/PredictionAccuracyBadge'
 
 const MVP_HIDE_DREAM_TEAM = true
@@ -97,7 +98,7 @@ const TodaySchedule = memo(function TodaySchedule({ matches, liveMatches, onMatc
           return (
             <div
               key={m.id}
-              onClick={() => onMatchClick(m.id)}
+              {...clickableProps(() => onMatchClick(m.id), { label: 'Maç detayı' })}
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '8px 12px', borderRadius: 10, cursor: 'pointer',
@@ -867,7 +868,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
 
   return (
     <div
-      onClick={() => onMatchClick(m.id)}
+      {...clickableProps(() => onMatchClick(m.id), { label: 'Maç detayı' })}
       style={{
         position: 'relative',
         borderRadius: 16,
@@ -1099,7 +1100,7 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
   const formB = teamForms?.get(bId) || []
   return (
     <div
-      onClick={() => onMatchClick(m.id)}
+      {...clickableProps(() => onMatchClick(m.id), { label: 'Maç detayı' })}
       style={{
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '9px 14px', borderRadius: 12, cursor: 'pointer',
@@ -1201,7 +1202,7 @@ const ResultRow = memo(function ResultRow({ match: m, onMatchClick }) {
   const isHero = tierLetter === 'S' || tierLetter === 'A'
   return (
     <div
-      onClick={() => onMatchClick(m.id)}
+      {...clickableProps(() => onMatchClick(m.id), { label: 'Maç detayı' })}
       style={{
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '9px 12px', borderRadius: 12, cursor: 'pointer',
@@ -2325,7 +2326,7 @@ export default function Dashboard() {
           {dreamLoading && <div style={{ padding: 14, color: 'var(--text-5)', fontSize: 12 }}>Dream Team hesaplanıyor...</div>}
           {!dreamLoading && dreamTeam.length === 0 && <div style={{ padding: 14, color: 'var(--text-5)', fontSize: 12 }}>Haftalık oyuncu verisi bulunamadı.</div>}
           {!dreamLoading && dreamTeam.map((p, idx) => (
-            <div key={p.id} onClick={() => navigate(`/player/${p.id}`)} style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1fr .9fr .9fr .9fr', gap: 8, alignItems: 'center', padding: '11px 14px', borderBottom: '1px solid var(--line)', cursor: 'pointer', background: idx === 0 ? 'linear-gradient(90deg, rgba(200,16,46,.22), transparent 62%)' : 'transparent' }}>
+            <div key={p.id} {...clickableProps(() => navigate(`/player/${p.id}`), { label: `${p.nickname ?? 'Oyuncu'} profili` })} style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1fr .9fr .9fr .9fr', gap: 8, alignItems: 'center', padding: '11px 14px', borderBottom: '1px solid var(--line)', cursor: 'pointer', background: idx === 0 ? 'linear-gradient(90deg, rgba(200,16,46,.22), transparent 62%)' : 'transparent' }}>
               <div style={{ fontWeight: 800, color: '#f4f4f4' }}>#{idx + 1}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                 <InitialsImage

@@ -15,6 +15,7 @@ import { getRoleBadge }                              from '../utils/roleHelper'
 import { isTurkishTeam }                             from '../constants'
 import { GAMES }                                     from '../context/GameContext'
 import { normalizeGameId }                           from '../utils/gameUtils'
+import { clickableProps }                            from '../utils/a11y'
 import {
   Search, MapPin, CalendarDays, Shield, User, Trophy, Inbox, RefreshCw, X as XIcon,
   Check, SlidersHorizontal, ChevronLeft, Gamepad2,
@@ -187,7 +188,7 @@ function TeamCard({ team, navigate }) {
   const isTR = isTurkishTeam(team.name)
   return (
     <div
-      onClick={() => navigate(`/team/${team.id}`)}
+      {...clickableProps(() => navigate(`/team/${team.id}`), { label: `${team.name ?? 'Takım'} sayfası` })}
       style={{
         display: 'flex', alignItems: 'center', gap: 12,
         padding: '12px 14px', borderRadius: 12, background: 'var(--surface)',
@@ -230,7 +231,7 @@ function PlayerCard({ player, navigate }) {
   const badge = getRoleBadge(player.role)
   return (
     <div
-      onClick={() => navigate(`/player/${player.id}`)}
+      {...clickableProps(() => navigate(`/player/${player.id}`), { label: `${player.nickname ?? 'Oyuncu'} profili` })}
       style={{
         display: 'flex', alignItems: 'center', gap: 12,
         padding: '12px 14px', borderRadius: 12,
@@ -295,7 +296,7 @@ function TournamentCard({ t, navigate, highlighted }) {
           : isTR ? '0 0 12px rgba(200,16,46,.1)' : 'none',
         cursor: 'pointer', transition: 'all .2s',
       }}
-      onClick={() => navigate(`/tournament/${t.id}`)}
+      {...clickableProps(() => navigate(`/tournament/${t.id}`), { label: `${t.name ?? 'Turnuva'} sayfası` })}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
     >

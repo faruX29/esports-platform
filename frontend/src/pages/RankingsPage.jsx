@@ -5,6 +5,7 @@ import { useGame, GAMES } from '../context/GameContext'
 import { useUser } from '../context/UserContext'
 import { correctedScores } from '../utils/matchResult'
 import { normalizeGameId } from '../utils/gameUtils'
+import { clickableProps } from '../utils/a11y'
 import { Medal, Star } from 'lucide-react'
 import { FEXT } from '../theme'
 
@@ -434,7 +435,7 @@ export default function RankingsPage() {
             return (
               <div
                 key={row.teamId}
-                onClick={() => navigate(`/team/${row.teamId}`)}
+                {...clickableProps(() => navigate(`/team/${row.teamId}`), { label: `${row.team?.name ?? 'Takım'} sayfası` })}
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '70px 1.6fr 1fr .9fr .9fr .9fr .8fr',

@@ -8,6 +8,7 @@ import InitialsImage                        from '../components/InitialsImage'
 import { getBOFormat }                       from '../utils/matchFormat'
 import { deriveWinnerTeamId, matchOutcome, correctedScores } from '../utils/matchResult'
 import { isUncertainPrediction } from '../utils/prediction'
+import { clickableProps } from '../utils/a11y'
 import {
   Radio, CircleCheck, X as XIcon, Trophy, Star, MapPin, Flame, Swords, Users,
   Handshake, CalendarDays, ClipboardList, TriangleAlert, Video, AtSign,
@@ -342,7 +343,7 @@ function MatchCard({ match, teamId, navigate }) {
 
   return (
     <div
-      onClick={() => navigate(`/match/${match.id}`)}
+      {...clickableProps(() => navigate(`/match/${match.id}`), { label: `${match.team_a?.name ?? ''} - ${match.team_b?.name ?? ''} maç detayı` })}
       style={{
         background: 'var(--surface)', borderRadius: 14, padding: '14px 16px',
         border: isWin  ? '1.5px solid rgba(76,175,80,.5)'

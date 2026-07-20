@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { GAMES, useGame } from '../context/GameContext'
 import { normalizeGameId } from '../utils/gameUtils'
+import { clickableProps } from '../utils/a11y'
 import InitialsImage from '../components/InitialsImage'
 import GameLogo, { GAME_ICON_PATHS } from '../components/GameLogo'
 
@@ -279,7 +280,7 @@ export default function TournamentsListPage() {
             return (
               <button
                 key={item.id}
-                onClick={() => navigate(`/tournament/${item.id}`)}
+                {...clickableProps(() => navigate(`/tournament/${item.id}`), { label: `${item.name ?? 'Turnuva'} sayfası` })}
                 style={{
                   position: 'relative', overflow: 'hidden', textAlign: 'left',
                   border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-1)',

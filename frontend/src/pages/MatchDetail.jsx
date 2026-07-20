@@ -21,6 +21,7 @@ import { getBOFormat }                              from '../utils/matchFormat'
 import { deriveWinnerTeamId, correctedScores }      from '../utils/matchResult'
 import { isUncertainPrediction }                    from '../utils/prediction'
 import { roundLabel }                               from '../utils/roundLabel'
+import { clickableProps }                           from '../utils/a11y'
 import { FEXT }                                     from '../theme'
 import Mascot from '../components/Mascot'
 import SeoHead from '../components/SeoHead'
@@ -1448,7 +1449,7 @@ export default function MatchDetail() {
 
             {/* Team A */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-              <div onClick={() => navigate(`/team/${aId}`)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, cursor: 'pointer', opacity: isFin && bWon ? 0.45 : 1, transition: 'opacity .2s' }}>
+              <div {...clickableProps(() => navigate(`/team/${aId}`), { label: `${aName} takım sayfası` })} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, cursor: 'pointer', opacity: isFin && bWon ? 0.45 : 1, transition: 'opacity .2s' }}>
                 <InitialsImage
                   src={aLogo}
                   name={aName}
@@ -1492,7 +1493,7 @@ export default function MatchDetail() {
 
             {/* Team B */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
-              <div onClick={() => navigate(`/team/${bId}`)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6, cursor: 'pointer', opacity: isFin && aWon ? 0.45 : 1, transition: 'opacity .2s' }}>
+              <div {...clickableProps(() => navigate(`/team/${bId}`), { label: `${bName} takım sayfası` })} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6, cursor: 'pointer', opacity: isFin && aWon ? 0.45 : 1, transition: 'opacity .2s' }}>
                 <InitialsImage
                   src={bLogo}
                   name={bName}
@@ -1657,7 +1658,7 @@ export default function MatchDetail() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       {h2h.matches.slice(0, 5).map(m => (
-                        <div key={m.id} onClick={() => navigate(`/match/${m.id}`)} style={{ cursor: 'pointer' }}>
+                        <div key={m.id} {...clickableProps(() => navigate(`/match/${m.id}`), { label: 'Maç detayı' })} style={{ cursor: 'pointer' }}>
                           <H2HRow match={m} refTeamAId={h2h.teamAId} />
                         </div>
                       ))}

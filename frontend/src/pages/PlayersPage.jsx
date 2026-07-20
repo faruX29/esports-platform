@@ -7,6 +7,7 @@ import { useUser } from '../context/UserContext'
 import { summarizePlayerMatchStats, metricBars, pickRowTimestamp } from '../utils/playerMetrics'
 import InitialsImage from '../components/InitialsImage'
 import { normalizeGameId } from '../utils/gameUtils'
+import { clickableProps } from '../utils/a11y'
 import { DeepScoutBadge } from '../components/ScoutSignals'
 import { X as XIcon, SearchX, Star } from 'lucide-react'
 import { FEXT } from '../theme'
@@ -737,7 +738,7 @@ export default function PlayersPage() {
                 }}
               >
                 <div
-                  onClick={() => navigate(`/player/${player.id}`)}
+                  {...clickableProps(() => navigate(`/player/${player.id}`), { label: `${player.nickname ?? 'Oyuncu'} profili` })}
                   style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, cursor: 'pointer' }}
                 >
                   <InitialsImage

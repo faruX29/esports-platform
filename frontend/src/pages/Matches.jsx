@@ -16,6 +16,7 @@ import { getBOFormat }                       from '../utils/matchFormat'
 import { correctedScores }                   from '../utils/matchResult'
 import { isUncertainPrediction }             from '../utils/prediction'
 import { roundLabel }                        from '../utils/roundLabel'
+import { clickableProps }                    from '../utils/a11y'
 import InitialsImage                        from '../components/InitialsImage'
 import {
   CalendarDays, Clock, CircleCheck, Radio, Search, Star, RefreshCw, Repeat,
@@ -793,7 +794,7 @@ function Matches() {
             return (
               <div
                 key={match.id}
-                onClick={() => navigate(`/match/${match.id}`)}
+                {...clickableProps(() => navigate(`/match/${match.id}`), { label: `${match.team_a?.name ?? ''} - ${match.team_b?.name ?? ''} maç detayı` })}
                 style={{
                   position: 'relative', borderRadius: 18,
                   padding: '18px 18px 14px',

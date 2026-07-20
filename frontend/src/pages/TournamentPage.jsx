@@ -18,6 +18,7 @@ import { DeepScoutBadge }                             from '../components/ScoutS
 import { deriveWinnerTeamId }                         from '../utils/matchResult'
 import { roundLabel }                                 from '../utils/roundLabel'
 import { isUncertainPrediction }                      from '../utils/prediction'
+import { clickableProps }                             from '../utils/a11y'
 import { normalizeGameId }                            from '../utils/gameUtils'
 import { GAMES }                                      from '../context/GameContext'
 import {
@@ -830,7 +831,7 @@ function StandingsTable({ matches, navigate }) {
             return (
               <tr
                 key={t.id}
-                onClick={() => navigate(`/team/${t.id}`)}
+                {...clickableProps(() => navigate(`/team/${t.id}`), { label: `${t.name} takım sayfası` })}
                 style={{ cursor: 'pointer' }}
               >
                 {/* Rank */}
@@ -1607,7 +1608,7 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
 
   return (
     <div
-      onClick={() => navigate(`/match/${m.id}`)}
+      {...clickableProps(() => navigate(`/match/${m.id}`), { label: `${m.team_a?.name ?? ''} - ${m.team_b?.name ?? ''} maç detayı` })}
       style={{
         position: 'relative', overflow: 'hidden',
         borderRadius: 14, cursor: 'pointer',

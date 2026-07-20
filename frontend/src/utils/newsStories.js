@@ -270,6 +270,6 @@ export function storyExplainability(story) {
     explanations.push('Mac onemi, skor yogunlugu ve turnuva baglami puanlanarak Gundem akisina yerlestirildi.')
   }
 
-  const classification = story?.source?.upset ? 'Surpriz' : (HERO_TIERS.has(tier) ? 'Manset' : 'Gundem')
+  const classification = story?.source?.upset ? 'Sürpriz' : (HERO_TIERS.has(tier) ? 'Manşet' : 'Gündem')
   return { classification, explanations }
 }

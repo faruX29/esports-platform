@@ -82,7 +82,7 @@ function getArticleStoryTag(variant) {
   if (variant === 'upset') return 'Sürpriz Sonuç'
   if (variant === 'stomp') return 'Skor Haberi'
   if (variant === 'close') return 'Seri Ozeti'
-  return 'Gundem'
+  return 'Gündem'
 }
 
 function articleRowToStory(row) {

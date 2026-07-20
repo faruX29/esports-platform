@@ -252,7 +252,7 @@ export default function RankingsPage() {
         setRows(computed)
       } catch (e) {
         if (!cancelled) {
-          setError(e?.message || 'Power rankings yuklenemedi.')
+          setError(e?.message || 'Güç sıralaması yüklenemedi.')
           setRows([])
         }
       } finally {
@@ -301,10 +301,10 @@ export default function RankingsPage() {
         <div style={{ marginBottom: 18 }}>
           <h1 style={{ margin: 0, fontSize: 30, letterSpacing: '.5px' }}>Güç Sıralaması</h1>
           <p style={{ margin: '8px 0 0', color: 'var(--text-2)', fontSize: 13 }}>
-            Son 6 ayin maclari; turnuva tier'i ve guncellik agirlikli guc siralamasi.
+            Son 6 ayın maçları; turnuva tier'i ve güncellik ağırlıklı güç sıralaması.
           </p>
           <p style={{ margin: '6px 0 0', color: 'var(--text-4)', fontSize: 12 }}>
-            Tier tavani belirler: dusuk tier bir takim yuksek tier bir sampiyonu gecemez. Siralama tek oyuna gore.
+            Tier tavanı belirler: düşük tier bir takım yüksek tier bir şampiyonu geçemez. Sıralama tek oyuna göre.
           </p>
         </div>
 
@@ -359,7 +359,7 @@ export default function RankingsPage() {
               }}
             />
             {[
-              { key: 'power', label: 'Power' },
+              { key: 'power', label: 'Güç' },
               { key: 'impact', label: 'Kalite' },
               { key: 'winrate', label: 'Kazanma Oranı' },
               { key: 'wins', label: 'Galibiyet' },
@@ -409,7 +409,7 @@ export default function RankingsPage() {
           }}>
             <div>Sıra</div>
             <div>Takım</div>
-            <div>G-M</div>
+            <div>W-L</div>
             <div>Kazanma Oranı</div>
             <div>Kalite</div>
             <div>Güç</div>
@@ -417,7 +417,7 @@ export default function RankingsPage() {
           </div>
 
             {loading && (
-              <div style={{ padding: 18, color: 'var(--text-3)', fontSize: 13 }}>Siralama verileri yukleniyor...</div>
+              <div style={{ padding: 18, color: 'var(--text-3)', fontSize: 13 }}>Sıralama verileri yükleniyor...</div>
             )}
 
             {!loading && error && (

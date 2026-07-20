@@ -253,7 +253,7 @@ function Matches() {
             id, status, scheduled_at,
             team_a_id, team_b_id, winner_id,
             team_a_score, team_b_score,
-            number_of_games, stream_url, game_id, round_info, stage_name, bracket_type,
+            number_of_games, stream_url, game_id, round_info,
             prediction_team_a, prediction_team_b, prediction_confidence,
             team_a:teams!matches_team_a_id_fkey(id, name, logo_url, acronym),
             team_b:teams!matches_team_b_id_fkey(id, name, logo_url, acronym),

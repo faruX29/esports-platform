@@ -1424,7 +1424,7 @@ export default function MatchDetail() {
         {/* TR banner */}
         {hasTR && (
           <div style={{ background: 'linear-gradient(90deg,#C8102E,#a00d25 40%,#001f6d)', borderRadius: '16px 16px 0 0', padding: 6, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
-            <span>🇹🇷</span><span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 2, color: '#fff', textTransform: 'uppercase' }}>Türk Gururu</span><span>🇹🇷</span>
+            <span>🇹🇷</span><span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 2, color: '#fff', textTransform: 'uppercase' }}>Bizim Takım</span><span>🇹🇷</span>
           </div>
         )}
 

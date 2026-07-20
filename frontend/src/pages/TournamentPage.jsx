@@ -1651,7 +1651,7 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
         }}>
           <span style={{ fontSize: 9, fontWeight: 800, color: '#fff',
             letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-            🇹🇷 Türk Gururu
+            🇹🇷 Bizim Takım
           </span>
         </div>
       )}
@@ -2287,7 +2287,7 @@ export default function TournamentPage() {
                     fontSize: 11, fontWeight: 800, color: '#ff6b7a',
                     letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: 8,
                   }}>
-                    Liquipedia Pro Bracket
+                    Liquipedia Profesyonel Ağaç
                   </div>
 
                   <div style={{
@@ -2315,7 +2315,7 @@ export default function TournamentPage() {
                       fontSize: 11, fontWeight: 800, color: '#ff6b7a',
                       letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: 8,
                     }}>
-                      {isDoubleElim ? 'Upper Bracket' : 'Bracket'}
+                      {isDoubleElim ? 'Üst Ayak' : 'Eleme Ağacı'}
                     </div>
                     <BracketView
                       matches={matches}
@@ -2337,7 +2337,7 @@ export default function TournamentPage() {
                           fontSize: 11, fontWeight: 800, color: '#60a5fa',
                           letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: 8,
                         }}>
-                          Lower Bracket
+                          Alt Ayak
                         </div>
                         <BracketView
                           matches={matches}
@@ -2361,8 +2361,8 @@ export default function TournamentPage() {
           <div style={{ marginBottom: 36 }}>
             <ST
               Icon={ClipboardList}
-              label={stageMode.hasLeagueStyle ? 'Stage Matches (Swiss / Groups / Round Robin)' : 'Stage Match List'}
-              right={<span style={{ fontSize: 10, color: 'var(--text-5)' }}>Tarih ve round bazli</span>}
+              label={stageMode.hasLeagueStyle ? 'Aşama Maçları (İsviçre / Grup / Lig Usulü)' : 'Aşama Maç Listesi'}
+              right={<span style={{ fontSize: 10, color: 'var(--text-5)' }}>Tarih ve tur bazlı</span>}
             />
             <div style={{
               background: 'var(--bg)', borderRadius: 16,

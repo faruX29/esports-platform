@@ -825,7 +825,7 @@ export default function NewsDetailPage() {
         await loadForum(story.id)
       }
       setCommentInput('')
-      setCommentSuccess('Yorum basariyla gonderildi.')
+      setCommentSuccess('Yorum başarıyla gönderildi.')
     } catch (commentErr) {
       const issueType = classifyCommentInsertIssue(commentErr)
       const details = {
@@ -996,19 +996,19 @@ export default function NewsDetailPage() {
   }
 
   const explain = useMemo(() => {
-    if (!story) return { classification: 'Gundem', explanations: [] }
+    if (!story) return { classification: 'Gündem', explanations: [] }
     return storyExplainability(story)
   }, [story])
 
   if (loading) {
-    return <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px', color: 'var(--text-3)' }}>Haber detayi yukleniyor...</div>
+    return <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px', color: 'var(--text-3)' }}>Haber detayı yükleniyor...</div>
   }
 
   if (error || !story) {
     return (
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px', color: 'var(--text-1)' }}>
         <div style={{ marginBottom: 14, color: '#ff8c9a' }}>{error || 'Haber bulunamadı.'}</div>
-        <Link to='/news' style={{ color: '#ffb3bd' }}>Haber akisina don</Link>
+        <Link to='/news' style={{ color: '#ffb3bd' }}>Haber akışına dön</Link>
       </div>
     )
   }
@@ -1051,7 +1051,7 @@ export default function NewsDetailPage() {
           }
         `}</style>
 
-        <Link to='/news' style={{ color: '#ffb3bd', fontSize: 13, textDecoration: 'none' }}>← Haber akisina don</Link>
+        <Link to='/news' style={{ color: '#ffb3bd', fontSize: 13, textDecoration: 'none' }}>← Haber akışına dön</Link>
 
         <section style={{ marginTop: 14, borderRadius: 20, border: '1px solid var(--line)', background: 'linear-gradient(145deg,var(--surface),var(--surface))', padding: 22 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
@@ -1213,7 +1213,7 @@ export default function NewsDetailPage() {
 
           {forumComingSoon ? (
             <div style={{ border: '1px dashed var(--line)', borderRadius: 10, padding: '12px', color: 'var(--text-3)', fontSize: 12 }}>
-              Yorumlar yakinda.
+              Yorumlar yakında.
             </div>
           ) : (
             <form onSubmit={submitComment} style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
@@ -1240,7 +1240,7 @@ export default function NewsDetailPage() {
                 </button>
               </div>
               {canInteract
-                ? <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Yorumun hesabinla paylasilir.</div>
+                ? <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Yorumun hesabınla paylaşılır.</div>
                 : <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
                     Yorum yazmak icin{' '}
                     <Link to="/login" style={{ color: FEXT.accentText, textDecoration: 'none', fontWeight: 600 }}>giriş yap</Link>
@@ -1254,7 +1254,7 @@ export default function NewsDetailPage() {
           {commentsLoading && <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Forum yukleniyor...</div>}
           {!commentsLoading && comments.length === 0 && (
             <div style={{ border: '1px dashed var(--line)', borderRadius: 10, padding: '12px', color: 'var(--text-3)', fontSize: 12 }}>
-              Henuz yorum yok. Ilk yorumu sen yaz.
+              Henüz yorum yok. İlk yorumu sen yaz.
             </div>
           )}
 
@@ -1267,7 +1267,7 @@ export default function NewsDetailPage() {
                 const isTopComment = comment.id === topCommentId
 
                 return (
-                  <div key={comment.id} style={{ border: isTopComment ? '1px solid rgba(255,184,0,.42)' : '1px solid var(--line)', borderRadius: 12, background: isTopComment ? 'linear-gradient(145deg, rgba(255,184,0,.08), var(--surface))' : 'var(--surface)', padding: '10px 11px' }}>
+                  <div key={comment.id} style={{ border: isTopComment ? '1px solid rgba(194,92,208,.42)' : '1px solid var(--line)', borderRadius: 12, background: isTopComment ? 'linear-gradient(145deg, rgba(194,92,208,.10), var(--surface))' : 'var(--surface)', padding: '10px 11px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flexWrap: 'wrap' }}>
                         <InitialsImage
@@ -1286,8 +1286,8 @@ export default function NewsDetailPage() {
                         )}
                         <ScoutRankBadge score={comment.authorScoutScore} />
                         {isTopComment && (
-                          <span style={{ fontSize: 10, fontWeight: 800, color: '#ffd46b', border: '1px solid rgba(255,184,0,.45)', background: 'rgba(255,184,0,.12)', borderRadius: 999, padding: '2px 8px', letterSpacing: '.4px' }}>
-                            Top Comment
+                          <span style={{ fontSize: 10, fontWeight: 800, color: '#c86fd8', border: '1px solid rgba(194,92,208,.45)', background: 'rgba(194,92,208,.14)', borderRadius: 999, padding: '2px 8px', letterSpacing: '.4px' }}>
+                            En İyi Yorum
                           </span>
                         )}
                       </div>

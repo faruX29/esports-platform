@@ -271,7 +271,7 @@ function buildTickerLines(running, finishedStories, upcomingStories, followedTea
   ;(running || []).forEach(match => {
     lines.push({
       id: `live_${match.id}`,
-      text: `🔴 LIVE ${match.team_a?.name || '?'} ${match.team_a_score ?? 0}:${match.team_b_score ?? 0} ${match.team_b?.name || '?'}`,
+      text: `🔴 CANLI ${match.team_a?.name || '?'} ${match.team_a_score ?? 0}:${match.team_b_score ?? 0} ${match.team_b?.name || '?'}`,
       href: match?.id ? `/match/${match.id}` : null,
     })
   })
@@ -603,7 +603,7 @@ const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
   const lines = safeItems.length > 0
     ? normalized
     : [
-      { id: 'boot_live', text: '🔴 LIVE ticker baglaniyor...', href: null },
+      { id: 'boot_live', text: '🔴 Canlı yayın bağlanıyor...', href: null },
       { id: 'boot_news', text: '📰 Son haberler hazirlaniyor...', href: null },
       { id: 'boot_scout', text: '🧭 Scout sinyalleri yükleniyor...', href: null },
     ]
@@ -929,7 +929,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
         </div>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 800, color: '#ff7683' }}>
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#FF4655', animation: 'liveNeonBlink 1.05s infinite' }} />
-          LIVE
+          CANLI
         </span>
       </div>
 

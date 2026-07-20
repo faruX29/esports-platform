@@ -521,8 +521,8 @@ function TacticalScoutReport({ report }) {
   return (
     <div style={{ marginTop: 14, background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--surface-2)', padding: 14 }}>
       <ST Icon={Brain} label="Scout Analiz" />
-      <div style={{ marginBottom: 10, fontSize: 11, color: '#9da3af' }}>
-        Map kaynaklari: {report.mapsUsed} · Form ornegi: {report.formSample}
+      <div style={{ marginBottom: 10, fontSize: 11, color: 'var(--text-3)' }}>
+        Harita kaynakları: {report.mapsUsed} · Form örneği: {report.formSample}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 10 }}>
@@ -531,23 +531,23 @@ function TacticalScoutReport({ report }) {
             <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)', marginBottom: 8 }}>{team.name}</div>
 
             <div style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: '#86efac', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
-                Strengths
+              <div style={{ fontSize: 10, fontWeight: 800, color: '#2f9e57', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
+                Güçlü Yönler
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {team.strengths.map((item, idx) => (
-                  <div key={`s_${idx}`} style={{ fontSize: 11, color: '#c8f5d4' }}>+ {item}</div>
+                  <div key={`s_${idx}`} style={{ fontSize: 11, color: 'var(--text-2)' }}><span style={{ color: '#2f9e57', fontWeight: 700 }}>+</span> {item}</div>
                 ))}
               </div>
             </div>
 
             <div>
-              <div style={{ fontSize: 10, fontWeight: 800, color: '#fda4af', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
-                Weaknesses
+              <div style={{ fontSize: 10, fontWeight: 800, color: '#d6394a', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
+                Zayıf Yönler
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {team.weaknesses.map((item, idx) => (
-                  <div key={`w_${idx}`} style={{ fontSize: 11, color: '#ffd6db' }}>- {item}</div>
+                  <div key={`w_${idx}`} style={{ fontSize: 11, color: 'var(--text-2)' }}><span style={{ color: '#d6394a', fontWeight: 700 }}>−</span> {item}</div>
                 ))}
               </div>
             </div>
@@ -1735,16 +1735,19 @@ export default function MatchDetail() {
             </div>
 
             <div style={{ border: '1px solid rgba(196,181,253,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(124,58,237,.12), var(--surface))', padding: '10px 11px' }}>
-              <div style={{ fontSize: 10, color: '#c8b4ff', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5 }}>Harita Profili</div>
-              <div style={{ fontSize: 12, color: '#efeaff' }}>{mapStats.length > 0 ? `${mapStats[0].map} en fazla oynanan harita` : 'Yeterli map tarihi yok'}</div>
-              <div style={{ marginTop: 4, fontSize: 11, color: '#b6acd6' }}>{mapStats.length > 0 ? `${mapStats[0].total} ornek uzerinden ${aName} ${mapStats[0].teamAWinRate}% - ${mapStats[0].teamBWinRate}% ${bName}` : 'Tahmin neutral modda'}</div>
+              <div style={{ fontSize: 10, color: 'var(--ai)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5 }}>Harita Profili</div>
+              <div style={{ fontSize: 12, color: 'var(--text-1)' }}>{mapStats.length > 0 ? `${mapStats[0].map} en fazla oynanan harita` : 'Yeterli harita geçmişi yok'}</div>
+              <div style={{ marginTop: 4, fontSize: 11, color: 'var(--text-3)' }}>{mapStats.length > 0 ? `${mapStats[0].total} örnek üzerinden ${aName} ${mapStats[0].teamAWinRate}% - ${mapStats[0].teamBWinRate}% ${bName}` : 'Tahmin nötr modda'}</div>
             </div>
 
-            <div style={{ border: '1px solid rgba(255,184,0,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(255,184,0,.12), var(--surface))', padding: '10px 11px' }}>
-              <div style={{ fontSize: 10, color: '#ffd67d', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5 }}>MVP Tahmini</div>
-              <div style={{ fontSize: 12, color: '#fff0cb' }}>{scoutMvp ? `${scoutMvp.nickname} (${scoutMvp.teamName})` : 'Canlı veri bekleniyor'}</div>
-              <div style={{ marginTop: 4, fontSize: 11, color: '#d2bf8f' }}>{scoutMvp ? `K/D/A: ${scoutMvp.kills || 0}/${scoutMvp.deaths || 0}/${scoutMvp.assists || 0}` : 'Model sadece takım seviyesinde çalışıyor'}</div>
-            </div>
+            {/* MVP Tahmini: istatistikler seyrek → yalnız gerçek veri varken göster (kurucu isteği) */}
+            {scoutMvp && (
+              <div style={{ border: '1px solid rgba(255,184,0,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(255,184,0,.12), var(--surface))', padding: '10px 11px' }}>
+                <div style={{ fontSize: 10, color: 'var(--warn, #c0821f)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5 }}>MVP Tahmini</div>
+                <div style={{ fontSize: 12, color: 'var(--text-1)' }}>{`${scoutMvp.nickname} (${scoutMvp.teamName})`}</div>
+                <div style={{ marginTop: 4, fontSize: 11, color: 'var(--text-3)' }}>{`K/D/A: ${scoutMvp.kills || 0}/${scoutMvp.deaths || 0}/${scoutMvp.assists || 0}`}</div>
+              </div>
+            )}
           </div>
         </div>
 

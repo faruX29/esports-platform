@@ -451,7 +451,7 @@ function MatchCard({ match, teamId, navigate }) {
         <div style={{ fontSize: 10, color: 'var(--text-6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
           <Trophy size={11} style={{ flexShrink: 0 }} /> {match.tournament?.name ?? '—'}
         </div>
-        {match.stream_url && (
+        {match.stream_url && !isFin && (
           <a
             href={match.stream_url}
             target="_blank"

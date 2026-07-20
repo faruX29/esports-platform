@@ -46,10 +46,10 @@
   --text:       #0f172a;
   --text-1:     #1e293b;
   --text-2:     #334155;
-  --text-3:     #5a6b82;
-  --text-4:     #7d8ba0;
-  --text-5:     #a7b1c2;
-  --text-6:     #cbd5e1;
+  --text-3:     #566579;   /* ikincil — biraz koyulaştı */
+  --text-4:     #6c7a90;   /* soluk — beyaza yakınlık giderildi */
+  --text-5:     #7f8da3;   /* daha soluk ama artık okunur */
+  --text-6:     #9aa7ba;   /* en soluk — eski #cbd5e1 fazla açıktı */
   --hover:        rgba(15,23,42,.05);
   --hover-strong: rgba(15,23,42,.08);
   --shadow:       rgba(15,23,42,.14);

@@ -1017,6 +1017,22 @@ export default function NewsDetailPage() {
         description={story.summary || story.heroScore || ''}
         image={story.visuals?.teamA?.logo_url || story.visuals?.teamB?.logo_url || ''}
         type="article"
+        schema={{
+          '@context': 'https://schema.org',
+          '@type': 'NewsArticle',
+          headline: story.title,
+          description: story.summary || story.heroScore || '',
+          datePublished: story.publishedAt || undefined,
+          dateModified: story.publishedAt || undefined,
+          inLanguage: 'tr-TR',
+          image: [story.visuals?.teamA?.logo_url, story.visuals?.teamB?.logo_url].filter(Boolean),
+          author: { '@type': 'Organization', name: 'feXt', url: 'https://fextesports.com/' },
+          publisher: {
+            '@type': 'Organization', name: 'feXt',
+            logo: { '@type': 'ImageObject', url: 'https://fextesports.com/icons/icon-512.png' },
+          },
+          mainEntityOfPage: typeof window !== 'undefined' ? window.location.href : 'https://fextesports.com/',
+        }}
       />
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '22px 16px 48px' }}>
         <style>{`

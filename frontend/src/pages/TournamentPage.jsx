@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { FEXT } from '../theme'
 import Mascot from '../components/Mascot'
+import SeoHead from '../components/SeoHead'
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 
@@ -1961,7 +1962,21 @@ export default function TournamentPage() {
 
   // ── Render ────────────────────────────────────────────────────
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 0 100px', color: 'white' }}>
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 0 100px', color: 'var(--text-1)' }}>
+      <SeoHead
+        title={`${tournament.name} — Fikstür, Puan Durumu ve Sonuçlar`}
+        description={`${tournament.name} espor turnuvası: maç programı, bracket, puan durumu ve sonuçlar — feXt.`}
+        type="article"
+        schema={{
+          '@context': 'https://schema.org',
+          '@type': 'SportsEvent',
+          name: tournament.name,
+          sport: 'Esports',
+          startDate: tournament.begin_at || undefined,
+          endDate: tournament.end_at || undefined,
+          url: typeof window !== 'undefined' ? window.location.href : undefined,
+        }}
+      />
 
       <style>{`
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }

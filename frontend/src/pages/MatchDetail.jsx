@@ -21,6 +21,7 @@ import { getBOFormat }                              from '../utils/matchFormat'
 import { deriveWinnerTeamId, correctedScores }      from '../utils/matchResult'
 import { FEXT }                                     from '../theme'
 import Mascot from '../components/Mascot'
+import SeoHead from '../components/SeoHead'
 
 // MVP Oylaması şimdilik GİZLİ (kurucu kararı 2026-07-16): gerçek oyuncu istatistiği
 // altyapısı olmadan oy "en popüler oyuncu" yarışına dönüşüyor (düşük performanslı ama
@@ -1377,7 +1378,27 @@ export default function MatchDetail() {
   })()
 
   return (
-    <div style={{ color: 'white', minHeight: '100vh', background: 'var(--bg)' }}>
+    <div style={{ color: 'var(--text-1)', minHeight: '100vh', background: 'var(--bg)' }}>
+      <SeoHead
+        title={`${aName} vs ${bName}${gName ? ` — ${gName}` : ''} Canlı Skor`}
+        description={`${aName} vs ${bName}${match.tournament?.name ? ` · ${match.tournament.name}` : ''} — canlı skor, AI tahmini, kadro ve maç istatistikleri. feXt.`}
+        image={aLogo || bLogo || ''}
+        type="article"
+        schema={{
+          '@context': 'https://schema.org',
+          '@type': 'SportsEvent',
+          name: `${aName} vs ${bName}`,
+          sport: 'Esports',
+          startDate: match.scheduled_at || undefined,
+          eventStatus: isLive ? 'https://schema.org/EventScheduled' : undefined,
+          competitor: [
+            { '@type': 'SportsTeam', name: aName },
+            { '@type': 'SportsTeam', name: bName },
+          ],
+          superEvent: match.tournament?.name ? { '@type': 'SportsEvent', name: match.tournament.name } : undefined,
+          url: typeof window !== 'undefined' ? window.location.href : undefined,
+        }}
+      />
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px 60px' }}>
 
         {/* Geri */}

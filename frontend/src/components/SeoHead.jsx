@@ -16,6 +16,7 @@ export default function SeoHead({
   url = '',
   type = 'article',
   siteName = 'feXt',
+  schema = null,   // Schema.org JSON-LD (obje veya dizi) → Google zengin sonuç
 }) {
   const fullTitle = title ? `${title} | ${siteName}` : siteName
   const canonical = url || (typeof window !== 'undefined' ? window.location.href : '')
@@ -25,6 +26,11 @@ export default function SeoHead({
       <title>{fullTitle}</title>
       {description && <meta name="description" content={description} />}
       {canonical && <link rel="canonical" href={canonical} />}
+
+      {/* Yapısal veri (Schema.org) — Google JSON-LD'yi head/body'de okur */}
+      {schema && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+      )}
 
       {/* Open Graph (Facebook, WhatsApp, Discord, LinkedIn) */}
       <meta property="og:site_name" content={siteName} />

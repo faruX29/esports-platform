@@ -21,6 +21,7 @@ import { summarizePlayerMatchStats, metricBars } from '../utils/playerMetrics'
 import { deriveWinnerTeamId, correctedScores } from '../utils/matchResult'
 import { FEXT } from '../theme'
 import Mascot from '../components/Mascot'
+import SeoHead from '../components/SeoHead'
 import {
   Brain, ClipboardList, Target, Swords, Skull, Handshake, Crosshair, Map as MapIcon,
   Compass, Sparkles, TriangleAlert, Star, MapPin, CircleCheck, X as XIcon, BarChart3,
@@ -1024,7 +1025,23 @@ export default function PlayerPage() {
 
   // ── Render ────────────────────────────────────────────────────
   return (
-    <div style={{ maxWidth: 820, margin: '0 auto', padding: isMobile ? '0 0 42px' : '0 0 80px', color: 'white' }}>
+    <div style={{ maxWidth: 820, margin: '0 auto', padding: isMobile ? '0 0 42px' : '0 0 80px', color: 'var(--text-1)' }}>
+      <SeoHead
+        title={`${player.nickname} — Espor Oyuncu Profili, İstatistikler`}
+        description={`${player.nickname}${team?.name ? ` (${team.name})` : ''} espor oyuncu profili: rol, KDA, kazanma oranı, kariyer ve istatistikler — feXt.`}
+        image={player.image_url || ''}
+        type="profile"
+        schema={{
+          '@context': 'https://schema.org',
+          '@type': 'Person',
+          name: player.nickname,
+          jobTitle: 'Espor Oyuncusu',
+          nationality: player.nationality || undefined,
+          image: player.image_url || undefined,
+          memberOf: team?.name ? { '@type': 'SportsTeam', name: team.name } : undefined,
+          url: typeof window !== 'undefined' ? window.location.href : undefined,
+        }}
+      />
 
       <style>{`
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }

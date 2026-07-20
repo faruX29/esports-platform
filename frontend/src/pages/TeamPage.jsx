@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { FEXT } from '../theme'
 import Mascot from '../components/Mascot'
+import SeoHead from '../components/SeoHead'
 
 // ── Yardımcılar ───────────────────────────────────────────────────────────────
 function calcTeamRating(wins, total) {
@@ -598,7 +599,21 @@ export default function TeamPage() {
 
   // ── Render ────────────────────────────────────────────────────
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 0 80px', color: 'white' }}>
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 0 80px', color: 'var(--text-1)' }}>
+      <SeoHead
+        title={`${team.name} — Kadro, Maçlar ve İstatistikler`}
+        description={`${team.name} espor takımı: güncel kadro, son maç sonuçları, kazanma oranı, transferler ve istatistikler — feXt.`}
+        image={team.logo_url || ''}
+        type="profile"
+        schema={{
+          '@context': 'https://schema.org',
+          '@type': 'SportsTeam',
+          name: team.name,
+          sport: 'Esports',
+          logo: team.logo_url || undefined,
+          url: typeof window !== 'undefined' ? window.location.href : undefined,
+        }}
+      />
 
       <style>{`
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }

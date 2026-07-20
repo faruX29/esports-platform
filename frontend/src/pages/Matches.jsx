@@ -388,7 +388,7 @@ function Matches() {
         background: 'var(--surface)', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6,
       }}>
         <Radio size={12} /> Filtre: <span style={{ color: 'var(--text-4)' }}>
-          {dbGame ? `${dbGame?.name ?? '?'} (id=${dbGame?.id ?? '?'})` : `id bulunamadi: "${activeGame}"`}
+          {dbGame ? `${dbGame?.name ?? '?'} (id=${dbGame?.id ?? '?'})` : `id bulunamadı: "${activeGame}"`}
         </span>
       </div>
     )

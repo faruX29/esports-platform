@@ -605,7 +605,7 @@ const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
     ? normalized
     : [
       { id: 'boot_live', text: '🔴 Canlı yayın bağlanıyor...', href: null },
-      { id: 'boot_news', text: '📰 Son haberler hazirlaniyor...', href: null },
+      { id: 'boot_news', text: '📰 Son haberler hazırlanıyor...', href: null },
       { id: 'boot_scout', text: '🧭 Scout sinyalleri yükleniyor...', href: null },
     ]
   const speedSeconds = Math.min(75, Math.max(24, lines.length * 4.2))

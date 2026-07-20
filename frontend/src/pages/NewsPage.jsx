@@ -184,7 +184,7 @@ function buildScoutRows(item) {
   }
 
   if (source.upset) {
-    rows.push({ label: 'Durum', value: 'Surpriz sonucu sinifi' })
+    rows.push({ label: 'Durum', value: 'Sürpriz sonucu sınıfı' })
   }
 
   return rows.slice(0, 3)
@@ -570,7 +570,7 @@ export default function NewsPage() {
       } catch {
         // no-op
       }
-      window.alert('Geri bildirim altyapisi hazir degil. Haber ozeti panoya kopyalandi.')
+      window.alert('Geri bildirim altyapısı hazır değil. Haber özeti panoya kopyalandı.')
     }
   }
 

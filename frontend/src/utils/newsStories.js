@@ -41,11 +41,11 @@ export function getGameMeta(gameId) {
 }
 
 function storyTag(variant) {
-  if (variant === 'upcoming') return 'Haftanin Maci'
-  if (variant === 'upset') return 'Surpriz Sonuc'
+  if (variant === 'upcoming') return 'Haftanın Maçı'
+  if (variant === 'upset') return 'Sürpriz Sonuç'
   if (variant === 'stomp') return 'Skor Haberi'
-  if (variant === 'close') return 'Seri Ozeti'
-  return 'Gundem'
+  if (variant === 'close') return 'Seri Özeti'
+  return 'Gündem'
 }
 
 export function buildStoryVisuals(match, isTurkishTeam) {
@@ -151,24 +151,24 @@ export function buildFinishedStory(match, statsByMatch, isTurkishTeam) {
   const scoreline = `${aScore}:${bScore}`
 
   const mvpLine = impactTeam
-    ? `${impactTeam}${impactScore != null ? ` tarafinda ${impactScore} impact puaniyla MVP seviyesi performans verdi` : ' tarafinda MVP etkisi yaratti'}.`
-    : 'Macin belirleyici bolumlerinde bireysel performans farki sonucu dogrudan etkiledi.'
+    ? `${impactTeam}${impactScore != null ? ` tarafında ${impactScore} impact puanıyla MVP seviyesi performans verdi` : ' tarafında MVP etkisi yarattı'}.`
+    : 'Maçın belirleyici bölümlerinde bireysel performans farkı sonucu doğrudan etkiledi.'
 
   let variant = 'close'
-  let title = `Mac Raporu: ${winnerName}, ${scoreline} ile seriyi tamamladi`
-  let summary = `${match.tournament?.name || 'Turnuva'} sahnesinde final skor ${scoreline}. Seri ${mapSignals.mapCount || 1} haritaya yayildi, tempo ${mapSignals.tempoLabel} olarak olculdu${mapMinutes ? ` ve ortalama harita suresi ${mapMinutes}` : ''}. ${mvpLine}`
+  let title = `Maç Raporu: ${winnerName}, ${scoreline} ile seriyi tamamladı`
+  let summary = `${match.tournament?.name || 'Turnuva'} sahnesinde final skor ${scoreline}. Seri ${mapSignals.mapCount || 1} haritaya yayıldı, tempo ${mapSignals.tempoLabel} olarak ölçüldü${mapMinutes ? ` ve ortalama harita süresi ${mapMinutes}` : ''}. ${mvpLine}`
 
   if (isUpset) {
     variant = 'upset'
-    title = `Surpriz Skor: ${winnerName}, ${match.tournament?.name || 'ana sahne'} dengesini degistirdi`
-    summary = `${match.tournament?.name || 'Turnuva'} arenasinda ${winnerName}, ${loserName} onunde ${scoreline} ile kazanarak model projeksiyonunu tersine cevirdi.${favoredName ? ` Tahminlerde onde yazilan taraf ${favoredName}` : ''}${predictionEdge != null ? ` ve tahmin farki ${predictionEdge} puandi` : ''}. ${mvpLine} Sonuc, playoff tablosunda yeni bir senaryo acti.`
+    title = `Sürpriz Skor: ${winnerName}, ${match.tournament?.name || 'ana sahne'} dengesini değiştirdi`
+    summary = `${match.tournament?.name || 'Turnuva'} arenasında ${winnerName}, ${loserName} önünde ${scoreline} ile kazanarak model projeksiyonunu tersine çevirdi.${favoredName ? ` Tahminlerde önde yazılan taraf ${favoredName}` : ''}${predictionEdge != null ? ` ve tahmin farkı ${predictionEdge} puandı` : ''}. ${mvpLine} Sonuç, playoff tablosunda yeni bir senaryo açtı.`
   } else if (margin >= 2) {
     variant = 'stomp'
-    title = `Skor Haberi: ${winnerName}, ${scoreline} ile net ustunluk kurdu`
-    summary = `${winnerName}, ${loserName} karsisinda seriyi ${scoreline} bitirdi. ${mapSignals.mapCount || 1} haritalik sette tempo ${mapSignals.tempoLabel} seviyesinde ilerledi${longestMap ? `, en uzun harita ${longestMap}` : ''}. ${mvpLine} Bu tablo gunun en yuksek kontrol yuzdelerinden birini urettirdi.`
+    title = `Skor Haberi: ${winnerName}, ${scoreline} ile net üstünlük kurdu`
+    summary = `${winnerName}, ${loserName} karşısında seriyi ${scoreline} bitirdi. ${mapSignals.mapCount || 1} haritalık sette tempo ${mapSignals.tempoLabel} seviyesinde ilerledi${longestMap ? `, en uzun harita ${longestMap}` : ''}. ${mvpLine} Bu tablo günün en yüksek kontrol yüzdelerinden birini ürettirdi.`
   } else if (impactTeam) {
-    title = `Analiz: ${winnerName} dar seride MVP etkisiyle ayakta kaldi`
-    summary = `${aName} ile ${bName} arasindaki yakin seride kazanan ${winnerName} oldu ve skor ${scoreline} kapandi. ${impactTeam}${impactScore != null ? ` ${impactScore} impact puaniyla` : ''} kritik roundlarda oyunu cevirdi${mapMinutes ? `; ortalama harita suresi ${mapMinutes}` : ''}. Teknik denge son bolumde mikro kararlarla kirildi.`
+    title = `Analiz: ${winnerName} dar seride MVP etkisiyle ayakta kaldı`
+    summary = `${aName} ile ${bName} arasındaki yakın seride kazanan ${winnerName} oldu ve skor ${scoreline} kapandı. ${impactTeam}${impactScore != null ? ` ${impactScore} impact puanıyla` : ''} kritik roundlarda oyunu çevirdi${mapMinutes ? `; ortalama harita süresi ${mapMinutes}` : ''}. Teknik denge son bölümde mikro kararlarla kırıldı.`
   }
 
   return {
@@ -218,12 +218,12 @@ export function buildUpcomingStory(match, isTurkishTeam) {
     ? (predA >= predB ? predA : predB)
     : null
 
-  let summary = `${aName} ile ${bName} ${hoursAway} saat sonra sunucuya cikiyor. Karsilasma oncesi ana hikaye skor tablosundaki pozisyon savasi ve veto duzeninin ilk haritaya etkisi. Analitik model, serinin kirilim noktasinin acilis haritasi olabilecegini isaret ediyor.`
+  let summary = `${aName} ile ${bName} ${hoursAway} saat sonra sunucuya çıkıyor. Karşılaşma öncesi ana hikaye skor tablosundaki pozisyon savaşı ve veto düzeninin ilk haritaya etkisi. Analitik model, serinin kırılım noktasının açılış haritası olabileceğini işaret ediyor.`
   if (isHeroTier) {
-    summary = `${aName} ile ${bName}, ${tournamentName} sahnesinde haftanin manset serisine cikiyor. Gozler form trendi, veto dengesi ve playoff bileti ihtimalleri uzerinde; bu seri turnuva ivmesini dogrudan etkileyebilir.`
+    summary = `${aName} ile ${bName}, ${tournamentName} sahnesinde haftanın manşet serisine çıkıyor. Gözler form trendi, veto dengesi ve playoff bileti ihtimalleri üzerinde; bu seri turnuva ivmesini doğrudan etkileyebilir.`
   }
   if (favorite && predictionEdge != null) {
-    summary += ` Model, ${favorite} tarafini ${predictionEdge} puanlik farkla onde goruyor${favoriteModelScore != null ? ` (model skoru ${favoriteModelScore})` : ''}; MVP yarisi acisindan one cikan ekip ilk iki haritada psikolojik ustunlugu alabilir.`
+    summary += ` Model, ${favorite} tarafını ${predictionEdge} puanlık farkla önde görüyor${favoriteModelScore != null ? ` (model skoru ${favoriteModelScore})` : ''}; MVP yarışı açısından öne çıkan ekip ilk iki haritada psikolojik üstünlüğü alabilir.`
   }
 
   return {
@@ -236,7 +236,7 @@ export function buildUpcomingStory(match, isTurkishTeam) {
     priority: (tierWeight(match.tournament?.tier) * 100) + (isHeroTier ? 46 : 18),
     title: isHeroTier
       ? `${tournamentName} vitrini: ${aName} vs ${bName}`
-      : `${aName} ile ${bName} haftanin radarinda`,
+      : `${aName} ile ${bName} haftanın radarında`,
     summary,
     tag: storyTag('upcoming'),
     heroScore: `${aName} vs ${bName}`,
@@ -255,19 +255,19 @@ export function storyExplainability(story) {
   const explanations = []
   const tier = story?.visuals?.tier
   if (HERO_TIERS.has(tier)) {
-    explanations.push('Turnuva tier puani yuksek oldugu icin manset onceligi verildi (Tier S/A).')
+    explanations.push('Turnuva tier puanı yüksek olduğu için manşet önceliği verildi (Tier S/A).')
   }
   if (story?.variant === 'upset' || story?.source?.upset) {
-    explanations.push('Model tahmini ile mac sonucu farkli oldugu icin haber Surpriz olarak etiketlendi.')
+    explanations.push('Model tahmini ile maç sonucu farklı olduğu için haber Sürpriz olarak etiketlendi.')
   }
   if (story?.variant === 'stomp') {
-    explanations.push('Skor marji yuksek oldugu icin skor odakli hikaye one cikti.')
+    explanations.push('Skor marjı yüksek olduğu için skor odaklı hikaye öne çıktı.')
   }
   if (story?.status === 'upcoming') {
-    explanations.push('Mac baslangicina kalan sure ve turnuva tier degeri Haftanin Maci secimini tetikledi.')
+    explanations.push('Maç başlangıcına kalan süre ve turnuva tier değeri Haftanın Maçı seçimini tetikledi.')
   }
   if (explanations.length === 0) {
-    explanations.push('Mac onemi, skor yogunlugu ve turnuva baglami puanlanarak Gundem akisina yerlestirildi.')
+    explanations.push('Maç önemi, skor yoğunluğu ve turnuva bağlamı puanlanarak Gündem akışına yerleştirildi.')
   }
 
   const classification = story?.source?.upset ? 'Sürpriz' : (HERO_TIERS.has(tier) ? 'Manşet' : 'Gündem')

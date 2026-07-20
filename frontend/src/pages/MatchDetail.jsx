@@ -462,50 +462,50 @@ function buildTacticalScoutReport({
   const teamBWeaknesses = []
 
   if (bestA && bestA.teamAWinRate >= 55) {
-    teamAStrengths.push(`${bestA.map} haritasinda %${bestA.teamAWinRate} kazaniyor`)
+    teamAStrengths.push(`${bestA.map} haritasında %${bestA.teamAWinRate} kazanıyor`)
   }
   if (bestB && bestB.teamBWinRate >= 55) {
-    teamBStrengths.push(`${bestB.map} haritasinda %${bestB.teamBWinRate} kazaniyor`)
+    teamBStrengths.push(`${bestB.map} haritasında %${bestB.teamBWinRate} kazanıyor`)
   }
 
   if (worstA && worstA.teamAWinRate <= 45) {
-    teamAWeaknesses.push(`${worstA.map} haritasinda zayif (%${worstA.teamAWinRate})`)
+    teamAWeaknesses.push(`${worstA.map} haritasında zayıf (%${worstA.teamAWinRate})`)
   }
   if (worstB && worstB.teamBWinRate <= 45) {
-    teamBWeaknesses.push(`${worstB.map} haritasinda zayif (%${worstB.teamBWinRate})`)
+    teamBWeaknesses.push(`${worstB.map} haritasında zayıf (%${worstB.teamBWinRate})`)
   }
 
   if (teamAWinRate != null && teamAWinRate >= 55) {
-    teamAStrengths.push(`Son ${recentSample} mac formu guclu (%${teamAWinRate} galibiyet)`)
+    teamAStrengths.push(`Son ${recentSample} maç formu güçlü (%${teamAWinRate} galibiyet)`)
   }
   if (teamBWinRate != null && teamBWinRate >= 55) {
-    teamBStrengths.push(`Son ${recentSample} mac formu guclu (%${teamBWinRate} galibiyet)`)
+    teamBStrengths.push(`Son ${recentSample} maç formu güçlü (%${teamBWinRate} galibiyet)`)
   }
 
   if (teamALossRate != null && teamALossRate >= 45) {
-    teamAWeaknesses.push(`Son ${recentSample} mac kayip orani yuksek (%${teamALossRate})`)
+    teamAWeaknesses.push(`Son ${recentSample} maç kayıp oranı yüksek (%${teamALossRate})`)
   }
   if (teamBLossRate != null && teamBLossRate >= 45) {
-    teamBWeaknesses.push(`Son ${recentSample} mac kayip orani yuksek (%${teamBLossRate})`)
+    teamBWeaknesses.push(`Son ${recentSample} maç kayıp oranı yüksek (%${teamBLossRate})`)
   }
 
   if (streakA.type === 'W' && streakA.count >= 2) {
-    teamAStrengths.push(`${streakA.count} maclik galibiyet serisi`)
+    teamAStrengths.push(`${streakA.count} maçlık galibiyet serisi`)
   }
   if (streakA.type === 'L' && streakA.count >= 2) {
-    teamAWeaknesses.push(`${streakA.count} maclik maglubiyet serisi`)
+    teamAWeaknesses.push(`${streakA.count} maçlık mağlubiyet serisi`)
   }
   if (streakB.type === 'W' && streakB.count >= 2) {
-    teamBStrengths.push(`${streakB.count} maclik galibiyet serisi`)
+    teamBStrengths.push(`${streakB.count} maçlık galibiyet serisi`)
   }
   if (streakB.type === 'L' && streakB.count >= 2) {
-    teamBWeaknesses.push(`${streakB.count} maclik maglubiyet serisi`)
+    teamBWeaknesses.push(`${streakB.count} maçlık mağlubiyet serisi`)
   }
 
-  if (teamAStrengths.length === 0) teamAStrengths.push('Denge modu: belirgin ustunluk sinyali sinirli')
-  if (teamAWeaknesses.length === 0) teamAWeaknesses.push('Kritik zayiflik sinyali tespit edilmedi')
-  if (teamBStrengths.length === 0) teamBStrengths.push('Denge modu: belirgin ustunluk sinyali sinirli')
-  if (teamBWeaknesses.length === 0) teamBWeaknesses.push('Kritik zayiflik sinyali tespit edilmedi')
+  if (teamAStrengths.length === 0) teamAStrengths.push('Denge modu: belirgin üstünlük sinyali sınırlı')
+  if (teamAWeaknesses.length === 0) teamAWeaknesses.push('Kritik zayıflık sinyali tespit edilmedi')
+  if (teamBStrengths.length === 0) teamBStrengths.push('Denge modu: belirgin üstünlük sinyali sınırlı')
+  if (teamBWeaknesses.length === 0) teamBWeaknesses.push('Kritik zayıflık sinyali tespit edilmedi')
 
   return {
     mapsUsed: normalizedMaps.length,

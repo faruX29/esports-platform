@@ -330,7 +330,7 @@ export default function ScoutEnginePage() {
           background: `radial-gradient(circle at 85% 10%, rgba(194,92,208,.16), transparent 40%), linear-gradient(160deg,var(--surface),var(--bg))`,
           padding: '34px 24px', marginBottom: 22,
         }}>
-          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase', color: ACCENT, border: `1px solid ${ACCENT}55`, borderRadius: 999, padding: '4px 12px' }}>
+          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--accent-fg)', border: `1px solid ${ACCENT}55`, borderRadius: 999, padding: '4px 12px' }}>
             Private Beta · Bekleme Listesi
           </span>
           <h1 style={{ margin: '16px 0 10px', fontSize: 38, lineHeight: 1.1, fontWeight: 900, maxWidth: 720 }}>

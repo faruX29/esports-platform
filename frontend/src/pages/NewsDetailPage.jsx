@@ -37,16 +37,16 @@ function explainCommentInsertError(error) {
   const message = String(error?.message || '').toLowerCase()
 
   if (code === '42501' || message.includes('row-level security') || message.includes('rls')) {
-    return 'Yorum izni reddedildi (RLS). Supabase policy ayarlarini kontrol edin.'
+    return 'Yorum izni reddedildi. Lütfen giriş yapıp tekrar deneyin.'
   }
   if (code === '23505') {
-    return 'Ayni yorum tekrarlandi. Lutfen farkli bir icerik deneyin.'
+    return 'Aynı yorum tekrarlandı. Lütfen farklı bir içerik deneyin.'
   }
   if (code === '23514') {
-    return 'Yorum metni gecerli degil. Lutfen metni kontrol edin.'
+    return 'Yorum metni geçerli değil. Lütfen metni kontrol edin.'
   }
 
-  return 'Yorum gonderilemedi, lutfen tekrar deneyin.'
+  return 'Yorum gönderilemedi, lütfen tekrar deneyin.'
 }
 
 function classifyCommentInsertIssue(error) {
@@ -836,9 +836,9 @@ export default function NewsDetailPage() {
       }
       console.error('submitComment error details:', details)
       if (issueType === 'RLS') {
-        window.alert('Yorum kaydedilemedi: Yetki (RLS) hatasi. Policy ayarlari kontrol edilmeli.')
+        window.alert('Yorum kaydedilemedi: yetki hatası. Lütfen giriş yapıp tekrar deneyin.')
       } else if (issueType === 'SCHEMA') {
-        window.alert('Yorum kaydedilemedi: Veri yapisi/sutun uyumsuzlugu tespit edildi.')
+        window.alert('Yorum kaydedilemedi: veri yapısı uyuşmazlığı tespit edildi.')
       }
       setCommentWarning(explainCommentInsertError(commentErr))
       setCommentSuccess('')
@@ -991,7 +991,7 @@ export default function NewsDetailPage() {
       } catch {
         // no-op
       }
-      window.alert('Geri bildirim altyapisi hazir degil. Haber ozeti panoya kopyalandi.')
+      window.alert('Geri bildirim altyapısı hazır değil. Haber özeti panoya kopyalandı.')
     }
   }
 

@@ -33,6 +33,7 @@
   --nav-border:   rgba(38,50,74,.6);
   --ai:           #a78bfa;   /* AI tahmin moru (bar + %) */
   --track:        #334155;   /* boş bar/ray zemini */
+  --accent-fg:    #d08be0;   /* marka moru METİN olarak (koyu üstünde okunur) */
   color-scheme: dark;
 }
 
@@ -57,6 +58,7 @@
   --nav-border:   rgba(203,213,225,.7);
   --ai:           #7c3aed;   /* aydınlıkta okunur derin mor */
   --track:        #e2e8f0;
+  --accent-fg:    #9c2bb0;   /* marka moru METİN olarak — aydınlıkta okunur derin magenta */
   color-scheme: light;
 }
 

@@ -23,8 +23,8 @@ export const FEXT = {
   textFaint:'#475569',
 
   // Marka aksanı (mor/magenta) — "feXt morluğu"
-  accent:       '#C25CD0',   // solid: buton bg, aktif durum
-  accentText:   '#D08BE0',   // link/metin (lacivert üstünde okunaklı)
+  accent:       '#C25CD0',   // solid: buton bg, aktif durum (alpha-suffix ile de kullanılır → sabit hex)
+  accentText:   'var(--accent-fg)', // link/metin → tema-farkında (koyu: açık mor / aydınlık: derin magenta)
   accentGrad:   'linear-gradient(135deg,#DF4888,#8B3AA0 55%,#6A297F)',
   accentSoftBg: 'rgba(194,92,208,.12)',
   accentBorder: 'rgba(194,92,208,.40)',

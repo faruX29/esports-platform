@@ -178,7 +178,7 @@ function buildScoutRows(item) {
       ? ` +%${(Number(source.predictionEdge) * 100).toFixed(1)}`
       : ''
     rows.push({
-      label: 'Model Ayraci',
+      label: 'Fextopus Farkı',
       value: `${source.favorite || 'Belirsiz'}${edgeLabel}`,
     })
   }

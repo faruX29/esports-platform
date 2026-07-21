@@ -263,7 +263,7 @@ function AIProbabilityBar({ story }) {
       </div>
 
       <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-5)', textAlign: 'center' }}>
-        {uncertain ? 'Model iki takımı başa baş görüyor' : 'Model öngörüsü — favori tarafın rengi vurgulanır'}
+        {uncertain ? 'Fextopus iki takımı başa baş görüyor' : 'Fextopus öngörüsü: favori tarafın rengi vurgulanır'}
       </div>
     </section>
   )

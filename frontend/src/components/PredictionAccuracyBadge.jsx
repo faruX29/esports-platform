@@ -89,7 +89,7 @@ export default function PredictionAccuracyBadge({ variant = 'card' }) {
           Yapay Zekanın En Güvendiği Maçlarda %{confPct} Net İsabet
         </div>
         <div style={{ fontSize: 12, color: '#c6c6c6', lineHeight: 1.5 }}>
-          Elo tabanlı model, yüksek güvenli tahminlerinde ({sample} maçta ölçüldü) bu isabeti tutturuyor.
+          Elo tabanlı Fextopus, yüksek güvenli tahminlerinde ({sample} maçta ölçüldü) bu isabeti tutturuyor.
           Genel isabet %{overall}. <span style={{ color: '#8f8f8f' }}>Her maçı değil — en emin olduklarını.</span>
         </div>
       </div>

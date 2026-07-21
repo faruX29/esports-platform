@@ -975,7 +975,7 @@ function WinProbabilityBar({ teamAName, teamBName, teamAPct, teamBPct }) {
 
       {uncertain ? (
         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textAlign: 'center' }}>
-          Model iki takımı başa baş görüyor
+          Fextopus iki takımı başa baş görüyor
         </div>
       ) : (
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 11, fontWeight: 800 }}>
@@ -1470,7 +1470,7 @@ export default function MatchDetail() {
                   <div style={{ flex: pctB, background: predUncertain ? 'var(--text-5)' : 'linear-gradient(90deg,#60a5fa,#3b82f6)', borderRadius: '0 4px 4px 0' }} />
                 </div>
                 {predUncertain ? (
-                  <div style={{ marginTop: 3, fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textAlign: 'center' }}>Model başa baş görüyor</div>
+                  <div style={{ marginTop: 3, fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textAlign: 'center' }}>Fextopus başa baş görüyor</div>
                 ) : (
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3, fontSize: 10, fontWeight: 800 }}>
                     <span style={{ color: '#4ade80' }}>{aName}: {pctA}%</span>

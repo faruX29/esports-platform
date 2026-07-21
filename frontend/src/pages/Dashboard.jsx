@@ -583,7 +583,7 @@ function scoutSignalLine(story) {
     return `🧭 Scout: ${source.impactTeam}${source.impactScore != null ? ` MVP ${source.impactScore}` : ' one cikiyor'}`
   }
   if (source.favorite) {
-    return `🧭 Scout: Model favorisi ${source.favorite}${source.predictionEdge != null ? ` (+${source.predictionEdge})` : ''}`
+    return `🧭 Scout: Fextopus favorisi ${source.favorite}${source.predictionEdge != null ? ` (+${source.predictionEdge})` : ''}`
   }
   if (source.mapCount || source.mapTempo) {
     return `🧭 Scout: ${source.mapCount || '?'} map · ${source.mapTempo || 'tempo dengeli'}`
@@ -2110,19 +2110,19 @@ export default function Dashboard() {
       accent: '#4CAF50',
       border: 'rgba(76,175,80,.5)',
       bg: 'linear-gradient(120deg, rgba(76,175,80,.18), rgba(15,15,15,.96))',
-      text: 'Model guvenli bantta',
+      text: 'Fextopus güvenli bantta',
     }
     if (rate >= 60) return {
       accent: '#FFB800',
       border: 'rgba(255,184,0,.5)',
       bg: 'linear-gradient(120deg, rgba(255,184,0,.15), rgba(15,15,15,.95))',
-      text: 'Model dengeli bantta',
+      text: 'Fextopus dengeli bantta',
     }
     return {
       accent: '#FF4655',
       border: 'rgba(255,70,85,.5)',
       bg: 'linear-gradient(120deg, rgba(255,70,85,.16), rgba(15,15,15,.95))',
-      text: 'Model risk bandinda',
+      text: 'Fextopus risk bandında',
     }
   }, [accuracySummary.accuracyRate])
 

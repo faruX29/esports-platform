@@ -321,12 +321,12 @@ export default function RankingsPage() {
             <div style={{ marginTop: 2, fontSize: 12, color: '#d74a61' }}>{top ? `${top.rating} Puan` : 'Veri bekleniyor'}</div>
           </div>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14, padding: 14 }}>
-            <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Listelenen Takim</div>
+            <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Listelenen Takım</div>
             <div style={{ marginTop: 4, fontWeight: 800, fontSize: 22 }}>{filtered.length}</div>
-            <div style={{ marginTop: 2, fontSize: 12, color: 'var(--text-1)' }}>Min. 6 mac · gercek turnuva</div>
+            <div style={{ marginTop: 2, fontSize: 12, color: 'var(--text-1)' }}>Min. 6 maç · gerçek turnuva</div>
           </div>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14, padding: 14 }}>
-            <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Model</div>
+            <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Fextopus</div>
             <div style={{ marginTop: 4, fontWeight: 800, fontSize: 16 }}>Güç = Form × Tier × Güncellik</div>
             <div style={{ marginTop: 2, fontSize: 12, color: 'var(--text-1)' }}>Kalite: karşılaşılan tier (güncellik ağırlıklı)</div>
           </div>

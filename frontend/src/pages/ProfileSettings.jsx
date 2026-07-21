@@ -128,8 +128,6 @@ export default function ProfileSettings() {
         first_name: firstName.trim() || null,
         last_name: lastName.trim() || null,
         avatar_url: avatarUrl.trim() || null,
-        favorite_team_id: favoriteTeamId ?? null,
-        show_team_badge: showBadge,
       })
       setMsg('Profil kaydedildi.')
     } catch (err) {
@@ -137,6 +135,21 @@ export default function ProfileSettings() {
     } finally {
       setSaving(false)
     }
+  }
+
+  // Favori takım + rozet tercihi: avatar gibi ANINDA kaydedilir (Kaydet'e gerek yok).
+  // Bu sayede bu iki alan takım bölümünde, üstteki profil formundan bağımsız durabilir.
+  async function handleFavoriteChange(id) {
+    setFavoriteTeamId(id ?? null)
+    setMsg('')
+    try {
+      await updateProfile({ favorite_team_id: id ?? null })
+      setMsg(id ? 'Favori takım güncellendi.' : 'Favori takım kaldırıldı.')
+    } catch (err) { setMsg(`Hata: ${err.message}`) }
+  }
+  async function handleBadgeChange(checked) {
+    setShowBadge(checked)
+    try { await updateProfile({ show_team_badge: checked }) } catch (err) { setMsg(`Hata: ${err.message}`) }
   }
 
   async function onChangePassword(e) {
@@ -187,7 +200,10 @@ export default function ProfileSettings() {
     try { await updateProfile({ avatar_url: null }) } catch (err) { setMsg(`Hata: ${err.message}`) }
   }
 
-  const inputStyle = { background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 10, color: 'var(--text)', padding: '10px 12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }
+  // Not: dolgu yerine kenarlıkla tanımlı input → aydınlık modda gri dolgu (surface-2)
+  // beyaz kartta soluk/kirli görünüyordu; surface (temiz zemin) + line-2 (net kenar).
+  const inputStyle = { background: 'var(--surface)', border: '1px solid var(--line-2)', borderRadius: 10, color: 'var(--text)', padding: '10px 12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }
+  const labelStyle = { fontSize: 10.5, fontWeight: 700, letterSpacing: '.4px', textTransform: 'uppercase', color: 'var(--text-3)' }
 
   return (
     <div style={{ maxWidth: 860, margin: '0 auto', padding: '28px 16px 48px' }}>
@@ -205,36 +221,22 @@ export default function ProfileSettings() {
         <form onSubmit={onSave} style={{ display: 'grid', gap: 12 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <label style={{ display: 'grid', gap: 6 }}>
-              <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Ad</span>
+              <span style={labelStyle}>Ad</span>
               <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Ömer Faruk" style={inputStyle} />
             </label>
             <label style={{ display: 'grid', gap: 6 }}>
-              <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Soyad</span>
+              <span style={labelStyle}>Soyad</span>
               <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Selçuk" style={inputStyle} />
             </label>
           </div>
 
           <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Kullanıcı Adı</span>
+            <span style={labelStyle}>Kullanıcı Adı</span>
             <input value={gamertag} onChange={e => setGamertag(e.target.value)} placeholder="kullanici_adi" style={inputStyle} />
           </label>
 
-          <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Favori Takım</span>
-            <TeamPicker value={favoriteTeamId} onChange={id => setFavoriteTeamId(id)} />
-          </label>
-
-          {/* Rozet tercihi — kullanıcı isterse takım logosunu gizler */}
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px' }}>
-            <input type="checkbox" checked={showBadge} onChange={e => setShowBadge(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#DF4888' }} />
-            <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
-              Forum yorumlarımda favori takım logomu <b>göster</b>
-              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-3)' }}>Kapatırsan yorumlarında takım rozeti çıkmaz.</span>
-            </span>
-          </label>
-
           <div style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Profil Fotoğrafı</span>
+            <span style={labelStyle}>Profil Fotoğrafı</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               {avatarUrl
                 ? <img src={avatarUrl} alt="avatar" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--line)', flexShrink: 0 }} />
@@ -252,7 +254,7 @@ export default function ProfileSettings() {
               </div>
               <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatarFile} style={{ display: 'none' }} />
             </div>
-            <span style={{ fontSize: 11, color: 'var(--text-4)' }}>Bilgisayarından JPG/PNG seç — en fazla 3 MB. Fotoğraf anında kaydedilir.</span>
+            <span style={{ fontSize: 11, color: 'var(--text-4)' }}>Bilgisayarından JPG/PNG seç (en fazla 3 MB). Fotoğraf anında kaydedilir.</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
@@ -266,14 +268,31 @@ export default function ProfileSettings() {
         <form onSubmit={onChangePassword} style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--line)', display: 'grid', gap: 10 }}>
           <div style={{ fontSize: 14, fontWeight: 800 }}>Şifre Değiştir</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <PasswordInput value={newPass} onChange={e => setNewPass(e.target.value)} placeholder="Yeni şifre (min 6)" autoComplete="new-password" style={{ ...inputStyle, background: 'var(--surface)' }} />
-            <PasswordInput value={confirmPass} onChange={e => setConfirmPass(e.target.value)} placeholder="Yeni şifre (tekrar)" autoComplete="new-password" style={{ ...inputStyle, background: 'var(--surface)' }} />
+            <PasswordInput value={newPass} onChange={e => setNewPass(e.target.value)} placeholder="Yeni şifre (min 6)" autoComplete="new-password" style={inputStyle} />
+            <PasswordInput value={confirmPass} onChange={e => setConfirmPass(e.target.value)} placeholder="Yeni şifre (tekrar)" autoComplete="new-password" style={inputStyle} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button disabled={pwSaving || !newPass} style={{ background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 16px', fontWeight: 700, cursor: 'pointer', opacity: (pwSaving || !newPass) ? 0.6 : 1 }}>{pwSaving ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}</button>
             {pwMsg && <span style={{ fontSize: 12, color: pwMsg.startsWith('Hata') ? '#FF4655' : '#4ade80' }}>{pwMsg}</span>}
           </div>
         </form>
+
+        {/* Favori takım — takip bölümünün hemen üstünde (ikisi de takım araması, bir arada
+            dururlar ki kullanıcı karıştırmasın). Anında kaydedilir. */}
+        <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--line)' }}>
+          <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 4 }}>Favori Takım</div>
+          <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 12 }}>Profilinde ve forum yorumlarında öne çıkan takımın.</div>
+          <TeamPicker value={favoriteTeamId} onChange={handleFavoriteChange} />
+
+          {/* Rozet tercihi — favori takımla ilgili olduğu için burada */}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', marginTop: 10 }}>
+            <input type="checkbox" checked={showBadge} onChange={e => handleBadgeChange(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#DF4888' }} />
+            <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
+              Forum yorumlarımda favori takım logomu <b>göster</b>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-3)' }}>Kapatırsan yorumlarında takım rozeti çıkmaz.</span>
+            </span>
+          </label>
+        </div>
 
         <FollowedTeamsManager />
       </div>

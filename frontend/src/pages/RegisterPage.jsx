@@ -69,7 +69,7 @@ export default function RegisterPage() {
         <div style={{ height: 4, background: 'linear-gradient(90deg,#DF4888,#8B3AA0 55%,#6A297F)' }} />
         <div style={{ padding: 24 }}>
           <h1 style={{ margin: 0, fontSize: 26, lineHeight: 1.1, color: 'var(--text)' }}>Kayıt Ol</h1>
-          <p style={{ margin: '6px 0 18px', fontSize: 13, color: 'var(--text-3)' }}>Takip ettiğin takımların maçları, transferleri ve haberleri tek yerde — profilin bulutta saklansın.</p>
+          <p style={{ margin: '6px 0 18px', fontSize: 13, color: 'var(--text-3)' }}>Takip ettiğin takımların maçları, transferleri ve haberleri tek yerde. Profilin bulutta güvende.</p>
 
           <form onSubmit={onSubmit} style={{ display: 'grid', gap: 10 }}>
             <input required value={username} onChange={e => setUsername(e.target.value)} placeholder="Kullanıcı adı" autoComplete="username" style={inputStyle} />

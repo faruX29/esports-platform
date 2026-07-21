@@ -1,11 +1,27 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import InitialsImage from './InitialsImage'
+import { normalizeGameId } from '../utils/gameUtils'
+
+const GAME_SHORT = { valorant: 'VAL', cs2: 'CS2', lol: 'LOL', dota2: 'DOTA2' }
+const GAME_COLOR = { valorant: '#FF4655', cs2: '#F0A500', lol: '#C89B3C', dota2: '#9d2226' }
+
+// Oyun etiketi — aynı isimli takımlar farklı oyunlarda olabildiği için (karışmasın).
+function GameTag({ team }) {
+  const g = normalizeGameId(team?.game?.slug ?? team?.game?.name)
+  if (!g) return null
+  const color = GAME_COLOR[g] || 'var(--text-3)'
+  return (
+    <span style={{ fontSize: 9, fontWeight: 800, color, background: `${color}1f`, border: `1px solid ${color}55`, borderRadius: 5, padding: '2px 6px', flexShrink: 0, letterSpacing: '.3px' }}>
+      {GAME_SHORT[g] || g.toUpperCase()}
+    </span>
+  )
+}
 
 /**
  * Favori takım seçici — aranabilir (2569 takım, dropdown uygun değil).
  * Kullanıcı yazar → Supabase teams ilike → seçer. value = team_id.
- * onChange(teamId | null, team | null).
+ * onChange(teamId | null, team | null). Sonuçlarda oyun etiketi gösterilir.
  */
 export default function TeamPicker({ value, onChange, placeholder = 'Favori takımını ara (opsiyonel)' }) {
   const [query, setQuery] = useState('')
@@ -19,7 +35,7 @@ export default function TeamPicker({ value, onChange, placeholder = 'Favori tak�
     if (!value) { setSelected(null); return }
     if (selected?.id === value) return
     let alive = true
-    supabase.from('teams').select('id,name,logo_url').eq('id', value).maybeSingle()
+    supabase.from('teams').select('id,name,logo_url,game:games(id,name,slug)').eq('id', value).maybeSingle()
       .then(({ data }) => { if (alive && data) setSelected(data) })
     return () => { alive = false }
   }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -31,7 +47,7 @@ export default function TeamPicker({ value, onChange, placeholder = 'Favori tak�
       const q = query.trim()
       const { data } = await supabase
         .from('teams')
-        .select('id,name,acronym,logo_url')
+        .select('id,name,acronym,logo_url,game:games(id,name,slug)')
         .or(`name.ilike.%${q}%,acronym.ilike.%${q}%`)
         .order('name', { ascending: true })
         .limit(8)
@@ -54,14 +70,15 @@ export default function TeamPicker({ value, onChange, placeholder = 'Favori tak�
     onChange?.(null, null)
   }
 
-  const inputStyle = { background: 'var(--surface-2)', border: '1px solid var(--line)', color: 'var(--text)', borderRadius: 11, padding: '11px 12px', width: '100%', boxSizing: 'border-box' }
+  const inputStyle = { background: 'var(--surface)', border: '1px solid var(--line-2)', color: 'var(--text)', borderRadius: 11, padding: '11px 12px', width: '100%', boxSizing: 'border-box' }
 
   if (selected) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 11, padding: '8px 12px' }}>
         <InitialsImage src={selected.logo_url} name={selected.name} width={26} height={26} borderRadius={6} objectFit="contain" />
-        <span style={{ flex: 1, color: 'var(--text)', fontSize: 14, fontWeight: 700 }}>{selected.name}</span>
-        <button type="button" onClick={clear} style={{ background: 'transparent', border: '1px solid var(--line-2)', color: 'var(--text-3)', borderRadius: 8, padding: '4px 8px', cursor: 'pointer', fontSize: 12 }}>Değiştir</button>
+        <span style={{ flex: 1, color: 'var(--text)', fontSize: 14, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selected.name}</span>
+        <GameTag team={selected} />
+        <button type="button" onClick={clear} style={{ background: 'transparent', border: '1px solid var(--line-2)', color: 'var(--text-3)', borderRadius: 8, padding: '4px 8px', cursor: 'pointer', fontSize: 12, flexShrink: 0 }}>Değiştir</button>
       </div>
     )
   }
@@ -87,7 +104,8 @@ export default function TeamPicker({ value, onChange, placeholder = 'Favori tak�
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
             >
               <InitialsImage src={team.logo_url} name={team.name} width={22} height={22} borderRadius={5} objectFit="contain" />
-              {team.name}
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.name}</span>
+              <GameTag team={team} />
             </button>
           ))}
         </div>

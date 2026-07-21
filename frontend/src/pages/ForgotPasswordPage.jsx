@@ -44,8 +44,8 @@ export default function ForgotPasswordPage() {
           <p style={{ margin: '6px 0 18px', fontSize: 13, color: 'var(--text-3)' }}>E-postanı gir, sıfırlama bağlantısı gönderelim.</p>
 
           {sent ? (
-            <div style={{ fontSize: 14, color: '#4ade80', lineHeight: 1.6 }}>
-              <CircleCheck size={15} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 4 }} /> Sıfırlama bağlantısı <b style={{ color: '#ddfffb' }}>{email}</b> adresine gönderildi.
+            <div style={{ fontSize: 14, color: 'var(--success-fg)', lineHeight: 1.6 }}>
+              <CircleCheck size={15} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 4 }} /> Sıfırlama bağlantısı <b style={{ color: 'var(--text-1)' }}>{email}</b> adresine gönderildi.
               E-postandaki linke tıklayıp yeni şifreni belirle.
               <div style={{ marginTop: 14, fontSize: 12, color: 'var(--text-4)' }}>
                 <Link to="/login" style={{ color: 'var(--text-1)' }}>Girişe dön</Link>

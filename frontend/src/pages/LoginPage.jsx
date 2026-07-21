@@ -13,7 +13,7 @@ export default function LoginPage() {
   const location = useLocation()
   const { signIn, signInWithDiscord, signInWithGoogle } = useAuth()
 
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -29,7 +29,7 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
     try {
-      await signIn({ email, password, captchaToken })
+      await signIn({ identifier, password, captchaToken })
       navigate(location.state?.from || '/', { replace: true })
     } catch (err) {
       setError(authErrorMessage(err, 'Giriş başarısız.'))
@@ -61,7 +61,7 @@ export default function LoginPage() {
           <p style={{ margin: '6px 0 18px', fontSize: 13, color: 'var(--text-3)' }}>Hesabına bağlan, takip akışını senkronize et.</p>
 
           <form onSubmit={onSubmit} style={{ display: 'grid', gap: 10 }}>
-            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="E-posta" autoComplete="email" style={inputStyle} />
+            <input type="text" required value={identifier} onChange={e => setIdentifier(e.target.value)} placeholder="E-posta veya kullanıcı adı" autoComplete="username" style={inputStyle} />
             <PasswordInput required value={password} onChange={e => setPassword(e.target.value)} placeholder="Şifre" autoComplete="current-password" style={inputStyle} />
             <Turnstile ref={captchaRef} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken('')} />
             <button disabled={loading} style={{ marginTop: 4, border: 'none', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#fff', fontWeight: 800, background: 'linear-gradient(135deg,#DF4888,#8B3AA0 55%,#6A297F)', opacity: loading ? 0.6 : 1 }}>{loading ? 'Bağlanılıyor...' : 'Giriş Yap'}</button>

@@ -35,7 +35,10 @@ export function authErrorMessage(err, fallback = 'İşlem başarısız. Lütfen 
   if ((low.includes('email') && (low.includes('sending') || low.includes('send'))) || low.includes('smtp'))
     return 'Doğrulama e-postası gönderilemedi. Birazdan tekrar dene ya da farklı bir e-posta kullan.'
 
-  if (low.includes('password') && (low.includes('should be') || low.includes('at least') || low.includes('weak') || low.includes('6 characters')))
+  if (low.includes('password') && (low.includes('different') || low.includes('should be different') || low.includes('same as')))
+    return 'Yeni şifren eskisinden farklı olmalı.'
+
+  if (low.includes('password') && (low.includes('at least') || low.includes('weak') || low.includes('6 characters') || low.includes('too short')))
     return 'Şifre en az 6 karakter olmalı.'
 
   if (low.includes('invalid') && low.includes('email'))

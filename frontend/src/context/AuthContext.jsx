@@ -272,9 +272,20 @@ export function AuthProvider({ children }) {
 		if (error) throw error
 	}
 
-	async function signIn({ email, password, captchaToken }) {
+	async function signIn({ identifier, email, password, captchaToken }) {
+		// identifier: e-posta VEYA kullanıcı adı olabilir. E-posta değilse (@ yoksa)
+		// email_for_login RPC'siyle kullanıcı adını e-postaya çeviririz. [[auth-onboarding]]
+		let loginEmail = String(identifier ?? email ?? '').trim()
+		if (loginEmail && !loginEmail.includes('@')) {
+			try {
+				const { data: resolved } = await supabase.rpc('email_for_login', { identifier: loginEmail })
+				if (resolved) loginEmail = resolved
+				// resolved boşsa loginEmail kullanıcı adı olarak kalır → signIn geçersiz kimlik
+				// hatası verir (kullanıcıya "e-posta/şifre hatalı" olarak gösterilir).
+			} catch { /* RPC yoksa/başarısızsa e-posta olarak devam et */ }
+		}
 		const { data, error } = await supabase.auth.signInWithPassword({
-			email,
+			email: loginEmail,
 			password,
 			...(captchaToken ? { options: { captchaToken } } : {}),
 		})

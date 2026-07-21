@@ -65,7 +65,7 @@ export default function ResetPasswordPage() {
         <div style={{ padding: 24 }}>
           <h1 style={{ margin: 0, fontSize: 24, color: 'var(--text)' }}>Yeni Şifre Belirle</h1>
           {done ? (
-            <p style={{ marginTop: 14, fontSize: 14, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 6 }}><CircleCheck size={15} /> Şifren güncellendi! Yönlendiriliyorsun...</p>
+            <p style={{ marginTop: 14, fontSize: 14, color: 'var(--success-fg)', display: 'flex', alignItems: 'center', gap: 6 }}><CircleCheck size={15} /> Şifren güncellendi! Yönlendiriliyorsun...</p>
           ) : (
             <>
               <p style={{ margin: '8px 0 18px', fontSize: 13, color: 'var(--text-3)', lineHeight: 1.6 }}>

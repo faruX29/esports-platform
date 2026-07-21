@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Turnstile from '../components/Turnstile'
 import { TURNSTILE_ENABLED } from '../features'
+import { authErrorMessage } from '../utils/authError'
 import { CircleCheck } from 'lucide-react'
 
 export default function ForgotPasswordPage() {
@@ -26,7 +27,7 @@ export default function ForgotPasswordPage() {
       await requestPasswordReset(email, captchaToken)
       setSent(true)
     } catch (err) {
-      setError(err.message || 'İşlem başarısız.')
+      setError(authErrorMessage(err, 'İşlem başarısız.'))
       captchaRef.current?.reset()
       setCaptchaToken('')
     } finally {

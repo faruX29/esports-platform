@@ -6,6 +6,7 @@ import PasswordInput from '../components/PasswordInput'
 import GoogleIcon from '../components/GoogleIcon'
 import { MessageCircle } from 'lucide-react'
 import { DISCORD_ENABLED, GOOGLE_ENABLED, TURNSTILE_ENABLED } from '../features'
+import { authErrorMessage } from '../utils/authError'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
@@ -41,7 +42,7 @@ export default function RegisterPage() {
         setTimeout(() => navigate('/login'), 3500)
       }
     } catch (err) {
-      setError(err.message || 'Kayıt başarısız.')
+      setError(authErrorMessage(err, 'Kayıt başarısız.'))
       // Turnstile token tek-kullanımlık — hatadan sonra yenile.
       captchaRef.current?.reset()
       setCaptchaToken('')
@@ -52,11 +53,11 @@ export default function RegisterPage() {
 
   async function onDiscord() {
     setError('')
-    try { await signInWithDiscord() } catch (err) { setError(err.message || 'Discord girişi başarısız.') }
+    try { await signInWithDiscord() } catch (err) { setError(authErrorMessage(err, 'Discord girişi başarısız.')) }
   }
   async function onGoogle() {
     setError('')
-    try { await signInWithGoogle() } catch (err) { setError(err.message || 'Google girişi başarısız.') }
+    try { await signInWithGoogle() } catch (err) { setError(authErrorMessage(err, 'Google girişi başarısız.')) }
   }
 
   const inputStyle = { background: 'var(--surface)', border: '1px solid var(--line)', color: 'var(--text)', borderRadius: 11, padding: '11px 12px', minWidth: 0, width: '100%', boxSizing: 'border-box' }

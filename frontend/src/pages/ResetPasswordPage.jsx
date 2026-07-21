@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../supabaseClient'
 import PasswordInput from '../components/PasswordInput'
+import { authErrorMessage } from '../utils/authError'
 import { CircleCheck } from 'lucide-react'
 
 /**
@@ -43,7 +44,7 @@ export default function ResetPasswordPage() {
       setDone(true)
       setTimeout(() => navigate('/', { replace: true }), 1200)
     } catch (err) {
-      setError(err.message || 'Şifre güncellenemedi. Bağlantının süresi dolmuş olabilir.')
+      setError(authErrorMessage(err, 'Şifre güncellenemedi. Bağlantının süresi dolmuş olabilir.'))
     } finally {
       setLoading(false)
     }

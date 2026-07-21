@@ -5,6 +5,7 @@ import Turnstile from '../components/Turnstile'
 import PasswordInput from '../components/PasswordInput'
 import GoogleIcon from '../components/GoogleIcon'
 import { DISCORD_ENABLED, GOOGLE_ENABLED, TURNSTILE_ENABLED } from '../features'
+import { authErrorMessage } from '../utils/authError'
 import { MessageCircle } from 'lucide-react'
 
 export default function LoginPage() {
@@ -31,7 +32,7 @@ export default function LoginPage() {
       await signIn({ email, password, captchaToken })
       navigate(location.state?.from || '/', { replace: true })
     } catch (err) {
-      setError(err.message || 'Giriş başarısız.')
+      setError(authErrorMessage(err, 'Giriş başarısız.'))
       captchaRef.current?.reset()
       setCaptchaToken('')
     } finally {
@@ -41,11 +42,11 @@ export default function LoginPage() {
 
   async function onDiscord() {
     setError('')
-    try { await signInWithDiscord() } catch (err) { setError(err.message || 'Discord girişi başarısız.') }
+    try { await signInWithDiscord() } catch (err) { setError(authErrorMessage(err, 'Discord girişi başarısız.')) }
   }
   async function onGoogle() {
     setError('')
-    try { await signInWithGoogle() } catch (err) { setError(err.message || 'Google girişi başarısız.') }
+    try { await signInWithGoogle() } catch (err) { setError(authErrorMessage(err, 'Google girişi başarısız.')) }
   }
 
   const inputStyle = { background: 'var(--surface)', border: '1px solid var(--line)', color: 'var(--text)', borderRadius: 11, padding: '11px 12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }
@@ -68,7 +69,7 @@ export default function LoginPage() {
           </form>
 
           <div style={{ marginTop: 10, textAlign: 'right' }}>
-            <Link to="/forgot-password" style={{ fontSize: 12, color: '#c98bd6', textDecoration: 'none' }}>Şifremi unuttum?</Link>
+            <Link to="/forgot-password" style={{ fontSize: 12, color: 'var(--accent-fg)', textDecoration: 'none' }}>Şifremi unuttum?</Link>
           </div>
 
           {oauthEnabled && (

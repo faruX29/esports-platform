@@ -161,7 +161,7 @@ export function buildFinishedStory(match, statsByMatch, isTurkishTeam) {
   if (isUpset) {
     variant = 'upset'
     title = `Sürpriz Skor: ${winnerName}, ${match.tournament?.name || 'ana sahne'} dengesini değiştirdi`
-    summary = `${match.tournament?.name || 'Turnuva'} arenasında ${winnerName}, ${loserName} önünde ${scoreline} ile kazanarak model projeksiyonunu tersine çevirdi.${favoredName ? ` Tahminlerde önde yazılan taraf ${favoredName}` : ''}${predictionEdge != null ? ` ve tahmin farkı ${predictionEdge} puandı` : ''}. ${mvpLine} Sonuç, playoff tablosunda yeni bir senaryo açtı.`
+    summary = `${match.tournament?.name || 'Turnuva'} arenasında ${winnerName}, ${loserName} önünde ${scoreline} ile kazanarak Fextopus projeksiyonunu tersine çevirdi.${favoredName ? ` Tahminlerde önde yazılan taraf ${favoredName}` : ''}${predictionEdge != null ? ` ve fark yaklaşık %${Math.round(predictionEdge * 100)} idi` : ''}. ${mvpLine} Sonuç, playoff tablosunda yeni bir senaryo açtı.`
   } else if (margin >= 2) {
     variant = 'stomp'
     title = `Skor Haberi: ${winnerName}, ${scoreline} ile net üstünlük kurdu`
@@ -214,16 +214,13 @@ export function buildUpcomingStory(match, isTurkishTeam) {
   const predB = typeof match.prediction_team_b === 'number' ? match.prediction_team_b : null
   const predictionEdge = predA != null && predB != null ? Math.abs(predA - predB) : null
   const favorite = predA != null && predB != null ? (predA >= predB ? aName : bName) : null
-  const favoriteModelScore = predA != null && predB != null
-    ? (predA >= predB ? predA : predB)
-    : null
 
-  let summary = `${aName} ile ${bName} ${hoursAway} saat sonra sunucuya çıkıyor. Karşılaşma öncesi ana hikaye skor tablosundaki pozisyon savaşı ve veto düzeninin ilk haritaya etkisi. Analitik model, serinin kırılım noktasının açılış haritası olabileceğini işaret ediyor.`
+  let summary = `${aName} ile ${bName} ${hoursAway} saat sonra sunucuya çıkıyor. Karşılaşma öncesi ana hikaye skor tablosundaki pozisyon savaşı ve veto düzeninin ilk haritaya etkisi. Fextopus, serinin kırılım noktasının açılış haritası olabileceğini işaret ediyor.`
   if (isHeroTier) {
     summary = `${aName} ile ${bName}, ${tournamentName} sahnesinde haftanın manşet serisine çıkıyor. Gözler form trendi, veto dengesi ve playoff bileti ihtimalleri üzerinde; bu seri turnuva ivmesini doğrudan etkileyebilir.`
   }
   if (favorite && predictionEdge != null) {
-    summary += ` Model, ${favorite} tarafını ${predictionEdge} puanlık farkla önde görüyor${favoriteModelScore != null ? ` (model skoru ${favoriteModelScore})` : ''}; MVP yarışı açısından öne çıkan ekip ilk iki haritada psikolojik üstünlüğü alabilir.`
+    summary += ` Fextopus, ${favorite} tarafını yaklaşık %${Math.round(predictionEdge * 100)} farkla önde görüyor; MVP yarışı açısından öne çıkan ekip ilk iki haritada psikolojik üstünlüğü alabilir.`
   }
 
   return {
@@ -258,7 +255,7 @@ export function storyExplainability(story) {
     explanations.push('Turnuva tier puanı yüksek olduğu için manşet önceliği verildi (Tier S/A).')
   }
   if (story?.variant === 'upset' || story?.source?.upset) {
-    explanations.push('Model tahmini ile maç sonucu farklı olduğu için haber Sürpriz olarak etiketlendi.')
+    explanations.push('Fextopus tahmini ile maç sonucu farklı olduğu için haber Sürpriz olarak etiketlendi.')
   }
   if (story?.variant === 'stomp') {
     explanations.push('Skor marjı yüksek olduğu için skor odaklı hikaye öne çıktı.')

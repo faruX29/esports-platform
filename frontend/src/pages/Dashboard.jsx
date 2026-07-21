@@ -583,7 +583,7 @@ function scoutSignalLine(story) {
     return `🧭 Scout: ${source.impactTeam}${source.impactScore != null ? ` MVP ${source.impactScore}` : ' one cikiyor'}`
   }
   if (source.favorite) {
-    return `🧭 Scout: Fextopus favorisi ${source.favorite}${source.predictionEdge != null ? ` (+${source.predictionEdge})` : ''}`
+    return `🧭 Scout: Fextopus favorisi ${source.favorite}${source.predictionEdge != null ? ` (+%${Math.round(source.predictionEdge * 100)})` : ''}`
   }
   if (source.mapCount || source.mapTempo) {
     return `🧭 Scout: ${source.mapCount || '?'} map · ${source.mapTempo || 'tempo dengeli'}`

@@ -3,13 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useUser } from '../context/UserContext'
 import { supabase } from '../supabaseClient'
-import TeamPicker from '../components/TeamPicker'
+import TeamPicker, { GameTag } from '../components/TeamPicker'
 import InitialsImage from '../components/InitialsImage'
 import PasswordInput from '../components/PasswordInput'
-import { normalizeGameId } from '../utils/gameUtils'
-
-const GAME_SHORT = { valorant: 'VAL', cs2: 'CS2', lol: 'LOL', dota2: 'DOTA2' }
-const GAME_COLOR = { valorant: '#FF4655', cs2: '#F0A500', lol: '#C89B3C', dota2: '#9d2226' }
 
 // Takip ettiğim takımlar — listele, çıkar, ara & ekle. (Takipler follows tablosuna
 // UserContext üzerinden yazılır; oyun ataması bir sonraki yüklemede takımdan türetilir.)
@@ -56,22 +52,14 @@ function FollowedTeamsManager() {
 
       {teams.length > 0 && (
         <div style={{ display: 'grid', gap: 8, marginBottom: 14 }}>
-          {teams.map(team => {
-            const g = normalizeGameId(team?.game?.slug ?? team?.game?.name)
-            const color = GAME_COLOR[g] || 'var(--text-3)'
-            return (
-              <div key={team.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface)', border: '1px solid var(--line-2)', borderRadius: 11, padding: '8px 12px' }}>
-                <InitialsImage src={team.logo_url} name={team.name} width={26} height={26} borderRadius={6} objectFit="contain" />
-                <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.name}</span>
-                {g && (
-                  <span style={{ fontSize: 9, fontWeight: 800, color, background: `${color}1f`, border: `1px solid ${color}55`, borderRadius: 5, padding: '2px 6px', flexShrink: 0 }}>
-                    {GAME_SHORT[g] || g.toUpperCase()}
-                  </span>
-                )}
-                <button type="button" onClick={() => unfollowTeam(team.id)} title="Takibi bırak" style={{ background: 'transparent', border: '1px solid var(--line-2)', color: 'var(--text-3)', borderRadius: 8, width: 26, height: 26, cursor: 'pointer', flexShrink: 0, fontSize: 15, lineHeight: 1 }}>×</button>
-              </div>
-            )
-          })}
+          {teams.map(team => (
+            <div key={team.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface)', border: '1px solid var(--line-2)', borderRadius: 11, padding: '8px 12px' }}>
+              <InitialsImage src={team.logo_url} name={team.name} width={26} height={26} borderRadius={6} objectFit="contain" />
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.name}</span>
+              <GameTag team={team} />
+              <button type="button" onClick={() => unfollowTeam(team.id)} title="Takibi bırak" style={{ background: 'transparent', border: '1px solid var(--line-2)', color: 'var(--text-3)', borderRadius: 8, width: 26, height: 26, cursor: 'pointer', flexShrink: 0, fontSize: 15, lineHeight: 1 }}>×</button>
+            </div>
+          ))}
         </div>
       )}
 

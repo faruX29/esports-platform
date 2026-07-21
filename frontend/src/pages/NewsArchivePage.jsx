@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import SeoHead from '../components/SeoHead'
 import NewsCover, { scoreFromHero } from '../components/NewsCover'
+import GameLogo from '../components/GameLogo'
 import { getGameMeta, normalizeGameId, normalizeTier } from '../utils/newsStories'
 import { buildNewsSlug } from '../utils/newsSlug'
 import { isTurkishTeam } from '../constants'
@@ -106,7 +107,8 @@ function ArchiveCard({ row, isMobile }) {
         <span style={{ fontSize: 10, color: 'var(--text-1)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, padding: '3px 7px', borderRadius: 999, background: `${visuals.gameColor}22`, border: `1px solid ${visuals.gameColor}55` }}>
           {typeTag(row)}
         </span>
-        <span style={{ fontSize: 10, color: 'var(--text-1)', padding: '3px 7px', borderRadius: 999, background: 'rgba(255,255,255,.04)', border: '1px solid var(--line)' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'var(--text-1)', padding: '3px 8px', borderRadius: 999, background: 'var(--hover)', border: '1px solid var(--line)' }}>
+          <GameLogo game={visuals.gameId} size={11} color={visuals.gameColor} />
           {visuals.gameLabel}
         </span>
         <span style={{ fontSize: 10, color: 'var(--text-2)', padding: '3px 7px', borderRadius: 999, background: 'var(--hover)', border: '1px solid var(--line)' }}>

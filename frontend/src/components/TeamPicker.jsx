@@ -1,19 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import InitialsImage from './InitialsImage'
+import GameLogo from './GameLogo'
 import { normalizeGameId } from '../utils/gameUtils'
 
 const GAME_SHORT = { valorant: 'VAL', cs2: 'CS2', lol: 'LOL', dota2: 'DOTA2' }
 const GAME_COLOR = { valorant: '#FF4655', cs2: '#F0A500', lol: '#C89B3C', dota2: '#9d2226' }
 
 // Oyun etiketi — aynı isimli takımlar farklı oyunlarda olabildiği için (karışmasın).
-function GameTag({ team }) {
+// Metin yerine oyun marka logosu (nav filtresiyle aynı dil), oyun renginde tint.
+export function GameTag({ team }) {
   const g = normalizeGameId(team?.game?.slug ?? team?.game?.name)
   if (!g) return null
   const color = GAME_COLOR[g] || 'var(--text-3)'
   return (
-    <span style={{ fontSize: 9, fontWeight: 800, color, background: `${color}1f`, border: `1px solid ${color}55`, borderRadius: 5, padding: '2px 6px', flexShrink: 0, letterSpacing: '.3px' }}>
-      {GAME_SHORT[g] || g.toUpperCase()}
+    <span title={GAME_SHORT[g] || g.toUpperCase()} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: 6, background: `${color}1f`, border: `1px solid ${color}55`, flexShrink: 0 }}>
+      <GameLogo game={g} size={13} color={color} />
     </span>
   )
 }

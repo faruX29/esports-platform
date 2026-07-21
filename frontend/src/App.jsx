@@ -178,7 +178,7 @@ function NavSearch() {
         <div style={{
           display: 'flex', alignItems: 'center', gap: 6,
           background: focused ? 'var(--surface-2)' : 'var(--surface)',
-          border: `1.5px solid ${focused ? FEXT.accent : 'var(--line)'}`,
+          border: `1.5px solid ${focused ? FEXT.accent : 'var(--line-2)'}`,
           borderRadius: 10, padding: '5px 10px',
           transition: 'all .2s',
           boxShadow: focused ? `0 0 0 3px ${FEXT.accentGlow}` : 'none',

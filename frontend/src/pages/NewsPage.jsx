@@ -225,13 +225,24 @@ function NewsCard({ item, likes, liked, comments, onLike, canInteract, onOpenDet
       onClick={() => onOpenDetail(item)}
       style={{
         background: 'linear-gradient(180deg,var(--surface) 0%,var(--bg) 100%)',
-        border: '1px solid #1f1f22',
+        border: '1px solid var(--line)',
         borderRadius: 18,
         padding: 16,
         boxShadow: visuals.turkish ? '0 18px 40px rgba(194,92,208,.08)' : 'none',
         position: 'relative',
         overflow: 'hidden',
         cursor: 'pointer',
+        transition: 'transform .18s ease, border-color .18s ease, box-shadow .18s ease',
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.transform = 'translateY(-3px)'
+        e.currentTarget.style.borderColor = 'rgba(194,92,208,.45)'
+        e.currentTarget.style.boxShadow = '0 14px 32px var(--shadow)'
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.transform = 'none'
+        e.currentTarget.style.borderColor = 'var(--line)'
+        e.currentTarget.style.boxShadow = visuals.turkish ? '0 18px 40px rgba(194,92,208,.08)' : 'none'
       }}
     >
       <div style={{
@@ -594,10 +605,10 @@ export default function NewsPage() {
           <div style={{ background: FEXT.accentGrad, color: '#fff', fontSize: 11, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase', textAlign: 'center', padding: 8 }}>
             Esports News Desk
           </div>
-          <div style={{ padding: 18, background: 'radial-gradient(circle at 78% 20%, rgba(198,27,51,.18), transparent 36%), radial-gradient(circle at 10% 12%, var(--hover), transparent 24%), var(--surface)' }}>
-            <h1 style={{ margin: 0, fontSize: isMobile ? 26 : 34, lineHeight: 1.1 }}>Gunun E-Spor Bulteni</h1>
+          <div style={{ padding: 18, background: 'radial-gradient(circle at 78% 20%, rgba(194,92,208,.18), transparent 36%), radial-gradient(circle at 10% 12%, var(--hover), transparent 24%), var(--surface)' }}>
+            <h1 style={{ margin: 0, fontSize: isMobile ? 26 : 34, lineHeight: 1.1 }}>Günün E-Spor Bülteni</h1>
             <p style={{ margin: '8px 0 16px', color: 'var(--text-3)', fontSize: isMobile ? 13 : 14 }}>
-              Tier oncelikli mansetler, skora dayali sonuc haberleri ve yaklasan haftanin maclari tek akista.
+              Tier öncelikli manşetler, skora dayalı sonuç haberleri ve yaklaşan haftanın maçları tek akışta.
             </p>
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

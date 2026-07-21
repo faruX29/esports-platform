@@ -74,7 +74,7 @@ export default function TeamPicker({ value, onChange, placeholder = 'Favori takÄ
 
   if (selected) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 11, padding: '8px 12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface)', border: '1px solid var(--line-2)', borderRadius: 11, padding: '8px 12px' }}>
         <InitialsImage src={selected.logo_url} name={selected.name} width={26} height={26} borderRadius={6} objectFit="contain" />
         <span style={{ flex: 1, color: 'var(--text)', fontSize: 14, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selected.name}</span>
         <GameTag team={selected} />

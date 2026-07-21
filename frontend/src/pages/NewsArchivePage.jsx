@@ -79,10 +79,21 @@ function ArchiveCard({ row, isMobile }) {
         textDecoration: 'none',
         color: 'inherit',
         background: 'linear-gradient(180deg,var(--surface) 0%,var(--bg) 100%)',
-        border: '1px solid #1f1f22',
+        border: '1px solid var(--line)',
         borderRadius: 14,
         padding: 12,
         overflow: 'hidden',
+        transition: 'transform .18s ease, border-color .18s ease, box-shadow .18s ease',
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.transform = 'translateY(-3px)'
+        e.currentTarget.style.borderColor = 'rgba(194,92,208,.45)'
+        e.currentTarget.style.boxShadow = '0 12px 28px var(--shadow)'
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.transform = 'none'
+        e.currentTarget.style.borderColor = 'var(--line)'
+        e.currentTarget.style.boxShadow = 'none'
       }}
     >
       <NewsCover
@@ -185,7 +196,7 @@ export default function NewsArchivePage() {
       />
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: isMobile ? '14px 10px 34px' : '22px 16px 48px' }}>
         <div style={{ marginBottom: 16 }}>
-          <Link to="/news" style={{ fontSize: 12, color: '#9db4ff', textDecoration: 'none' }}>‹ Günün Bülteni</Link>
+          <Link to="/news" style={{ fontSize: 12, color: 'var(--accent-fg)', textDecoration: 'none' }}>‹ Günün Bülteni</Link>
           <h1 style={{ margin: '8px 0 4px', fontSize: isMobile ? 26 : 34 }}>Haber Arşivi</h1>
           <p style={{ margin: 0, color: 'var(--text-3)', fontSize: isMobile ? 13 : 14 }}>
             {total > 0 ? `${total} haber` : 'Tüm e-spor haberleri tek arşivde'} · maç sonuçları, önizlemeler ve transferler.

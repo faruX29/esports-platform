@@ -60,7 +60,7 @@ function FollowedTeamsManager() {
             const g = normalizeGameId(team?.game?.slug ?? team?.game?.name)
             const color = GAME_COLOR[g] || 'var(--text-3)'
             return (
-              <div key={team.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 11, padding: '8px 12px' }}>
+              <div key={team.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface)', border: '1px solid var(--line-2)', borderRadius: 11, padding: '8px 12px' }}>
                 <InitialsImage src={team.logo_url} name={team.name} width={26} height={26} borderRadius={6} objectFit="contain" />
                 <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.name}</span>
                 {g && (
@@ -141,15 +141,13 @@ export default function ProfileSettings() {
   // Bu sayede bu iki alan takım bölümünde, üstteki profil formundan bağımsız durabilir.
   async function handleFavoriteChange(id) {
     setFavoriteTeamId(id ?? null)
-    setMsg('')
-    try {
-      await updateProfile({ favorite_team_id: id ?? null })
-      setMsg(id ? 'Favori takım güncellendi.' : 'Favori takım kaldırıldı.')
-    } catch (err) { setMsg(`Hata: ${err.message}`) }
+    // Sessiz kaydet — picker zaten görsel geri bildirim veriyor; üstteki Kaydet'in
+    // yanında mesaj göstermek kafa karıştırıyordu.
+    try { await updateProfile({ favorite_team_id: id ?? null }) } catch { /* yoksay */ }
   }
   async function handleBadgeChange(checked) {
     setShowBadge(checked)
-    try { await updateProfile({ show_team_badge: checked }) } catch (err) { setMsg(`Hata: ${err.message}`) }
+    try { await updateProfile({ show_team_badge: checked }) } catch { /* yoksay */ }
   }
 
   async function onChangePassword(e) {
@@ -243,7 +241,7 @@ export default function ProfileSettings() {
                 : <div style={{ width: 56, height: 56, borderRadius: '50%', border: '2px solid var(--line)', display: 'grid', placeItems: 'center', color: 'var(--text-3)', fontWeight: 800, flexShrink: 0 }}>{fallbackAvatar}</div>
               }
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} style={{ background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--line)', borderRadius: 10, padding: '9px 14px', fontWeight: 700, cursor: 'pointer', opacity: uploading ? 0.6 : 1 }}>
+                <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} style={{ background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--line-2)', borderRadius: 10, padding: '9px 14px', fontWeight: 700, cursor: 'pointer', opacity: uploading ? 0.6 : 1 }}>
                   {uploading ? 'Yükleniyor...' : (avatarUrl ? 'Fotoğrafı Değiştir' : 'Fotoğraf Seç')}
                 </button>
                 {avatarUrl && (
@@ -272,7 +270,7 @@ export default function ProfileSettings() {
             <PasswordInput value={confirmPass} onChange={e => setConfirmPass(e.target.value)} placeholder="Yeni şifre (tekrar)" autoComplete="new-password" style={inputStyle} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <button disabled={pwSaving || !newPass} style={{ background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 16px', fontWeight: 700, cursor: 'pointer', opacity: (pwSaving || !newPass) ? 0.6 : 1 }}>{pwSaving ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}</button>
+            <button disabled={pwSaving || !newPass} style={{ background: newPass ? 'linear-gradient(135deg,#DF4888,#8B3AA0 55%,#6A297F)' : 'var(--surface)', color: newPass ? '#fff' : 'var(--text-3)', border: newPass ? 'none' : '1px solid var(--line-2)', borderRadius: 10, padding: '10px 16px', fontWeight: newPass ? 800 : 700, cursor: newPass ? 'pointer' : 'not-allowed', opacity: pwSaving ? 0.6 : 1, transition: 'background .18s ease, color .18s ease' }}>{pwSaving ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}</button>
             {pwMsg && <span style={{ fontSize: 12, color: pwMsg.startsWith('Hata') ? '#FF4655' : '#4ade80' }}>{pwMsg}</span>}
           </div>
         </form>
@@ -285,7 +283,7 @@ export default function ProfileSettings() {
           <TeamPicker value={favoriteTeamId} onChange={handleFavoriteChange} />
 
           {/* Rozet tercihi — favori takımla ilgili olduğu için burada */}
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', marginTop: 10 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: 'var(--surface)', border: '1px solid var(--line-2)', borderRadius: 10, padding: '10px 12px', marginTop: 10 }}>
             <input type="checkbox" checked={showBadge} onChange={e => handleBadgeChange(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#DF4888' }} />
             <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
               Forum yorumlarımda favori takım logomu <b>göster</b>

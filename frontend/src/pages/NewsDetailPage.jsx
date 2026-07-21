@@ -105,11 +105,6 @@ function fmtDate(iso) {
   })
 }
 
-function fmtPct(val) {
-  const n = Number(val)
-  if (!Number.isFinite(n)) return '-'
-  return `%${(n * 100).toFixed(1)}`
-}
 
 /** news_articles transfer satırını detay sayfası story şekline çevirir. */
 function mapTransferRowToStory(row) {
@@ -303,7 +298,6 @@ export default function NewsDetailPage() {
 
   const [story, setStory] = useState(location.state?.story || null)
   const [matchData, setMatchData] = useState(null)
-  const [statsRows, setStatsRows] = useState([])
   const [loading, setLoading] = useState(!location.state?.story)
   const [error, setError] = useState('')
   const [comments, setComments] = useState([])
@@ -322,7 +316,6 @@ export default function NewsDetailPage() {
   const [votePulse, setVotePulse] = useState({ commentId: null, direction: 0, token: 0 })
   const [sortMode, setSortMode] = useState('best')
   const canInteract = !!user?.id
-  const [techMetricsOpen, setTechMetricsOpen] = useState(false)
 
   // Yanıtları parent'a göre grupla (okuma sırası: eskiden yeniye)
   const repliesByParent = useMemo(() => {
@@ -698,13 +691,12 @@ export default function NewsDetailPage() {
 
         if (!cancelled) {
           setMatchData(matchWithRealtimeTournament)
-          setStatsRows(statRows || [])
           setStory(storyWithRealtimeTier)
           await loadForum(storyWithRealtimeTier.id)
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err.message || 'Haber detaylari yuklenemedi.')
+          setError(err.message || 'Haber detayları yüklenemedi.')
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -1093,7 +1085,7 @@ export default function NewsDetailPage() {
         <AIProbabilityBar story={story} />
 
         <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid var(--surface-2)', background: 'var(--surface)', padding: 16 }}>
-          <div style={{ fontSize: 11, color: '#ffb3bd', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800, marginBottom: 10 }}>
+          <div style={{ fontSize: 11, color: 'var(--accent-fg)', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800, marginBottom: 10 }}>
             Maç Analizi
           </div>
           <div style={{ display: 'grid', gap: 8 }}>
@@ -1102,74 +1094,6 @@ export default function NewsDetailPage() {
                 {line}
               </div>
             ))}
-          </div>
-        </section>
-
-        <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid var(--surface-2)', background: 'var(--surface)', overflow: 'hidden' }}>
-          <button
-            onClick={() => setTechMetricsOpen(prev => !prev)}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '14px 16px', background: 'transparent', border: 'none', borderBottom: techMetricsOpen ? '1px solid var(--surface-2)' : 'none',
-              color: 'var(--text-3)', cursor: 'pointer', fontSize: 11, fontWeight: 800,
-              letterSpacing: 1, textTransform: 'uppercase',
-            }}
-          >
-            <span>Teknik Metrikler &amp; Analitik Detaylar</span>
-            <span style={{ fontSize: 16, transform: techMetricsOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.25s ease', display: 'inline-block' }}>
-              ▾
-            </span>
-          </button>
-
-          <div style={{ maxHeight: techMetricsOpen ? 900 : 0, overflow: 'hidden', transition: 'max-height 0.3s ease' }}>
-            <div style={{ padding: '14px 16px 16px' }}>
-              <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', marginBottom: 12 }}>
-                <div style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '9px 10px', background: 'var(--surface)' }}>
-                  <div style={{ fontSize: 10, color: 'var(--text-4)', marginBottom: 3 }}>Maç ID</div>
-                  <div style={{ fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{story.matchId || '-'}</div>
-                </div>
-                <div style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '9px 10px', background: 'var(--surface)' }}>
-                  <div style={{ fontSize: 10, color: 'var(--text-4)', marginBottom: 3 }}>Durum</div>
-                  <div style={{ fontSize: 14, fontWeight: 800 }}>{story.status}</div>
-                </div>
-                <div style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '9px 10px', background: 'var(--surface)' }}>
-                  <div style={{ fontSize: 10, color: 'var(--text-4)', marginBottom: 3 }}>Model Tahmini (Ham)</div>
-                  <div style={{ fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-                    {fmtPct(story.source?.predictionA)} : {fmtPct(story.source?.predictionB)}
-                  </div>
-                </div>
-                <div style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '9px 10px', background: 'var(--surface)' }}>
-                  <div style={{ fontSize: 10, color: 'var(--text-4)', marginBottom: 3 }}>Skor Marjı</div>
-                  <div style={{ fontSize: 14, fontWeight: 800 }}>{story.source?.margin ?? '-'}</div>
-                </div>
-              </div>
-
-              {matchData && (
-                <div style={{ fontSize: 12, color: 'var(--text-4)', marginBottom: 10 }}>
-                  Tarih: {fmtDate(matchData.scheduled_at)} · Turnuva: {matchData.tournament?.name || '-'}
-                </div>
-              )}
-
-              <div style={{ border: '1px solid var(--surface-2)', borderRadius: 10, overflow: 'hidden' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', padding: '8px 10px', fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.8px', background: 'var(--surface)', borderBottom: '1px solid var(--surface-2)' }}>
-                  <div>Takım</div>
-                  <div style={{ textAlign: 'right' }}>Skor Metriği</div>
-                </div>
-                {statsRows.length === 0 && (
-                  <div style={{ padding: '10px', color: 'var(--text-4)', fontSize: 12 }}>Ek match_stats verisi bulunamadı.</div>
-                )}
-                {statsRows.map((row, idx) => (
-                  <div key={`${row.team_id}_${idx}`} style={{ display: 'grid', gridTemplateColumns: '1fr 120px', padding: '9px 10px', fontSize: 12, borderBottom: idx === statsRows.length - 1 ? 'none' : '1px solid var(--surface-2)', background: 'var(--surface)' }}>
-                    <div style={{ color: 'var(--text-2)' }}>
-                      {Number(row.team_id) === Number(matchData?.team_a_id) ? (matchData?.team_a?.name || 'Team A') : (matchData?.team_b?.name || 'Team B')}
-                    </div>
-                    <div style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--text-1)', fontWeight: 700 }}>
-                      {Number(row?.stats?.score ?? 0).toFixed(0)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         </section>
 

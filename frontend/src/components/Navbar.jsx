@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import BRANDING from '../branding.config'
-import FextLogo from './FextLogo'
+import FextopusLogo from './FextopusLogo'
 import ThemeToggle from './ThemeToggle'
 import { FEXT } from '../theme'
 
@@ -110,7 +110,7 @@ export default function Navbar({ navLinks, SearchComponent }) {
         height: 58,
       }}>
         <NavLink to="/" style={{ textDecoration: 'none', marginRight: 8, flexShrink: 0, display: 'inline-flex', alignItems: 'center', height: 36 }} aria-label="feXt ana sayfa">
-          <FextLogo height={30} />
+          <FextopusLogo height={30} />
         </NavLink>
 
         {!isMobile && (

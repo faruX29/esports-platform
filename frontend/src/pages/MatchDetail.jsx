@@ -25,6 +25,7 @@ import { clickableProps }                           from '../utils/a11y'
 import TurkishBadge                                 from '../components/TurkishBadge'
 import { FEXT }                                     from '../theme'
 import Mascot from '../components/Mascot'
+import FextopusIcon from '../components/FextopusIcon'
 import SeoHead from '../components/SeoHead'
 
 // MVP Oylaması şimdilik GİZLİ (kurucu kararı 2026-07-16): gerçek oyuncu istatistiği
@@ -957,8 +958,8 @@ function WinProbabilityBar({ teamAName, teamBName, teamAPct, teamBPct }) {
   return (
     <div style={{ border: '1px solid rgba(194,92,208,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(194,92,208,.12), var(--surface))', padding: '10px 11px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <div style={{ fontSize: 10, color: '#8be9dd', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px' }}>
-          Kazanma Olasılığı
+        <div style={{ fontSize: 10, color: '#8be9dd', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <FextopusIcon size={15} /> Kazanma Olasılığı
         </div>
         {uncertain && (
           <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', background: 'var(--hover)', border: '1px solid var(--line-2)', borderRadius: 6, padding: '1px 6px', letterSpacing: '.4px' }}>BELİRSİZ</span>
@@ -1464,7 +1465,7 @@ export default function MatchDetail() {
               <div style={{ fontSize: 12, fontWeight: 700, color: isLive ? '#FF4655' : '#4CAF50', marginTop: 4 }}>{isLive ? '● Canlı' : fmtTime(match.scheduled_at)}</div>
               <div style={{ fontSize: 10, color: 'var(--text-6)', marginTop: 2 }}>{fmtDate(match.scheduled_at)}</div>
               <div style={{ marginTop: 10, padding: '0 6px', minWidth: 170 }}>
-                <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--ai)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>AI Kazanma Olasılığı{predUncertain && <span style={{ color: 'var(--text-3)', fontWeight: 800 }}>· Belirsiz</span>}</div>
+                <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--ai)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><FextopusIcon size={14} /> Fextopus Kazanma Olasılığı{predUncertain && <span style={{ color: 'var(--text-3)', fontWeight: 800 }}>· Belirsiz</span>}</div>
                 <div style={{ height: 8, borderRadius: 4, overflow: 'hidden', display: 'flex', border: '1px solid var(--line)' }}>
                   <div style={{ flex: pctA, background: predUncertain ? 'var(--text-6)' : 'linear-gradient(90deg,#4ade80,#22c55e)', borderRadius: '4px 0 0 4px' }} />
                   <div style={{ flex: pctB, background: predUncertain ? 'var(--text-5)' : 'linear-gradient(90deg,#60a5fa,#3b82f6)', borderRadius: '0 4px 4px 0' }} />

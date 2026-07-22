@@ -1,17 +1,18 @@
+import mascotImg from '../assets/fextopus-icon.png'
+
 /**
- * Mascot — feXt ahtapot maskotu (public/fext-mascot.svg).
+ * Mascot — feXt Fextopus maskotu (arkadaş çizimi).
  * Boş durumlar, "sonuç yok" ve hata ekranlarında sevimli marka dokunuşu.
- * SVG dosyadan gelir → kurucu daha kaliteli mascot koyunca otomatik güncellenir.
  */
 export default function Mascot({ size = 72, style, dim = false }) {
   return (
     <img
-      src="/fext-mascot.svg"
+      src={mascotImg}
       alt=""
       aria-hidden="true"
       width={size}
       height={size}
-      style={{ display: 'block', opacity: dim ? 0.7 : 1, ...style }}
+      style={{ display: 'block', width: size, height: size, objectFit: 'contain', opacity: dim ? 0.72 : 1, ...style }}
     />
   )
 }

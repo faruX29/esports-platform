@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Target } from 'lucide-react'
 import { supabase } from '../supabaseClient'
+import FextopusIcon from './FextopusIcon'
 
 /**
  * AI tahmin doğruluğu "trust signal" rozeti.
@@ -63,8 +63,8 @@ export default function PredictionAccuracyBadge({ variant = 'card' }) {
           background: 'rgba(194,92,208,.12)', border: '1px solid rgba(194,92,208,.28)',
         }}
       >
-        <Target size={12} strokeWidth={2.4} />
-        AI'nın en güvendiği maçlarda %{confPct} net isabet
+        <FextopusIcon size={15} />
+        Fextopus'un en güvendiği maçlarda %{confPct} net isabet
       </div>
     )
   }
@@ -75,8 +75,9 @@ export default function PredictionAccuracyBadge({ variant = 'card' }) {
       background: 'linear-gradient(130deg, rgba(194,92,208,.12), rgba(16,16,16,.92))',
       borderRadius: 14,
       padding: '14px 16px',
-      display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+      display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
     }}>
+      <FextopusIcon size={44} />
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <span style={{ fontSize: 32, fontWeight: 900, color: '#ddfffb', lineHeight: 1 }}>%{confPct}</span>
         <span style={{ fontSize: 10, color: 'var(--ai)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginTop: 4 }}>
@@ -84,9 +85,8 @@ export default function PredictionAccuracyBadge({ variant = 'card' }) {
         </span>
       </div>
       <div style={{ flex: 1, minWidth: 180 }}>
-        <div style={{ fontSize: 13, color: '#ddfffb', fontWeight: 800, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Target size={15} strokeWidth={2.4} />
-          Yapay Zekanın En Güvendiği Maçlarda %{confPct} Net İsabet
+        <div style={{ fontSize: 13, color: '#ddfffb', fontWeight: 800, marginBottom: 4 }}>
+          Fextopus'un En Güvendiği Maçlarda %{confPct} Net İsabet
         </div>
         <div style={{ fontSize: 12, color: '#c6c6c6', lineHeight: 1.5 }}>
           Elo tabanlı Fextopus, yüksek güvenli tahminlerinde ({sample} maçta ölçüldü) bu isabeti tutturuyor.

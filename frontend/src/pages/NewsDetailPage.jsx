@@ -16,6 +16,7 @@ import {
   normalizeScoutScore,
 } from '../utils/scoutRank'
 import InitialsImage from '../components/InitialsImage'
+import FextopusIcon from '../components/FextopusIcon'
 import ShareButton from '../components/ShareButton'
 import SeoHead from '../components/SeoHead'
 import NewsCover, { scoreFromHero } from '../components/NewsCover'
@@ -223,8 +224,8 @@ function AIProbabilityBar({ story }) {
 
   return (
     <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid #1a2a3a', background: 'linear-gradient(145deg,#0a1520,var(--surface))', padding: 16 }}>
-      <div style={{ fontSize: 11, color: '#7dd3fc', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800, marginBottom: 14 }}>
-        AI Güç Dengesi
+      <div style={{ fontSize: 11, color: '#7dd3fc', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <FextopusIcon size={16} /> Fextopus Güç Dengesi
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>

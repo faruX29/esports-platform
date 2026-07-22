@@ -1,31 +1,56 @@
-import fextopusImg from '../assets/fextopus-trim.png'
+import { useEffect, useRef } from 'react'
+import baseImg from '../assets/fextopus-base.png'
+import shinesImg from '../assets/fextopus-shines.png'
 
 /**
- * FextopusLogo — feXt marka logosu: gerçek Fextopus maskotu (arkadaş çizimi PNG,
- * birebir) + feXt wordmark.
- * Animasyon: hafif süzülme (float) + hover'da küçük eğilme/büyüme. Maskot tek parça
- * (gölgeli) olduğu için parça-bazlı animasyon (göz takibi/kırpma) yerine bütün-gövde
- * hareketi kullanılır. prefers-reduced-motion açıksa durur.
+ * FextopusLogo — gerçek Fextopus maskotu (arkadaş çizimi, birebir PNG) + feXt wordmark.
+ * İki katman: gövde (fextopus-base, parlamasız) + göz parlamaları (fextopus-shines).
+ * Animasyon:
+ *  • float  — hafif süzülme (CSS)
+ *  • göz takibi — parlamalar (shines) fareye doğru kayar → gözler seni takip eder
+ *  • hover  — küçük eğilme/büyüme
+ * prefers-reduced-motion açıksa hareket durur.
  *
- * Not: göz-takibi/kırpma istenirse maskotun katmanları (gözsüz gövde + ayrı göz
- * parlamaları) ayrı şeffaf PNG olarak lazım — o zaman overlay ile eklenebilir.
- *
- * Props: height (px), wordmark (bool).
+ * Props: height (px), wordmark (bool), interactive (göz takibi aç/kapa).
  */
-export default function FextopusLogo({ height = 30, wordmark = true }) {
+export default function FextopusLogo({ height = 30, wordmark = true, interactive = true }) {
+  const innerRef = useRef(null)
+  const shinesRef = useRef(null)
   const size = Math.round(height * 1.5)
+
+  useEffect(() => {
+    if (!interactive) return
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    const inner = innerRef.current
+    const shines = shinesRef.current
+    if (!inner || !shines) return
+    const maxMove = size * 0.05
+    let raf = 0
+    function onMove(e) {
+      if (raf) return
+      raf = requestAnimationFrame(() => {
+        raf = 0
+        const r = inner.getBoundingClientRect()
+        const dx = e.clientX - (r.left + r.width / 2)
+        const dy = e.clientY - (r.top + r.height / 2)
+        const dist = Math.hypot(dx, dy) || 1
+        const move = Math.min(maxMove, dist / 40)
+        const px = ((dx / dist) * move).toFixed(2)
+        const py = ((dy / dist) * move).toFixed(2)
+        shines.style.transform = `translate(${px}px, ${py}px)`
+      })
+    }
+    window.addEventListener('mousemove', onMove, { passive: true })
+    return () => { window.removeEventListener('mousemove', onMove); if (raf) cancelAnimationFrame(raf) }
+  }, [interactive, size])
 
   return (
     <span className="fx-logo" style={{ display: 'inline-flex', alignItems: 'center', gap: Math.round(height * 0.32), lineHeight: 1 }}>
       <span className="fx-float" style={{ display: 'inline-flex' }}>
-        <img
-          className="fx-mascot"
-          src={fextopusImg}
-          alt="feXt Fextopus"
-          width={size}
-          height={size}
-          style={{ display: 'block', width: size, height: size, objectFit: 'contain' }}
-        />
+        <span ref={innerRef} className="fx-inner" style={{ position: 'relative', display: 'block', width: size, height: size }}>
+          <img className="fx-base" src={baseImg} alt="feXt Fextopus" width={size} height={size} style={{ display: 'block', width: size, height: size, objectFit: 'contain' }} />
+          <img ref={shinesRef} className="fx-shines" src={shinesImg} alt="" aria-hidden="true" width={size} height={size} style={{ position: 'absolute', inset: 0, width: size, height: size, objectFit: 'contain', transition: 'transform .12s ease-out', pointerEvents: 'none' }} />
+        </span>
       </span>
 
       {wordmark && (
@@ -45,12 +70,12 @@ export default function FextopusLogo({ height = 30, wordmark = true }) {
 
       <style>{`
         .fx-float { animation: fxFloat 4.2s ease-in-out infinite; will-change: transform; }
-        .fx-mascot { transform-origin: center 70%; transition: transform .25s cubic-bezier(.34,1.56,.64,1); }
-        .fx-logo:hover .fx-mascot { transform: rotate(-5deg) scale(1.08); }
+        .fx-inner { transform-origin: center 68%; transition: transform .25s cubic-bezier(.34,1.56,.64,1); }
+        .fx-logo:hover .fx-inner { transform: rotate(-5deg) scale(1.08); }
         @keyframes fxFloat { 0%,100%{ transform: translateY(0) } 50%{ transform: translateY(-3px) } }
         @media (prefers-reduced-motion: reduce) {
           .fx-float { animation: none !important; }
-          .fx-logo:hover .fx-mascot { transform: none; }
+          .fx-logo:hover .fx-inner { transform: none; }
         }
       `}</style>
     </span>

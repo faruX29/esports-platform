@@ -43,16 +43,34 @@ export function isStoryForYou(story, followedTeamIds = [], followedGameIds = [])
   return isStoryGamePreferred(story, followedGameIds)
 }
 
+// Tazelik kovası — "Günün Bülteni" için recency önce gelsin (yoksa eski yüksek-tier
+// haber günlerce manşette kalıyordu). Gün içinde tier/priority belirleyici.
+// Yaklaşan maçlar (gelecek tarih) en taze kovaya düşer → prominent kalır.
+export function freshnessBucket(publishedAt) {
+  const h = (Date.now() - new Date(publishedAt || 0).getTime()) / 3600000
+  if (h < 24) return 3   // bugün (ve yaklaşan)
+  if (h < 48) return 2   // dün
+  if (h < 96) return 1   // 2-3 gün
+  return 0               // daha eski
+}
+
 export function prioritizeStoriesForYou(stories = [], followedTeamIds = [], followedGameIds = []) {
   if (!Array.isArray(stories) || stories.length === 0) return []
 
   return [...stories].sort((left, right) => {
     const leftForYou = isStoryForYou(left, followedTeamIds, followedGameIds) ? 1 : 0
     const rightForYou = isStoryForYou(right, followedTeamIds, followedGameIds) ? 1 : 0
-
     if (rightForYou !== leftForYou) return rightForYou - leftForYou
+
+    // Önce tazelik kovası (bugün > dün > 2-3 gün > eski)
+    const leftBucket = freshnessBucket(left?.publishedAt)
+    const rightBucket = freshnessBucket(right?.publishedAt)
+    if (rightBucket !== leftBucket) return rightBucket - leftBucket
+
+    // Aynı kova içinde tier/priority
     if ((right?.priority || 0) !== (left?.priority || 0)) return (right?.priority || 0) - (left?.priority || 0)
 
+    // Son olarak tam zaman
     const leftTs = new Date(left?.publishedAt || 0).getTime()
     const rightTs = new Date(right?.publishedAt || 0).getTime()
     return rightTs - leftTs

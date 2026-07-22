@@ -14,7 +14,7 @@ import {
   getGameMeta,
   tierWeight,
 } from '../utils/newsStories'
-import { isStoryFollowedTeam, prioritizeStoriesForYou } from '../utils/newsPersonalization'
+import { isStoryFollowedTeam, prioritizeStoriesForYou, freshnessBucket } from '../utils/newsPersonalization'
 import ShareButton from '../components/ShareButton'
 import SeoHead from '../components/SeoHead'
 import NewsCover, { scoreFromHero } from '../components/NewsCover'
@@ -527,7 +527,10 @@ export default function NewsPage() {
     setPage(1)
   }, [activeCategory, stories.length])
 
-  const hero = filteredStories.find(story => HERO_TIERS.has(story.visuals.tier)) || filteredStories[0] || null
+  // Manşet: yalnız SON GÜNLERDEKİ (taze) hero-tier haberden seçilir; yoksa en taze
+  // tepe haber. Böylece haftalık eski bir tier-S manşette çakılı kalmaz.
+  const hero = filteredStories.find(story => HERO_TIERS.has(story.visuals.tier) && freshnessBucket(story.publishedAt) >= 1)
+    || filteredStories[0] || null
   const agenda = filteredStories.filter(story => story.id !== hero?.id)
   const totalPages = Math.max(1, Math.ceil(agenda.length / NEWS_PAGE_SIZE))
   const pagedAgenda = agenda.slice((page - 1) * NEWS_PAGE_SIZE, page * NEWS_PAGE_SIZE)

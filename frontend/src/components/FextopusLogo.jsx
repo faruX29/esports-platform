@@ -76,12 +76,18 @@ export default function FextopusLogo({ height = 30, wordmark = true, interactive
         .fx-float { animation: fxFloat 4.2s ease-in-out infinite; will-change: transform; }
         .fx-inner { transform-origin: center 68%; transition: transform .25s cubic-bezier(.34,1.56,.64,1); }
         .fx-logo:hover .fx-inner { transform: rotate(-5deg) scale(1.08); }
+        /* Kırpma anında baz+parlamalar gizlenir, kapalı-göz karesi görünür (birbirini
+           tamamlayan opacity). Sağ göz gövde dışına taştığı için sadece kapalıyı
+           göstermek yetmez — açık kareyi de gizlemek gerek. */
+        .fx-base, .fx-shines { animation: fxUnblink 5.6s ease-in-out infinite; will-change: opacity; }
         .fx-blink { opacity: 0; animation: fxBlink 5.6s ease-in-out infinite; will-change: opacity; }
         @keyframes fxFloat { 0%,100%{ transform: translateY(0) } 50%{ transform: translateY(-3px) } }
-        @keyframes fxBlink { 0%,92%,100%{ opacity: 0 } 94%,97%{ opacity: 1 } }
+        @keyframes fxBlink   { 0%,92%,100%{ opacity: 0 } 94%,97%{ opacity: 1 } }
+        @keyframes fxUnblink { 0%,92%,100%{ opacity: 1 } 94%,97%{ opacity: 0 } }
         @media (prefers-reduced-motion: reduce) {
           .fx-float { animation: none !important; }
           .fx-blink { animation: none !important; opacity: 0 !important; }
+          .fx-base, .fx-shines { animation: none !important; opacity: 1 !important; }
           .fx-logo:hover .fx-inner { transform: none; }
         }
       `}</style>

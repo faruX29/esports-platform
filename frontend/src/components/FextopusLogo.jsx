@@ -1,15 +1,18 @@
 import { useEffect, useRef } from 'react'
 import baseImg from '../assets/fextopus-base.png'
 import shinesImg from '../assets/fextopus-shines.png'
+import blinkImg from '../assets/fextopus-eyes-closed.png'
 
 /**
  * FextopusLogo — gerçek Fextopus maskotu (arkadaş çizimi, birebir PNG) + feXt wordmark.
- * İki katman: gövde (fextopus-base, parlamasız) + göz parlamaları (fextopus-shines).
+ * Üç katman: gövde (fextopus-base, parlamasız) + göz parlamaları (fextopus-shines)
+ * + göz-kapalı kare (fextopus-eyes-closed, kırpma için üstte).
  * Animasyon:
  *  • float  — hafif süzülme (CSS)
  *  • göz takibi — parlamalar (shines) fareye doğru kayar → gözler seni takip eder
+ *  • göz kırpma — ~5.6 sn'de bir kapalı-göz karesi kısa süre görünür
  *  • hover  — küçük eğilme/büyüme
- * prefers-reduced-motion açıksa hareket durur.
+ * prefers-reduced-motion açıksa hareket durur (gözler açık kalır).
  *
  * Props: height (px), wordmark (bool), interactive (göz takibi aç/kapa).
  */
@@ -50,6 +53,7 @@ export default function FextopusLogo({ height = 30, wordmark = true, interactive
         <span ref={innerRef} className="fx-inner" style={{ position: 'relative', display: 'block', width: size, height: size }}>
           <img className="fx-base" src={baseImg} alt="feXt Fextopus" width={size} height={size} style={{ display: 'block', width: size, height: size, objectFit: 'contain' }} />
           <img ref={shinesRef} className="fx-shines" src={shinesImg} alt="" aria-hidden="true" width={size} height={size} style={{ position: 'absolute', inset: 0, width: size, height: size, objectFit: 'contain', transition: 'transform .12s ease-out', pointerEvents: 'none' }} />
+          <img className="fx-blink" src={blinkImg} alt="" aria-hidden="true" width={size} height={size} style={{ position: 'absolute', inset: 0, width: size, height: size, objectFit: 'contain', pointerEvents: 'none' }} />
         </span>
       </span>
 
@@ -72,9 +76,12 @@ export default function FextopusLogo({ height = 30, wordmark = true, interactive
         .fx-float { animation: fxFloat 4.2s ease-in-out infinite; will-change: transform; }
         .fx-inner { transform-origin: center 68%; transition: transform .25s cubic-bezier(.34,1.56,.64,1); }
         .fx-logo:hover .fx-inner { transform: rotate(-5deg) scale(1.08); }
+        .fx-blink { opacity: 0; animation: fxBlink 5.6s ease-in-out infinite; will-change: opacity; }
         @keyframes fxFloat { 0%,100%{ transform: translateY(0) } 50%{ transform: translateY(-3px) } }
+        @keyframes fxBlink { 0%,92%,100%{ opacity: 0 } 94%,97%{ opacity: 1 } }
         @media (prefers-reduced-motion: reduce) {
           .fx-float { animation: none !important; }
+          .fx-blink { animation: none !important; opacity: 0 !important; }
           .fx-logo:hover .fx-inner { transform: none; }
         }
       `}</style>

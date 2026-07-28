@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import Turnstile from '../components/Turnstile'
 import PasswordInput from '../components/PasswordInput'
 import GoogleIcon from '../components/GoogleIcon'
-import { MessageCircle } from 'lucide-react'
+import { MessageCircle, MailCheck } from 'lucide-react'
 import { DISCORD_ENABLED, GOOGLE_ENABLED, TURNSTILE_ENABLED } from '../features'
 import { authErrorMessage } from '../utils/authError'
 
@@ -19,6 +19,7 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [captchaToken, setCaptchaToken] = useState('')
+  const [pendingEmail, setPendingEmail] = useState('')
   const captchaRef = useRef(null)
 
   async function onSubmit(e) {
@@ -38,8 +39,9 @@ export default function RegisterPage() {
         setSuccess('Kayıt tamamlandı! Yönlendiriliyorsun...')
         setTimeout(() => navigate('/', { replace: true }), 700)
       } else {
-        setSuccess('Kayıt alındı! E-postana gönderdiğimiz doğrulama linkine tıkla, sonra giriş yap.')
-        setTimeout(() => navigate('/login'), 3500)
+        // Doğrulama açık → belirgin "spam'i kontrol et" paneli göster (otomatik
+        // yönlendirme yok; kullanıcı uyarıyı okusun, maili spam'den çıkarsın).
+        setPendingEmail(email)
       }
     } catch (err) {
       setError(authErrorMessage(err, 'Kayıt başarısız.'))
@@ -68,9 +70,25 @@ export default function RegisterPage() {
       <div style={{ width: 'min(460px, 100%)', borderRadius: 18, border: '1px solid var(--line)', background: 'var(--surface)', overflow: 'hidden', boxShadow: '0 18px 40px rgba(0,0,0,.5)' }}>
         <div style={{ height: 4, background: 'linear-gradient(90deg,#DF4888,#8B3AA0 55%,#6A297F)' }} />
         <div style={{ padding: 24 }}>
-          <h1 style={{ margin: 0, fontSize: 26, lineHeight: 1.1, color: 'var(--text)' }}>Kayıt Ol</h1>
-          <p style={{ margin: '6px 0 18px', fontSize: 13, color: 'var(--text-3)' }}>Takip ettiğin takımların maçları, transferleri ve haberleri tek yerde. Profilin bulutta güvende.</p>
+          <h1 style={{ margin: 0, fontSize: 26, lineHeight: 1.1, color: 'var(--text)' }}>{pendingEmail ? 'Son bir adım' : 'Kayıt Ol'}</h1>
+          <p style={{ margin: '6px 0 18px', fontSize: 13, color: 'var(--text-3)' }}>{pendingEmail ? 'Hesabını etkinleştirmek için e-postanı doğrula.' : 'Takip ettiğin takımların maçları, transferleri ve haberleri tek yerde. Profilin bulutta güvende.'}</p>
 
+          {pendingEmail && (
+            <div style={{ display: 'grid', gap: 12 }}>
+              <div style={{ display: 'flex', gap: 12, padding: 14, borderRadius: 12, border: '1px solid var(--line)', background: 'var(--surface-2)' }}>
+                <MailCheck size={22} style={{ color: 'var(--accent-fg)', flexShrink: 0, marginTop: 2 }} />
+                <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.55 }}>
+                  <strong style={{ color: 'var(--text)' }}>{pendingEmail}</strong> adresine doğrulama linki gönderdik. Linke tıklayınca hesabın etkinleşir, sonra giriş yapabilirsin.
+                </div>
+              </div>
+              <div style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid rgba(194,92,208,.35)', background: 'rgba(194,92,208,.08)', fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.55 }}>
+                📬 Mail birkaç dakikada gelmezse <strong style={{ color: 'var(--text)' }}>Spam / Gereksiz</strong> klasörünü kontrol et. Bulursan <strong style={{ color: 'var(--text)' }}>“Spam değil”</strong> işaretle — sonraki maillerimiz doğrudan gelen kutuna düşer.
+              </div>
+              <button onClick={() => navigate('/login')} style={{ border: 'none', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#fff', fontWeight: 800, background: 'linear-gradient(135deg,#DF4888,#8B3AA0 55%,#6A297F)' }}>Giriş sayfasına git</button>
+            </div>
+          )}
+
+          {!pendingEmail && (<>
           <form onSubmit={onSubmit} style={{ display: 'grid', gap: 10 }}>
             <input required value={username} onChange={e => setUsername(e.target.value)} placeholder="Kullanıcı adı" autoComplete="username" style={inputStyle} />
             <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="E-posta" autoComplete="email" style={inputStyle} />
@@ -106,6 +124,7 @@ export default function RegisterPage() {
           <div style={{ marginTop: 16, fontSize: 12, color: 'var(--text-3)' }}>
             Zaten hesabın var mı? <Link to="/login" style={{ color: 'var(--text)' }}>Giriş yap</Link>
           </div>
+          </>)}
         </div>
       </div>
     </div>

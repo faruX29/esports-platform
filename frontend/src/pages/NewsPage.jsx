@@ -130,7 +130,7 @@ function articleRowToStory(row) {
 function NewsTrustLayer({ item, onReport }) {
   return (
     <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-      <span style={{ fontSize: 11, color: 'var(--text-3)' }}>PandaScore verileriyle otomatik uretilmistir.</span>
+      <span style={{ fontSize: 11, color: 'var(--text-3)' }}>PandaScore verileriyle otomatik üretilmiştir.</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
         <ShareButton path={`/news/${buildNewsSlug(item)}`} title={item.title} compact />
         <button
@@ -718,7 +718,7 @@ export default function NewsPage() {
                 disabled={page === 1}
                 style={{ border: '1px solid var(--text-6)', background: page === 1 ? 'var(--surface)' : 'var(--surface-2)', color: page === 1 ? 'var(--text-4)' : 'var(--text-1)', borderRadius: 8, padding: '6px 10px', cursor: page === 1 ? 'not-allowed' : 'pointer' }}
               >
-                ‹ Onceki
+                ‹ Önceki
               </button>
               <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Sayfa {page} / {totalPages}</span>
               <button
@@ -733,7 +733,7 @@ export default function NewsPage() {
         </section>
 
         {!loading && filteredStories.length === 0 && (
-          <div style={{ marginTop: 18, color: 'var(--text-4)', fontSize: 13 }}>Su an secili oyun icin gosterilecek taze haber bulunamadi.</div>
+          <div style={{ marginTop: 18, color: 'var(--text-4)', fontSize: 13 }}>Şu an seçili oyun için gösterilecek taze haber bulunamadı.</div>
         )}
       </div>
     </div>

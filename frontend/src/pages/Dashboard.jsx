@@ -409,7 +409,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
           <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.9px', color: '#ff9ba5', textTransform: 'uppercase' }}>
             Takip Tercihleri
           </div>
-          <h3 style={{ margin: '8px 0 0', fontSize: 22, color: '#f5f5f5' }}>For You akisini ozellestir</h3>
+          <h3 style={{ margin: '8px 0 0', fontSize: 22, color: '#f5f5f5' }}>For You akışını özelleştir</h3>
           <p style={{ margin: '8px 0 0', fontSize: 12, color: '#9a9a9a', lineHeight: 1.5 }}>
             Oyun ve takim secimlerini kaydet. Dashboard ticker icerigi secimlerine gore aninda siralanir.
           </p>
@@ -510,7 +510,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
             )}
             {searchActive && !searching && displayedTeams.length === 0 && (
               <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--text-5)', border: '1px dashed #262626', borderRadius: 10, padding: '12px 10px', textAlign: 'center' }}>
-                "{teamSearch.trim()}" icin takim bulunamadi.
+                "{teamSearch.trim()}" için takım bulunamadı.
               </div>
             )}
             {!searchActive && !loading && (!popularTeams || popularTeams.length === 0) && (
@@ -2630,7 +2630,7 @@ export default function Dashboard() {
             </span>
           </h1>
           <p style={{ margin: '0 0 16px', fontSize: 11, color: 'var(--text-6)', lineHeight: 1.6 }}>
-            Canli sonuclar · PandaScore verileri
+            Canlı sonuçlar · PandaScore verileri
           </p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {[

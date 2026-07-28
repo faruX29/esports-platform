@@ -426,7 +426,7 @@ export default function RankingsPage() {
             )}
 
             {!loading && !error && filtered.length === 0 && (
-              <div style={{ padding: 18, color: 'var(--text-3)', fontSize: 13 }}>Filtreye uygun takim bulunamadi.</div>
+              <div style={{ padding: 18, color: 'var(--text-3)', fontSize: 13 }}>Filtreye uygun takım bulunamadı.</div>
             )}
 
             {!loading && !error && filtered.map((row, idx) => {

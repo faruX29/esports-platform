@@ -616,11 +616,11 @@ export default function PlayersPage() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 10, marginBottom: 10 }}>
               <select value={compareAId} onChange={e => setCompareAId(e.target.value)} style={{ height: 36, borderRadius: 10, border: '1px solid var(--text-6)', background: 'var(--surface)', color: 'var(--text)', padding: '0 10px' }}>
-                <option value=''>Oyuncu A sec</option>
+                <option value=''>Oyuncu A seç</option>
                 {visiblePlayers.map(p => <option key={p.id} value={p.id}>{p.nickname}</option>)}
               </select>
               <select value={compareBId} onChange={e => setCompareBId(e.target.value)} style={{ height: 36, borderRadius: 10, border: '1px solid var(--text-6)', background: 'var(--surface)', color: 'var(--text)', padding: '0 10px' }}>
-                <option value=''>Oyuncu B sec</option>
+                <option value=''>Oyuncu B seç</option>
                 {visiblePlayers.map(p => <option key={p.id} value={p.id}>{p.nickname}</option>)}
               </select>
             </div>
@@ -708,7 +708,7 @@ export default function PlayersPage() {
             <div>Takip</div>
           </div>
 
-            {loading && <div style={{ padding: 18, color: 'var(--text-3)', fontSize: 13 }}>Oyuncular yukleniyor...</div>}
+            {loading && <div style={{ padding: 18, color: 'var(--text-3)', fontSize: 13 }}>Oyuncular yükleniyor...</div>}
             {!loading && error && <div style={{ padding: 18, color: '#ff6a7f', fontSize: 13 }}>{error}</div>}
             {!loading && !error && visiblePlayers.length === 0 && (
               <div style={{ padding: 26, textAlign: 'center' }}>
@@ -807,7 +807,7 @@ export default function PlayersPage() {
         </div>
 
         <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-4)' }}>
-          Not: Oyuncular istatistikleri olmasa bile arama sonuclarinda listelenir. Faker/Caps gibi isimler dogrudan bulunabilir.
+          Not: Oyuncular istatistikleri olmasa bile arama sonuçlarında listelenir. Faker/Caps gibi isimler doğrudan bulunabilir.
         </div>
       </div>
     </div>

@@ -170,7 +170,7 @@ function TransferTimeline({ transfers }) {
   if (!transfers.length) {
     return (
       <div style={{ marginTop: 18, padding: '14px 16px', borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--surface-2)', color: 'var(--text-5)', fontSize: 12, textAlign: 'center' }}>
-        Transfer akisi henuz bulunamadi.
+        Transfer akışı henüz bulunamadı.
       </div>
     )
   }

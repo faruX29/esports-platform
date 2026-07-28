@@ -261,12 +261,12 @@ export default function TournamentsListPage() {
         )}
       </div>
 
-      {loading && <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Turnuvalar yukleniyor...</div>}
+      {loading && <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Turnuvalar yükleniyor...</div>}
       {!loading && error && <div style={{ fontSize: 13, color: '#ff7d91' }}>{error}</div>}
 
       {!loading && !error && visibleTournaments.length === 0 && (
         <div style={{ border: '1px dashed var(--line)', borderRadius: 12, padding: 16, color: 'var(--text-3)', fontSize: 13 }}>
-          Eslesen turnuva bulunamadi.
+          Eşleşen turnuva bulunamadı.
         </div>
       )}
 

@@ -279,7 +279,7 @@ function TrustLayer({ story, onReport, liked, likeCount, onToggleLike }) {
       <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
         {isTransfer
           ? <>Transfer verisi <a href="https://liquipedia.net" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-3)', textDecoration: 'underline' }}>Liquipedia</a> kaynaklıdır; haber otomatik üretildi.</>
-          : 'PandaScore verileriyle otomatik uretilmistir.'}
+          : 'PandaScore verileriyle otomatik üretilmiştir.'}
       </span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <LikeButton liked={liked} count={likeCount} onToggle={onToggleLike} />
@@ -1221,7 +1221,7 @@ export default function NewsDetailPage() {
             </form>
           )}
 
-          {commentsLoading && <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Forum yukleniyor...</div>}
+          {commentsLoading && <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Forum yükleniyor...</div>}
           {!commentsLoading && comments.length === 0 && (
             <div style={{ border: '1px dashed var(--line)', borderRadius: 10, padding: '12px', color: 'var(--text-3)', fontSize: 12 }}>
               Henüz yorum yok. İlk yorumu sen yaz.

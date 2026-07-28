@@ -122,7 +122,7 @@ const TodaySchedule = memo(function TodaySchedule({ matches, liveMatches, onMatc
                 {gameShort}
               </span>
               {/* Teams */}
-              <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: '#ccc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {tA} <span style={{ color: 'var(--track)' }}>vs</span> {tB}
               </span>
               {/* Tournament */}
@@ -406,12 +406,12 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
         boxShadow: '0 28px 70px rgba(0,0,0,.55)',
       }}>
         <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid var(--surface-2)' }}>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.9px', color: '#ff9ba5', textTransform: 'uppercase' }}>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.9px', color: 'var(--accent-fg)', textTransform: 'uppercase' }}>
             Takip Tercihleri
           </div>
-          <h3 style={{ margin: '8px 0 0', fontSize: 22, color: '#f5f5f5' }}>For You akışını özelleştir</h3>
-          <p style={{ margin: '8px 0 0', fontSize: 12, color: '#9a9a9a', lineHeight: 1.5 }}>
-            Oyun ve takim secimlerini kaydet. Dashboard ticker icerigi secimlerine gore aninda siralanir.
+          <h3 style={{ margin: '8px 0 0', fontSize: 22, color: 'var(--text-1)' }}>For You akışını özelleştir</h3>
+          <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>
+            Oyun ve takım seçimlerini kaydet. Dashboard ticker içeriği seçimlerine göre anında sıralanır.
           </p>
         </div>
 
@@ -960,7 +960,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
           />
           <div style={{
             fontSize: 10, fontWeight: 700, lineHeight: 1.2,
-            color: aWon ? '#4CAF50' : favA ? '#FFD700' : '#ccc',
+            color: aWon ? '#4CAF50' : favA ? '#FFD700' : 'var(--text-2)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {m.team_a?.name || '?'}{turkA && ' 🇹🇷'}
@@ -991,16 +991,16 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
           <div style={{
             fontSize: aggressiveLiveMode ? 28 : 20,
             fontWeight: 900,
-            color: '#fff',
+            color: 'var(--text-1)',
             fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px', lineHeight: 1,
             textShadow: 'none',
           }}>
             {m.team_a_score ?? 0}
-            <span style={{ color: 'var(--line-2)', margin: '0 3px' }}>:</span>
+            <span style={{ color: 'var(--text-5)', margin: '0 3px' }}>:</span>
             {m.team_b_score ?? 0}
           </div>
           <div style={{
-            fontSize: 8, color: 'var(--line-2)', marginTop: 3,
+            fontSize: 8, color: 'var(--text-4)', marginTop: 3,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 72,
           }}>
             {m.tournament?.name || ''}
@@ -1021,7 +1021,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
           />
           <div style={{
             fontSize: 10, fontWeight: 700, lineHeight: 1.2,
-            color: bWon ? '#4CAF50' : favB ? '#FFD700' : '#ccc',
+            color: bWon ? '#4CAF50' : favB ? '#FFD700' : 'var(--text-2)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {m.team_b?.name || '?'}{turkB && ' 🇹🇷'}

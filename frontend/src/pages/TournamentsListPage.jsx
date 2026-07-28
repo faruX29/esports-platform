@@ -251,7 +251,7 @@ export default function TournamentsListPage() {
               boxShadow: showAllTiers ? 'inset 0 0 0 1px rgba(100,220,120,.34), 0 0 14px rgba(100,200,120,.18)' : 'none',
             }}
           >
-            Tumu
+            Tümü
           </button>
         </div>
         {!showAllTiers && hiddenCount > 0 && (

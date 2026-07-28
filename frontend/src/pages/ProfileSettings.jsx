@@ -208,11 +208,11 @@ export default function ProfileSettings() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <label style={{ display: 'grid', gap: 6 }}>
               <span style={labelStyle}>Ad</span>
-              <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Ömer Faruk" style={inputStyle} />
+              <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Adın (opsiyonel)" style={inputStyle} />
             </label>
             <label style={{ display: 'grid', gap: 6 }}>
               <span style={labelStyle}>Soyad</span>
-              <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Selçuk" style={inputStyle} />
+              <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Soyadın (opsiyonel)" style={inputStyle} />
             </label>
           </div>
 

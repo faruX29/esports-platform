@@ -472,17 +472,31 @@ class MatchSyncer:
         )
         return total
 
+    # PandaScore videogame.slug bazen kanonik olmayan varyant döndürür
+    # ('cs-go', 'league-of-legends'). Normalize etmezsek her varyant ayrı bir
+    # games satırı yaratıyordu (mükerrer id 8/9 sorunu). Tek kanonik slug'a indir.
+    GAME_SLUG_ALIASES = {
+        'cs-go': 'csgo', 'cs2': 'csgo', 'counter-strike': 'csgo',
+        'league-of-legends': 'lol', 'leagueoflegends': 'lol',
+        'dota-2': 'dota2',
+    }
+
     def _get_or_create_game(self, cur, game_slug):
         """Get or create game in database"""
         if not game_slug:
             return None
-        
+
+        # Kanonik slug'a normalize et (mükerrer games kaydını önler)
+        game_slug = self.GAME_SLUG_ALIASES.get(
+            game_slug.strip().lower(), game_slug.strip().lower()
+        )
+
         game_names = {
             'valorant': 'Valorant',
             'csgo': 'Counter-Strike 2',
             'lol': 'League of Legends'
         }
-        
+
         cur.execute("SELECT id FROM games WHERE slug = %s", (game_slug,))
         result = cur.fetchone()
         

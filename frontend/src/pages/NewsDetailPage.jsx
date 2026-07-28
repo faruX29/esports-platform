@@ -1089,11 +1089,11 @@ export default function NewsDetailPage() {
           }
         `}</style>
 
-        <Link to='/news' style={{ color: '#ffb3bd', fontSize: 13, textDecoration: 'none' }}>← Haber akışına dön</Link>
+        <Link to='/news' style={{ color: 'var(--accent-fg)', fontSize: 13, textDecoration: 'none' }}>← Haber akışına dön</Link>
 
         <section style={{ marginTop: 14, borderRadius: 20, border: '1px solid var(--line)', background: 'linear-gradient(145deg,var(--surface),var(--surface))', padding: 22 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
-            <span style={{ fontSize: 10, fontWeight: 800, color: '#ffd2d8', padding: '4px 8px', borderRadius: 999, background: 'rgba(200,16,46,.18)', border: '1px solid rgba(200,16,46,.34)', textTransform: 'uppercase', letterSpacing: 1 }}>
+            <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-1)', padding: '4px 8px', borderRadius: 999, background: 'rgba(200,16,46,.18)', border: '1px solid rgba(200,16,46,.34)', textTransform: 'uppercase', letterSpacing: 1 }}>
               {explain.classification}
             </span>
             <span style={{ fontSize: 10, color: 'var(--text-1)', padding: '4px 8px', borderRadius: 999, background: `${story.visuals.gameColor}22`, border: `1px solid ${story.visuals.gameColor}55` }}>
@@ -1110,7 +1110,7 @@ export default function NewsDetailPage() {
           </div>
           <div style={{ marginBottom: 12 }}>
             <h1 style={{ margin: '0 0 8px', fontSize: 38, fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.3px', textAlign: 'left' }}>{story.title}</h1>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#f0d3d8' }}>{story.heroScore}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-2)' }}>{story.heroScore}</div>
           </div>
 
           <p style={{ margin: 0, color: '#9fa3af', lineHeight: 1.85, textAlign: 'left', fontSize: 15 }}>{story.summary}</p>

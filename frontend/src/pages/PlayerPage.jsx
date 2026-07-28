@@ -1089,8 +1089,8 @@ export default function PlayerPage() {
               margin: '0 0 4px', fontSize: isMobile ? 28 : 32, fontWeight: 900, lineHeight: 1.1,
               overflowWrap: 'anywhere',
               background: isTR
-                ? 'linear-gradient(135deg,#fff 40%,#ff8a8a)'
-                : 'linear-gradient(135deg,#fff,var(--text-4))',
+                ? 'linear-gradient(135deg,var(--text-1) 40%,#ff8a8a)'
+                : 'linear-gradient(135deg,var(--text-1),var(--text-4))',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             }}>{player.nickname}</h1>
 
@@ -1205,7 +1205,7 @@ export default function PlayerPage() {
         {/* Hızlı istatistikler */}
         {analytics && (
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,minmax(0,1fr))' : 'repeat(4,minmax(0,1fr))', gap: 10, marginTop: 22 }}>
-            <StatBox Icon={Swords} value={analytics.totalMatches}   label="Maç"        color="#fff"     />
+            <StatBox Icon={Swords} value={analytics.totalMatches}   label="Maç"        color="var(--text-1)" />
             <StatBox Icon={CircleCheck} value={analytics.wonMatches}     label="Galibiyet"  color="#4CAF50"  />
             <StatBox Icon={XIcon} value={analytics.lostMatches}    label="Mağ."       color="#FF4655"  />
             {analytics.draws > 0 && (

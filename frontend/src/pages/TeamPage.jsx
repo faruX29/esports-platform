@@ -705,8 +705,8 @@ export default function TeamPage() {
                 margin: 0, fontSize: 'clamp(22px, 6vw, 34px)', fontWeight: 900, lineHeight: 1.1,
                 overflowWrap: 'anywhere', minWidth: 0,
                 background: isTR
-                  ? 'linear-gradient(135deg,#fff,#ff6b7a)'
-                  : 'linear-gradient(135deg,#fff,var(--text-3))',
+                  ? 'linear-gradient(135deg,var(--text-1),#ff6b7a)'
+                  : 'linear-gradient(135deg,var(--text-1),var(--text-3))',
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
               }}>{team.name}</h1>
               {team.acronym && (

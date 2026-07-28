@@ -204,13 +204,13 @@ function ScoutNoteCard({ item, compact = false }) {
       padding: compact ? '8px 9px' : '10px 11px',
     }}>
       <div style={{ fontSize: 10, color: 'var(--ai)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.9px', marginBottom: 6 }}>
-        Gozcu Notu
+        Gözcü Notu
       </div>
       <div style={{ display: 'grid', gap: 4 }}>
         {rows.map((row, idx) => (
           <div key={`${row.label}-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: compact ? 11 : 12 }}>
             <span style={{ color: 'var(--text-3)' }}>{row.label}</span>
-            <span style={{ color: '#ddfffb', fontWeight: 700, textAlign: 'right' }}>{row.value}</span>
+            <span style={{ color: 'var(--text-1)', fontWeight: 700, textAlign: 'right' }}>{row.value}</span>
           </div>
         ))}
       </div>
@@ -644,7 +644,7 @@ export default function NewsPage() {
         {hero && (
           <section style={{ marginBottom: 18 }}>
             <div style={{ marginBottom: 8, fontSize: 11, color: '#c61b33', textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 800 }}>
-              {hero.isForYou ? 'Manset · For You' : 'Manset'}
+              {hero.isForYou ? 'Manşet · For You' : 'Manşet'}
             </div>
             <article onClick={() => openStoryDetail(hero)} style={{ borderRadius: 18, padding: isMobile ? 14 : 20, border: '1px solid var(--line)', background: 'linear-gradient(145deg,var(--surface),var(--surface))', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
               <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: hero.visuals.turkish ? 'radial-gradient(circle at 12% 18%, rgba(194,92,208,.22), transparent 34%)' : 'radial-gradient(circle at 90% 10%, var(--hover), transparent 24%)' }} />
@@ -657,7 +657,7 @@ export default function NewsPage() {
                       </span>
                     )}
                     <span style={{ fontSize: 10, color: 'var(--ai)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.1, padding: '5px 9px', borderRadius: 999, background: 'rgba(194,92,208,.18)', border: '1px solid rgba(194,92,208,.38)' }}>
-                      Manset
+                      Manşet
                     </span>
                     <span style={{ fontSize: 10, color: 'var(--text-1)', padding: '5px 9px', borderRadius: 999, background: `${hero.visuals.gameColor}22`, border: `1px solid ${hero.visuals.gameColor}55` }}>
                       {hero.visuals.gameLabel}
@@ -693,7 +693,7 @@ export default function NewsPage() {
         )}
 
         <section>
-          <div style={{ marginBottom: 10, fontSize: 11, color: 'var(--text-1)', textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 800 }}>Gundem</div>
+          <div style={{ marginBottom: 10, fontSize: 11, color: 'var(--text-1)', textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 800 }}>Gündem</div>
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit,minmax(320px,1fr))' }}>
             {pagedAgenda.map(item => (
               <NewsCard

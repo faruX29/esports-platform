@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { supabase, subscribeToNewsComments } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
+import { useUser } from '../context/UserContext'
 import { isTurkishTeam } from '../constants'
 import {
   buildFinishedStory,
@@ -18,6 +19,7 @@ import {
 import InitialsImage from '../components/InitialsImage'
 import FextopusIcon from '../components/FextopusIcon'
 import ShareButton from '../components/ShareButton'
+import LikeButton from '../components/LikeButton'
 import SeoHead from '../components/SeoHead'
 import NewsCover, { scoreFromHero } from '../components/NewsCover'
 import { cleanDisplayName } from '../utils/nameCleaner'
@@ -270,7 +272,7 @@ function AIProbabilityBar({ story }) {
   )
 }
 
-function TrustLayer({ story, onReport }) {
+function TrustLayer({ story, onReport, liked, likeCount, onToggleLike }) {
   const isTransfer = story?.variant === 'transfer' || story?.status === 'transfer'
   return (
     <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
@@ -280,6 +282,7 @@ function TrustLayer({ story, onReport }) {
           : 'PandaScore verileriyle otomatik uretilmistir.'}
       </span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <LikeButton liked={liked} count={likeCount} onToggle={onToggleLike} />
         <ShareButton path={`/news/${buildNewsSlug(story)}`} title={story.title} />
         <button
           onClick={() => onReport(story)}
@@ -296,9 +299,12 @@ export default function NewsDetailPage() {
   const { newsId } = useParams()
   const location = useLocation()
   const { user, profile } = useAuth()
+  const { requireAuth } = useUser()
 
   const [story, setStory] = useState(location.state?.story || null)
-  const [matchData, setMatchData] = useState(null)
+  const [liked, setLiked] = useState(false)
+  const [likeCount, setLikeCount] = useState(0)
+  const [, setMatchData] = useState(null)  // değer okunmuyor; yalnız setter kullanılıyor
   const [loading, setLoading] = useState(!location.state?.story)
   const [error, setError] = useState('')
   const [comments, setComments] = useState([])
@@ -753,6 +759,45 @@ export default function NewsDetailPage() {
     return unsubscribe
   }, [story?.id, forumComingSoon])
 
+  // ── Beğeni: story değişince sayı + kullanıcının durumunu çek ──
+  useEffect(() => {
+    const sid = story?.id
+    if (!sid) { setLiked(false); setLikeCount(0); return }
+    let cancelled = false
+    ;(async () => {
+      const { count } = await supabase
+        .from('news_likes')
+        .select('id', { count: 'exact', head: true })
+        .eq('news_id', sid)
+      if (!cancelled) setLikeCount(count || 0)
+      if (user?.id) {
+        const { data } = await supabase
+          .from('news_likes')
+          .select('id')
+          .eq('news_id', sid)
+          .eq('user_id', user.id)
+          .maybeSingle()
+        if (!cancelled) setLiked(!!data)
+      } else if (!cancelled) {
+        setLiked(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [story?.id, user?.id])
+
+  async function toggleLike() {
+    if (!user?.id) { requireAuth(); return }  // giriş yoksa kayıt modalı aç
+    const sid = story?.id
+    if (!sid) return
+    if (liked) {
+      const { error } = await supabase.from('news_likes').delete().eq('news_id', sid).eq('user_id', user.id)
+      if (!error) { setLiked(false); setLikeCount(c => Math.max(0, c - 1)) }
+    } else {
+      const { error } = await supabase.from('news_likes').insert({ news_id: sid, user_id: user.id })
+      if (!error) { setLiked(true); setLikeCount(c => c + 1) }
+    }
+  }
+
   async function submitComment(e) {
     e.preventDefault()
     if (forumComingSoon) return
@@ -1080,7 +1125,7 @@ export default function NewsDetailPage() {
             </div>
           )}
 
-          <TrustLayer story={story} onReport={reportStoryIssue} />
+          <TrustLayer story={story} onReport={reportStoryIssue} liked={liked} likeCount={likeCount} onToggleLike={toggleLike} />
         </section>
 
         <AIProbabilityBar story={story} />

@@ -20,7 +20,7 @@ export default function LikeButton({ liked, count = 0, onToggle, size = 15 }) {
   return (
     <button
       type="button"
-      onClick={e => { e.stopPropagation(); onToggle?.() }}
+      onClick={e => { e.preventDefault(); e.stopPropagation(); onToggle?.() }}
       aria-label={liked ? 'Beğeniyi geri al' : 'Beğen'}
       aria-pressed={liked}
       style={{

@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import { useAuth } from '../context/AuthContext'
+import { useUser } from '../context/UserContext'
 import SeoHead from '../components/SeoHead'
 import NewsCover, { scoreFromHero } from '../components/NewsCover'
 import GameLogo from '../components/GameLogo'
+import LikeButton from '../components/LikeButton'
 import { getGameMeta, normalizeGameId, normalizeTier } from '../utils/newsStories'
 import { buildNewsSlug } from '../utils/newsSlug'
 import { isTurkishTeam } from '../constants'
@@ -70,7 +73,7 @@ function rowToVisuals(row) {
 }
 
 /** Arşiv kartı — SEO için GERÇEK <a> (Link). Crawler'lar bu iç linkleri takip eder. */
-function ArchiveCard({ row, isMobile }) {
+function ArchiveCard({ row, isMobile, liked, likeCount, onToggleLike }) {
   const visuals = rowToVisuals(row)
   return (
     <Link
@@ -121,7 +124,10 @@ function ArchiveCard({ row, isMobile }) {
           {row.summary}
         </p>
       )}
-      <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-4)' }}>{fmtDate(row.created_at)}</div>
+      <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <span style={{ fontSize: 11, color: 'var(--text-4)' }}>{fmtDate(row.created_at)}</span>
+        <LikeButton liked={liked} count={likeCount} onToggle={onToggleLike} />
+      </div>
     </Link>
   )
 }
@@ -132,10 +138,15 @@ export default function NewsArchivePage() {
   const type = searchParams.get('tur') || 'all'
   const page = Math.max(1, Number(searchParams.get('sayfa')) || 1)
 
+  const { user } = useAuth()
+  const { requireAuth } = useUser()
+
   const [rows, setRows] = useState([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 900)
+  const [likesByStory, setLikesByStory] = useState({})
+  const [likedSet, setLikedSet] = useState(() => new Set())
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= 900)
@@ -186,6 +197,46 @@ export default function NewsArchivePage() {
     loadPage()
     window.scrollTo({ top: 0 })
   }, [loadPage])
+
+  // ── Beğeni: yüklü kartların sayıları + kullanıcının beğendikleri ──
+  useEffect(() => {
+    const ids = rows.map(storyIdFor).filter(Boolean)
+    if (!ids.length) { setLikesByStory({}); setLikedSet(new Set()); return }
+    let cancelled = false
+    ;(async () => {
+      const { data, error } = await supabase
+        .from('news_likes')
+        .select('news_id,user_id')
+        .in('news_id', ids)
+      if (cancelled || error) return
+      const counts = {}
+      const mine = new Set()
+      for (const r of (data || [])) {
+        counts[r.news_id] = (counts[r.news_id] || 0) + 1
+        if (user?.id && r.user_id === user.id) mine.add(r.news_id)
+      }
+      setLikesByStory(counts)
+      setLikedSet(mine)
+    })()
+    return () => { cancelled = true }
+  }, [rows, user?.id])
+
+  async function toggleLike(storyId) {
+    if (!user?.id) { requireAuth(); return }  // giriş yoksa kayıt modalı aç
+    if (likedSet.has(storyId)) {
+      const { error } = await supabase.from('news_likes').delete().eq('news_id', storyId).eq('user_id', user.id)
+      if (!error) {
+        setLikedSet(prev => { const n = new Set(prev); n.delete(storyId); return n })
+        setLikesByStory(prev => ({ ...prev, [storyId]: Math.max((prev[storyId] || 1) - 1, 0) }))
+      }
+    } else {
+      const { error } = await supabase.from('news_likes').insert({ news_id: storyId, user_id: user.id })
+      if (!error) {
+        setLikedSet(prev => new Set(prev).add(storyId))
+        setLikesByStory(prev => ({ ...prev, [storyId]: (prev[storyId] || 0) + 1 }))
+      }
+    }
+  }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -239,7 +290,7 @@ export default function NewsArchivePage() {
 
         <div style={{ display: 'grid', gap: 12, gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill,minmax(280px,1fr))' }}>
           {rows.map(row => (
-            <ArchiveCard key={row.id} row={row} isMobile={isMobile} />
+            <ArchiveCard key={row.id} row={row} isMobile={isMobile} liked={likedSet.has(storyIdFor(row))} likeCount={likesByStory[storyIdFor(row)] || 0} onToggleLike={() => toggleLike(storyIdFor(row))} />
           ))}
         </div>
 

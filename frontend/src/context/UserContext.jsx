@@ -361,6 +361,7 @@ export function UserProvider({ children }) {
     isGameFollowed,
     setFollowedTeams,
     setFollowedGames,
+    requireAuth,
     authPromptOpen,
     closeAuthPrompt: () => setAuthPromptOpen(false),
   }), [teamIds, playerIds, gameIds, authPromptOpen])

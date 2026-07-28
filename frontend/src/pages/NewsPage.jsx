@@ -21,6 +21,7 @@ import NewsCover, { scoreFromHero } from '../components/NewsCover'
 import { cleanDisplayName } from '../utils/nameCleaner'
 import { buildNewsSlug } from '../utils/newsSlug'
 import { MessageSquare, Library } from 'lucide-react'
+import LikeButton from '../components/LikeButton'
 import { FEXT } from '../theme'
 
 const GAME_FILTERS = GAMES.filter(game => !game.soon && game.id !== 'all' && ['valorant', 'cs2', 'lol'].includes(game.id))
@@ -217,7 +218,7 @@ function ScoutNoteCard({ item, compact = false }) {
   )
 }
 
-function NewsCard({ item, likes, liked, comments, onLike, canInteract, onOpenDetail, onReport, isForYou, isMobile = false }) {
+function NewsCard({ item, likes, liked, comments, onLike, onOpenDetail, onReport, isForYou, isMobile = false }) {
   const { visuals } = item
 
   return (
@@ -289,26 +290,7 @@ function NewsCard({ item, likes, liked, comments, onLike, canInteract, onOpenDet
         <ScoutNoteCard item={item} compact />
 
         <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <button
-            disabled={!canInteract}
-            onClick={e => {
-              e.stopPropagation()
-              onLike(item.id)
-            }}
-            style={{
-              border: `1px solid ${liked ? '#ffc857' : 'var(--text-6)'}`,
-              background: liked ? 'linear-gradient(140deg, rgba(255,200,87,.22), rgba(35,25,8,.95))' : 'var(--surface)',
-              color: liked ? '#ffe7b1' : 'var(--text-2)',
-              borderRadius: 8,
-              padding: '6px 10px',
-              cursor: canInteract ? 'pointer' : 'not-allowed',
-              fontSize: 12,
-              fontWeight: 700,
-              letterSpacing: '.3px',
-            }}
-          >
-            {liked ? 'STARRED' : 'STAR'} ({likes})
-          </button>
+          <LikeButton liked={liked} count={likes} onToggle={() => onLike(item.id)} />
           <button
             onClick={e => {
               e.stopPropagation()
@@ -318,7 +300,6 @@ function NewsCard({ item, likes, liked, comments, onLike, canInteract, onOpenDet
           >
             <MessageSquare size={12} /> {comments.length > 0 ? `${comments.length} yorum` : 'Yorum yap'} ›
           </button>
-          {!canInteract && <span style={{ fontSize: 11, color: 'var(--text-4)' }}>Etkilesim icin giris yapin</span>}
         </div>
 
         <NewsTrustLayer item={item} onReport={onReport} />
@@ -330,7 +311,7 @@ function NewsCard({ item, likes, liked, comments, onLike, canInteract, onOpenDet
 export default function NewsPage() {
   const navigate = useNavigate()
   const { user, profile } = useAuth()
-  const { followedTeamIds, followedGames } = useUser()
+  const { followedTeamIds, followedGames, requireAuth } = useUser()
   const [activeCategory, setActiveCategory] = useState('all')
 
   const [loading, setLoading] = useState(true)
@@ -537,7 +518,7 @@ export default function NewsPage() {
   const canInteract = !!user?.id
 
   async function toggleLike(newsId) {
-    if (!canInteract) return
+    if (!canInteract) { requireAuth(); return }  // giriş yoksa kayıt modalı aç
     const alreadyLiked = likedSet.has(newsId)
 
     if (alreadyLiked) {
@@ -701,25 +682,7 @@ export default function NewsPage() {
                 <ScoutNoteCard item={hero} />
 
                 <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <button
-                    disabled={!canInteract}
-                    onClick={e => {
-                      e.stopPropagation()
-                      toggleLike(hero.id)
-                    }}
-                    style={{
-                      border: `1px solid ${likedSet.has(hero.id) ? '#ffc857' : 'var(--text-6)'}`,
-                      background: likedSet.has(hero.id) ? 'linear-gradient(140deg, rgba(255,200,87,.22), rgba(35,25,8,.95))' : 'var(--surface)',
-                      color: likedSet.has(hero.id) ? '#ffe7b1' : 'var(--text-2)',
-                      borderRadius: 9,
-                      padding: '7px 11px',
-                      cursor: canInteract ? 'pointer' : 'not-allowed',
-                      fontWeight: 700,
-                      letterSpacing: '.3px',
-                    }}
-                  >
-                    {likedSet.has(hero.id) ? 'STARRED' : 'STAR'} ({likesByNews[hero.id] || 0})
-                  </button>
+                  <LikeButton liked={likedSet.has(hero.id)} count={likesByNews[hero.id] || 0} onToggle={() => toggleLike(hero.id)} size={16} />
                   <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Yorum: {(commentsByNews[hero.id] || []).length}</span>
                 </div>
 
@@ -740,7 +703,6 @@ export default function NewsPage() {
                 liked={likedSet.has(item.id)}
                 comments={commentsByNews[item.id] || []}
                 onLike={toggleLike}
-                canInteract={canInteract}
                 onOpenDetail={openStoryDetail}
                 onReport={reportStoryIssue}
                 isForYou={item.isForYou}

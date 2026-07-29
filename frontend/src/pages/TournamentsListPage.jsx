@@ -6,6 +6,7 @@ import { normalizeGameId } from '../utils/gameUtils'
 import { clickableProps } from '../utils/a11y'
 import InitialsImage from '../components/InitialsImage'
 import GameLogo, { GAME_ICON_PATHS } from '../components/GameLogo'
+import { distinctiveTournamentName, isGenericStageName } from '../utils/tournamentDisplay'
 
 // Kanonik oyuna ait TÜM game_id'ler (mükerrer kayıtlar dahil: CS2 2/8, LoL 3/9).
 function resolveGameIds(activeGame, games) {
@@ -295,7 +296,7 @@ export default function TournamentsListPage() {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                   <div style={{ fontSize: 14, fontWeight: 800, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {item.name || 'Tournament'}
+                    {distinctiveTournamentName(item.name, item.region)}
                   </div>
                   {tierKey && (
                     <span style={{ fontSize: 10, fontWeight: 900, color: 'var(--bg)', background: tierColor, borderRadius: 5, padding: '2px 6px', flexShrink: 0, letterSpacing: '.3px' }}>
@@ -308,7 +309,7 @@ export default function TournamentsListPage() {
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: gm.color, fontWeight: 700 }}>
                     {GAME_ICON_PATHS[gm.id] ? <GameLogo game={gm.id} size={13} color={gm.color} /> : <span style={{ width: 6, height: 6, borderRadius: '50%', background: gm.color }} />} {gm.label}
                   </span>
-                  {item.region && <span>· {item.region}</span>}
+                  {item.region && !isGenericStageName(item.name) && <span>· {item.region}</span>}
                 </div>
 
                 {logos.length > 0 && (

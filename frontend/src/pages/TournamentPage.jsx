@@ -30,6 +30,7 @@ import {
 import { FEXT } from '../theme'
 import Mascot from '../components/Mascot'
 import SeoHead from '../components/SeoHead'
+import { distinctiveTournamentName, isGenericStageName } from '../utils/tournamentDisplay'
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 
@@ -1964,7 +1965,7 @@ export default function TournamentPage() {
   const gLabel = GAMES.find(g => g.id === normalizeGameId(tournament?.game?.slug ?? gName))?.label || gName || 'Esports'
   const gc    = gameColor(gName)
   const tier  = getTierMeta(tournament?.tier)
-  const tournamentDisplayName = cleanName(tournament?.name, 'Tournament')
+  const tournamentDisplayName = distinctiveTournamentName(cleanName(tournament?.name, 'Tournament'), tournament?.region)
   const isTR  = isTurkishTeam(tournament?.name ?? '') || tournament?.region === 'TR'
   const liquipediaMeta = tournament?.extra_metadata?.liquipedia || null
   const liquipediaLocation = liquipediaMeta?.location || null
@@ -2095,10 +2096,10 @@ export default function TournamentPage() {
               }}>{tier.label}</span>
             )}
 
-            {tournament.region && (
+            {tournament.region && !isGenericStageName(tournament?.name) && (
               <span style={{
                 padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700,
-                background: 'rgba(255,255,255,.06)', border: '1px solid var(--text-6)', color: 'var(--text-2)',
+                background: 'var(--hover)', border: '1px solid var(--line-2)', color: 'var(--text-2)',
                 display: 'inline-flex', alignItems: 'center', gap: 5,
               }}>
                 <MapPin size={11} /> {String(tournament.region).toUpperCase()}
@@ -2151,7 +2152,7 @@ export default function TournamentPage() {
                 {tournament.end_at && ` — ${fmtDate(tournament.end_at)}`}
               </span>
             )}
-            {tournament.region && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><MapPin size={12} /> {tournament.region}</span>}
+            {tournament.region && !isGenericStageName(tournament?.name) && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><MapPin size={12} /> {tournament.region}</span>}
             {tournament.prizepool && (
               <span style={{ color: '#FFD700', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                 <Wallet size={12} /> {tournament.prizepool}

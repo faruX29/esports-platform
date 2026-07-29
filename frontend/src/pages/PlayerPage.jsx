@@ -253,7 +253,7 @@ function PlayerHeroAvatar({ src, name, size = 120, isTR }) {
           }}
         />
         {isTR && (
-          <span style={{ position: 'absolute', bottom: 2, right: 2, fontSize: 18 }}>🇹🇷</span>
+          <span style={{ position: 'absolute', bottom: -3, right: -3, fontSize: 13, lineHeight: 1, width: 24, height: 24, borderRadius: '50%', background: 'var(--surface)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,.3)' }}>🇹🇷</span>
         )}
       </div>
     )
@@ -1108,7 +1108,8 @@ export default function PlayerPage() {
                   color: badge.color, boxShadow: `0 0 8px ${badge.border}55`,
                 }}>{badge.label}</span>
               )}
-              {flag && (
+              {/* Türk oyuncuda TurkishBadge zaten var → generic bayrak rozetini tekrar gösterme */}
+              {flag && !isTR && (
                 <span style={{ padding: '4px 10px', borderRadius: 8, fontSize: 12, fontWeight: 700, background: 'var(--surface-2)', border: '1px solid var(--line)', color: 'var(--text-3)' }}>
                   {flag} {player.nationality}
                 </span>

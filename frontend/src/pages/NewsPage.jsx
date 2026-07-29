@@ -66,7 +66,7 @@ function getCommentContent(comment) {
 }
 
 function fmtDate(iso) {
-  if (!iso) return 'N/A'
+  if (!iso) return '—'
   return new Date(iso).toLocaleDateString('tr-TR', {
     day: '2-digit',
     month: 'short',
@@ -162,7 +162,7 @@ function buildScoutRows(item) {
   if (source.mapCount || source.mapTempo) {
     rows.push({
       label: 'Harita Profili',
-      value: `${source.mapCount || '?'} map · ${source.mapTempo || 'tempo bilinmiyor'}`,
+      value: `${source.mapCount || '?'} harita · ${source.mapTempo || 'tempo bilinmiyor'}`,
     })
   }
 

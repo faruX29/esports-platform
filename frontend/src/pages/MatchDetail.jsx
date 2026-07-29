@@ -240,7 +240,7 @@ function buildLivePlayerBoard(matchRaw, rosters, teamAId, teamBId) {
       acc[key] = {
         player_id: pid,
         team_id: teamId,
-        nickname: source.nickname || source.name || source?.player?.name || source?.player?.slug || 'Unknown',
+        nickname: source.nickname || source.name || source?.player?.name || source?.player?.slug || '—',
         kills: 0,
         deaths: 0,
         assists: 0,
@@ -277,7 +277,7 @@ function buildLivePlayerBoard(matchRaw, rosters, teamAId, teamBId) {
     return (roster || []).map(p => ({
       player_id: p.id,
       team_id: teamId,
-      nickname: p.nickname || 'Unknown',
+      nickname: p.nickname || '—',
       kills: 0,
       deaths: 0,
       assists: 0,
@@ -1325,6 +1325,18 @@ export default function MatchDetail() {
   const bName = match?.team_b?.name || '?'
   const extraMetadata = match?.extra_metadata || match?.raw_data?.extra_metadata || null
 
+  // Skoru VE gerçek ismi olmayan haritaları "Harita Skorları" altında gösterme
+  // (LoL/free-tier'da yalnızca süre gelir → boş "—" satırları profesyonel durmaz).
+  const scoredMaps = useMemo(() => (maps || []).filter(m =>
+    m.team_a_score != null || m.team_b_score != null ||
+    (m.map_name && String(m.map_name).trim() && String(m.map_name).toLowerCase() !== 'unknown')
+  ), [maps])
+
+  // Harita Kazanma Oranları: yalnızca gerçek isimli haritalar (Unknown gizlensin)
+  const namedMapStats = useMemo(() => (mapStats || []).filter(m =>
+    m.map && String(m.map).trim() && String(m.map).toLowerCase() !== 'unknown'
+  ), [mapStats])
+
   const scoutMvp = useMemo(
     () => pickScoutMvpCandidate(liveBoard, aName, bName),
     [liveBoard, aName, bName],
@@ -1443,7 +1455,7 @@ export default function MatchDetail() {
 
             {/* Team A */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-              <div {...clickableProps(() => navigate(`/team/${aId}`), { label: `${aName} takım sayfası` })} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, cursor: 'pointer', opacity: isFin && bWon ? 0.45 : 1, transition: 'opacity .2s' }}>
+              <div {...clickableProps(() => navigate(`/team/${aId}`), { label: `${aName} takım sayfası` })} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, cursor: 'pointer', opacity: isFin && bWon ? 0.62 : 1, transition: 'opacity .2s' }}>
                 <InitialsImage
                   src={aLogo}
                   name={aName}
@@ -1451,7 +1463,7 @@ export default function MatchDetail() {
                   borderRadius={12}
                   imgStyle={{ objectFit: 'contain', filter: isFin && bWon ? 'grayscale(80%)' : 'none' }}
                 />
-                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (aWon ? '#4CAF50' : 'var(--text-4)') : '#fff' }}>{aName}{isTurkishTeam(aName) && ' 🇹🇷'}</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (aWon ? '#4CAF50' : 'var(--text-3)') : 'var(--text-1)' }}>{aName}{isTurkishTeam(aName) && ' 🇹🇷'}</div>
               </div>
               <FavButton teamId={aId} active={favA} onToggle={toggleTeamFollow} />
             </div>
@@ -1487,7 +1499,7 @@ export default function MatchDetail() {
 
             {/* Team B */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
-              <div {...clickableProps(() => navigate(`/team/${bId}`), { label: `${bName} takım sayfası` })} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6, cursor: 'pointer', opacity: isFin && aWon ? 0.45 : 1, transition: 'opacity .2s' }}>
+              <div {...clickableProps(() => navigate(`/team/${bId}`), { label: `${bName} takım sayfası` })} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6, cursor: 'pointer', opacity: isFin && aWon ? 0.62 : 1, transition: 'opacity .2s' }}>
                 <InitialsImage
                   src={bLogo}
                   name={bName}
@@ -1495,7 +1507,7 @@ export default function MatchDetail() {
                   borderRadius={12}
                   imgStyle={{ objectFit: 'contain', filter: isFin && aWon ? 'grayscale(80%)' : 'none' }}
                 />
-                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (bWon ? '#4CAF50' : 'var(--text-4)') : '#fff' }}>{isTurkishTeam(bName) && '🇹🇷 '}{bName}</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (bWon ? '#4CAF50' : 'var(--text-3)') : 'var(--text-1)' }}>{isTurkishTeam(bName) && '🇹🇷 '}{bName}</div>
               </div>
               <FavButton teamId={bId} active={favB} onToggle={toggleTeamFollow} />
             </div>
@@ -1544,32 +1556,32 @@ export default function MatchDetail() {
             <div style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--surface-2)', padding: 18 }}>
               <ST Icon={MapIcon} label="Harita Skorları" />
               {loadingDetails ? <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>{[1,2,3].map(i => <Sk key={i} h="44px" r="10px" />)}</div>
-                : maps.length === 0 ? <StatsCoverageNotice compact message="Bu maç için harita bazlı skorlar ve tur detayları yalnızca Tier S/A kapsamındaki maçlarda mevcut." />
+                : scoredMaps.length === 0 ? <StatsCoverageNotice compact message="Bu maç için harita bazlı skorlar ve tur detayları yalnızca Tier S/A kapsamındaki maçlarda mevcut." />
 
                 : (
                   <div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 10, marginBottom: 6, padding: '0 14px' }}>
-                      <div style={{ textAlign: 'right', fontSize: 9, fontWeight: 700, color: 'var(--line)' }}>{aName}</div>
+                      <div style={{ textAlign: 'right', fontSize: 9, fontWeight: 700, color: 'var(--text-4)' }}>{aName}</div>
                       <div style={{ minWidth: 80 }} />
-                      <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--line)' }}>{bName}</div>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-4)' }}>{bName}</div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                      {maps.map((map, i) => <MapRow key={i} map={map} index={i} teamAId={aId} />)}
+                      {scoredMaps.map((map, i) => <MapRow key={i} map={map} index={i} teamAId={aId} />)}
                     </div>
                     <div style={{ marginTop: 8, padding: '8px 14px', borderRadius: 9, background: 'var(--bg)', border: '1px solid var(--surface-2)', display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 10 }}>
-                      <div style={{ textAlign: 'right', fontSize: 20, fontWeight: 900, color: aWon ? '#4CAF50' : 'var(--line)', fontVariantNumeric: 'tabular-nums' }}>{dispScores.team_a_score ?? '—'}</div>
-                      <div style={{ textAlign: 'center', fontSize: 10, color: 'var(--line)', minWidth: 50 }}>TOPLAM</div>
-                      <div style={{ fontSize: 20, fontWeight: 900, color: bWon ? '#4CAF50' : 'var(--line)', fontVariantNumeric: 'tabular-nums' }}>{dispScores.team_b_score ?? '—'}</div>
+                      <div style={{ textAlign: 'right', fontSize: 20, fontWeight: 900, color: aWon ? '#4CAF50' : 'var(--text-2)', fontVariantNumeric: 'tabular-nums' }}>{dispScores.team_a_score ?? '—'}</div>
+                      <div style={{ textAlign: 'center', fontSize: 10, color: 'var(--text-4)', minWidth: 50 }}>TOPLAM</div>
+                      <div style={{ fontSize: 20, fontWeight: 900, color: bWon ? '#4CAF50' : 'var(--text-2)', fontVariantNumeric: 'tabular-nums' }}>{dispScores.team_b_score ?? '—'}</div>
                     </div>
-                    {mapStats.length > 0 && (
+                    {namedMapStats.length > 0 && (
                       <div style={{ marginTop: 12, background: 'var(--bg)', borderRadius: 10, border: '1px solid var(--surface-2)', padding: 10 }}>
                         <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-5)', marginBottom: 8, textTransform: 'uppercase' }}>Harita Kazanma Oranları</div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {mapStats.map(m => (
+                          {namedMapStats.map(m => (
                             <div key={m.map} style={{ background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--surface-2)', padding: '7px 8px' }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 10 }}>
-                                <span style={{ color: '#9ca3af', fontWeight: 700 }}>{m.map}</span>
-                                <span style={{ color: 'var(--text-5)' }}>{m.total} map</span>
+                                <span style={{ color: 'var(--text-2)', fontWeight: 700 }}>{m.map}</span>
+                                <span style={{ color: 'var(--text-5)' }}>{m.total} harita</span>
                               </div>
                               <div style={{ height: 6, borderRadius: 4, overflow: 'hidden', display: 'flex' }}>
                                 <div style={{ width: `${m.teamAWinRate}%`, background: '#4ade80' }} />
@@ -1609,7 +1621,7 @@ export default function MatchDetail() {
             <div style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--surface-2)', padding: 18 }}>
               <ST Icon={Swords} label="Rekabet Geçmişi (H2H)" />
               {loadingDetails ? <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>{[1,2,3].map(i => <Sk key={i} h="36px" r="8px" />)}</div>
-                : h2h.total === 0 ? <div style={{ textAlign: 'center', padding: 18, color: 'var(--line)', fontSize: 12 }}>İlk karşılaşmaları</div>
+                : h2h.total === 0 ? <div style={{ textAlign: 'center', padding: 18, color: 'var(--text-4)', fontSize: 12 }}>İlk karşılaşmaları</div>
                 : (
                   <div>
                     <div style={{ display: 'flex', height: 7, borderRadius: 4, overflow: 'hidden', marginBottom: 8 }}>
@@ -1690,7 +1702,7 @@ export default function MatchDetail() {
                 <ST icon="" label={aName + ' Kadro'} />
               </div>
               {loadingDetails ? <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{[1,2,3,4,5].map(i => <Sk key={i} h="50px" r="10px" />)}</div>
-                : players.teamA.length === 0 ? <div style={{ textAlign: 'center', padding: 18, color: 'var(--line)', fontSize: 12 }}>Kadro verisi yok</div>
+                : players.teamA.length === 0 ? <div style={{ textAlign: 'center', padding: 18, color: 'var(--text-4)', fontSize: 12 }}>Kadro verisi yok</div>
                 : <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>{players.teamA.map((p, i) => <PlayerCard key={i} player={p} side="left" />)}</div>
               }
             </div>
@@ -1702,7 +1714,7 @@ export default function MatchDetail() {
                 <ST icon="" label={bName + ' Kadro'} />
               </div>
               {loadingDetails ? <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{[1,2,3,4,5].map(i => <Sk key={i} h="50px" r="10px" />)}</div>
-                : players.teamB.length === 0 ? <div style={{ textAlign: 'center', padding: 18, color: 'var(--line)', fontSize: 12 }}>Kadro verisi yok</div>
+                : players.teamB.length === 0 ? <div style={{ textAlign: 'center', padding: 18, color: 'var(--text-4)', fontSize: 12 }}>Kadro verisi yok</div>
                 : <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>{players.teamB.map((p, i) => <PlayerCard key={i} player={p} side="right" />)}</div>
               }
             </div>
@@ -1772,6 +1784,12 @@ export default function MatchDetail() {
 
 function LiveScoreboard({ teamAName, teamBName, teamABoard, teamBBoard, isLive }) {
   if (!isLive) return null
+
+  // Free-tier canlı maçlarda KDA verisi gelmiyor → tüm satırlar 0/0/0 oluyordu.
+  // Gerçek veri (en az bir oyuncuda K/D/A > 0) yoksa tabloyu HİÇ gösterme.
+  const hasData = [...(teamABoard || []), ...(teamBBoard || [])]
+    .some(p => (Number(p.kills) || 0) + (Number(p.deaths) || 0) + (Number(p.assists) || 0) > 0)
+  if (!hasData) return null
 
   const table = (title, rows, accent) => (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--surface-2)', borderRadius: 12, padding: 10 }}>

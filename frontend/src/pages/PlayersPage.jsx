@@ -149,7 +149,7 @@ function CompareCard({ player, onClear }) {
             style={{ border: '1px solid var(--text-6)' }}
           />
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.nickname || 'Unknown'}</div>
+            <div style={{ fontWeight: 800, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.nickname || '—'}</div>
             <div style={{ color: 'var(--text-3)', fontSize: 11 }}>{player.team?.name || 'Free Agent'}</div>
           </div>
         </div>
@@ -752,7 +752,7 @@ export default function PlayersPage() {
                     style={{ border: '1px solid var(--text-6)' }}
                   />
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.nickname || 'Unknown'}</div>
+                    <div style={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.nickname || '—'}</div>
                     {showRoleBadge && (
                     <div style={{ display: 'inline-flex', alignItems: 'center', marginTop: 3, padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700, background: roleBadge.bg, color: roleBadge.color, border: `1px solid ${roleBadge.border}` }}>
                       {roleBadge.label}

@@ -580,7 +580,7 @@ function Matches() {
 
       {/* Toolbar */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 18, justifyContent: 'center', flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ position: 'relative', maxWidth: 340, flex: 1 }}>
+        <div style={{ position: 'relative', maxWidth: 440, flex: 1, minWidth: 240 }}>
           <Search size={15} color="var(--text-4)" style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
           <input
             type="text" placeholder="Takım veya turnuva ara..."

@@ -919,19 +919,19 @@ const LOWER_ROUND_ORDER = [
   'Lower Round 1', 'Lower Round 2', 'Lower Semifinals', 'Lower Finals',
 ]
 const ROUND_LABELS = {
-  'Round of 16':     { Icon: Swords, color: 'var(--text-4)', short: 'R16'    },
-  'Upper Round 1':   { Icon: Swords, color: '#6b7280', short: 'UBR1'   },
-  'Upper Round 2':   { Icon: Swords, color: '#6b7280', short: 'UBR2'   },
-  'Upper Round 3':   { Icon: Swords, color: '#6b7280', short: 'UBR3'   },
-  'Upper Round 4':   { Icon: Swords, color: '#6b7280', short: 'UBR4'   },
-  'Quarter-finals':  { Icon: Swords, color: '#818cf8', short: 'QF'     },
-  'Semi-finals':     { Icon: Flame,  color: '#FF8C00', short: 'SF'     },
-  'Upper Finals':    { Icon: Trophy, color: '#f59e0b', short: 'UBF'    },
-  'Grand final':     { Icon: Crown,  color: '#FFD700', short: 'GF'     },
-  'Lower Round 1':    { Icon: Route, color: 'var(--text-3)', short: 'LB R1'  },
-  'Lower Round 2':    { Icon: Route, color: 'var(--text-3)', short: 'LB R2'  },
-  'Lower Semifinals': { Icon: Swords, color: '#60a5fa', short: 'LB SF'  },
-  'Lower Finals':     { Icon: Flag,  color: '#38bdf8', short: 'LB F'   },
+  'Round of 16':     { Icon: Swords, color: 'var(--text-4)', short: 'R16',   tr: 'Son 16'            },
+  'Upper Round 1':   { Icon: Swords, color: '#6b7280', short: 'UBR1',   tr: 'Üst Ayak Tur 1'    },
+  'Upper Round 2':   { Icon: Swords, color: '#6b7280', short: 'UBR2',   tr: 'Üst Ayak Tur 2'    },
+  'Upper Round 3':   { Icon: Swords, color: '#6b7280', short: 'UBR3',   tr: 'Üst Ayak Tur 3'    },
+  'Upper Round 4':   { Icon: Swords, color: '#6b7280', short: 'UBR4',   tr: 'Üst Ayak Tur 4'    },
+  'Quarter-finals':  { Icon: Swords, color: '#818cf8', short: 'QF',     tr: 'Çeyrek Final'      },
+  'Semi-finals':     { Icon: Flame,  color: '#FF8C00', short: 'SF',     tr: 'Yarı Final'        },
+  'Upper Finals':    { Icon: Trophy, color: '#f59e0b', short: 'UBF',    tr: 'Üst Ayak Finali'   },
+  'Grand final':     { Icon: Crown,  color: '#FFD700', short: 'GF',     tr: 'Büyük Final'       },
+  'Lower Round 1':    { Icon: Route, color: 'var(--text-3)', short: 'LB R1', tr: 'Alt Ayak Tur 1'    },
+  'Lower Round 2':    { Icon: Route, color: 'var(--text-3)', short: 'LB R2', tr: 'Alt Ayak Tur 2'    },
+  'Lower Semifinals': { Icon: Swords, color: '#60a5fa', short: 'LB SF', tr: 'Alt Ayak Yarı Final' },
+  'Lower Finals':     { Icon: Flag,  color: '#38bdf8', short: 'LB F',   tr: 'Alt Ayak Finali'   },
 }
 
 // Expected match count per stage for virtual TBD injection.
@@ -1537,7 +1537,7 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
                   left: 0, right: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                   padding: '5px 12px', borderRadius: 20,
-                  background: `linear-gradient(135deg, ${meta.color}1f, rgba(9,9,9,.9))`,
+                  background: `linear-gradient(135deg, ${meta.color}1f, var(--surface))`,
                   border: `1px solid ${meta.color}45`,
                   boxShadow: `0 5px 18px ${meta.color}22`,
                   height: BRACKET_HEADER_H - 10,
@@ -1546,7 +1546,7 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
                   <span style={{
                     fontSize: 10, fontWeight: 800,
                     color: meta.color, letterSpacing: '1px', textTransform: 'uppercase',
-                  }}>{col.rk}</span>
+                  }}>{meta.tr || col.rk}</span>
                   <span style={{ fontSize: 9, color: 'var(--text-5)' }}>({col.cards.length})</span>
                 </div>
 

@@ -98,7 +98,7 @@ async function checkTable(tableName) {
 }
 
 function fmtDate(iso) {
-  if (!iso) return 'N/A'
+  if (!iso) return '—'
   return new Date(iso).toLocaleString('tr-TR', {
     day: '2-digit',
     month: 'short',

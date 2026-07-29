@@ -2315,7 +2315,7 @@ export default function Dashboard() {
                   objectFit='cover'
                   style={{ border: '1px solid var(--track)' }}
                 />
-                <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nickname || 'Unknown'}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nickname || '—'}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                 <InitialsImage

@@ -38,13 +38,15 @@ SYSTEM_PROMPT = (
     "ÖZGÜNLÜK (EN ÖNEMLİ KURAL):\n"
     "- Her haber birbirinden farklı olmalı. ASLA kalıp/şablon cümle yapısı kullanma.\n"
     "- Habere EN dikkat çekici gerçekle başla: sürpriz sonuç, tahmin farkı (örn. "
-    "'model %95 favori gösteriyordu'), skor, öne çıkan oyuncu ya da turnuva bağlamı. "
+    "'Fextopus %95 favori gösteriyordu'), skor, öne çıkan oyuncu ya da turnuva bağlamı. "
     "Her haberi aynı 'X-Tier ... turnuvasında/çerçevesinde' kalıbıyla AÇMA.\n"
     "- Şu dolgu ifadelerini KULLANMA: 'dengeli tempo', 'dar seri', 'geçit vermeyerek', "
     "'sahnedeydi', 'heyecan dolu mücadele', 'nefes kesen', 'zafere ulaştı', "
     "'büyük bir mücadeleye sahne oldu'.\n"
     "- Veri sınırlıysa KISA yaz (2 kısa paragraf). Boş/klişe cümlelerle DOLDURMA.\n\n"
     "İÇERİK KURALLARI:\n"
+    "- 'Fextopus' bizim AI tahmin motorumuzun adıdır; tahmin/favoriden bahsederken "
+    "'model' DEĞİL 'Fextopus' de (örn. 'Fextopus favorisi', 'Fextopus tahmini').\n"
     "- Yalnızca fact sheet'teki verileri kullan; oyuncu/istatistik/skor UYDURMA.\n"
     "- Espor jargonuna hakimsin (ACS, clutch, eco, veto, opening duel) ama yalnızca "
     "fact sheet destekliyorsa kullan.\n"
@@ -69,7 +71,9 @@ PREVIEW_SYSTEM_PROMPT = (
     "- Veri sınırlıysa KISA yaz (2 paragraf); klişeyle DOLDURMA.\n\n"
     "İÇERİK KURALLARI:\n"
     "- Maç henüz OYNANMADI; sonuç/skor uydurma. Form ve favori analizi yaz.\n"
-    "- Model favorisi verildiyse 'kağıt üstünde favori' tonuyla değin; kesin sonuç verme.\n"
+    "- 'Fextopus' bizim AI tahmin motorumuzun adıdır; tahmin/favoriden bahsederken "
+    "'model' DEĞİL 'Fextopus' de (örn. 'Fextopus favorisi', 'Fextopus tahmini').\n"
+    "- Fextopus favorisi verildiyse 'kağıt üstünde favori' tonuyla değin; kesin sonuç verme.\n"
     "- Form verisi (son W/L) verildiyse habere doğal işle; UYDURMA yapma.\n"
     "- Başlık (title) en fazla 12 kelime, özet (summary) 2-3 cümle.\n"
     "- Gövde 2-3 paragraf string'i içeren 'paragraphs' dizisi olsun.\n"
@@ -190,9 +194,9 @@ class FactSheetBuilder:
         pred_b = match.get("prediction_team_b")
         if pred_a is not None and pred_b is not None:
             fav = a_name if float(pred_a) >= float(pred_b) else b_name
-            lines.append(f"Model favorisi: {fav} (tahmin {float(pred_a):.2f} / {float(pred_b):.2f})")
+            lines.append(f"Fextopus favorisi: {fav} (tahmin {float(pred_a):.2f} / {float(pred_b):.2f})")
         else:
-            lines.append("Model tahmini: henüz yok (dengeli beklenti)")
+            lines.append("Fextopus tahmini: henüz yok (dengeli beklenti)")
         return "\n".join(lines)
 
     @staticmethod
@@ -403,7 +407,7 @@ class FactSheetBuilder:
             lines.append(f"Turnuva içi kayıt: {rec_line}")
         if pred_a is not None and pred_b is not None:
             lines.append(
-                f"Model tahmini: {a_name}={float(pred_a):.2f} / {b_name}={float(pred_b):.2f}"
+                f"Fextopus tahmini: {a_name}={float(pred_a):.2f} / {b_name}={float(pred_b):.2f}"
             )
         if upset:
             lines.append(

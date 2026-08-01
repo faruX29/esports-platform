@@ -225,12 +225,13 @@ export default function TournamentsListPage() {
             style={{
               border: '1px solid transparent',
               background: showAllTiers ? 'transparent' : 'linear-gradient(135deg, rgba(223,72,136,.24), rgba(106,41,127,.2))',
-              color: showAllTiers ? 'var(--text-2)' : '#f0d6f5',
+              color: showAllTiers ? 'var(--text-2)' : 'var(--accent-fg)',
               borderRadius: 999,
               fontSize: 11,
               fontWeight: 800,
               letterSpacing: '.2px',
-              padding: '7px 12px',
+              padding: '9px 14px',
+              minHeight: 38,
               cursor: 'pointer',
               boxShadow: showAllTiers ? 'none' : 'inset 0 0 0 1px rgba(194,92,208,.35), 0 0 14px rgba(194,92,208,.2)',
             }}
@@ -242,12 +243,13 @@ export default function TournamentsListPage() {
             style={{
               border: '1px solid transparent',
               background: showAllTiers ? 'linear-gradient(135deg, rgba(223,72,136,.24), rgba(106,41,127,.2))' : 'transparent',
-              color: showAllTiers ? '#f0d6f5' : 'var(--text-2)',
+              color: showAllTiers ? 'var(--accent-fg)' : 'var(--text-2)',
               borderRadius: 999,
               fontSize: 11,
               fontWeight: 800,
               letterSpacing: '.2px',
-              padding: '7px 12px',
+              padding: '9px 14px',
+              minHeight: 38,
               cursor: 'pointer',
               boxShadow: showAllTiers ? 'inset 0 0 0 1px rgba(100,220,120,.34), 0 0 14px rgba(100,200,120,.18)' : 'none',
             }}

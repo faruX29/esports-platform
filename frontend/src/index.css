@@ -144,6 +144,16 @@ textarea:focus-visible,
   border-radius: 4px;
 }
 
+/* Yatay kaydırılabilir şeritlerde (oyun filtresi) mobilde sağ kenara "devamı var"
+   ipucu: hafif fade maskesi. Sadece dar ekranda uygulanır → masaüstünde son öğe
+   kırpılmaz. */
+@media (max-width: 640px) {
+  .scroll-fade-x {
+    -webkit-mask-image: linear-gradient(to right, #000 88%, transparent);
+            mask-image: linear-gradient(to right, #000 88%, transparent);
+  }
+}
+
 /* "İçeriğe geç" atlama linki — klavyeyle Tab'lanınca görünür, aksi halde gizli.
    Ekran okuyucu/klavye kullanıcısı navigasyonu atlayıp doğrudan içeriğe gider. */
 .skip-link {

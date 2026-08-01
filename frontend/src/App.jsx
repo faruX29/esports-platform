@@ -394,7 +394,7 @@ function GameSelectorBar() {
   if (!showOn.includes(location.pathname)) return null
 
   return (
-    <div style={{
+    <div className="scroll-fade-x" style={{
       background: 'var(--bg)', borderBottom: '1px solid var(--line)',
       overflowX: 'auto', scrollbarWidth: 'none',
     }}>

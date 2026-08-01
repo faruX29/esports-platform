@@ -730,7 +730,7 @@ const QuickAccessBar = memo(function QuickAccessBar({ entries, loading, onOpen }
 
   return (
     <div style={{ marginBottom: 12 }}>
-      <div style={{ fontSize: 10, fontWeight: 800, color: '#8f8f8f', letterSpacing: '.9px', textTransform: 'uppercase', marginBottom: 8 }}>
+      <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '.9px', textTransform: 'uppercase', marginBottom: 8 }}>
         Hızlı Erişim
       </div>
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', overflowX: 'auto', paddingBottom: 3 }}>
@@ -1051,17 +1051,17 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
 
       {/* ── Stream linki ── */}
       {m.stream_url && (
-        <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,70,85,.15)' }}>
+        <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,70,85,.15)' }}>
           <a
             href={m.stream_url}
             target="_blank"
             rel="noopener noreferrer"
             onClick={e => e.stopPropagation()}
             style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-              padding: '5px 0', borderRadius: 7,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              padding: '11px 0', borderRadius: 8, minHeight: 40,
               background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.3)',
-              color: '#c4b5fd', fontSize: 10, fontWeight: 700,
+              color: 'var(--ai)', fontSize: 11.5, fontWeight: 800,
               textDecoration: 'none', transition: 'background .15s',
             }}
             onMouseEnter={e => e.currentTarget.style.background = 'rgba(167,139,250,.22)'}
@@ -2167,11 +2167,12 @@ export default function Dashboard() {
             borderRadius: 999,
             border: '1px solid rgba(194,92,208,.4)',
             background: 'rgba(194,92,208,.1)',
-            color: '#f0d6f5',
+            color: 'var(--accent-fg)',
             fontSize: 11,
             fontWeight: 700,
             letterSpacing: '.2px',
-            padding: '6px 12px',
+            padding: '9px 14px',
+            minHeight: 38,
             cursor: 'pointer',
             whiteSpace: 'nowrap',
           }}

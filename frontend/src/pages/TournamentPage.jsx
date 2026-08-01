@@ -795,7 +795,15 @@ function StandingsTable({ matches, navigate }) {
         // en son 5 maç, soldan sağa eskiden yeniye
         form: t.history.sort((a, b) => a.t - b.t).slice(-5).map(h => h.result),
       }))
-      .sort((a, b) => b.w - a.w || a.l - b.l)
+      // Sıralama: (1) maç galibiyeti ↓ (2) map farkı ↓ [espor standart tie-break —
+      // eşit galibiyette map farkı fazla olan önde] (3) toplam map galibiyeti ↓
+      // (4) maç mağlubiyeti ↑ (round-robin'de herkes aynı sayıda oynamayabilir).
+      .sort((a, b) =>
+        b.w - a.w ||
+        (b.mw - b.ml) - (a.mw - a.ml) ||
+        b.mw - a.mw ||
+        a.l - b.l
+      )
   }, [matches])
 
   if (table.length < 2) return null

@@ -1485,9 +1485,9 @@ export default function MatchDetail() {
                 {predUncertain ? (
                   <div style={{ marginTop: 3, fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textAlign: 'center' }}>Fextopus başa baş görüyor</div>
                 ) : (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3, fontSize: 10, fontWeight: 800 }}>
-                    <span style={{ color: '#4ade80' }}>{aName}: {pctA}%</span>
-                    <span style={{ color: '#60a5fa' }}>{pctB}% :{bName}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 3, fontSize: 10, fontWeight: 800 }}>
+                    <span style={{ color: '#4ade80', minWidth: 0, flex: '0 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{aName} %{pctA}</span>
+                    <span style={{ color: '#60a5fa', minWidth: 0, flex: '0 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>%{pctB} {bName}</span>
                   </div>
                 )}
                 <div style={{ marginTop: 2, fontSize: 9, color: 'var(--text-6)' }}>Güven Skoru: %{aiWin.confidence} · örneklem: {aiWin.samples}</div>
@@ -1629,16 +1629,16 @@ export default function MatchDetail() {
                       {h2h.draws > 0 && <div style={{ flex: h2h.draws, background: 'var(--text-4)' }} />}
                       <div style={{ flex: h2h.teamBWins, background: '#FF4655', minWidth: h2h.teamBWins > 0 ? 4 : 0 }} />
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, fontSize: 10 }}>
-                      <span style={{ color: h2h.teamAWins >= h2h.teamBWins ? '#4CAF50' : 'var(--text-5)', fontWeight: 700 }}>{aName} {h2h.teamAWins}G</span>
-                      <span style={{ color: h2h.teamBWins > h2h.teamAWins ? '#4CAF50' : 'var(--text-5)', fontWeight: 700 }}>{h2h.teamBWins}G {bName}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginBottom: 10, fontSize: 10 }}>
+                      <span style={{ color: h2h.teamAWins >= h2h.teamBWins ? '#4CAF50' : 'var(--text-5)', fontWeight: 700, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{aName} · {h2h.teamAWins}G</span>
+                      <span style={{ color: h2h.teamBWins > h2h.teamAWins ? '#4CAF50' : 'var(--text-5)', fontWeight: 700, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>{h2h.teamBWins}G · {bName}</span>
                     </div>
-                    <div style={{ marginBottom: 10, background: 'var(--bg)', border: '1px solid var(--surface-2)', borderRadius: 8, padding: '7px 9px', display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
-                      <span style={{ color: 'var(--text-4)' }}>Rekabet Skoru</span>
-                      <span style={{ color: 'var(--text-1)', fontWeight: 800 }}>{aName} {h2h.teamAWins} - {h2h.teamBWins} {bName}</span>
+                    <div style={{ marginBottom: 10, background: 'var(--bg)', border: '1px solid var(--surface-2)', borderRadius: 8, padding: '7px 9px', display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 10 }}>
+                      <span style={{ color: 'var(--text-4)', flexShrink: 0 }}>Rekabet Skoru</span>
+                      <span style={{ color: 'var(--text-1)', fontWeight: 800, minWidth: 0, textAlign: 'right' }}>{aName} {h2h.teamAWins} - {h2h.teamBWins} {bName}</span>
                     </div>
                     <div style={{ marginBottom: 10, background: 'var(--bg)', border: '1px solid var(--surface-2)', borderRadius: 8, padding: '7px 9px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <span style={{ color: 'var(--text-4)', fontSize: 10 }}>Son 5 Form</span>
+                      <span style={{ color: 'var(--text-4)', fontSize: 10 }}>Aralarındaki Form</span>
                       <div style={{ display: 'flex', gap: 6 }}>
                         {h2hRecentForm.map((badge, idx) => (
                           <span

@@ -25,7 +25,7 @@ import { GAMES }                                      from '../context/GameConte
 import {
   Swords, Flame, Trophy, Crown, Route, Flag, Gamepad2, Medal, CalendarDays,
   MapPin, Compass, Wallet, RefreshCw, CircleCheck, BarChart3, ClipboardList,
-  Radio, Star, TriangleAlert, Zap, Target,
+  Radio, Star, TriangleAlert, Zap, Target, Layers,
 } from 'lucide-react'
 import { FEXT } from '../theme'
 import Mascot from '../components/Mascot'
@@ -1771,6 +1771,7 @@ export default function TournamentPage() {
 
   const [tournament,  setTournament]  = useState(null)
   const [matches,     setMatches]     = useState([])
+  const [eventStages, setEventStages] = useState([])  // aynı serie'nin kardeş aşamaları (Group A / Playoffs …)
   const [topPerformers, setTopPerformers] = useState([])
   const [loading,     setLoading]     = useState(true)
   const [error,       setError]       = useState(null)
@@ -1860,6 +1861,39 @@ export default function TournamentPage() {
 
       setTournament(normalizedTournament)
       setMatches(normalizedMatches)
+
+      // ── Etkinlik aşamaları: aynı serie_id'yi paylaşan kardeş turnuvalar ──
+      // (PandaScore hiyerarşisi League→Serie→Tournament; "Group A/Playoffs" hepsi
+      // aynı serie'dedir → aralarında gezinme şeridi. serie_id maçlarda saklı.)
+      const serieId = (() => {
+        const counts = {}
+        for (const m of normalizedMatches) {
+          if (m.serie_id != null) counts[m.serie_id] = (counts[m.serie_id] || 0) + 1
+        }
+        let best = null, bestN = 0
+        for (const [sid, n] of Object.entries(counts)) if (n > bestN) { best = sid; bestN = n }
+        return best
+      })()
+      if (serieId != null) {
+        const { data: siblingRows } = await supabase
+          .from('matches')
+          .select('tournament_id, tournament:tournaments(id, name, begin_at)')
+          .eq('serie_id', serieId)
+          .not('tournament_id', 'is', null)
+        const byId = new Map()
+        for (const r of siblingRows || []) {
+          const t = r.tournament
+          if (t?.id != null && !byId.has(t.id)) byId.set(t.id, t)
+        }
+        const stages = [...byId.values()].sort((a, b) => {
+          const ta = a.begin_at ? new Date(a.begin_at).getTime() : Infinity
+          const tb = b.begin_at ? new Date(b.begin_at).getTime() : Infinity
+          return ta - tb || String(a.name || '').localeCompare(String(b.name || ''))
+        })
+        setEventStages(stages.length > 1 ? stages : [])
+      } else {
+        setEventStages([])
+      }
 
       // ── Top Performers: turnuvanın enriched maçlarından oyuncu KDA agregasyonu (hybrid v3) ──
       const finishedIds = normalizedMatches.filter(m => m.status === 'finished').map(m => m.id)
@@ -2185,6 +2219,40 @@ export default function TournamentPage() {
 
       {/* ══════════════ CONTENT ════════════════════════════════════ */}
       <div style={{ padding: '0 20px', animation: 'fadeUp .3s ease' }}>
+
+        {/* ── Etkinlik aşamaları arası gezinme (aynı serie: Group A / Play-In / Playoffs) ── */}
+        {eventStages.length > 1 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.8px', textTransform: 'uppercase', color: 'var(--text-4)', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Layers size={12} /> Bu Etkinliğin Aşamaları
+            </div>
+            <div className="scroll-fade-x" style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 3, scrollbarWidth: 'none' }}>
+              {eventStages.map(s => {
+                const isCurrent = String(s.id) === String(tournamentId)
+                const label = cleanName(s.name, s.name || 'Aşama')
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => { if (!isCurrent) navigate(`/tournament/${s.id}`) }}
+                    aria-current={isCurrent ? 'page' : undefined}
+                    style={{
+                      flexShrink: 0, cursor: isCurrent ? 'default' : 'pointer',
+                      padding: '7px 13px', minHeight: 36, borderRadius: 999,
+                      fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap',
+                      border: isCurrent ? `1px solid ${FEXT.accentBorder}` : '1px solid var(--line-2)',
+                      background: isCurrent ? FEXT.accentSoftBg : 'var(--surface)',
+                      color: isCurrent ? FEXT.accentText : 'var(--text-2)',
+                    }}
+                    onMouseEnter={e => { if (!isCurrent) e.currentTarget.style.borderColor = FEXT.accentBorder }}
+                    onMouseLeave={e => { if (!isCurrent) e.currentTarget.style.borderColor = 'var(--line-2)' }}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* ── DEV: Manual View Override (yalnızca TOURNAMENT_DEBUG açıkken) ─── */}
         {TOURNAMENT_DEBUG && <div style={{

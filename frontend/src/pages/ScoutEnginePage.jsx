@@ -336,7 +336,7 @@ export default function ScoutEnginePage() {
           <h1 style={{ margin: '16px 0 10px', fontSize: 38, lineHeight: 1.1, fontWeight: 900, maxWidth: 720 }}>
             Scout Engine — Ajanslar için Veri Odaklı Espor Scouting
           </h1>
-          <p style={{ margin: 0, fontSize: 16, lineHeight: 1.7, color: '#b6c4c1', maxWidth: 680 }}>
+          <p style={{ margin: 0, fontSize: 16, lineHeight: 1.7, color: 'var(--text-2)', maxWidth: 680 }}>
             Yüzlerce oyuncuyu manuel izlemeyi bırak. Hibrit veri hattımız harita bazlı KDA,
             Impact skoru ve form trendlerini otomatik analiz eder; sana sadece doğru
             transfer kararını sunar. Rakiplerinden önce yeteneği keşfet.

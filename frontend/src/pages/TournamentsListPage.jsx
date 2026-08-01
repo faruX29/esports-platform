@@ -256,14 +256,14 @@ export default function TournamentsListPage() {
           </button>
         </div>
         {!showAllTiers && hiddenCount > 0 && (
-          <span style={{ fontSize: 11, color: 'var(--text-4)' }}>
+          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
             {hiddenCount} alt-tier turnuva gizli
           </span>
         )}
       </div>
 
       {loading && <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Turnuvalar yükleniyor...</div>}
-      {!loading && error && <div style={{ fontSize: 13, color: '#ff7d91' }}>{error}</div>}
+      {!loading && error && <div style={{ fontSize: 13, color: 'var(--danger-fg)' }}>{error}</div>}
 
       {!loading && !error && visibleTournaments.length === 0 && (
         <div style={{ border: '1px dashed var(--line)', borderRadius: 12, padding: 16, color: 'var(--text-3)', fontSize: 13 }}>
@@ -299,7 +299,7 @@ export default function TournamentsListPage() {
                     {distinctiveTournamentName(item.name, item.region)}
                   </div>
                   {tierKey && (
-                    <span style={{ fontSize: 10, fontWeight: 900, color: 'var(--bg)', background: tierColor, borderRadius: 5, padding: '2px 6px', flexShrink: 0, letterSpacing: '.3px' }}>
+                    <span style={{ fontSize: 10, fontWeight: 900, color: '#0b0f19', background: tierColor, borderRadius: 5, padding: '2px 6px', flexShrink: 0, letterSpacing: '.3px' }}>
                       {tierKey}
                     </span>
                   )}

@@ -318,7 +318,7 @@ export default function RankingsPage() {
           <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14, padding: 14 }}>
             <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Lider</div>
             <div style={{ marginTop: 4, fontWeight: 800, fontSize: 18 }}>{top?.team?.name || '—'}</div>
-            <div style={{ marginTop: 2, fontSize: 12, color: '#d74a61' }}>{top ? `${top.rating} Puan` : 'Veri bekleniyor'}</div>
+            <div style={{ marginTop: 2, fontSize: 12, color: 'var(--accent-fg)' }}>{top ? `${top.rating} Puan` : 'Veri bekleniyor'}</div>
           </div>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14, padding: 14 }}>
             <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Listelenen Takım</div>
@@ -422,7 +422,7 @@ export default function RankingsPage() {
             )}
 
             {!loading && error && (
-              <div style={{ padding: 18, color: '#ff6a7f', fontSize: 13 }}>{error}</div>
+              <div style={{ padding: 18, color: 'var(--danger-fg)', fontSize: 13 }}>{error}</div>
             )}
 
             {!loading && !error && filtered.length === 0 && (
@@ -467,13 +467,13 @@ export default function RankingsPage() {
                 </div>
 
                 <div style={{ fontSize: 13 }}>
-                  <span style={{ color: '#6dde90', fontWeight: 700 }}>{row.wins}W</span>
+                  <span style={{ color: 'var(--success-fg)', fontWeight: 700 }}>{row.wins}W</span>
                   <span style={{ color: 'var(--text-4)' }}> / </span>
-                  <span style={{ color: '#ef6a77', fontWeight: 700 }}>{row.losses}L</span>
+                  <span style={{ color: 'var(--danger-fg)', fontWeight: 700 }}>{row.losses}L</span>
                 </div>
 
                 <div style={{ fontWeight: 700 }}>{formatPercent(row.winRate)}</div>
-                <div style={{ color: '#ff9aa9', fontWeight: 700 }}>{Math.round(row.impactScore)}</div>
+                <div style={{ color: 'var(--accent-fg)', fontWeight: 700 }}>{Math.round(row.impactScore)}</div>
                 <div style={{ color: 'var(--text-1)', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{row.rating}</div>
 
                 <div>

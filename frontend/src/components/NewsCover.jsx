@@ -78,7 +78,7 @@ export default function NewsCover({ visuals, score = '', height = 180, compact =
         </span>
         {v.tier && (
           <span style={{
-            fontSize: compact ? 9 : 10, fontWeight: 700, color: 'var(--text-1)',
+            fontSize: compact ? 9 : 10, fontWeight: 700, color: '#e2e8f0',
             padding: '3px 8px', borderRadius: 999,
             background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.14)',
           }}>
@@ -100,7 +100,7 @@ export default function NewsCover({ visuals, score = '', height = 180, compact =
             style={{ background: 'rgba(255,255,255,.04)', padding: 6, border: '1px solid rgba(255,255,255,.1)' }}
           />
           {!compact && (
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-1)', maxWidth: 120, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0', maxWidth: 120, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {teamA.name}
             </span>
           )}
@@ -123,7 +123,7 @@ export default function NewsCover({ visuals, score = '', height = 180, compact =
             style={{ background: 'rgba(255,255,255,.04)', padding: 6, border: '1px solid rgba(255,255,255,.1)' }}
           />
           {!compact && (
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-1)', maxWidth: 120, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0', maxWidth: 120, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {teamB.name}
             </span>
           )}
@@ -136,7 +136,7 @@ export default function NewsCover({ visuals, score = '', height = 180, compact =
           position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 2,
           padding: compact ? '5px 12px' : '7px 14px',
           background: 'linear-gradient(0deg, rgba(0,0,0,.7), transparent)',
-          fontSize: compact ? 9 : 10, color: 'var(--text-2)', fontWeight: 600,
+          fontSize: compact ? 9 : 10, color: '#cbd5e1', fontWeight: 600,
           textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {v.tournamentName}

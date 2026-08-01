@@ -610,10 +610,10 @@ function Matches() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }} title="Geçmiş arşivinde döneme atla (örn. 2018 maçları)">
             <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5 }}><CalendarDays size={13} /> Dönem:</span>
             <input type="date" value={dateFrom} max={dateTo || undefined} onChange={e => setDateFrom(e.target.value)}
-              style={{ padding: '7px 8px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-2)', fontSize: 12, outline: 'none', colorScheme: 'dark' }} />
+              style={{ padding: '7px 8px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-2)', fontSize: 12, outline: 'none' }} />
             <span style={{ color: 'var(--text-4)', fontSize: 12 }}>–</span>
             <input type="date" value={dateTo} min={dateFrom || undefined} onChange={e => setDateTo(e.target.value)}
-              style={{ padding: '7px 8px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-2)', fontSize: 12, outline: 'none', colorScheme: 'dark' }} />
+              style={{ padding: '7px 8px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-2)', fontSize: 12, outline: 'none' }} />
             {(dateFrom || dateTo) && (
               <button onClick={() => { setDateFrom(''); setDateTo('') }} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', display: 'inline-flex' }}><XIcon size={14} /></button>
             )}
@@ -726,7 +726,7 @@ function Matches() {
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                       {/* Bo Format */}
                       {getBOFormat(match.team_a_score, match.team_b_score, match.number_of_games) && (
-                        <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: 'rgba(255,255,255,.06)', border: '1px solid var(--line)', color: 'var(--text-4)' }}>
+                        <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: 'var(--hover)', border: '1px solid var(--line)', color: 'var(--text-4)' }}>
                           {getBOFormat(match.team_a_score, match.team_b_score, match.number_of_games)}
                         </span>
                       )}

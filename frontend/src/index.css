@@ -35,6 +35,7 @@
   --track:        #334155;   /* boş bar/ray zemini */
   --accent-fg:    #d08be0;   /* marka moru METİN olarak (koyu üstünde okunur) */
   --success-fg:   #4ade80;   /* başarı metni (koyu üstünde okunur açık yeşil) */
+  --danger-fg:    #fb7185;   /* hata/kayıp metni (koyu üstünde okunur açık kırmızı) */
   color-scheme: dark;
 }
 
@@ -61,6 +62,7 @@
   --track:        #e2e8f0;
   --accent-fg:    #9c2bb0;   /* marka moru METİN olarak — aydınlıkta okunur derin magenta */
   --success-fg:   #15803d;   /* başarı metni — aydınlıkta okunur koyu yeşil (açık yeşil beyazda kayboluyordu) */
+  --danger-fg:    #dc2626;   /* hata/kayıp metni — aydınlıkta okunur koyu kırmızı (açık kırmızı beyazda kayboluyordu) */
   color-scheme: light;
 }
 

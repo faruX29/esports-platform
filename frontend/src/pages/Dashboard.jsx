@@ -2561,13 +2561,13 @@ export default function Dashboard() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                       <span style={{
                         fontSize: 9, fontWeight: 800, letterSpacing: '.6px', textTransform: 'uppercase',
-                        color: 'var(--text-6)', padding: '2px 8px', borderRadius: 6,
-                        border: '1px solid #2b3a58',
+                        color: 'var(--text-4)', padding: '2px 8px', borderRadius: 6,
+                        border: '1px solid var(--line-2)',
                       }}>
                         ⟳ Sonuç Bekleniyor
                       </span>
                       <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
-                      <span style={{ fontSize: 9, color: 'var(--surface-2)' }}>veri gecikmesi</span>
+                      <span style={{ fontSize: 9, color: 'var(--text-4)' }}>veri gecikmesi</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 3, opacity: 0.45 }}>
                       {stale.map(m => (
@@ -2590,11 +2590,11 @@ export default function Dashboard() {
       }}>
         <PredictionAccuracyBadge variant="inline" />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 220, justifyContent: 'flex-end' }}>
-          <span style={{ fontSize: 11, color: '#8d8d8d', whiteSpace: 'nowrap' }}>Son 30 maç trend</span>
-          <div style={{ flex: 1, maxWidth: 160, height: 6, borderRadius: 999, overflow: 'hidden', background: 'rgba(0,0,0,.35)' }}>
+          <span style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>Son 30 maç trend</span>
+          <div style={{ flex: 1, maxWidth: 160, height: 6, borderRadius: 999, overflow: 'hidden', background: 'var(--track)' }}>
             <div style={{ height: '100%', width: `${accuracySummary.accuracyRate ?? 0}%`, background: confidenceTone.accent, transition: 'width .35s ease' }} />
           </div>
-          <span style={{ fontSize: 15, fontWeight: 900, color: '#f5f5f5', fontVariantNumeric: 'tabular-nums', minWidth: 42, textAlign: 'right' }}>
+          <span style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', fontVariantNumeric: 'tabular-nums', minWidth: 42, textAlign: 'right' }}>
             {accuracySummary.accuracyRate == null ? '--' : `%${accuracySummary.accuracyRate}`}
           </span>
         </div>
@@ -2671,7 +2671,7 @@ export default function Dashboard() {
             <div style={{ fontSize: 22, fontWeight: 900, color: s.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
               {s.value}
             </div>
-            <div style={{ fontSize: 9, color: 'var(--text-5)', textTransform: 'uppercase', letterSpacing: '.6px', marginTop: 4 }}>
+            <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.6px', marginTop: 4 }}>
               {s.label}
             </div>
           </div>

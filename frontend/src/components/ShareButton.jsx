@@ -40,18 +40,19 @@ export default function ShareButton({ path, title = '', compact = false }) {
     window.open(intent, '_blank', 'noopener,noreferrer')
   }
 
-  const pad = compact ? '5px 8px' : '6px 10px'
+  const pad = compact ? '5px 8px' : '9px 12px'
   const fs = compact ? 11 : 12
+  const minH = compact ? undefined : 38
 
   return (
-    <div style={{ display: 'inline-flex', gap: 6 }}>
+    <div style={{ display: 'inline-flex', gap: 8 }}>
       <button
         type="button"
         onClick={shareX}
         title="X'te paylaş"
         style={{
           border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-2)',
-          borderRadius: 8, padding: pad, fontSize: fs, fontWeight: 700, cursor: 'pointer',
+          borderRadius: 8, padding: pad, minHeight: minH, fontSize: fs, fontWeight: 700, cursor: 'pointer',
           display: 'inline-flex', alignItems: 'center', gap: 5,
         }}
       >
@@ -62,10 +63,10 @@ export default function ShareButton({ path, title = '', compact = false }) {
         onClick={copyLink}
         title="Bağlantıyı kopyala"
         style={{
-          border: `1px solid ${copied ? '#2f6846' : 'var(--line)'}`,
-          background: copied ? '#10281a' : 'var(--surface)',
-          color: copied ? '#8de3af' : 'var(--text-2)',
-          borderRadius: 8, padding: pad, fontSize: fs, fontWeight: 700, cursor: 'pointer',
+          border: `1px solid ${copied ? 'var(--success-fg)' : 'var(--line)'}`,
+          background: copied ? 'rgba(74,222,128,.12)' : 'var(--surface)',
+          color: copied ? 'var(--success-fg)' : 'var(--text-2)',
+          borderRadius: 8, padding: pad, minHeight: minH, fontSize: fs, fontWeight: 700, cursor: 'pointer',
           display: 'inline-flex', alignItems: 'center', gap: 5,
         }}
       >

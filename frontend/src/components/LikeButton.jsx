@@ -28,7 +28,7 @@ export default function LikeButton({ liked, count = 0, onToggle, size = 15 }) {
         border: `1px solid ${liked ? 'rgba(223,72,136,.55)' : 'var(--line-2)'}`,
         background: liked ? 'rgba(223,72,136,.12)' : 'var(--surface)',
         color: liked ? '#DF4888' : 'var(--text-2)',
-        borderRadius: 9, padding: '6px 11px', cursor: 'pointer',
+        borderRadius: 9, padding: '9px 13px', minHeight: 38, cursor: 'pointer',
         fontSize: 12.5, fontWeight: 700, lineHeight: 1,
         transition: 'background .15s, border-color .15s, color .15s',
       }}

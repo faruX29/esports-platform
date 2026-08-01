@@ -237,7 +237,7 @@ function AIProbabilityBar({ story }) {
             width={26} height={26} borderRadius={7} objectFit='contain'
             style={{ background: 'var(--surface)', padding: 3, border: '1px solid var(--line)', flexShrink: 0 }}
           />
-          <span style={{ fontSize: 13, fontWeight: 700, color: aFavored ? 'var(--text-1)' : 'var(--text-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: aFavored ? 'var(--text-1)' : 'var(--text-4)', minWidth: 0, overflowWrap: 'break-word', lineHeight: 1.25 }}>
             {teamA.name}
           </span>
         </div>
@@ -249,7 +249,7 @@ function AIProbabilityBar({ story }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flex: '1 1 0', justifyContent: 'flex-end' }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: bFavored ? 'var(--text-1)' : 'var(--text-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: bFavored ? 'var(--text-1)' : 'var(--text-4)', minWidth: 0, overflowWrap: 'break-word', lineHeight: 1.25, textAlign: 'right' }}>
             {teamB.name}
           </span>
           <InitialsImage
@@ -281,12 +281,12 @@ function TrustLayer({ story, onReport, liked, likeCount, onToggleLike }) {
           ? <>Transfer verisi <a href="https://liquipedia.net" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-3)', textDecoration: 'underline' }}>Liquipedia</a> kaynaklıdır; haber otomatik üretildi.</>
           : 'PandaScore verileriyle otomatik üretilmiştir.'}
       </span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <LikeButton liked={liked} count={likeCount} onToggle={onToggleLike} />
         <ShareButton path={`/news/${buildNewsSlug(story)}`} title={story.title} />
         <button
           onClick={() => onReport(story)}
-          style={{ border: '1px solid var(--text-6)', background: 'var(--surface)', color: 'var(--text-1)', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer' }}
+          style={{ border: '1px solid var(--text-6)', background: 'var(--surface)', color: 'var(--text-1)', borderRadius: 8, padding: '9px 12px', minHeight: 38, fontSize: 12, cursor: 'pointer' }}
         >
           Hata Bildir
         </button>

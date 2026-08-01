@@ -30,7 +30,7 @@ import {
 import { FEXT } from '../theme'
 import Mascot from '../components/Mascot'
 import SeoHead from '../components/SeoHead'
-import { distinctiveTournamentName, isGenericStageName } from '../utils/tournamentDisplay'
+import { distinctiveTournamentName, isGenericStageName, displayRegion } from '../utils/tournamentDisplay'
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 
@@ -1970,10 +1970,12 @@ export default function TournamentPage() {
   // ── Stil değerleri ───────────────────────────────────────────
   const gName = tournament?.game?.name ?? ''
   // Ham slug ("Cs-Go"/"League-Of-Legends") yerine temiz oyun adı.
-  const gLabel = GAMES.find(g => g.id === normalizeGameId(tournament?.game?.slug ?? gName))?.label || gName || 'Esports'
+  const gameId = normalizeGameId(tournament?.game?.slug ?? gName)
+  const gLabel = GAMES.find(g => g.id === gameId)?.label || gName || 'Esports'
   const gc    = gameColor(gName)
   const tier  = getTierMeta(tournament?.tier)
-  const tournamentDisplayName = distinctiveTournamentName(cleanName(tournament?.name, 'Tournament'), tournament?.region)
+  const regionLabel = displayRegion(tournament?.region, gameId)
+  const tournamentDisplayName = distinctiveTournamentName(cleanName(tournament?.name, 'Tournament'), tournament?.region, gameId)
   const isTR  = isTurkishTeam(tournament?.name ?? '') || tournament?.region === 'TR'
   const liquipediaMeta = tournament?.extra_metadata?.liquipedia || null
   const liquipediaLocation = liquipediaMeta?.location || null
@@ -2110,7 +2112,7 @@ export default function TournamentPage() {
                 background: 'var(--hover)', border: '1px solid var(--line-2)', color: 'var(--text-2)',
                 display: 'inline-flex', alignItems: 'center', gap: 5,
               }}>
-                <MapPin size={11} /> {String(tournament.region).toUpperCase()}
+                <MapPin size={11} /> {String(regionLabel).toUpperCase()}
               </span>
             )}
 
@@ -2160,7 +2162,7 @@ export default function TournamentPage() {
                 {tournament.end_at && ` — ${fmtDate(tournament.end_at)}`}
               </span>
             )}
-            {tournament.region && !isGenericStageName(tournament?.name) && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><MapPin size={12} /> {tournament.region}</span>}
+            {tournament.region && !isGenericStageName(tournament?.name) && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><MapPin size={12} /> {regionLabel}</span>}
             {tournament.prizepool && (
               <span style={{ color: '#FFD700', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                 <Wallet size={12} /> {tournament.prizepool}
@@ -2170,10 +2172,13 @@ export default function TournamentPage() {
 
           {/* Kompakt Stat Chips */}
           <StatChips chips={[
-            { Icon: Gamepad2,    label: 'Maç',      value: matches.length,                              color: '#818cf8' },
-            { Icon: CircleCheck, label: 'Yaklaşan', value: upcomingMatches.length,                      color: '#4CAF50' },
-            { Icon: CircleCheck, label: 'Bitti',    value: pastMatches.length,                          color: '#FF8C00' },
-            { Icon: Radio,       label: 'Canlı',    value: matches.filter(m => m.status === 'running').length, color: '#FF4655' },
+            // Sayaçlar AYRIK olmalı (toplamları = Maç). "Yaklaşan" yalnız not_started;
+            // canlı maçlar ayrı "Canlı" sayacında (upcomingMatches ikisini de içerir →
+            // burada kullanılırsa canlı çift sayılır, 6 yerine 7 görünürdü).
+            { Icon: Gamepad2,    label: 'Maç',      value: matches.length,                                        color: '#818cf8' },
+            { Icon: CircleCheck, label: 'Yaklaşan', value: matches.filter(m => m.status === 'not_started').length, color: '#4CAF50' },
+            { Icon: CircleCheck, label: 'Bitti',    value: pastMatches.length,                                    color: '#FF8C00' },
+            { Icon: Radio,       label: 'Canlı',    value: matches.filter(m => m.status === 'running').length,     color: '#FF4655' },
           ]} />
         </div>
       </div>

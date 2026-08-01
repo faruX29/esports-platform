@@ -704,10 +704,15 @@ export default function TeamPage() {
               <h1 style={{
                 margin: 0, fontSize: 'clamp(22px, 6vw, 34px)', fontWeight: 900, lineHeight: 1.1,
                 overflowWrap: 'anywhere', minWidth: 0,
-                background: isTR
-                  ? 'linear-gradient(135deg,var(--text-1),#ff6b7a)'
-                  : 'linear-gradient(135deg,var(--text-1),var(--text-3))',
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                // Normal takımlarda DÜZ renk (gradient-clip başarısız olursa metin
+                // görünmez kalıyordu → aydınlık-mod "beyaz/okunamaz" riski). Türk
+                // takımlarında kırmızı gradient marka dokunuşu olarak kalıyor.
+                color: 'var(--text-1)',
+                ...(isTR ? {
+                  background: 'linear-gradient(135deg,var(--text-1),#ff6b7a)',
+                  WebkitBackgroundClip: 'text', backgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                } : {}),
               }}>{team.name}</h1>
               {team.acronym && (
                 <span style={{ fontSize: 16, color: 'var(--text-4)', fontWeight: 700 }}>({team.acronym})</span>

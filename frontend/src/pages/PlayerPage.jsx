@@ -1088,10 +1088,14 @@ export default function PlayerPage() {
             <h1 style={{
               margin: '0 0 4px', fontSize: isMobile ? 28 : 32, fontWeight: 900, lineHeight: 1.1,
               overflowWrap: 'anywhere',
-              background: isTR
-                ? 'linear-gradient(135deg,var(--text-1) 40%,#ff8a8a)'
-                : 'linear-gradient(135deg,var(--text-1),var(--text-4))',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              // Düz renk fallback — gradient-clip başarısız olursa metin görünmez
+              // kalmasın (aydınlık-mod okunamama riski). TR'de kırmızı gradient kalır.
+              color: 'var(--text-1)',
+              ...(isTR ? {
+                background: 'linear-gradient(135deg,var(--text-1) 40%,#ff8a8a)',
+                WebkitBackgroundClip: 'text', backgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              } : {}),
             }}>{player.nickname}</h1>
 
             {/* Gerçek isim */}

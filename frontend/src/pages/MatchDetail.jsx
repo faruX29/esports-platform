@@ -1454,8 +1454,8 @@ export default function MatchDetail() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 12 }}>
 
             {/* Team A */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-              <div {...clickableProps(() => navigate(`/team/${aId}`), { label: `${aName} takım sayfası` })} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, cursor: 'pointer', opacity: isFin && bWon ? 0.62 : 1, transition: 'opacity .2s' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, minWidth: 0 }}>
+              <div {...clickableProps(() => navigate(`/team/${aId}`), { label: `${aName} takım sayfası` })} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, cursor: 'pointer', opacity: isFin && bWon ? 0.62 : 1, transition: 'opacity .2s', minWidth: 0, maxWidth: '100%' }}>
                 <InitialsImage
                   src={aLogo}
                   name={aName}
@@ -1463,7 +1463,7 @@ export default function MatchDetail() {
                   borderRadius={12}
                   imgStyle={{ objectFit: 'contain', filter: isFin && bWon ? 'grayscale(80%)' : 'none' }}
                 />
-                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (aWon ? '#4CAF50' : 'var(--text-3)') : 'var(--text-1)' }}>{aName}{isTurkishTeam(aName) && ' 🇹🇷'}</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (aWon ? '#4CAF50' : 'var(--text-3)') : 'var(--text-1)', minWidth: 0, overflowWrap: 'break-word', textAlign: 'right', lineHeight: 1.2 }}>{aName}{isTurkishTeam(aName) && ' 🇹🇷'}</div>
               </div>
               <FavButton teamId={aId} active={favA} onToggle={toggleTeamFollow} />
             </div>
@@ -1476,30 +1476,11 @@ export default function MatchDetail() {
               }
               <div style={{ fontSize: 12, fontWeight: 700, color: isLive ? '#FF4655' : '#4CAF50', marginTop: 4 }}>{isLive ? '● Canlı' : fmtTime(match.scheduled_at)}</div>
               <div style={{ fontSize: 10, color: 'var(--text-6)', marginTop: 2 }}>{fmtDate(match.scheduled_at)}</div>
-              <div style={{ marginTop: 10, padding: '0 6px', minWidth: 170 }}>
-                <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--ai)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><FextopusIcon size={14} /> Fextopus Kazanma Olasılığı{predUncertain && <span style={{ color: 'var(--text-3)', fontWeight: 800 }}>· Belirsiz</span>}</div>
-                <div style={{ height: 8, borderRadius: 4, overflow: 'hidden', display: 'flex', border: '1px solid var(--line)' }}>
-                  <div style={{ flex: pctA, background: predUncertain ? 'var(--text-6)' : 'linear-gradient(90deg,#4ade80,#22c55e)', borderRadius: '4px 0 0 4px' }} />
-                  <div style={{ flex: pctB, background: predUncertain ? 'var(--text-5)' : 'linear-gradient(90deg,#60a5fa,#3b82f6)', borderRadius: '0 4px 4px 0' }} />
-                </div>
-                {predUncertain ? (
-                  <div style={{ marginTop: 3, fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textAlign: 'center' }}>Fextopus başa baş görüyor</div>
-                ) : (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 3, fontSize: 10, fontWeight: 800 }}>
-                    <span style={{ color: '#4ade80', minWidth: 0, flex: '0 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{aName} %{pctA}</span>
-                    <span style={{ color: '#60a5fa', minWidth: 0, flex: '0 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>%{pctB} {bName}</span>
-                  </div>
-                )}
-                <div style={{ marginTop: 2, fontSize: 9, color: 'var(--text-6)' }}>Güven Skoru: %{aiWin.confidence} · örneklem: {aiWin.samples}</div>
-                <div style={{ marginTop: 6, display: 'flex', justifyContent: 'center' }}>
-                  <PredictionAccuracyBadge variant="inline" />
-                </div>
-              </div>
             </div>
 
             {/* Team B */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
-              <div {...clickableProps(() => navigate(`/team/${bId}`), { label: `${bName} takım sayfası` })} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6, cursor: 'pointer', opacity: isFin && aWon ? 0.62 : 1, transition: 'opacity .2s' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8, minWidth: 0 }}>
+              <div {...clickableProps(() => navigate(`/team/${bId}`), { label: `${bName} takım sayfası` })} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6, cursor: 'pointer', opacity: isFin && aWon ? 0.62 : 1, transition: 'opacity .2s', minWidth: 0, maxWidth: '100%' }}>
                 <InitialsImage
                   src={bLogo}
                   name={bName}
@@ -1507,9 +1488,30 @@ export default function MatchDetail() {
                   borderRadius={12}
                   imgStyle={{ objectFit: 'contain', filter: isFin && aWon ? 'grayscale(80%)' : 'none' }}
                 />
-                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (bWon ? '#4CAF50' : 'var(--text-3)') : 'var(--text-1)' }}>{isTurkishTeam(bName) && '🇹🇷 '}{bName}</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (bWon ? '#4CAF50' : 'var(--text-3)') : 'var(--text-1)', minWidth: 0, overflowWrap: 'break-word', textAlign: 'left', lineHeight: 1.2 }}>{isTurkishTeam(bName) && '🇹🇷 '}{bName}</div>
               </div>
               <FavButton teamId={bId} active={favB} onToggle={toggleTeamFollow} />
+            </div>
+          </div>
+
+          {/* ── AI Kazanma Olasılığı — tam genişlik (mobilde takım isimleriyle çakışmasın) ── */}
+          <div style={{ marginTop: 18, maxWidth: 440, marginLeft: 'auto', marginRight: 'auto' }}>
+            <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--ai)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><FextopusIcon size={14} /> Fextopus Kazanma Olasılığı{predUncertain && <span style={{ color: 'var(--text-3)', fontWeight: 800 }}>· Belirsiz</span>}</div>
+            <div style={{ height: 9, borderRadius: 5, overflow: 'hidden', display: 'flex', border: '1px solid var(--line)' }}>
+              <div style={{ flex: pctA, background: predUncertain ? 'var(--text-6)' : 'linear-gradient(90deg,#4ade80,#22c55e)', borderRadius: '5px 0 0 5px' }} />
+              <div style={{ flex: pctB, background: predUncertain ? 'var(--text-5)' : 'linear-gradient(90deg,#60a5fa,#3b82f6)', borderRadius: '0 5px 5px 0' }} />
+            </div>
+            {predUncertain ? (
+              <div style={{ marginTop: 4, fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textAlign: 'center' }}>Fextopus başa baş görüyor</div>
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginTop: 4, fontSize: 10.5, fontWeight: 800 }}>
+                <span style={{ color: '#4ade80', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{aName} %{pctA}</span>
+                <span style={{ color: '#60a5fa', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>%{pctB} {bName}</span>
+              </div>
+            )}
+            <div style={{ marginTop: 3, fontSize: 9, color: 'var(--text-6)', textAlign: 'center' }}>Güven Skoru: %{aiWin.confidence} · örneklem: {aiWin.samples}</div>
+            <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center' }}>
+              <PredictionAccuracyBadge variant="inline" />
             </div>
           </div>
         </div>

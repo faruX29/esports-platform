@@ -32,9 +32,19 @@
     <meta name="apple-mobile-web-app-title" content="feXt" />
 
     <!-- Inter — veri-yoğun UI; Baloo 2 — feXt marka wordmark'ı (yuvarlak/oyunbaz) -->
+    <!-- Font CSS render'ı BLOKE ETMEZ (preload→stylesheet): yavaş 4G'de ~2s FCP
+         kazancı. display=swap zaten fallback→web-font geçişini yönetir. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet" />
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Baloo+2:wght@600;700;800&display=swap"
+      onload="this.onload=null;this.rel='stylesheet'"
+    />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Baloo+2:wght@600;700;800&display=swap" />
+    </noscript>
 
     <!-- Varsayılan SEO (sayfa-bazlı etiketler React SeoHead ile override edilir) -->
     <title>feXt — Espor Maçları, Skorlar ve Haberler</title>

@@ -200,7 +200,22 @@ async function buildForNews(ref, origin, url) {
     publisher: { '@type': 'Organization', name: 'feXt', logo: { '@type': 'ImageObject', url: `${origin}/icons/icon-512.png` } },
     mainEntityOfPage: url,
   }
-  return htmlDoc({ title: row.title || 'feXt', desc: row.summary || '', url, img, jsonLd })
+  // İç linkler → Googlebot takımları/maçı/turnuvayı takip eder (tarama derinliği).
+  const linkItems = []
+  if (ref.type === 'match') {
+    linkItems.push(`<a href="${origin}/match/${ENC(ref.id)}">Maç detayı ve canlı skor</a>`)
+    const m = await sbFetch(`matches?id=eq.${ENC(ref.id)}&select=team_a_id,team_b_id,tournament_id&limit=1`)
+    if (m) {
+      if (m.team_a_id) linkItems.push(`<a href="${origin}/team/${m.team_a_id}">${esc(row.team_a_name || 'Takım A')}</a>`)
+      if (m.team_b_id) linkItems.push(`<a href="${origin}/team/${m.team_b_id}">${esc(row.team_b_name || 'Takım B')}</a>`)
+      if (m.tournament_id) linkItems.push(`<a href="${origin}/tournament/${m.tournament_id}">${esc(row.tournament_name || 'Turnuva')}</a>`)
+    }
+  } else if (ref.type === 'tournament') {
+    linkItems.push(`<a href="${origin}/tournament/${ENC(ref.id)}">${esc(row.tournament_name || 'Turnuva')} turnuva sayfası</a>`)
+  }
+  const body = `<h1>${esc(row.title || 'feXt')}</h1><p>${esc(row.summary || '')}</p>` +
+    (linkItems.length ? `<h2>İlgili Sayfalar</h2><ul>${linkItems.map(l => `<li>${l}</li>`).join('')}</ul>` : '')
+  return htmlDoc({ title: row.title || 'feXt', desc: row.summary || '', url, img, jsonLd, body })
 }
 
 const ENC = encodeURIComponent

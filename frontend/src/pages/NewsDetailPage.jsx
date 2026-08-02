@@ -25,7 +25,7 @@ import NewsCover, { scoreFromHero } from '../components/NewsCover'
 import { cleanDisplayName } from '../utils/nameCleaner'
 import { buildNewsSlug, parseNewsRef } from '../utils/newsSlug'
 import { getEsportsName } from '../utils/esportsName'
-import { X as XIcon, MessageSquare } from 'lucide-react'
+import { X as XIcon, MessageSquare, Swords, Trophy } from 'lucide-react'
 import { FEXT } from '../theme'
 import { isUncertainPrediction } from '../utils/prediction'
 
@@ -237,9 +237,15 @@ function AIProbabilityBar({ story }) {
             width={26} height={26} borderRadius={7} objectFit='contain'
             style={{ background: 'var(--surface)', padding: 3, border: '1px solid var(--line)', flexShrink: 0 }}
           />
-          <span style={{ fontSize: 13, fontWeight: 700, color: aFavored ? 'var(--text-1)' : 'var(--text-4)', minWidth: 0, overflowWrap: 'break-word', lineHeight: 1.25 }}>
-            {teamA.name}
-          </span>
+          {teamA.id ? (
+            <Link to={`/team/${teamA.id}`} style={{ fontSize: 13, fontWeight: 700, color: aFavored ? 'var(--text-1)' : 'var(--text-4)', minWidth: 0, overflowWrap: 'break-word', lineHeight: 1.25, textDecoration: 'none' }}>
+              {teamA.name}
+            </Link>
+          ) : (
+            <span style={{ fontSize: 13, fontWeight: 700, color: aFavored ? 'var(--text-1)' : 'var(--text-4)', minWidth: 0, overflowWrap: 'break-word', lineHeight: 1.25 }}>
+              {teamA.name}
+            </span>
+          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
@@ -249,9 +255,15 @@ function AIProbabilityBar({ story }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flex: '1 1 0', justifyContent: 'flex-end' }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: bFavored ? 'var(--text-1)' : 'var(--text-4)', minWidth: 0, overflowWrap: 'break-word', lineHeight: 1.25, textAlign: 'right' }}>
-            {teamB.name}
-          </span>
+          {teamB.id ? (
+            <Link to={`/team/${teamB.id}`} style={{ fontSize: 13, fontWeight: 700, color: bFavored ? 'var(--text-1)' : 'var(--text-4)', minWidth: 0, overflowWrap: 'break-word', lineHeight: 1.25, textAlign: 'right', textDecoration: 'none' }}>
+              {teamB.name}
+            </Link>
+          ) : (
+            <span style={{ fontSize: 13, fontWeight: 700, color: bFavored ? 'var(--text-1)' : 'var(--text-4)', minWidth: 0, overflowWrap: 'break-word', lineHeight: 1.25, textAlign: 'right' }}>
+              {teamB.name}
+            </span>
+          )}
           <InitialsImage
             src={teamB.logo_url} alt={teamB.name || ''} name={teamB.name}
             width={26} height={26} borderRadius={7} objectFit='contain'
@@ -292,6 +304,42 @@ function TrustLayer({ story, onReport, liked, likeCount, onToggleLike }) {
         </button>
       </div>
     </div>
+  )
+}
+
+/** Haber → ilgili takım/maç/turnuva sayfalarına iç link (UX + SEO tarama derinliği). */
+function RelatedLinks({ story }) {
+  const v = story.visuals || {}
+  const isMatch = story.status === 'finished' || story.status === 'upcoming'
+  const chips = []
+  if (v.teamA?.id) chips.push({ key: 'ta', to: `/team/${v.teamA.id}`, label: v.teamA.name, logo: v.teamA.logo_url })
+  if (v.teamB?.id) chips.push({ key: 'tb', to: `/team/${v.teamB.id}`, label: v.teamB.name, logo: v.teamB.logo_url })
+  if (isMatch && story.matchId) chips.push({ key: 'm', to: `/match/${story.matchId}`, label: 'Maç Detayı', icon: 'match' })
+  if (story.tournamentId) chips.push({ key: 'to', to: `/tournament/${story.tournamentId}`, label: v.tournamentName || 'Turnuva', icon: 'trophy' })
+  if (!chips.length) return null
+
+  return (
+    <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid var(--surface-2)', background: 'var(--surface)', padding: 16 }}>
+      <div style={{ fontSize: 11, color: 'var(--accent-fg)', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800, marginBottom: 10 }}>
+        Bağlantılı Sayfalar
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {chips.map(c => (
+          <Link
+            key={c.key}
+            to={c.to}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 12px', minHeight: 38, borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-1)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-fg)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line)' }}
+          >
+            {c.logo
+              ? <InitialsImage src={c.logo} name={c.label} width={20} height={20} borderRadius={5} objectFit='contain' />
+              : c.icon === 'match' ? <Swords size={15} /> : <Trophy size={15} />}
+            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>{c.label}</span>
+          </Link>
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -1129,6 +1177,8 @@ export default function NewsDetailPage() {
         </section>
 
         <AIProbabilityBar story={story} />
+
+        <RelatedLinks story={story} />
 
         <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid var(--surface-2)', background: 'var(--surface)', padding: 16 }}>
           <div style={{ fontSize: 11, color: 'var(--accent-fg)', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800, marginBottom: 10 }}>

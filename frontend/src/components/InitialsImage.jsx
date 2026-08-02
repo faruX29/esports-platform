@@ -36,6 +36,19 @@ function makeTone(seed) {
   }
 }
 
+/**
+ * Dış (http) görselleri wsrv.nl proxy'siyle GÖSTERİM boyutunda + WebP olarak sunar.
+ * PandaScore logoları 500x500 gelip 18-63px gösteriliyordu (logo başına ~50-266KB);
+ * proxy ile ~1-3KB'a düşer → mobilde LCP/veri büyük kazanç. data:/blob:/yerel (/)
+ * görsellere dokunulmaz. Proxy hata verirse orijinale, o da olmazsa baş harflere düşer.
+ */
+function proxiedSrc(src, size) {
+  if (typeof src !== 'string' || !/^https?:\/\//i.test(src)) return src
+  if (src.includes('wsrv.nl')) return src
+  const w = Math.min(Math.round((Number(size) || 32) * 2), 256)   // 2x retina, tavan 256
+  return `https://wsrv.nl/?url=${encodeURIComponent(src)}&w=${w}&output=webp&q=80`
+}
+
 export default function InitialsImage({
   src,
   name,
@@ -51,10 +64,11 @@ export default function InitialsImage({
   fallbackBorder,
   fallbackColor,
 }) {
-  const [failed, setFailed] = useState(false)
+  // 'proxy' → wsrv küçültülmüş; 'original' → ham kaynak; 'failed' → baş harf avatarı
+  const [stage, setStage] = useState('proxy')
 
   useEffect(() => {
-    setFailed(false)
+    setStage('proxy')
   }, [src])
 
   const label = name || alt || ''
@@ -68,14 +82,20 @@ export default function InitialsImage({
     : 28
   const textSize = Math.max(10, Math.round(baseSize * textScale))
 
-  if (src && !failed) {
+  const displaySrc = useMemo(() => {
+    if (!src) return null
+    if (stage === 'original') return src
+    return proxiedSrc(src, Math.max(numericWidth, numericHeight) || 32)
+  }, [src, stage, numericWidth, numericHeight])
+
+  if (src && stage !== 'failed') {
     return (
       <img
-        src={src}
+        src={displaySrc}
         alt={alt || name || ''}
         loading='lazy'
         decoding='async'
-        onError={() => setFailed(true)}
+        onError={() => setStage(s => (s === 'proxy' ? 'original' : 'failed'))}
         style={{
           width,
           height,

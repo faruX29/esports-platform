@@ -18,6 +18,10 @@ export const config = {
 // tarayıcı UA'ları (Mozilla/Chrome/Safari/Edg) bu token'ları içermez → etkilenmez.
 const BOT_RE = /(bot|crawler|spider|slurp|preview|unfurl|embed|opengraph|open graph|metadata|validator|facebookexternalhit|whatsapp|telegram|slack|discord|twitter|reddit|linkedin|pinterest|applebot|skype|vkshare|iframely|curl|wget|python-requests|axios|go-http|okhttp|headless)/i
 
+// Canonical = DAİMA üretim domaini + temiz path (query yok). www/vercel.app/utm
+// varyantları tek canonical'da toplanır → "duplicate without user-selected canonical" biter.
+const SITE_ORIGIN = (process.env.SITE_URL || 'https://fextesports.com').replace(/\/+$/, '')
+
 const GAME_META = {
   valorant: { label: 'VALORANT', accent: 'FF4655' },
   csgo: { label: 'CS2', accent: 'F5A623' },
@@ -90,6 +94,20 @@ function predHook(pa, pb, aName, bName) {
   return `AI: %${Math.round(favProb * 100)} ${fav}`
 }
 
+// Event yapısal verisi ortak alanları. location + startDate KRİTİK (Google zengin
+// sonuç zorunluları); geri kalanı non-critical öneri. Espor maçı = online etkinlik.
+function eventCommon(url, startDate, desc, img) {
+  return {
+    startDate: startDate || undefined,
+    eventStatus: 'https://schema.org/EventScheduled',
+    eventAttendanceMode: 'https://schema.org/OnlineEventAttendanceMode',
+    location: { '@type': 'VirtualLocation', url },
+    description: desc || undefined,
+    image: img || undefined,
+    organizer: { '@type': 'Organization', name: 'feXt', url: SITE_ORIGIN },
+  }
+}
+
 function htmlDoc({ title, desc, url, img, type = 'article', jsonLd = null, body = '' }) {
   const t = esc(title), d = esc(desc), u = esc(url), i = esc(img)
   const imgTags = i ? `<meta property="og:image" content="${i}"/>
@@ -130,7 +148,7 @@ function matchListHtml(origin, rows, heading) {
 
 async function buildForMatch(id, origin, url) {
   const sel =
-    'team_a_score,team_b_score,prediction_team_a,prediction_team_b,' +
+    'team_a_score,team_b_score,scheduled_at,prediction_team_a,prediction_team_b,' +
     'team_a:teams!matches_team_a_id_fkey(name,logo_url),' +
     'team_b:teams!matches_team_b_id_fkey(name,logo_url),' +
     'tournament:tournaments(name,tier),game:games(slug)'
@@ -147,9 +165,11 @@ async function buildForMatch(id, origin, url) {
   })
   const title = `${a} vs ${b}${row.tournament?.name ? ' · ' + row.tournament.name : ''}`
   const desc = p ? `${p} · feXt AI analizi ve canlı skor.` : 'feXt — AI analizi, canlı skor ve istatistikler.'
+  const teams = [{ '@type': 'SportsTeam', name: a }, { '@type': 'SportsTeam', name: b }]
   const jsonLd = {
     '@context': 'https://schema.org', '@type': 'SportsEvent', name: `${a} vs ${b}`, sport: 'Esports',
-    competitor: [{ '@type': 'SportsTeam', name: a }, { '@type': 'SportsTeam', name: b }],
+    ...eventCommon(url, row.scheduled_at, desc, img),
+    competitor: teams, performer: teams,
     superEvent: row.tournament?.name ? { '@type': 'SportsEvent', name: row.tournament.name } : undefined,
     url,
   }
@@ -228,7 +248,11 @@ async function buildForTournament(id, origin, url) {
   const matches = await sbFetchAll(`matches?tournament_id=eq.${ENC(id)}&select=${ENC(MATCH_SEL)}&order=scheduled_at.desc&limit=15`)
   const title = `${name} — Fikstür, Puan Durumu ve Sonuçlar`
   const desc = `${name} espor turnuvası: maç programı, sonuçlar ve puan durumu — feXt.`
-  const jsonLd = { '@context': 'https://schema.org', '@type': 'SportsEvent', name, sport: 'Esports', startDate: t.begin_at || undefined, endDate: t.end_at || undefined, url }
+  const jsonLd = {
+    '@context': 'https://schema.org', '@type': 'SportsEvent', name, sport: 'Esports',
+    ...eventCommon(url, t.begin_at, desc, ''),
+    endDate: t.end_at || undefined, url,
+  }
   const body = `<h1>${esc(name)}</h1><p>${esc(desc)}</p>${matchListHtml(origin, matches, 'Maçlar')}`
   return htmlDoc({ title, desc, url, img: '', type: 'article', jsonLd, body })
 }
@@ -241,22 +265,24 @@ export default async function middleware(req) {
   if (!force && !BOT_RE.test(ua)) return next() // gerçek kullanıcı → SPA
 
   try {
-    const origin = url.origin
     const path = url.pathname
 
+    // canonical + iç linkler + OG görsel = üretim domaini (req host'u DEĞİL) →
+    // www/vercel.app/utm varyantları tek canonical'da toplanır.
+    const canon = SITE_ORIGIN + path
     let html = null
     const seg = path.split('/')[2]
     if (path.startsWith('/match/')) {
-      if (seg) html = await buildForMatch(seg, origin, req.url)
+      if (seg) html = await buildForMatch(seg, SITE_ORIGIN, canon)
     } else if (path.startsWith('/news/') && path !== '/news/archive') {
       const ref = parseNewsRef(seg)
-      if (ref) html = await buildForNews(ref, origin, req.url)
+      if (ref) html = await buildForNews(ref, SITE_ORIGIN, canon)
     } else if (path.startsWith('/team/')) {
-      if (seg) html = await buildForTeam(seg, origin, req.url)
+      if (seg) html = await buildForTeam(seg, SITE_ORIGIN, canon)
     } else if (path.startsWith('/player/')) {
-      if (seg) html = await buildForPlayer(seg, origin, req.url)
+      if (seg) html = await buildForPlayer(seg, SITE_ORIGIN, canon)
     } else if (path.startsWith('/tournament/')) {
-      if (seg) html = await buildForTournament(seg, origin, req.url)
+      if (seg) html = await buildForTournament(seg, SITE_ORIGIN, canon)
     }
 
     if (html) {

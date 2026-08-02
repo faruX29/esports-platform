@@ -19,7 +19,11 @@ export default function SeoHead({
   schema = null,   // Schema.org JSON-LD (obje veya dizi) → Google zengin sonuç
 }) {
   const fullTitle = title ? `${title} | ${siteName}` : siteName
-  const canonical = url || (typeof window !== 'undefined' ? window.location.href : '')
+  // Canonical = üretim domaini + temiz path (query/hash yok). www, vercel.app ve
+  // ?utm= varyantlarının hepsi tek canonical'da toplanır → "duplicate without
+  // user-selected canonical" (Search Console) çözülür.
+  const SITE_ORIGIN = 'https://fextesports.com'
+  const canonical = url || (typeof window !== 'undefined' ? SITE_ORIGIN + window.location.pathname : '')
 
   return (
     <>

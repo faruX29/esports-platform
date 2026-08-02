@@ -1418,8 +1418,17 @@ export default function MatchDetail() {
           name: `${aName} vs ${bName}`,
           sport: 'Esports',
           startDate: match.scheduled_at || undefined,
-          eventStatus: isLive ? 'https://schema.org/EventScheduled' : undefined,
+          eventStatus: 'https://schema.org/EventScheduled',
+          eventAttendanceMode: 'https://schema.org/OnlineEventAttendanceMode',
+          location: { '@type': 'VirtualLocation', url: typeof window !== 'undefined' ? window.location.href : undefined },
+          description: `${aName} vs ${bName}${match.tournament?.name ? ` · ${match.tournament.name}` : ''} — canlı skor, AI tahmini ve maç istatistikleri.`,
+          image: aLogo || bLogo || undefined,
+          organizer: { '@type': 'Organization', name: 'feXt' },
           competitor: [
+            { '@type': 'SportsTeam', name: aName },
+            { '@type': 'SportsTeam', name: bName },
+          ],
+          performer: [
             { '@type': 'SportsTeam', name: aName },
             { '@type': 'SportsTeam', name: bName },
           ],

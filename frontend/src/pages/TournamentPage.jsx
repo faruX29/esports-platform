@@ -2054,6 +2054,15 @@ export default function TournamentPage() {
           sport: 'Esports',
           startDate: tournament.begin_at || undefined,
           endDate: tournament.end_at || undefined,
+          eventStatus: 'https://schema.org/EventScheduled',
+          eventAttendanceMode: liquipediaLocation
+            ? 'https://schema.org/MixedEventAttendanceMode'
+            : 'https://schema.org/OnlineEventAttendanceMode',
+          location: liquipediaLocation
+            ? { '@type': 'Place', name: liquipediaLocation, address: liquipediaLocation }
+            : { '@type': 'VirtualLocation', url: typeof window !== 'undefined' ? window.location.href : undefined },
+          description: `${tournament.name} espor turnuvası: maç programı, bracket, puan durumu ve sonuçlar.`,
+          organizer: { '@type': 'Organization', name: 'feXt' },
           url: typeof window !== 'undefined' ? window.location.href : undefined,
         }}
       />

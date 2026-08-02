@@ -92,7 +92,24 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <!--
+      App-shell iskeleti: SPA'da #root boş olduğu için throttled mobilde JS
+      inip çalışana kadar hiçbir şey boyanmıyordu (FCP ~3.4s). Bu statik iskelet
+      CSS gelir gelmez (JS'siz) anında boyanır → FCP ~0.5-1s. React mount olunca
+      createRoot içeriği otomatik değiştirir. Renkler CSS token'ları (render-blocking
+      2.3KB bundle'da hazır); fallback hex'ler ilk boyama garantisi için.
+    -->
+    <div id="root">
+      <div style="max-width:1440px;margin:0 auto;padding:14px 12px;min-height:calc(100vh - 58px)">
+        <div style="display:flex;align-items:center;justify-content:space-between;height:44px;margin-bottom:20px">
+          <span style="font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:26px;letter-spacing:-.5px;color:var(--text-1,#1e293b)">fe<span style="color:var(--accent-fg,#9c2bb0)">X</span>t</span>
+          <div style="width:40px;height:40px;border-radius:10px;background:var(--surface-2,#eef2f8)"></div>
+        </div>
+        <div style="height:40px;border-radius:12px;background:var(--surface,#fff);border:1px solid var(--line,#e3e8f1);margin-bottom:18px"></div>
+        <div style="height:44px;border-radius:12px;background:var(--surface,#fff);border:1px solid var(--line,#e3e8f1);margin-bottom:18px"></div>
+        <div style="height:248px;border-radius:16px;background:var(--surface,#fff);border:1px solid var(--line,#e3e8f1)"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
     <!-- Service Worker kaydı (PWA). Yalnızca prod/https'te; hata sayfayı bozmaz. -->
     <script>

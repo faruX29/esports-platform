@@ -1,0 +1,24 @@
+# feXt
+
+> feXt, Valorant, Counter-Strike 2 ve League of Legends için canlı espor skorları,
+> maç ve turnuva takibi, takım/oyuncu istatistikleri ve "Fextopus" adlı yapay zeka
+> tahmin motoruyla desteklenen otomatik Türkçe haber bülteni sunan bir platformdur.
+
+## Ana Bölümler
+
+- [Ana Sayfa](https://fextesports.com/): canlı maçlar, kişiselleştirilmiş akış, günün programı
+- [Maçlar](https://fextesports.com/matches): canlı, yaklaşan ve geçmiş maçlar; tarih ve turnuva filtresi
+- [Turnuvalar](https://fextesports.com/tournaments): fikstür, puan durumu, eleme ağacı (bracket)
+- [Sıralamalar](https://fextesports.com/rankings): takım güç sıralamaları ve oyuncu istatistikleri
+- [Haberler](https://fextesports.com/news): AI destekli maç/turnuva/transfer haberleri ve topluluk forumu
+- [Scout Engine](https://fextesports.com/scout): B2B espor scouting ve oyuncu analiz raporları
+
+## Site Haritaları
+
+- [Sitemap](https://fextesports.com/sitemap.xml)
+
+## Notlar
+
+- İçerik Türkçedir. Kapsanan oyunlar: Valorant, CS2, League of Legends.
+- Tahminler "Fextopus" motoru tarafından üretilir; olasılıklar bilgilendirme amaçlıdır.
+- Veri kaynakları: PandaScore (maç/skor) ve Liquipedia (transfer/istatistik atıflı).

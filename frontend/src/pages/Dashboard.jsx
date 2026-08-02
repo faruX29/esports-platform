@@ -2363,7 +2363,8 @@ export default function Dashboard() {
 
         {loading ? (
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill,minmax(230px,1fr))', gap: 12 }}>
-            {[1,2,3].map(i => <Sk key={i} h="150px" r="16px" />)}
+            {/* Skeleton yüksekliği gerçek LiveMatchCard ile aynı (248px) → CLS'i önler */}
+            {[1,2,3].map(i => <Sk key={i} h="248px" r="16px" />)}
           </div>
         ) : liveMatches.length === 0 ? (
           <div style={{ padding: '20px', borderRadius: 16, background: 'var(--surface)', border: '1px solid var(--line)', textAlign: 'center' }}>
@@ -2468,7 +2469,8 @@ export default function Dashboard() {
 
             {loading ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {[1,2,3,4,5].map(i => <Sk key={i} h="40px" r="12px" />)}
+                {/* Skeleton yüksekliği gerçek program satırı ile aynı (54px) → CLS'i önler */}
+                {[1,2,3,4,5].map(i => <Sk key={i} h="54px" r="12px" />)}
               </div>
             ) : groups.length === 0 ? (
               <div style={{ padding: '16px', borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--line)', textAlign: 'center', fontSize: 11, color: 'var(--line-2)' }}>

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../supabaseClient'
+import { supabase, requestBrowserNotificationPermission } from '../supabaseClient'
 import { useAuth } from './AuthContext'
 import BRANDING from '../branding.config'
 import { normalizeGameId } from '../utils/gameUtils'
@@ -238,6 +238,9 @@ export function UserProvider({ children }) {
   function followTeam(teamId) {
     if (!teamId || !requireAuth()) return
     setTeamIds(prev => (prev.includes(teamId) ? prev : [...prev, teamId]))
+    // Bildirim izni: sayfa yükünde DEĞİL, kullanıcı takım takip edince iste
+    // (doğal opt-in anı; favori maça bildirim özelliği için).
+    requestBrowserNotificationPermission({ allowPrompt: true })
   }
 
   function unfollowTeam(teamId) {
@@ -248,9 +251,12 @@ export function UserProvider({ children }) {
   function toggleTeamFollow(teamId) {
     if (!teamId) return
     if (!teamIds.includes(teamId) && !requireAuth()) return
+    const isAdding = !teamIds.includes(teamId)
     setTeamIds(prev => (prev.includes(teamId)
       ? prev.filter(id => id !== teamId)
       : [...prev, teamId]))
+    // Yeni takip eklenince bildirim izni iste (sayfa yükünde değil).
+    if (isAdding) requestBrowserNotificationPermission({ allowPrompt: true })
   }
 
   function isTeamFollowed(teamId) {

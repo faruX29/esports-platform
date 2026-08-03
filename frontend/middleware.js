@@ -166,13 +166,15 @@ async function buildForMatch(id, origin, url) {
   const title = `${a} vs ${b}${row.tournament?.name ? ' · ' + row.tournament.name : ''}`
   const desc = p ? `${p} · feXt AI analizi ve canlı skor.` : 'feXt — AI analizi, canlı skor ve istatistikler.'
   const teams = [{ '@type': 'SportsTeam', name: a }, { '@type': 'SportsTeam', name: b }]
-  const jsonLd = {
+  // Event şeması YALNIZCA startDate varsa basılır (startDate = Google zorunlu alanı;
+  // tarih yoksa geçersiz Event yerine hiç şema basmamak daha doğru).
+  const jsonLd = row.scheduled_at ? {
     '@context': 'https://schema.org', '@type': 'SportsEvent', name: `${a} vs ${b}`, sport: 'Esports',
     ...eventCommon(url, row.scheduled_at, desc, img),
     competitor: teams, performer: teams,
     superEvent: row.tournament?.name ? { '@type': 'SportsEvent', name: row.tournament.name } : undefined,
     url,
-  }
+  } : null
   return htmlDoc({ title, desc, url, img, jsonLd })
 }
 
@@ -263,11 +265,13 @@ async function buildForTournament(id, origin, url) {
   const matches = await sbFetchAll(`matches?tournament_id=eq.${ENC(id)}&select=${ENC(MATCH_SEL)}&order=scheduled_at.desc&limit=15`)
   const title = `${name} — Fikstür, Puan Durumu ve Sonuçlar`
   const desc = `${name} espor turnuvası: maç programı, sonuçlar ve puan durumu — feXt.`
-  const jsonLd = {
+  // Event şeması yalnızca begin_at (startDate) varsa (turnuvaların ~%18'i tarihsiz →
+  // onlarda geçersiz Event basmaktansa hiç basma; sayfa yine çalışır).
+  const jsonLd = t.begin_at ? {
     '@context': 'https://schema.org', '@type': 'SportsEvent', name, sport: 'Esports',
     ...eventCommon(url, t.begin_at, desc, ''),
     endDate: t.end_at || undefined, url,
-  }
+  } : null
   const body = `<h1>${esc(name)}</h1><p>${esc(desc)}</p>${matchListHtml(origin, matches, 'Maçlar')}`
   return htmlDoc({ title, desc, url, img: '', type: 'article', jsonLd, body })
 }

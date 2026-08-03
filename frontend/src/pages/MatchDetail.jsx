@@ -1412,12 +1412,12 @@ export default function MatchDetail() {
         description={`${aName} vs ${bName}${match.tournament?.name ? ` · ${match.tournament.name}` : ''} — canlı skor, AI tahmini, kadro ve maç istatistikleri. feXt.`}
         image={aLogo || bLogo || ''}
         type="article"
-        schema={{
+        schema={match.scheduled_at ? {
           '@context': 'https://schema.org',
           '@type': 'SportsEvent',
           name: `${aName} vs ${bName}`,
           sport: 'Esports',
-          startDate: match.scheduled_at || undefined,
+          startDate: match.scheduled_at,
           eventStatus: 'https://schema.org/EventScheduled',
           eventAttendanceMode: 'https://schema.org/OnlineEventAttendanceMode',
           location: { '@type': 'VirtualLocation', url: typeof window !== 'undefined' ? window.location.href : undefined },
@@ -1434,7 +1434,7 @@ export default function MatchDetail() {
           ],
           superEvent: match.tournament?.name ? { '@type': 'SportsEvent', name: match.tournament.name } : undefined,
           url: typeof window !== 'undefined' ? window.location.href : undefined,
-        }}
+        } : null}
       />
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px 60px' }}>
 

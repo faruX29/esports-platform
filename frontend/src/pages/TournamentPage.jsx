@@ -2047,12 +2047,12 @@ export default function TournamentPage() {
         title={`${tournament.name} — Fikstür, Puan Durumu ve Sonuçlar`}
         description={`${tournament.name} espor turnuvası: maç programı, bracket, puan durumu ve sonuçlar — feXt.`}
         type="article"
-        schema={{
+        schema={tournament.begin_at ? {
           '@context': 'https://schema.org',
           '@type': 'SportsEvent',
           name: tournament.name,
           sport: 'Esports',
-          startDate: tournament.begin_at || undefined,
+          startDate: tournament.begin_at,
           endDate: tournament.end_at || undefined,
           eventStatus: 'https://schema.org/EventScheduled',
           eventAttendanceMode: liquipediaLocation
@@ -2064,7 +2064,7 @@ export default function TournamentPage() {
           description: `${tournament.name} espor turnuvası: maç programı, bracket, puan durumu ve sonuçlar.`,
           organizer: { '@type': 'Organization', name: 'feXt' },
           url: typeof window !== 'undefined' ? window.location.href : undefined,
-        }}
+        } : null}
       />
 
       <style>{`

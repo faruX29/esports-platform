@@ -34,12 +34,11 @@
     <!-- Inter — veri-yoğun UI; Baloo 2 — feXt marka wordmark'ı (yuvarlak/oyunbaz) -->
     <!-- Font CSS render'ı BLOKE ETMEZ (preload→stylesheet): yavaş 4G'de ~2s FCP
          kazancı. display=swap zaten fallback→web-font geçişini yönetir. -->
-    <!-- Kritik yol: veri (Supabase → LCP) ve logolar (wsrv resim-proxy) önce bağlanır.
+    <!-- Kritik yol: veri (Supabase → LCP) ve takım logoları (pandascore) önce bağlanır.
          Fontlar artık render-blocking değil → hafif dns-prefetch yeterli (<4 ipucu). -->
     <link rel="preconnect" href="https://owepdnaivhrpadapbtxb.supabase.co" crossorigin />
-    <link rel="preconnect" href="https://wsrv.nl" crossorigin />
+    <link rel="preconnect" href="https://cdn-api.pandascore.co" crossorigin />
     <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
-    <link rel="dns-prefetch" href="https://cdn-api.pandascore.co" />
     <link
       rel="preload"
       as="style"

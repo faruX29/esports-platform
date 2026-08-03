@@ -36,19 +36,10 @@ function makeTone(seed) {
   }
 }
 
-/**
- * Dış (http) görselleri wsrv.nl proxy'siyle GÖSTERİM boyutunda + WebP olarak sunar.
- * PandaScore logoları 500x500 gelip 18-63px gösteriliyordu (logo başına ~50-266KB);
- * proxy ile ~1-3KB'a düşer → mobilde LCP/veri büyük kazanç. data:/blob:/yerel (/)
- * görsellere dokunulmaz. Proxy hata verirse orijinale, o da olmazsa baş harflere düşer.
- */
-function proxiedSrc(src, size) {
-  if (typeof src !== 'string' || !/^https?:\/\//i.test(src)) return src
-  if (src.includes('wsrv.nl')) return src
-  const w = Math.min(Math.round((Number(size) || 32) * 2), 256)   // 2x retina, tavan 256
-  return `https://wsrv.nl/?url=${encodeURIComponent(src)}&w=${w}&output=webp&q=80`
-}
-
+// NOT: Görselleri wsrv.nl proxy'siyle küçültme DENENDİ ama proxy timeout verdiği
+// için logolar boş kalıyordu → geri alındı (logo güvenilirliği > bayt tasarrufu).
+// İleride görsel optimizasyonu güvenilir bir çözümle (Vercel Image Opt / self-host
+// imgproxy) yapılabilir; wsrv KULLANMA.
 export default function InitialsImage({
   src,
   name,
@@ -64,11 +55,10 @@ export default function InitialsImage({
   fallbackBorder,
   fallbackColor,
 }) {
-  // 'proxy' → wsrv küçültülmüş; 'original' → ham kaynak; 'failed' → baş harf avatarı
-  const [stage, setStage] = useState('proxy')
+  const [failed, setFailed] = useState(false)
 
   useEffect(() => {
-    setStage('proxy')
+    setFailed(false)
   }, [src])
 
   const label = name || alt || ''
@@ -82,20 +72,14 @@ export default function InitialsImage({
     : 28
   const textSize = Math.max(10, Math.round(baseSize * textScale))
 
-  const displaySrc = useMemo(() => {
-    if (!src) return null
-    if (stage === 'original') return src
-    return proxiedSrc(src, Math.max(numericWidth, numericHeight) || 32)
-  }, [src, stage, numericWidth, numericHeight])
-
-  if (src && stage !== 'failed') {
+  if (src && !failed) {
     return (
       <img
-        src={displaySrc}
+        src={src}
         alt={alt || name || ''}
         loading='lazy'
         decoding='async'
-        onError={() => setStage(s => (s === 'proxy' ? 'original' : 'failed'))}
+        onError={() => setFailed(true)}
         style={{
           width,
           height,

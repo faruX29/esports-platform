@@ -1,4 +1,4 @@
-import mascotImg from '../assets/fextopus-icon.png'
+import mascotImg from '../assets/fextopus-icon.webp'
 
 /**
  * Mascot — feXt Fextopus maskotu (arkadaş çizimi).

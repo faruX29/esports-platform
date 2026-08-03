@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
-import baseImg from '../assets/fextopus-base.png'
-import shinesImg from '../assets/fextopus-shines.png'
-import blinkImg from '../assets/fextopus-eyes-closed.png'
+import baseImg from '../assets/fextopus-base.webp'
+import shinesImg from '../assets/fextopus-shines.webp'
+import blinkImg from '../assets/fextopus-eyes-closed.webp'
 
 /**
  * FextopusLogo — gerçek Fextopus maskotu (arkadaş çizimi, birebir PNG) + feXt wordmark.

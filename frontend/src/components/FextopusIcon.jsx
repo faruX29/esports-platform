@@ -1,4 +1,4 @@
-import iconImg from '../assets/fextopus-icon.png'
+import iconImg from '../assets/fextopus-icon.webp'
 
 /**
  * FextopusIcon — Fextopus maskotunun küçük statik rozet ikonu (AI/tahmin

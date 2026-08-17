@@ -108,7 +108,13 @@ async function buildChild(type, base) {
     return urlset(rows.map(r => ({ loc: `${base}/news/${newsSlug(r)}`, lastmod: lastmod(r), changefreq: 'weekly', priority: '0.8' })))
   }
   if (type === 'matches') {
-    const rows = await fetchAll('matches', 'id,updated_at', 'status=eq.finished')
+    // Yalnız SON 1 YIL biten maçlar. Eski 2014-2024 backfill'i (33k'nın çoğu, ince
+    // "skor" sayfaları) sitemap'ten çıkar → botların tarama yüzeyi ~3x küçülür
+    // (Vercel Fluid CPU + Origin Transfer tasarrufu) + crawl bütçesi değerli sayfalara
+    // odaklanır. Eski maçlar erişilebilir kalır; süreyi uzatmak için SITEMAP_MATCH_DAYS.
+    const SITEMAP_MATCH_DAYS = 365
+    const cutoff = new Date(Date.now() - SITEMAP_MATCH_DAYS * 86400000).toISOString()
+    const rows = await fetchAll('matches', 'id,updated_at', `status=eq.finished&scheduled_at=gte.${encodeURIComponent(cutoff)}`)
     return urlset(rows.map(r => ({ loc: `${base}/match/${r.id}`, lastmod: lastmod(r), changefreq: 'monthly', priority: '0.6' })))
   }
   if (type === 'tournaments') {

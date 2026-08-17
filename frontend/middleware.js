@@ -306,7 +306,13 @@ export default async function middleware(req) {
 
     if (html) {
       return new Response(html, {
-        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=600' },
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          // Bot SEO snapshot'ı gerçek-zamanlı olmak zorunda değil → uzun paylaşımlı
+          // cache: aynı URL tekrar taranınca fonksiyon yeniden çalışmaz (Vercel CPU/
+          // Origin Transfer tasarrufu). Google zaten periyodik yeniden tarar.
+          'cache-control': 'public, max-age=1800, s-maxage=86400, stale-while-revalidate=604800',
+        },
       })
     }
   } catch {

@@ -31,7 +31,7 @@ import {
 import { FEXT } from '../theme'
 import Mascot from '../components/Mascot'
 import SeoHead from '../components/SeoHead'
-import { distinctiveTournamentName, isGenericStageName, displayRegion } from '../utils/tournamentDisplay'
+import { tournamentDisplayName, isGenericStageName, displayRegion } from '../utils/tournamentDisplay'
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 
@@ -2010,7 +2010,7 @@ export default function TournamentPage() {
   const gc    = gameColor(gName)
   const tier  = getTierMeta(tournament?.tier)
   const regionLabel = displayRegion(tournament?.region, gameId)
-  const tournamentDisplayName = distinctiveTournamentName(cleanName(tournament?.name, 'Tournament'), tournament?.region, gameId)
+  const tournamentTitle = tournamentDisplayName(tournament, { game: gameId })
   const isTR  = isTurkishTeam(tournament?.name ?? '') || tournament?.region === 'TR'
   const liquipediaMeta = tournament?.extra_metadata?.liquipedia || null
   const liquipediaLocation = liquipediaMeta?.location || null
@@ -2196,7 +2196,7 @@ export default function TournamentPage() {
           <h1 style={{
             margin: '0 0 10px', fontSize: 28, fontWeight: 900, lineHeight: 1.15,
             color: 'var(--text-1)',
-          }}>{tournamentDisplayName}</h1>
+          }}>{tournamentTitle}</h1>
 
           {/* Meta row */}
           <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginBottom: 14,

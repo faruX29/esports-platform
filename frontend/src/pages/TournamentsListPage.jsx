@@ -6,7 +6,7 @@ import { normalizeGameId } from '../utils/gameUtils'
 import { clickableProps } from '../utils/a11y'
 import InitialsImage from '../components/InitialsImage'
 import GameLogo, { GAME_ICON_PATHS } from '../components/GameLogo'
-import { distinctiveTournamentName, isGenericStageName, displayRegion } from '../utils/tournamentDisplay'
+import { tournamentDisplayName, isGenericStageName, displayRegion } from '../utils/tournamentDisplay'
 
 // Kanonik oyuna ait TÜM game_id'ler (mükerrer kayıtlar dahil: CS2 2/8, LoL 3/9).
 function resolveGameIds(activeGame, games) {
@@ -99,7 +99,7 @@ export default function TournamentsListPage() {
         const gameIds = resolveGameIds(activeGame, games)
         let q = supabase
           .from('tournaments')
-          .select('id,name,tier,region,begin_at,end_at,game:games(id,name,slug)')
+          .select('id,name,tier,region,begin_at,end_at,league_name,event_name,display_name,game:games(id,name,slug)')
         if (debouncedSearch) q = q.ilike('name', `%${debouncedSearch}%`)
         if (gameIds.length) q = q.in('game_id', gameIds)
         // Tier filtresi SUNUCU-taraflı: eskiden client-side'dı → 120'lik sayfa çoğu
@@ -298,7 +298,7 @@ export default function TournamentsListPage() {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                   <div style={{ fontSize: 14, fontWeight: 800, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {distinctiveTournamentName(item.name, item.region, gm.id)}
+                    {tournamentDisplayName(item, { game: gm.id })}
                   </div>
                   {tierKey && (
                     <span style={{ fontSize: 10, fontWeight: 900, color: '#0b0f19', background: tierColor, borderRadius: 5, padding: '2px 6px', flexShrink: 0, letterSpacing: '.3px' }}>

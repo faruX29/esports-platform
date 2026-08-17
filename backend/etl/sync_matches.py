@@ -284,6 +284,8 @@ class MatchSyncer:
                                 end_at   = match.get('tournament_end_at'),
                                 tier     = match.get('tournament_tier'),
                                 region   = match.get('tournament_region'),
+                                league_name = match.get('league_name'),
+                                event_name  = match.get('event_name'),
                             )
 
                         # ── Timezone-aware scheduled_at ──────────────
@@ -534,23 +536,28 @@ class MatchSyncer:
     
     def _get_or_create_tournament(self, cur, tournament_id, name, game_id,
                                    begin_at=None, end_at=None,
-                                   tier=None, region=None):
+                                   tier=None, region=None,
+                                   league_name=None, event_name=None):
         """
         Get or create tournament in database.
-        Artık begin_at, end_at, tier ve region alanlarını da yazıyor.
+        name = AŞAMA (Play-In/Playoffs); league_name (VCT) + event_name
+        (serie full_name, "Americas Stage 2 2026") tam-ad compose'u için saklanır.
+        display_name (manuel override) burada ASLA yazılmaz → korunur.
         """
         cur.execute("""
-            INSERT INTO tournaments (id, name, game_id, begin_at, end_at, tier, region)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO tournaments (id, name, game_id, begin_at, end_at, tier, region, league_name, event_name)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (id) DO UPDATE SET
-                name     = COALESCE(EXCLUDED.name, tournaments.name),
-                game_id  = COALESCE(EXCLUDED.game_id, tournaments.game_id),
-                begin_at = COALESCE(EXCLUDED.begin_at, tournaments.begin_at),
-                end_at   = COALESCE(EXCLUDED.end_at,   tournaments.end_at),
-                tier     = COALESCE(EXCLUDED.tier,     tournaments.tier),
-                region   = COALESCE(EXCLUDED.region,   tournaments.region)
+                name        = COALESCE(EXCLUDED.name, tournaments.name),
+                game_id     = COALESCE(EXCLUDED.game_id, tournaments.game_id),
+                begin_at    = COALESCE(EXCLUDED.begin_at, tournaments.begin_at),
+                end_at      = COALESCE(EXCLUDED.end_at,   tournaments.end_at),
+                tier        = COALESCE(EXCLUDED.tier,     tournaments.tier),
+                region      = COALESCE(EXCLUDED.region,   tournaments.region),
+                league_name = COALESCE(EXCLUDED.league_name, tournaments.league_name),
+                event_name  = COALESCE(EXCLUDED.event_name,  tournaments.event_name)
             RETURNING id
-        """, (tournament_id, name, game_id, begin_at, end_at, tier, region))
+        """, (tournament_id, name, game_id, begin_at, end_at, tier, region, league_name, event_name))
 
         result = cur.fetchone()
         return result[0] if result else None

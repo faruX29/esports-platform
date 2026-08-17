@@ -402,6 +402,7 @@ class DataCleaner:
             "tournament_id": match.get("tournament_id") or tournament.get("id") or league.get("id"),
             "tournament_name": tournament_name,
             "event_name": event_name or None,
+            "league_name": (league.get("name") or None),
             "tournament_begin_at": tournament_begin_at,
             "tournament_end_at": tournament_end_at,
             "tournament_tier": tournament_tier,

@@ -19,7 +19,7 @@ import InitialsImage                        from '../components/InitialsImage'
 import TrBadge                              from '../components/TrBadge'
 import TurkishBadge                          from '../components/TurkishBadge'
 import { normalizeGameId }                  from '../utils/gameUtils'
-import { distinctiveTournamentName }        from '../utils/tournamentDisplay'
+import { tournamentDisplayName }            from '../utils/tournamentDisplay'
 import { getBOFormat }                       from '../utils/matchFormat'
 import { FEXT, statusStyle }                 from '../theme'
 import { correctedScores }                   from '../utils/matchResult'
@@ -1520,7 +1520,7 @@ export default function Dashboard() {
         const nowIso = new Date().toISOString()
         const { data: tRows, error } = await supabase
           .from('tournaments')
-          .select('id,name,tier,begin_at,end_at,region,game:games(id,name,slug)')
+          .select('id,name,tier,begin_at,end_at,region,league_name,event_name,display_name,game:games(id,name,slug)')
           .lte('begin_at', nowIso)
           .gte('end_at', nowIso)
           .order('begin_at', { ascending: false })
@@ -2510,7 +2510,7 @@ export default function Dashboard() {
                       )}
                     </div>
                     <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', minHeight: 32 }}>
-                      {distinctiveTournamentName(t.name, t.region, normalizeGameId(t.game?.slug ?? t.game?.name))}
+                      {tournamentDisplayName(t, { game: normalizeGameId(t.game?.slug ?? t.game?.name) })}
                     </div>
                     {t.teams.length > 0 && (
                       <div style={{ display: 'flex', alignItems: 'center', marginTop: 2 }}>

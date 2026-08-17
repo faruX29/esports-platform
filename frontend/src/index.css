@@ -157,6 +157,10 @@ textarea:focus-visible,
   .hide-sm { display: none !important; }
   /* Dar mobilde içeriği ortala (ör. kompakt maç satırında takım isimleri). */
   .center-sm { justify-content: center !important; }
+  /* Kompakt maç satırı: mobilde takımlar ALT ALTA (TeamA / vs / TeamB) →
+     her takım kendi satırını alır, isimler kırpılmaz. */
+  .matchup { flex-direction: column !important; align-items: center !important; gap: 2px !important; }
+  .matchup-team { justify-content: center; max-width: 100%; }
 }
 
 /* "İçeriğe geç" atlama linki — klavyeyle Tab'lanınca görünür, aksi halde gizli.

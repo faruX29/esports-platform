@@ -1126,38 +1126,42 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
         }} />
       )}
 
-      {/* Teams — mobilde ortalı (Yaklaşan etiketi + form gizli olduğu için dengeli durur) */}
-      <div className="center-sm" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, overflow: 'hidden' }}>
-        <InitialsImage
-          src={m.team_a?.logo_url}
-          alt={m.team_a?.name || ''}
-          name={m.team_a?.name}
-          width={18}
-          height={18}
-          borderRadius={4}
-          objectFit='contain'
-        />
-        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: turkA ? '#ff6b7a' : 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
-            {m.team_a?.name || '?'}{turkA && ' 🇹🇷'}
-          </span>
-          {formA.length > 0 && <FormStrip form={formA} className="hide-sm" />}
+      {/* Teams — mobilde takımlar ALT ALTA (TeamA / vs / TeamB); masaüstünde yatay */}
+      <div className="matchup" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, overflow: 'hidden' }}>
+        <div className="matchup-team" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+          <InitialsImage
+            src={m.team_a?.logo_url}
+            alt={m.team_a?.name || ''}
+            name={m.team_a?.name}
+            width={18}
+            height={18}
+            borderRadius={4}
+            objectFit='contain'
+          />
+          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: turkA ? '#ff6b7a' : 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {m.team_a?.name || '?'}{turkA && ' 🇹🇷'}
+            </span>
+            {formA.length > 0 && <FormStrip form={formA} className="hide-sm" />}
+          </div>
         </div>
-        <span style={{ fontSize: 9, color: 'var(--line-2)', flexShrink: 0 }}>vs</span>
-        <InitialsImage
-          src={m.team_b?.logo_url}
-          alt={m.team_b?.name || ''}
-          name={m.team_b?.name}
-          width={18}
-          height={18}
-          borderRadius={4}
-          objectFit='contain'
-        />
-        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: turkB ? '#ff6b7a' : 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
-            {m.team_b?.name || '?'}{turkB && ' 🇹🇷'}
-          </span>
-          {formB.length > 0 && <FormStrip form={formB} className="hide-sm" />}
+        <span className="matchup-vs" style={{ fontSize: 9, color: 'var(--line-2)', flexShrink: 0 }}>vs</span>
+        <div className="matchup-team" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+          <InitialsImage
+            src={m.team_b?.logo_url}
+            alt={m.team_b?.name || ''}
+            name={m.team_b?.name}
+            width={18}
+            height={18}
+            borderRadius={4}
+            objectFit='contain'
+          />
+          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: turkB ? '#ff6b7a' : 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {m.team_b?.name || '?'}{turkB && ' 🇹🇷'}
+            </span>
+            {formB.length > 0 && <FormStrip form={formB} className="hide-sm" />}
+          </div>
         </div>
       </div>
 

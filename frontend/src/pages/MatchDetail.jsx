@@ -9,6 +9,7 @@ import { supabase }                                 from '../supabaseClient'
 import { isTurkishTeam }                           from '../constants'
 import { useUser }                                 from '../context/UserContext'
 import InitialsImage                               from '../components/InitialsImage'
+import TrBadge                                     from '../components/TrBadge'
 import LiquipediaCredit                            from '../components/LiquipediaCredit'
 import PredictionAccuracyBadge                     from '../components/PredictionAccuracyBadge'
 import { DeepScoutBadge, StatsCoverageNotice }     from '../components/ScoutSignals'
@@ -1473,7 +1474,7 @@ export default function MatchDetail() {
                   borderRadius={12}
                   imgStyle={{ objectFit: 'contain', filter: isFin && bWon ? 'grayscale(80%)' : 'none' }}
                 />
-                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (aWon ? '#4CAF50' : 'var(--text-3)') : 'var(--text-1)', minWidth: 0, overflowWrap: 'break-word', textAlign: 'right', lineHeight: 1.2 }}>{aName}{isTurkishTeam(aName) && ' 🇹🇷'}</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (aWon ? '#4CAF50' : 'var(--text-3)') : 'var(--text-1)', minWidth: 0, overflowWrap: 'break-word', textAlign: 'right', lineHeight: 1.2 }}>{aName}{isTurkishTeam(aName) && <TrBadge />}</div>
               </div>
               <FavButton teamId={aId} active={favA} onToggle={toggleTeamFollow} />
             </div>
@@ -1498,7 +1499,7 @@ export default function MatchDetail() {
                   borderRadius={12}
                   imgStyle={{ objectFit: 'contain', filter: isFin && aWon ? 'grayscale(80%)' : 'none' }}
                 />
-                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (bWon ? '#4CAF50' : 'var(--text-3)') : 'var(--text-1)', minWidth: 0, overflowWrap: 'break-word', textAlign: 'left', lineHeight: 1.2 }}>{isTurkishTeam(bName) && '🇹🇷 '}{bName}</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (bWon ? '#4CAF50' : 'var(--text-3)') : 'var(--text-1)', minWidth: 0, overflowWrap: 'break-word', textAlign: 'left', lineHeight: 1.2 }}>{isTurkishTeam(bName) && <TrBadge />}{bName}</div>
               </div>
               <FavButton teamId={bId} active={favB} onToggle={toggleTeamFollow} />
             </div>

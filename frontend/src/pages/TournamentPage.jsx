@@ -15,6 +15,7 @@ import { isTurkishTeam }                              from '../constants'
 import { cleanDisplayName }                           from '../utils/nameCleaner'
 import { getBOFormat }                                from '../utils/matchFormat'
 import { DeepScoutBadge }                             from '../components/ScoutSignals'
+import TrBadge                                        from '../components/TrBadge'
 import { deriveWinnerTeamId }                         from '../utils/matchResult'
 import { roundLabel }                                 from '../utils/roundLabel'
 import { isUncertainPrediction }                      from '../utils/prediction'
@@ -850,7 +851,7 @@ function StandingsTable({ matches, navigate }) {
                     <TeamAv src={t.logo} name={t.name} size={28} />
                     <span style={{ fontSize: 13, fontWeight: 700,
                       color: isTR ? '#FFD700' : 'var(--text-1)' }}>
-                      {t.name}{isTR && ' 🇹🇷'}
+                      {t.name}{isTR && <TrBadge />}
                     </span>
                   </div>
                 </td>
@@ -1133,7 +1134,7 @@ const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, gc, highl
             color: side.won ? 'var(--text-1)' : side.name === 'TBD' ? 'var(--text-6)' : 'var(--text-3)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
-            {side.isTR && '🇹🇷 '}{side.name}
+            {side.isTR && <TrBadge />}{side.name}
           </span>
 
           {/* Score */}
@@ -1688,7 +1689,7 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
               color: aWon ? 'var(--text-1)' : 'var(--text-4)',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
-              {isTRA && '🇹🇷 '}{m.team_a?.name ?? '?'}
+              {isTRA && <TrBadge />}{m.team_a?.name ?? '?'}
             </span>
             <TeamAv src={m.team_a?.logo_url} name={m.team_a?.name} size={28} />
           </div>
@@ -1725,7 +1726,7 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
               color: bWon ? 'var(--text-1)' : 'var(--text-4)',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
-              {isTRB && '🇹🇷 '}{m.team_b?.name ?? '?'}
+              {isTRB && <TrBadge />}{m.team_b?.name ?? '?'}
             </span>
           </div>
         </div>

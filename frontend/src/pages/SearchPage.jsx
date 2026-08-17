@@ -17,6 +17,7 @@ import { GAMES }                                     from '../context/GameContex
 import { normalizeGameId }                           from '../utils/gameUtils'
 import { clickableProps }                            from '../utils/a11y'
 import TurkishBadge                                  from '../components/TurkishBadge'
+import TrBadge                                        from '../components/TrBadge'
 import {
   Search, MapPin, CalendarDays, Shield, User, Trophy, Inbox, RefreshCw, X as XIcon,
   Check, SlidersHorizontal, ChevronLeft, Gamepad2,
@@ -213,7 +214,7 @@ function TeamCard({ team, navigate }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {team.name}{isTR && ' 🇹🇷'}
+          {team.name}{isTR && <TrBadge />}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-5)', marginTop: 3 }}>
           <GameChip game={team.game} />

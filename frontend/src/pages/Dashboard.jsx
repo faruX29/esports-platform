@@ -16,6 +16,7 @@ import { isStoryFollowedTeam, prioritizeStoriesForYou } from '../utils/newsPerso
 import { calculatePredictionAccuracy } from '../utils/accuracyTracker'
 import { memo }                             from 'react'
 import InitialsImage                        from '../components/InitialsImage'
+import TrBadge                              from '../components/TrBadge'
 import TurkishBadge                          from '../components/TurkishBadge'
 import { normalizeGameId }                  from '../utils/gameUtils'
 import { getBOFormat }                       from '../utils/matchFormat'
@@ -963,7 +964,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
             color: aWon ? '#4CAF50' : favA ? '#FFD700' : 'var(--text-2)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
-            {m.team_a?.name || '?'}{turkA && ' 🇹🇷'}
+            {m.team_a?.name || '?'}{turkA && <TrBadge />}
           </div>
           {formA.length > 0 && (
             <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -1024,7 +1025,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
             color: bWon ? '#4CAF50' : favB ? '#FFD700' : 'var(--text-2)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
-            {m.team_b?.name || '?'}{turkB && ' 🇹🇷'}
+            {m.team_b?.name || '?'}{turkB && <TrBadge />}
           </div>
           {formB.length > 0 && (
             <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -1140,7 +1141,7 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
           />
           <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: turkA ? '#ff6b7a' : 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {m.team_a?.name || '?'}{turkA && ' 🇹🇷'}
+              {m.team_a?.name || '?'}{turkA && <TrBadge />}
             </span>
             {formA.length > 0 && <FormStrip form={formA} className="hide-sm" />}
           </div>
@@ -1158,7 +1159,7 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
           />
           <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: turkB ? '#ff6b7a' : 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {m.team_b?.name || '?'}{turkB && ' 🇹🇷'}
+              {m.team_b?.name || '?'}{turkB && <TrBadge />}
             </span>
             {formB.length > 0 && <FormStrip form={formB} className="hide-sm" />}
           </div>
@@ -1214,7 +1215,7 @@ const ResultRow = memo(function ResultRow({ match: m, onMatchClick }) {
       {/* Team A (sağa hizalı, merkeze doğru) */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, minWidth: 0 }}>
         <span style={{ fontSize: 12, fontWeight: aWon ? 800 : 600, color: aWon ? '#eaeaea' : '#6f6f6f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130, textAlign: 'right' }}>
-          {m.team_a?.name || '?'}{turkA && ' 🇹🇷'}
+          {m.team_a?.name || '?'}{turkA && <TrBadge />}
         </span>
         <InitialsImage src={m.team_a?.logo_url} alt={m.team_a?.name || ''} name={m.team_a?.name} width={18} height={18} borderRadius={4} objectFit='contain' />
       </div>
@@ -1230,7 +1231,7 @@ const ResultRow = memo(function ResultRow({ match: m, onMatchClick }) {
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
         <InitialsImage src={m.team_b?.logo_url} alt={m.team_b?.name || ''} name={m.team_b?.name} width={18} height={18} borderRadius={4} objectFit='contain' />
         <span style={{ fontSize: 12, fontWeight: bWon ? 800 : 600, color: bWon ? '#eaeaea' : '#6f6f6f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130 }}>
-          {m.team_b?.name || '?'}{turkB && ' 🇹🇷'}
+          {m.team_b?.name || '?'}{turkB && <TrBadge />}
         </span>
       </div>
 

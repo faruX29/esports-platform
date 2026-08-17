@@ -1847,7 +1847,7 @@ export default function Dashboard() {
             .select(selectStr)
             .eq('status', 'finished')
             .order('scheduled_at', { ascending: false })
-            .limit(40),
+            .limit(60),
           supabase
             .from('matches')
             .select(selectStr)
@@ -1924,7 +1924,7 @@ export default function Dashboard() {
               // Favori takım maçları en üstte; sonrası tarih-desc (finished zaten öyle sıralı, stable).
               return (involvesFav(b) ? 1 : 0) - (involvesFav(a) ? 1 : 0)
             })
-            .slice(0, 8)
+            .slice(0, 15)   // üst-tier çok maç olduğunda daha fazla göster (yoksa doğal olarak az)
           setRecentResults(orderedResults)
 
           safeWriteCache(DASHBOARD_TICKER_CACHE_KEY, {

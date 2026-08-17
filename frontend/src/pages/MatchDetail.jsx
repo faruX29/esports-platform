@@ -1432,7 +1432,8 @@ export default function MatchDetail() {
             { '@type': 'SportsTeam', name: aName },
             { '@type': 'SportsTeam', name: bName },
           ],
-          superEvent: match.tournament?.name ? { '@type': 'SportsEvent', name: match.tournament.name } : undefined,
+          // superEvent kaldırıldı: iç içe SportsEvent (turnuva) sadece name taşıyıp
+          // "location/startDate eksik" doğrulama hatası veriyordu (GSC). Ana Event tam.
           url: typeof window !== 'undefined' ? window.location.href : undefined,
         } : null}
       />

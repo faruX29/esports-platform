@@ -172,7 +172,9 @@ async function buildForMatch(id, origin, url) {
     '@context': 'https://schema.org', '@type': 'SportsEvent', name: `${a} vs ${b}`, sport: 'Esports',
     ...eventCommon(url, row.scheduled_at, desc, img),
     competitor: teams, performer: teams,
-    superEvent: row.tournament?.name ? { '@type': 'SportsEvent', name: row.tournament.name } : undefined,
+    // superEvent KALDIRILDI: iç içe SportsEvent (turnuva) sadece name taşıyordu →
+    // Google onu ayrı Event gibi doğrulayıp "location/startDate eksik" veriyordu
+    // (GSC 10 öğe). Ana maç Event'i zaten tam; superEvent opsiyonel, kaldırınca temiz.
     url,
   } : null
   return htmlDoc({ title, desc, url, img, jsonLd })

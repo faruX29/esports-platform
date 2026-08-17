@@ -19,6 +19,7 @@ import InitialsImage                        from '../components/InitialsImage'
 import TrBadge                              from '../components/TrBadge'
 import TurkishBadge                          from '../components/TurkishBadge'
 import { normalizeGameId }                  from '../utils/gameUtils'
+import { distinctiveTournamentName }        from '../utils/tournamentDisplay'
 import { getBOFormat }                       from '../utils/matchFormat'
 import { FEXT, statusStyle }                 from '../theme'
 import { correctedScores }                   from '../utils/matchResult'
@@ -1277,6 +1278,7 @@ export default function Dashboard() {
   const [tickerLoading, setTickerLoading] = useState(false)
   const [recentResults, setRecentResults] = useState([])  // Son Sonuçlar (biten maçlar, skorlu)
   const [showAllResults, setShowAllResults] = useState(false)  // Son Sonuçlar: 6 göster / hepsini aç
+  const [activeTournaments, setActiveTournaments] = useState([])  // Aktif üst-tier turnuvalar (canlı maçların altında)
   const [dreamTeam, setDreamTeam] = useState([])
   const [dreamLoading, setDreamLoading] = useState(false)
   const [stats,           setStats]           = useState({ total: 0, live: 0, today: 0, teams: 0 })
@@ -1508,6 +1510,58 @@ export default function Dashboard() {
 
     return () => { cancelled = true }
   }, [liveMatches, upcomingMatches])
+
+  // Aktif üst-tier turnuvalar: bugünün tarihi begin_at–end_at arasında olan S/A
+  // turnuvalar + katılan takım logoları. Canlı maçların altında bölüm olarak gösterilir.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const nowIso = new Date().toISOString()
+        const { data: tRows, error } = await supabase
+          .from('tournaments')
+          .select('id,name,tier,begin_at,end_at,region,game:games(id,name,slug)')
+          .lte('begin_at', nowIso)
+          .gte('end_at', nowIso)
+          .order('begin_at', { ascending: false })
+          .limit(50)
+        if (error || cancelled) return
+
+        let list = (tRows || []).filter(t => {
+          const k = normalizeTierKey(t.tier)
+          return k === 'S' || k === 'A'
+        })
+        if (activeGame && activeGame !== 'all') {
+          list = list.filter(t => normalizeGameId(t.game?.slug ?? t.game?.name) === activeGame)
+        }
+        list = list.slice(0, 12)
+
+        // Katılan takım logolarını turnuvaların maçlarından türet.
+        const ids = list.map(t => t.id)
+        const teamsByTourn = new Map()
+        if (ids.length) {
+          const { data: mRows } = await supabase
+            .from('matches')
+            .select('tournament_id,team_a:teams!matches_team_a_id_fkey(id,name,logo_url),team_b:teams!matches_team_b_id_fkey(id,name,logo_url)')
+            .in('tournament_id', ids)
+            .limit(800)
+          for (const m of (mRows || [])) {
+            if (!teamsByTourn.has(m.tournament_id)) teamsByTourn.set(m.tournament_id, new Map())
+            const tm = teamsByTourn.get(m.tournament_id)
+            for (const t of [m.team_a, m.team_b]) {
+              if (t?.id && !tm.has(t.id)) tm.set(t.id, t)
+            }
+          }
+        }
+        const enriched = list.map(t => ({
+          ...t,
+          teams: Array.from(teamsByTourn.get(t.id)?.values() || []).slice(0, 7),
+        }))
+        if (!cancelled) setActiveTournaments(enriched)
+      } catch { /* non-critical */ }
+    })()
+    return () => { cancelled = true }
+  }, [activeGame])
 
   useEffect(() => {
     let cancelled = false
@@ -2411,6 +2465,72 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* ── Aktif Turnuvalar (süregelen üst-tier — canlı maçların altında) ─── */}
+      {activeTournaments.length > 0 && (() => {
+        const liveTournIds = new Set((liveMatches || []).map(m => m.tournament?.id ?? m.tournament_id).filter(Boolean))
+        return (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: '#a78bfa', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Trophy size={13} /> Aktif Turnuvalar
+              </span>
+              <span style={{ padding: '1px 7px', borderRadius: 8, background: 'rgba(167,139,250,.14)', color: '#a78bfa', fontSize: 10, fontWeight: 700 }}>
+                {activeTournaments.length}
+              </span>
+              <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(167,139,250,.3),transparent)' }} />
+              <Link to="/tournaments" style={{ fontSize: 10, color: 'var(--text-5)', textDecoration: 'none' }}>Tümü →</Link>
+            </div>
+            <div className="scroll-fade-x" style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
+              {activeTournaments.map(t => {
+                const isLiveT = liveTournIds.has(t.id)
+                const tierK = normalizeTierKey(t.tier)
+                return (
+                  <div
+                    key={t.id}
+                    {...clickableProps(() => navigate(`/tournament/${t.id}`), { label: `${t.name} turnuvası` })}
+                    style={{
+                      flexShrink: 0, width: 210, cursor: 'pointer',
+                      background: 'var(--surface)', border: `1px solid ${isLiveT ? 'rgba(255,70,85,.4)' : 'var(--line)'}`,
+                      borderRadius: 14, padding: '12px 13px', display: 'flex', flexDirection: 'column', gap: 8,
+                      transition: 'border-color .15s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = isLiveT ? 'rgba(255,70,85,.6)' : 'var(--line-2)' }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = isLiveT ? 'rgba(255,70,85,.4)' : 'var(--line)' }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {isLiveT && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 8, fontWeight: 800, color: '#FF4655', letterSpacing: '.5px' }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF4655', animation: 'livePulse 1.2s infinite' }} /> CANLI
+                        </span>
+                      )}
+                      <span style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-5)', textTransform: 'uppercase', letterSpacing: '.4px' }}>{t.game?.name || ''}</span>
+                      {(tierK === 'S' || tierK === 'A') && (
+                        <span style={{ marginLeft: 'auto', fontSize: 8, fontWeight: 900, color: '#f0c040', border: '1px solid rgba(240,192,64,.4)', borderRadius: 5, padding: '1px 5px' }}>{tierK}-Tier</span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', minHeight: 32 }}>
+                      {distinctiveTournamentName(t.name, t.region, normalizeGameId(t.game?.slug ?? t.game?.name))}
+                    </div>
+                    {t.teams.length > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', marginTop: 2 }}>
+                        {t.teams.slice(0, 6).map((tm, i) => (
+                          <InitialsImage
+                            key={tm.id} src={tm.logo_url} name={tm.name} alt={tm.name}
+                            width={20} height={20} borderRadius={5} objectFit='contain'
+                            style={{ marginLeft: i === 0 ? 0 : -4, border: '1px solid var(--surface)', background: 'var(--surface-2)' }}
+                          />
+                        ))}
+                        {t.teams.length > 6 && <span style={{ fontSize: 9, color: 'var(--text-5)', marginLeft: 6 }}>+{t.teams.length - 6}</span>}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Son Sonuçlar (biten maçlar, skorlu — ana sayfada kalıcı) ───────── */}
       {recentResults.length > 0 && (

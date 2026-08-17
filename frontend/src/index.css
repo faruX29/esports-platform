@@ -152,6 +152,9 @@ textarea:focus-visible,
     -webkit-mask-image: linear-gradient(to right, #000 88%, transparent);
             mask-image: linear-gradient(to right, #000 88%, transparent);
   }
+  /* Dar mobilde gizlenecek ikincil öğeler (ör. kompakt maç satırındaki form
+     şeridi — yatayda "vs"/karşı takımla iç içe girip taşıyordu). */
+  .hide-sm { display: none !important; }
 }
 
 /* "İçeriğe geç" atlama linki — klavyeyle Tab'lanınca görünür, aksi halde gizli.

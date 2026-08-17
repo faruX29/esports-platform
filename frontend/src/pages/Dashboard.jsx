@@ -38,10 +38,10 @@ const PREFERENCE_GAMES = GAMES.filter(game => ['valorant', 'cs2', 'lol'].include
 const UPCOMING_WINDOW_DAYS = 7
 
 /* ── FormStrip ────────────────────────────────────────────────────────────── */
-function FormStrip({ form }) {
+function FormStrip({ form, className }) {
   if (!form?.length) return null
   return (
-    <div style={{ display: 'flex', gap: 2, marginTop: 3 }}>
+    <div className={className} style={{ display: 'flex', gap: 2, marginTop: 3 }}>
       {form.map((r, i) => (
         <span key={i} style={{
           width: 13, height: 13, borderRadius: 3, flexShrink: 0,
@@ -1141,7 +1141,7 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
           <span style={{ fontSize: 12, fontWeight: 600, color: turkA ? '#ff6b7a' : 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
             {m.team_a?.name || '?'}{turkA && ' 🇹🇷'}
           </span>
-          {formA.length > 0 && <FormStrip form={formA} />}
+          {formA.length > 0 && <FormStrip form={formA} className="hide-sm" />}
         </div>
         <span style={{ fontSize: 9, color: 'var(--line-2)', flexShrink: 0 }}>vs</span>
         <InitialsImage
@@ -1157,7 +1157,7 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
           <span style={{ fontSize: 12, fontWeight: 600, color: turkB ? '#ff6b7a' : 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
             {m.team_b?.name || '?'}{turkB && ' 🇹🇷'}
           </span>
-          {formB.length > 0 && <FormStrip form={formB} />}
+          {formB.length > 0 && <FormStrip form={formB} className="hide-sm" />}
         </div>
       </div>
 

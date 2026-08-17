@@ -155,6 +155,8 @@ textarea:focus-visible,
   /* Dar mobilde gizlenecek ikincil öğeler (ör. kompakt maç satırındaki form
      şeridi — yatayda "vs"/karşı takımla iç içe girip taşıyordu). */
   .hide-sm { display: none !important; }
+  /* Dar mobilde içeriği ortala (ör. kompakt maç satırında takım isimleri). */
+  .center-sm { justify-content: center !important; }
 }
 
 /* "İçeriğe geç" atlama linki — klavyeyle Tab'lanınca görünür, aksi halde gizli.

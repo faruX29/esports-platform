@@ -1126,8 +1126,8 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
         }} />
       )}
 
-      {/* Teams */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, overflow: 'hidden' }}>
+      {/* Teams — mobilde ortalı (Yaklaşan etiketi + form gizli olduğu için dengeli durur) */}
+      <div className="center-sm" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, overflow: 'hidden' }}>
         <InitialsImage
           src={m.team_a?.logo_url}
           alt={m.team_a?.name || ''}
@@ -1168,8 +1168,8 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
 
       <MatchImpactPill match={m} compact />
 
-      {/* Badge */}
-      <span style={{ padding: '2px 7px', borderRadius: 6, fontSize: 8, fontWeight: 700, color: badge.color, background: badge.bg, flexShrink: 0 }}>
+      {/* Badge — mobilde gizli (Maç Programı zaten "yaklaşan"; canlıyı kırmızı nokta belli eder) */}
+      <span className="hide-sm" style={{ padding: '2px 7px', borderRadius: 6, fontSize: 8, fontWeight: 700, color: badge.color, background: badge.bg, flexShrink: 0 }}>
         {badge.text}
       </span>
     </div>
@@ -1450,17 +1450,36 @@ export default function Dashboard() {
     if (teamIds.length === 0) return
 
     let cancelled = false
-    const idsStr = teamIds.join(',')
 
     ;(async () => {
+      // DOĞRU YOL: takım BAŞINA son-5 (Postgres RPC, window function). Eski global
+      // limit(300) sorgusu ~60 takım için yetmiyor, az-oynayan takımların maçlarını
+      // kaçırıp eksik/yanlış form gösteriyordu (TeamPage ile çelişki). RPC yoksa
+      // (migration henüz çalışmadıysa) aşağıdaki eski yönteme düşer → kırılmaz.
       try {
+        const { data, error } = await supabase.rpc('get_teams_recent_form', { p_team_ids: teamIds })
+        if (!error && Array.isArray(data)) {
+          if (cancelled) return
+          const map = new Map()
+          for (const row of data) {
+            const arr = String(row.form || '').split('').filter(c => c === 'W' || c === 'L')
+            if (arr.length) map.set(Number(row.team_id), arr)
+          }
+          setTeamFormMap(map)
+          return
+        }
+      } catch { /* RPC yok → fallback */ }
+
+      // Fallback (RPC yayınlanana kadar): eski global sorgu, limit 500.
+      try {
+        const idsStr = teamIds.join(',')
         const { data, error } = await supabase
           .from('matches')
           .select('winner_id,team_a_id,team_b_id')
           .eq('status', 'finished')
           .or(`team_a_id.in.(${idsStr}),team_b_id.in.(${idsStr})`)
           .order('scheduled_at', { ascending: false })
-          .limit(300)
+          .limit(500)
 
         if (error || cancelled) return
 

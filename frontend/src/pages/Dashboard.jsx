@@ -1276,6 +1276,7 @@ export default function Dashboard() {
   const [tickerItems, setTickerItems] = useState([])
   const [tickerLoading, setTickerLoading] = useState(false)
   const [recentResults, setRecentResults] = useState([])  // Son Sonuçlar (biten maçlar, skorlu)
+  const [showAllResults, setShowAllResults] = useState(false)  // Son Sonuçlar: 6 göster / hepsini aç
   const [dreamTeam, setDreamTeam] = useState([])
   const [dreamLoading, setDreamLoading] = useState(false)
   const [stats,           setStats]           = useState({ total: 0, live: 0, today: 0, teams: 0 })
@@ -1847,7 +1848,7 @@ export default function Dashboard() {
             .select(selectStr)
             .eq('status', 'finished')
             .order('scheduled_at', { ascending: false })
-            .limit(60),
+            .limit(100),
           supabase
             .from('matches')
             .select(selectStr)
@@ -2430,7 +2431,23 @@ export default function Dashboard() {
             >Tümü →</Link>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {recentResults.map(m => <ResultRow key={m.id} match={m} onMatchClick={handleMatchOpen} />)}
+            {(showAllResults ? recentResults : recentResults.slice(0, 6)).map(m => (
+              <ResultRow key={m.id} match={m} onMatchClick={handleMatchOpen} />
+            ))}
+            {recentResults.length > 6 && (
+              <button
+                onClick={() => setShowAllResults(v => !v)}
+                style={{
+                  background: 'none', border: '1px solid var(--line)', borderRadius: 8,
+                  color: 'var(--text-6)', fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                  padding: '7px 0', width: '100%', transition: 'all .15s', marginTop: 2,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--line-2)'; e.currentTarget.style.color = 'var(--text-4)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line)'; e.currentTarget.style.color = 'var(--text-6)' }}
+              >
+                {showAllResults ? 'Daha az göster' : `+${recentResults.length - 6} sonuç daha göster`}
+              </button>
+            )}
           </div>
         </div>
       )}

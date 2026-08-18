@@ -144,6 +144,31 @@ textarea:focus-visible,
   border-radius: 4px;
 }
 
+/* Yatay şeritler (DragScroll): görünür scrollbar YOK — mobilde parmakla basılı
+   tutup kaydırma, masaüstünde fareyle sürükleme ya da kenar oklarıyla yumuşak kayma. */
+.drag-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  overscroll-behavior-x: contain;
+}
+.drag-scroll::-webkit-scrollbar { display: none; width: 0; height: 0; }
+@media (hover: hover) and (pointer: fine) {
+  .drag-scroll { cursor: grab; -webkit-user-select: none; user-select: none; }
+  .drag-scroll:active { cursor: grabbing; }
+}
+/* Logolar sürüklenirken tarayıcının native resim-taşıması devreye girip
+   pointermove akışını kesmesin. */
+.drag-scroll img { -webkit-user-drag: none; user-drag: none; }
+
+/* Kompakt maç satırı (Maç Programı): masaüstünde 3 sütunlu grid → "vs" tam
+   ortada ve satırlar boyunca ALT ALTA hizalanır. Sol sütundaki takım sağa
+   yaslanır (isim → logo), sağdaki sola yaslanır (logo → isim). */
+.matchup-a { flex-direction: row-reverse; justify-content: flex-start; }
+/* İsim sütunu esnemeye devam etsin (align-items: flex-end kırpma yerine taşmaya
+   yol açıyordu) → sadece metni ve form şeridini sağa yasla. */
+.matchup-a .matchup-name { text-align: right; }
+.matchup-a .matchup-name > div { justify-content: flex-end; }
+
 /* Yatay kaydırılabilir şeritlerde (oyun filtresi) mobilde sağ kenara "devamı var"
    ipucu: hafif fade maskesi. Sadece dar ekranda uygulanır → masaüstünde son öğe
    kırpılmaz. */
@@ -159,8 +184,13 @@ textarea:focus-visible,
   .center-sm { justify-content: center !important; }
   /* Kompakt maç satırı: mobilde takımlar ALT ALTA (TeamA / vs / TeamB) →
      her takım kendi satırını alır, isimler kırpılmaz. */
-  .matchup { flex-direction: column !important; align-items: center !important; gap: 2px !important; }
+  .matchup { display: flex !important; flex-direction: column !important; align-items: center !important; gap: 2px !important; }
   .matchup-team { justify-content: center; max-width: 100%; }
+  /* Dikey dizilimde A takımı da normal sırada (logo → isim) dursun. */
+  .matchup-a { flex-direction: row !important; justify-content: center !important; }
+  .matchup-a .matchup-name { text-align: left !important; }
+  /* "vs" hizası için masaüstünde sabitlenen turnuva sütunu mobilde daralsın. */
+  .row-tour { width: 70px !important; }
 }
 
 /* "İçeriğe geç" atlama linki — klavyeyle Tab'lanınca görünür, aksi halde gizli.

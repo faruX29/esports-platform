@@ -16,6 +16,7 @@ import { isStoryFollowedTeam, prioritizeStoriesForYou } from '../utils/newsPerso
 import { calculatePredictionAccuracy } from '../utils/accuracyTracker'
 import { memo }                             from 'react'
 import InitialsImage                        from '../components/InitialsImage'
+import DragScroll                          from '../components/DragScroll'
 import TrBadge                              from '../components/TrBadge'
 import TurkishBadge                          from '../components/TurkishBadge'
 import { normalizeGameId }                  from '../utils/gameUtils'
@@ -1113,24 +1114,25 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
       </div>
 
       {/* Oyun etiketi */}
-      <span style={{ fontSize: 8, padding: '2px 6px', borderRadius: 4, background: 'var(--line)', color: 'var(--text-6)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', flexShrink: 0 }}>
+      <span style={{ fontSize: 8, padding: '2px 0', width: 34, textAlign: 'center', borderRadius: 4, background: 'var(--line)', color: 'var(--text-6)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', flexShrink: 0 }}>
         {m.game?.name?.slice(0, 3).toUpperCase() || '—'}
       </span>
 
-      {isLive && (
-        <span style={{
-          width: 7,
-          height: 7,
-          borderRadius: '50%',
-          background: '#ff4655',
-          animation: 'liveNeonBlink 1.05s infinite',
-          flexShrink: 0,
-        }} />
-      )}
+      {/* Canlı noktası — canlı olmasa da yer tutar ki "vs" sütunu kaymasın */}
+      <span style={{
+        width: 7,
+        height: 7,
+        borderRadius: '50%',
+        background: '#ff4655',
+        animation: 'liveNeonBlink 1.05s infinite',
+        flexShrink: 0,
+        visibility: isLive ? 'visible' : 'hidden',
+      }} />
 
-      {/* Teams — mobilde takımlar ALT ALTA (TeamA / vs / TeamB); masaüstünde yatay */}
-      <div className="matchup" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, overflow: 'hidden' }}>
-        <div className="matchup-team" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+      {/* Teams — masaüstünde 3 sütun (A | vs | B) → "vs"ler alt alta hizalanır.
+          Mobilde CSS ile dikey flex'e döner (TeamA / vs / TeamB). */}
+      <div className="matchup" style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 6, minWidth: 0, overflow: 'hidden' }}>
+        <div className="matchup-team matchup-a" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
           <InitialsImage
             src={m.team_a?.logo_url}
             alt={m.team_a?.name || ''}
@@ -1140,14 +1142,14 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
             borderRadius={4}
             objectFit='contain'
           />
-          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          <div className="matchup-name" style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: turkA ? '#ff6b7a' : 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {m.team_a?.name || '?'}{turkA && <TrBadge />}
             </span>
             {formA.length > 0 && <FormStrip form={formA} className="hide-sm" />}
           </div>
         </div>
-        <span className="matchup-vs" style={{ fontSize: 9, color: 'var(--line-2)', flexShrink: 0 }}>vs</span>
+        <span className="matchup-vs" style={{ fontSize: 9, color: 'var(--line-2)', flexShrink: 0, textAlign: 'center' }}>vs</span>
         <div className="matchup-team" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
           <InitialsImage
             src={m.team_b?.logo_url}
@@ -1158,7 +1160,7 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
             borderRadius={4}
             objectFit='contain'
           />
-          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          <div className="matchup-name" style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: turkB ? '#ff6b7a' : 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {m.team_b?.name || '?'}{turkB && <TrBadge />}
             </span>
@@ -1167,15 +1169,16 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
         </div>
       </div>
 
-      {/* Turnuva */}
-      <div style={{ fontSize: 9, color: 'var(--line-2)', flexShrink: 0, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>
+      {/* Turnuva — sabit genişlik: sağ blok her satırda aynı yer kaplasın ki
+          ortadaki "vs" sütunu satırlar boyunca kaymasın. */}
+      <div className="row-tour" style={{ fontSize: 9, color: 'var(--line-2)', flexShrink: 0, width: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>
         {m.tournament?.name || ''}
       </div>
 
       <MatchImpactPill match={m} compact />
 
       {/* Badge — mobilde gizli (Maç Programı zaten "yaklaşan"; canlıyı kırmızı nokta belli eder) */}
-      <span className="hide-sm" style={{ padding: '2px 7px', borderRadius: 6, fontSize: 8, fontWeight: 700, color: badge.color, background: badge.bg, flexShrink: 0 }}>
+      <span className="hide-sm" style={{ padding: '2px 0', width: 58, textAlign: 'center', borderRadius: 6, fontSize: 8, fontWeight: 700, color: badge.color, background: badge.bg, flexShrink: 0 }}>
         {badge.text}
       </span>
     </div>
@@ -2481,7 +2484,7 @@ export default function Dashboard() {
               <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(167,139,250,.3),transparent)' }} />
               <Link to="/tournaments" style={{ fontSize: 10, color: 'var(--text-5)', textDecoration: 'none' }}>Tümü →</Link>
             </div>
-            <div className="scroll-fade-x" style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
+            <DragScroll className="scroll-fade-x" style={{ gap: 10, paddingBottom: 4 }} ariaLabel="Aktif turnuvalar">
               {activeTournaments.map(t => {
                 const isLiveT = liveTournIds.has(t.id)
                 const tierK = normalizeTierKey(t.tier)
@@ -2527,7 +2530,7 @@ export default function Dashboard() {
                   </div>
                 )
               })}
-            </div>
+            </DragScroll>
           </div>
         )
       })()}

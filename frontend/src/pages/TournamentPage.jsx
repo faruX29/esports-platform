@@ -32,6 +32,7 @@ import { FEXT } from '../theme'
 import Mascot from '../components/Mascot'
 import SeoHead from '../components/SeoHead'
 import { tournamentDisplayName, isGenericStageName, displayRegion } from '../utils/tournamentDisplay'
+import DragScroll from '../components/DragScroll'
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 
@@ -1159,9 +1160,6 @@ const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, gc, highl
 })
 
 function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'upper', zoom = 1, isDoubleElim = false }) {
-  const scrollRef = useRef(null)
-  const dragRef = useRef({ isDown: false, moved: false, startX: 0, scrollLeft: 0 })
-  const [isDragging, setIsDragging] = useState(false)
 
   const prepared = useMemo(() => {
     const source = (resolvedMatches || buildBracketStages(matches))
@@ -1399,33 +1397,6 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
     [layout.edges]
   )
 
-  const onMouseDown = (e) => {
-    if (e.button !== 0) return
-    const el = scrollRef.current
-    if (!el) return
-    dragRef.current = {
-      isDown: true,
-      moved: false,
-      startX: e.clientX,
-      scrollLeft: el.scrollLeft,
-    }
-    setIsDragging(true)
-  }
-
-  const onMouseMove = (e) => {
-    if (!dragRef.current.isDown) return
-    const el = scrollRef.current
-    if (!el) return
-    const dx = e.clientX - dragRef.current.startX
-    if (Math.abs(dx) > 3) dragRef.current.moved = true
-    el.scrollLeft = dragRef.current.scrollLeft - dx
-  }
-
-  const endDrag = () => {
-    dragRef.current.isDown = false
-    setIsDragging(false)
-  }
-
   if (roundKeys.length === 0) return (
     <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-6)', fontSize: 13 }}>
       Playoff verisi bulunamadı.
@@ -1438,22 +1409,21 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
   return (
     <div>
       <div style={{ fontSize: 10, color: 'var(--text-5)', marginBottom: 8, textAlign: 'right' }}>
-        Drag to scroll →
+        Sürükleyerek kaydır →
       </div>
-      <div style={{
-        overflowX: 'auto',
-        overflowY: 'auto',
-        maxWidth: '100%',
-        paddingBottom: 12,
-        cursor: isDragging ? 'grabbing' : 'grab',
-        userSelect: isDragging ? 'none' : 'auto',
-        WebkitOverflowScrolling: 'touch',
-      }}
-      ref={scrollRef}
-      onMouseDown={onMouseDown}
-      onMouseMove={onMouseMove}
-      onMouseUp={endDrag}
-      onMouseLeave={endDrag}
+      {/* Aktif Turnuvalar şeridiyle aynı davranış: scrollbar gizli, fareyle
+          sürükleme + kenar oklarıyla yumuşak kayma, sürükleme sonrası tıklama
+          yutuluyor (yanlışlıkla maç açılmasın). */}
+      <DragScroll
+        ariaLabel="Turnuva ağacı"
+        arrowAlign="top"
+        style={{
+          display: 'block',
+          overflowY: 'auto',
+          maxWidth: '100%',
+          paddingBottom: 12,
+          WebkitOverflowScrolling: 'touch',
+        }}
       >
         <div style={{
           position: 'relative',
@@ -1576,7 +1546,7 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
           })}
           </div>
         </div>
-      </div>
+      </DragScroll>
 
       {bracketSide === 'upper' && prepared.thirdPlace && (
         <div style={{ marginTop: 14 }}>

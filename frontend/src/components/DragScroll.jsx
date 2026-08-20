@@ -11,7 +11,12 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
  *
  * @param {number} step  ok butonunun bir basışta kaydıracağı px (varsayılan: görünen genişliğin %80'i)
  */
-export default function DragScroll({ children, className = '', style, step, ariaLabel = 'Yatay liste' }) {
+export default function DragScroll({
+  children, className = '', style, step, ariaLabel = 'Yatay liste',
+  /** Uzun kabinlerde (ör. turnuva ağacı) okların içeriğin üstüne binmemesi için
+   *  dikey hizayı yukarı al. 'center' (varsayılan) | 'top' */
+  arrowAlign = 'center',
+}) {
   const ref = useRef(null)
   const drag = useRef({ active: false, startX: 0, startScroll: 0, moved: false })
   const [edges, setEdges] = useState({ left: false, right: false })
@@ -70,7 +75,11 @@ export default function DragScroll({ children, className = '', style, step, aria
   }
 
   const arrowStyle = side => ({
-    position: 'absolute', top: '50%', [side]: -6, transform: 'translateY(-50%)',
+    position: 'absolute',
+    ...(arrowAlign === 'top'
+      ? { top: 10, transform: 'none' }
+      : { top: '50%', transform: 'translateY(-50%)' }),
+    [side]: -6,
     width: 30, height: 30, borderRadius: '50%', zIndex: 2,
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     background: 'var(--surface-2)', border: '1px solid var(--line-2)',

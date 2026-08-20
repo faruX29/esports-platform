@@ -2472,6 +2472,13 @@ export default function Dashboard() {
       {/* ── Aktif Turnuvalar (süregelen üst-tier — canlı maçların altında) ─── */}
       {activeTournaments.length > 0 && (() => {
         const liveTournIds = new Set((liveMatches || []).map(m => m.tournament?.id ?? m.tournament_id).filter(Boolean))
+        // Canlı maçı olan turnuvalar en solda (şeritte ilk görünen) — kullanıcı
+        // kaydırmadan "şu an oynanan" turnuvayı görsün. Sıralama kararlı:
+        // canlılar kendi aralarındaki mevcut sırayı korur.
+        const orderedTournaments = [
+          ...activeTournaments.filter(t => liveTournIds.has(t.id)),
+          ...activeTournaments.filter(t => !liveTournIds.has(t.id)),
+        ]
         return (
           <div style={{ marginBottom: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
@@ -2485,7 +2492,7 @@ export default function Dashboard() {
               <Link to="/tournaments" style={{ fontSize: 10, color: 'var(--text-5)', textDecoration: 'none' }}>Tümü →</Link>
             </div>
             <DragScroll className="scroll-fade-x" style={{ gap: 10, paddingBottom: 4 }} ariaLabel="Aktif turnuvalar">
-              {activeTournaments.map(t => {
+              {orderedTournaments.map(t => {
                 const isLiveT = liveTournIds.has(t.id)
                 const tierK = normalizeTierKey(t.tier)
                 return (

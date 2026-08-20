@@ -90,6 +90,11 @@ export default function Footer() {
               <FLink to="/register">Kayıt Ol</FLink>
               <FLink to="/settings">Profil</FLink>
             </Col>
+            <Col title="Yasal">
+              <FLink to="/gizlilik">Gizlilik Politikası</FLink>
+              <FLink to="/kullanim-kosullari">Kullanım Koşulları</FLink>
+              <FLink to="/kvkk">KVKK Aydınlatma Metni</FLink>
+            </Col>
           </div>
         </div>
 

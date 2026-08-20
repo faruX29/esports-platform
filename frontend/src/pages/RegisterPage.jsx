@@ -97,6 +97,12 @@ export default function RegisterPage() {
             <button disabled={loading} style={{ marginTop: 4, border: 'none', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#fff', fontWeight: 800, background: 'linear-gradient(135deg,#DF4888,#8B3AA0 55%,#6A297F)', opacity: loading ? 0.6 : 1 }}>{loading ? 'Kaydediliyor...' : 'Kayıt Ol'}</button>
             {error && <div style={{ fontSize: 12, color: '#FF4655' }}>{error}</div>}
             {success && <div style={{ fontSize: 12, color: 'var(--success-fg)' }}>{success}</div>}
+            {/* KVKK/gizlilik: kayıt anında yasal belgelere görünür bağlantı */}
+            <p style={{ margin: '2px 0 0', fontSize: 11.5, lineHeight: 1.6, color: 'var(--text-5)', textAlign: 'center' }}>
+              Kayıt olarak{' '}
+              <Link to="/kullanim-kosullari" style={{ color: 'var(--text-4)' }}>Kullanım Koşulları</Link>'nı ve{' '}
+              <Link to="/gizlilik" style={{ color: 'var(--text-4)' }}>Gizlilik Politikası</Link>'nı kabul etmiş olursun.
+            </p>
           </form>
 
           {oauthEnabled && (

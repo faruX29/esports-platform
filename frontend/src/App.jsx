@@ -45,6 +45,7 @@ const NewsArchivePage = lazy(() => import('./pages/NewsArchivePage'))
 const NewsDetailPage = lazy(() => import('./pages/NewsDetailPage'))
 const TournamentsListPage = lazy(() => import('./pages/TournamentsListPage'))
 const ScoutEnginePage = lazy(() => import('./pages/ScoutEnginePage'))
+const LegalPage       = lazy(() => import('./pages/LegalPage'))
 
 import './App.css'
 
@@ -662,6 +663,11 @@ function AppShell() {
           <Route path="/forgot-password"          element={<ForgotPasswordPage />} />
           <Route path="/reset-password"           element={<ResetPasswordPage />} />
           <Route path="/settings"                 element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
+
+          {/* Yasal belgeler — KVKK/gizlilik zorunlulukları ve mağaza/reklam ön koşulu */}
+          <Route path="/gizlilik"                 element={<LegalPage doc="privacy" />} />
+          <Route path="/kullanim-kosullari"       element={<LegalPage doc="terms" />} />
+          <Route path="/kvkk"                     element={<LegalPage doc="kvkk" />} />
         </Routes>
       </Suspense>
       </ErrorBoundary>

@@ -100,6 +100,10 @@ async function buildChild(type, base) {
       ['/', 'daily', '1.0'], ['/matches', 'daily', '0.9'], ['/news', 'daily', '0.9'],
       ['/news/archive', 'daily', '0.8'], ['/tournaments', 'daily', '0.8'],
       ['/rankings', 'weekly', '0.8'], ['/scout', 'monthly', '0.6'],
+      // Yasal belgeler — düşük öncelik ama indekslenebilir olmalı (AdSense ve
+      // uygulama mağazaları erişilebilir bir gizlilik politikası URL'i ister).
+      ['/gizlilik', 'yearly', '0.3'], ['/kullanim-kosullari', 'yearly', '0.3'],
+      ['/kvkk', 'yearly', '0.3'],
     ]
     return urlset(pages.map(([p, cf, pr]) => ({ loc: base + p, lastmod: today, changefreq: cf, priority: pr })))
   }

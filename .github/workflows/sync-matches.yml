@@ -61,7 +61,10 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python run.py --all-games --limit 50 --predict --stats
+        # --limit 100 = PandaScore sayfa üst sınırı. 50'de kalınca 7 günlük pencerede
+        # CS2 (152 maç) ve LoL (93) kırpılıyordu → maçlar ancak zamanla listenin
+        # başına kaydıkça giriyordu. 100 bu gecikmeyi büyük ölçüde kapatır.
+        run: python run.py --all-games --limit 100 --predict --stats
 
       - name: Generate AI news articles
         env:

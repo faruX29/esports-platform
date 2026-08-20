@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import SeoHead from '../components/SeoHead'
+import { DISCORD_ENABLED, GOOGLE_ENABLED } from '../features'
 
 /**
  * LegalPage — Gizlilik Politikası / Kullanım Koşulları / KVKK Aydınlatma Metni.
@@ -14,7 +15,15 @@ import SeoHead from '../components/SeoHead'
  * olmalı. Şahıs şirketi kurulduğunda OPERATOR unvanla güncellenmeli.
  */
 
-const OPERATOR = 'feXt (fextesports.com)'
+const OPERATOR = 'feXt Platform Yönetimi (fextesports.com)'
+
+/**
+ * Sosyal giriş sağlayıcıları metni features.js bayraklarından TÜRETİLİR.
+ * Discord açılıp kapandığında yasal metin otomatik doğru kalır — "kodda kapalı
+ * ama politikada yazıyor" tutarsızlığı oluşamaz.
+ */
+const OAUTH_NAMES = [GOOGLE_ENABLED && 'Google', DISCORD_ENABLED && 'Discord'].filter(Boolean)
+const OAUTH_LABEL = OAUTH_NAMES.join(' veya ')
 const CONTACT_EMAIL = 'iletisim@fextesports.com'
 const UPDATED = '20 Ağustos 2026'
 
@@ -71,7 +80,9 @@ function PrivacyBody() {
         <LI>E-posta adresin ve şifren — şifren bize <B>hiçbir zaman düz metin olarak ulaşmaz</B>, kimlik doğrulama sağlayıcımız tarafından şifrelenmiş biçimde saklanır</LI>
         <LI>Kullanıcı adın, varsa ad-soyadın ve profil görselin</LI>
         <LI>Favori takımın</LI>
-        <LI>"Google ile giriş" kullanırsan: Google'ın paylaştığı ad, e-posta ve profil görseli</LI>
+        {OAUTH_NAMES.length > 0 && (
+          <LI>"{OAUTH_LABEL} ile giriş" kullanırsan: ilgili platformun paylaştığı kullanıcı adı, e-posta ve profil görseli</LI>
+        )}
       </UL>
       <P><B>Platformu kullandığında:</B></P>
       <UL>
@@ -119,7 +130,8 @@ function PrivacyBody() {
         <LI><B>Vercel</B> — site barındırma ve anonim ziyaret istatistikleri</LI>
         <LI><B>Cloudflare</B> — alan adı yönetimi ve bot koruması</LI>
         <LI><B>Resend / Amazon SES</B> — doğrulama ve şifre sıfırlama e-postaları</LI>
-        <LI><B>Google</B> — yalnızca "Google ile giriş"i tercih edersen</LI>
+        {GOOGLE_ENABLED && <LI><B>Google</B> — yalnızca "Google ile giriş"i tercih edersen</LI>}
+        {DISCORD_ENABLED && <LI><B>Discord Inc.</B> — yalnızca "Discord ile giriş"i tercih edersen</LI>}
       </UL>
       <P>
         Bu sağlayıcıların sunucuları <B>yurt dışında</B> (Avrupa Birliği ve Amerika Birleşik
@@ -207,6 +219,7 @@ function TermsBody() {
         <LI>Bahis sitesi tanıtımı ve yönlendirmesi</LI>
         <LI>Telif hakkı ihlali oluşturan paylaşımlar</LI>
         <LI>Platformun teknik işleyişini bozmaya yönelik girişimler</LI>
+        <LI>Otomatik araçlarla (bot, scraper, örümcek) toplu veri çekme</LI>
       </UL>
       <P>
         Bu kurallara aykırı içerikleri bildirim yapmaksızın kaldırma ve hesabı askıya alma hakkımız
@@ -218,13 +231,21 @@ function TermsBody() {
       <P>
         Maç, takım ve oyuncu verileri <Ext href="https://pandascore.co">PandaScore</Ext> ve{' '}
         <Ext href="https://liquipedia.net">Liquipedia</Ext> kaynaklarından alınır ve ilgili kullanım
-        şartlarına tabidir. Takım logoları, oyun isimleri ve turnuva markaları <B>ilgili hak
-        sahiplerine aittir</B>; feXt bunlar üzerinde hak iddia etmez ve bu kuruluşlarla resmî bir
-        bağlantısı yoktur.
+        şartlarına tabidir. Platformda sunulan bazı turnuva, kadro ve maç verileri Liquipedia
+        kaynaklı olup <B>Creative Commons Atıf-AynıLisanslaPaylaş 3.0 (CC BY-SA 3.0)</B> lisansına
+        tabidir. Takım logoları, oyun isimleri ve turnuva markaları <B>ilgili hak sahiplerine
+        aittir</B>; feXt bunlar üzerinde hak iddia etmez ve bu kuruluşlarla resmî bir bağlantısı
+        yoktur.
       </P>
       <P>
-        feXt adı, logosu, tasarımı ve ürettiği özgün analiz içerikleri feXt'e aittir; izinsiz
-        kopyalanamaz veya ticari olarak kullanılamaz.
+        feXt adı, logosu, tasarımı, derlediği veri tabanı ve ürettiği özgün analiz içerikleri
+        feXt'e aittir; izinsiz kopyalanamaz veya ticari olarak kullanılamaz.
+      </P>
+      <P>
+        Platform içeriğinin, veri tabanının ve analiz algoritmalarının <B>otomatik araçlarla
+        (bot, scraper, örümcek vb.) taranması, kopyalanması, tersine mühendislik yapılması veya
+        arayüzlerinin izinsiz sorgulanması kesinlikle yasaktır</B>. Bu tür kullanımlar tespit
+        edildiğinde erişim engellenir ve hukuki yollara başvurulabilir.
       </P>
 
       <H2>6. Sorumluluğun sınırı</H2>
@@ -304,7 +325,7 @@ function KvkkBody() {
       <H2>6. Aktarım ve yurt dışına aktarım</H2>
       <P>
         Verilerin; barındırma, kimlik doğrulama, e-posta iletimi ve bot koruması hizmeti aldığımız
-        tedarikçilere (Supabase, Vercel, Cloudflare, Resend/Amazon SES, Google) hizmetin
+        tedarikçilere (Supabase, Vercel, Cloudflare, Resend/Amazon SES{OAUTH_NAMES.length > 0 ? ', ' + OAUTH_LABEL.replace(' veya ', ', ') : ''}) hizmetin
         gerektirdiği ölçüde aktarılır. Bu tedarikçilerin sunucuları <B>yurt dışında</B>
         bulunduğundan, aktarım KVKK m.9 kapsamında açık rızana dayanılarak gerçekleştirilir.
         Ayrıca yasal talep hâlinde yetkili kamu kurum ve kuruluşlarıyla paylaşım yapılabilir.

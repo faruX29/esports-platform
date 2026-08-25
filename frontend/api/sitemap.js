@@ -19,7 +19,10 @@ export const config = { runtime: 'edge' }
 const SB = process.env.VITE_SUPABASE_URL
 const KEY = process.env.VITE_SUPABASE_ANON_KEY
 
-const CHILDREN = ['static', 'news', 'matches', 'tournaments', 'teams', 'players']
+const CHILDREN = ['static', 'news', 'matches', 'tournaments', 'teams']
+// NOT: 'players' listeden ÇIKARILDI (2026-08-25) — 5.882 ince oyuncu sayfası
+// crawl bütçesini yiyordu. /sitemap-players.xml artık 404 döner; Google
+// böylece onu dizinden düşürür. Sayfaların kendisi erişilebilir kalır.
 
 const TR = { ç: 'c', ğ: 'g', ı: 'i', İ: 'i', ö: 'o', ş: 's', ü: 'u' }
 function slugify(t) {
@@ -55,6 +58,13 @@ function baseUrl(req) {
   const site = process.env.SITE_URL
   return (site || new URL(req.url).origin).replace(/\/+$/, '')
 }
+
+// Sitemap kapsamı — GSC teşhisi (2026-08-25): 27.960 URL'in %91'i "keşfedildi ama
+// dizine eklenmedi". Google yeni bir alan adına bu ölçekte tarama bütçesi ayırmıyor;
+// ince sayfalar site geneli kalite puanını da düşürüyor. Kapsam daraltıldı.
+const SITEMAP_MATCH_DAYS = 365   // maç + turnuva penceresi
+const TOP_TIERS = ['S', 'A']     // yalnız üst-tier (tier değerleri büyük harf)
+const TEAM_MIN_MATCHES = 10      // takım sayfası için son 1 yıldaki asgari maç sayısı
 
 async function fetchAll(table, select, filter) {
   if (!SB || !KEY) return []
@@ -112,26 +122,57 @@ async function buildChild(type, base) {
     return urlset(rows.map(r => ({ loc: `${base}/news/${newsSlug(r)}`, lastmod: lastmod(r), changefreq: 'weekly', priority: '0.8' })))
   }
   if (type === 'matches') {
-    // Yalnız SON 1 YIL biten maçlar. Eski 2014-2024 backfill'i (33k'nın çoğu, ince
-    // "skor" sayfaları) sitemap'ten çıkar → botların tarama yüzeyi ~3x küçülür
-    // (Vercel Fluid CPU + Origin Transfer tasarrufu) + crawl bütçesi değerli sayfalara
-    // odaklanır. Eski maçlar erişilebilir kalır; süreyi uzatmak için SITEMAP_MATCH_DAYS.
-    const SITEMAP_MATCH_DAYS = 365
+    // SON 1 YIL + yalnız TIER S/A. GSC (2026-08-25): 27.960 URL'in 25.700'ü
+    // "keşfedildi ama dizine eklenmedi" — Google tarama bütçesini alt-tier ve eski
+    // maç sayfalarına harcamak istemiyor. Kapsamı daraltmak, bütçeyi indekslenmeye
+    // değer sayfalara yoğunlaştırır. Sayfalar erişilebilir kalır (noindex DEĞİL),
+    // sadece Google'a "önce şunları tara" diyoruz.
     const cutoff = new Date(Date.now() - SITEMAP_MATCH_DAYS * 86400000).toISOString()
-    const rows = await fetchAll('matches', 'id,updated_at', `status=eq.finished&scheduled_at=gte.${encodeURIComponent(cutoff)}`)
+    const rows = await fetchAll(
+      'matches',
+      'id,updated_at,tournament:tournaments!inner(tier)',
+      `status=eq.finished&scheduled_at=gte.${encodeURIComponent(cutoff)}&tournament.tier=in.(${TOP_TIERS.join(',')})`
+    )
     return urlset(rows.map(r => ({ loc: `${base}/match/${r.id}`, lastmod: lastmod(r), changefreq: 'monthly', priority: '0.6' })))
   }
   if (type === 'tournaments') {
-    const rows = await fetchAll('tournaments', 'id,updated_at')
+    // Yalnız S/A tier ve son 1 yıl — alt-tier turnuva sayfaları fikstür/sonuç
+    // bakımından ince kalıyor ve Google zaten indekslemiyor.
+    const cutoff = new Date(Date.now() - SITEMAP_MATCH_DAYS * 86400000).toISOString()
+    const rows = await fetchAll(
+      'tournaments', 'id,updated_at',
+      `tier=in.(${TOP_TIERS.join(',')})&begin_at=gte.${encodeURIComponent(cutoff)}`
+    )
     return urlset(rows.map(r => ({ loc: `${base}/tournament/${r.id}`, lastmod: lastmod(r), changefreq: 'weekly', priority: '0.6' })))
   }
   if (type === 'teams') {
-    const rows = await fetchAll('teams', 'id,updated_at')
+    // Takım sayfaları GSC'de EN ÇOK gösterim alan sayfalarımız → agresif kesmiyoruz.
+    // Ama 2.790 takımın çoğu bir-iki maçlık hayalet kadro. Ölçüt: son 1 yılda en az
+    // TEAM_MIN_MATCHES maçı olmak = gösterilecek gerçek bir geçmişi var demek.
+    // (Tier filtresi kullanılmadı: Türk takımlarının çoğu B-tier'da oynuyor ve
+    // Türkiye pazarı bizim ana hedefimiz.)
+    const cutoff = new Date(Date.now() - SITEMAP_MATCH_DAYS * 86400000).toISOString()
+    const played = await fetchAll('matches', 'team_a_id,team_b_id',
+      `scheduled_at=gte.${encodeURIComponent(cutoff)}`)
+    const counts = new Map()
+    for (const m of played) {
+      for (const id of [m.team_a_id, m.team_b_id]) {
+        if (id != null) counts.set(id, (counts.get(id) || 0) + 1)
+      }
+    }
+    const keep = new Set([...counts.entries()].filter(([, n]) => n >= TEAM_MIN_MATCHES).map(([id]) => id))
+    const rows = (await fetchAll('teams', 'id,updated_at')).filter(r => keep.has(r.id))
     return urlset(rows.map(r => ({ loc: `${base}/team/${r.id}`, lastmod: lastmod(r), changefreq: 'weekly', priority: '0.6' })))
   }
   if (type === 'players') {
-    const rows = await fetchAll('players', 'id,created_at')
-    return urlset(rows.map(r => ({ loc: `${base}/player/${r.id}`, lastmod: lastmod(r), changefreq: 'weekly', priority: '0.5' })))
+    // OYUNCU SAYFALARI SITEMAP'TEN ÇIKARILDI (2026-08-25).
+    // 5.882 URL'in neredeyse tamamı ince: 5.383 oyuncunun yalnız 41'inde kariyer
+    // verisi var, gerisinde UI zaten alanları gizliyor. Google'ın "ince içerik"
+    // değerlendirmesinde bunlar site geneli kalite puanını aşağı çekiyordu.
+    // Sayfalar ERİŞİLEBİLİR kalıyor (noindex yok, iç linklerden bulunabilir);
+    // sadece "bunları öncelikli tara" demeyi bıraktık. Oyuncu profilleri
+    // zenginleştikçe (küratör yıldız listesi) filtreyle geri eklenebilir.
+    return urlset([])
   }
   return null
 }

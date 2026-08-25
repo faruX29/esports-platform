@@ -594,6 +594,11 @@ class PlayerStatsSyncer:
         - force=False (varsayılan): oyuncusu zaten yüklü takımları atlar
         - force=True              : tüm takımları yeniden çeker (güncellik için)
 
+        NOT: Aralık ifadesi `make_interval(days => %s)` ile kurulur.
+        `INTERVAL '%s days'` YAZILMAZ — `%s` tırnak içinde kaldığı için
+        parametre yerine geçmez ve `days` argümanı sessizce yok sayılır
+        (2026-08-25'te bu yüzden 7/30/90 hepsi aynı takım kümesini dönüyordu).
+
         Args:
             days:       Kaç günlük geçmişe bakılacağı
             batch_size: Kaç takım sonra kısa bekleme yapılacağı (rate-limit)
@@ -613,7 +618,7 @@ class PlayerStatsSyncer:
                         FROM teams t
                         JOIN matches m
                           ON m.team_a_id = t.id OR m.team_b_id = t.id
-                        WHERE m.scheduled_at >= NOW() - INTERVAL '%s days'
+                        WHERE m.scheduled_at >= NOW() - make_interval(days => %s)
                         ORDER BY t.id
                     """, (days,))
                 else:
@@ -622,7 +627,7 @@ class PlayerStatsSyncer:
                         FROM teams t
                         JOIN matches m
                           ON m.team_a_id = t.id OR m.team_b_id = t.id
-                        WHERE m.scheduled_at >= NOW() - INTERVAL '%s days'
+                        WHERE m.scheduled_at >= NOW() - make_interval(days => %s)
                           AND NOT EXISTS (
                               SELECT 1 FROM players p
                               WHERE p.team_pandascore_id = t.id
@@ -1015,7 +1020,7 @@ class PlayerStatsSyncer:
                     SELECT DISTINCT t.id, t.name
                     FROM teams t
                     JOIN matches m ON m.team_a_id = t.id OR m.team_b_id = t.id
-                    WHERE m.scheduled_at >= NOW() - INTERVAL '%s days'
+                    WHERE m.scheduled_at >= NOW() - make_interval(days => %s)
                     ORDER BY t.id
                 """, (days,))
                 teams = cur.fetchall()

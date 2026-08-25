@@ -76,6 +76,21 @@ async function sbFetch(path) {
   return rows[0] || null
 }
 
+// Dinamik OG kartı üretimi (@vercel/og) kart başına ~1.7sn SAF CPU harcıyor ve
+// her maçın kendine ait bir kart URL'i var (~15.6k maç). Sosyal medyada gerçekte
+// paylaşılan şeyler haberler ve yakın tarihli/yaklaşan maçlar; aylar önceki bir
+// maçı kimse paylaşmıyor. Bu yüzden eski maçlarda statik marka kartına düşüyoruz
+// → CDN'den servis, 0 CPU. (Vercel Fluid Active CPU bütçesi: ücretsiz 4sa/ay.)
+const OG_FRESH_DAYS = 7
+const STATIC_OG = '/og-default.png'
+
+function isShareableMatch(scheduledAt) {
+  if (!scheduledAt) return false           // tarihsiz maç → statik
+  const t = Date.parse(scheduledAt)
+  if (Number.isNaN(t)) return false
+  return t >= Date.now() - OG_FRESH_DAYS * 86400000  // son 7 gün + tüm gelecek
+}
+
 function ogImageUrl(origin, p) {
   const qs = new URLSearchParams()
   for (const [k, v] of Object.entries(p)) {
@@ -159,10 +174,12 @@ async function buildForMatch(id, origin, url) {
   const gm = gameMeta(row.game?.slug)
   const score = (row.team_a_score != null && row.team_b_score != null) ? `${row.team_a_score} - ${row.team_b_score}` : ''
   const p = predHook(row.prediction_team_a, row.prediction_team_b, a, b)
-  const img = ogImageUrl(origin, {
-    a, b, la: row.team_a?.logo_url, lb: row.team_b?.logo_url,
-    s: score, g: gm.label, t: row.tournament?.tier, tn: row.tournament?.name, p, c: gm.accent,
-  })
+  const img = isShareableMatch(row.scheduled_at)
+    ? ogImageUrl(origin, {
+        a, b, la: row.team_a?.logo_url, lb: row.team_b?.logo_url,
+        s: score, g: gm.label, t: row.tournament?.tier, tn: row.tournament?.name, p, c: gm.accent,
+      })
+    : `${origin}${STATIC_OG}`
   const title = `${a} vs ${b}${row.tournament?.name ? ' · ' + row.tournament.name : ''}`
   const desc = p ? `${p} · feXt AI analizi ve canlı skor.` : 'feXt — AI analizi, canlı skor ve istatistikler.'
   const teams = [{ '@type': 'SportsTeam', name: a }, { '@type': 'SportsTeam', name: b }]

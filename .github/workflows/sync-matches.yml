@@ -118,12 +118,24 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        # Bu iş SAATLİK çalışıyor. force'suz mod yalnızca HİÇ oyuncusu olmayan
+        # takımları çeker → kadrosu bir kez yüklenen takım bir daha asla
+        # tazelenmiyordu ve "kadro dışı oyuncuyu serbest bırak" (flush) mantığı
+        # hiç devreye girmiyordu. Sonuç: FUT/BBL gibi takımlarda 6 ay bayat,
+        # ayrılmış oyuncuları da içeren şişkin kadrolar.
+        #
+        # Çözüm: saatlik turlarda ucuz "eksik kadro" taraması sürsün; günde BİR
+        # KEZ (03:00 UTC) son 7 günde maçı olan takımlar için tam tazeleme yap.
+        # Böylece sitede görünen her takım en geç 24 saatte güncellenir ve
+        # PandaScore istek bütçesi saatlik force ile patlamaz.
         run: |
-          FORCE_FLAG=""
-          if [ "${{ github.event.inputs.force_rosters }}" = "true" ]; then
-            FORCE_FLAG="--roster-force"
+          if [ "${{ github.event.inputs.force_rosters }}" = "true" ] || [ "$(date -u +%H)" = "03" ]; then
+            echo "🔄 Günlük tam kadro tazeleme (son 7 gün, force)"
+            python run.py --players --roster-days 7 --roster-force
+          else
+            echo "➕ Eksik kadro taraması (force yok)"
+            python run.py --players --roster-days 90
           fi
-          python run.py --players --roster-days 90 $FORCE_FLAG
 
       - name: Notify on failure
         if: failure()

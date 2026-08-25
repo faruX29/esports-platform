@@ -14,7 +14,7 @@ concurrency:
 jobs:
   liquipedia-sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 50
     defaults:
       run:
         working-directory: backend
@@ -31,15 +31,8 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Hybrid stats backfill (map + player KDA → player_match_stats)
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          LIQUIPEDIA_API_KEY: ${{ secrets.LIQUIPEDIA_API_KEY }}
-        run: python run.py --hybrid-stats --hybrid-limit 50
-
       - name: Sync transfers (v3 → roster_changes)
+        continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
@@ -54,6 +47,7 @@ jobs:
         run: python apply_roster_changes.py --apply
 
       - name: Generate transfer news (LLM, bekleyen roster_changes)
+        continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
@@ -62,6 +56,7 @@ jobs:
         run: python run.py --generate-transfers
 
       - name: Generate match previews (yaklaşan S/A + B-tier büyük turnuva, 72s)
+        continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
@@ -93,6 +88,21 @@ jobs:
       # NOT: SEO sitemap artık dinamik Vercel Edge route (frontend/api/sitemap.js,
       # Gemini #15) — statik dosya üretimi/commit'i kaldırıldı. Sitemap istek anında
       # Supabase'den üretilir. Bu workflow'da sitemap adımı yok.
+
+      # ⚠️ EN SONA ALINDI (2026-08-25). Bu adım 25 dakikalık iş zaman aşımını tek
+      # başına tüketiyordu → job "cancelled" oluyor ve ARDINDAKİ TÜM ADIMLAR
+      # (transfer sync, transfer haberi, maç önizlemesi, turnuva özeti, yıldız
+      # oyuncu) "skipped" geçiyordu. 8+ gündür Liquipedia hattı tamamen ölüydü;
+      # roster_changes 3 Temmuz'dan beri boştu. Sona alınınca zaman aşımına
+      # uğrasa bile diğer her şey tamamlanmış olur.
+      - name: Hybrid stats backfill (map + player KDA → player_match_stats)
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          LIQUIPEDIA_API_KEY: ${{ secrets.LIQUIPEDIA_API_KEY }}
+        run: python run.py --hybrid-stats --hybrid-limit 50
 
       - name: Notify on failure
         if: failure()

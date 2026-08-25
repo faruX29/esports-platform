@@ -82,7 +82,7 @@ async function sbFetch(path) {
 // maçı kimse paylaşmıyor. Bu yüzden eski maçlarda statik marka kartına düşüyoruz
 // → CDN'den servis, 0 CPU. (Vercel Fluid Active CPU bütçesi: ücretsiz 4sa/ay.)
 const OG_FRESH_DAYS = 7
-const STATIC_OG = '/og-default.png'
+const STATIC_OG = '/og-default.jpg'
 
 function isShareableMatch(scheduledAt) {
   if (!scheduledAt) return false           // tarihsiz maç → statik

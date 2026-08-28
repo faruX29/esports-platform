@@ -12,9 +12,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  liquipedia-sync:
+  transfers:
+    # Transfer hattı. LLM adımı yavaş; kendi işinde izole → tıkanırsa diğerlerini etkilemez.
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: backend
@@ -31,8 +32,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # continue-on-error KALDIRILDI (2026-08-28): bu adım Actions'ta sessizce
+      # başarısız oluyordu (yerelde 275 transfer buluyor, Actions'ta 0 yazıyordu)
+      # ve hata yutulduğu için haftalarca fark edilmedi. Artık patlarsa iş kırmızı
+      # olur ve bildirim gelir — sessiz bozulmaktansa gürültülü kırılsın.
       - name: Sync transfers (v3 → roster_changes)
-        continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
@@ -54,6 +58,27 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           LIQUIPEDIA_API_KEY: ${{ secrets.LIQUIPEDIA_API_KEY }}
         run: python run.py --generate-transfers
+
+
+  content:
+    # Maç önizlemesi + turnuva özeti. Transfer LLM yığınına takılmasın diye ayrı iş.
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
       - name: Generate match previews (yaklaşan S/A + B-tier büyük turnuva, 72s)
         continue-on-error: true
@@ -77,6 +102,28 @@ jobs:
       # oyuncuya kariyer/sosyal/yaş çek. Liquipedia 429'ladığı için DÜŞÜK hacim
       # (limit 5/gün) + işlenmişi atla (adapter targeted mod) → ~2 haftada liste dolar,
       # compliance'a saygılı. Geri kalan 5300+ oyuncuda veri boşsa UI zaten gizliyor.
+
+
+  enrichment:
+    # Liquipedia zenginlestirme. En pahalı ve en az acil olan; kendi işinde.
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
       - name: Curated star-player enrichment (career/social/age, düşük hacim)
         continue-on-error: true
         env:
@@ -95,6 +142,7 @@ jobs:
       # oyuncu) "skipped" geçiyordu. 8+ gündür Liquipedia hattı tamamen ölüydü;
       # roster_changes 3 Temmuz'dan beri boştu. Sona alınınca zaman aşımına
       # uğrasa bile diğer her şey tamamlanmış olur.
+
       - name: Hybrid stats backfill (map + player KDA → player_match_stats)
         continue-on-error: true
         env:
@@ -104,6 +152,3 @@ jobs:
           LIQUIPEDIA_API_KEY: ${{ secrets.LIQUIPEDIA_API_KEY }}
         run: python run.py --hybrid-stats --hybrid-limit 50
 
-      - name: Notify on failure
-        if: failure()
-        run: echo "❌ Liquipedia sync failed! Check logs above."

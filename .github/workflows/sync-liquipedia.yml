@@ -170,8 +170,10 @@ jobs:
           echo
   enrichment:
     # Liquipedia zenginlestirme. En pahalı ve en az acil olan; kendi işinde.
+    # timeout 50 -> 20 (2026-08-29): hybrid backfill devre dışı bırakılınca
+    # geriye yalnızca düşük hacimli yıldız oyuncu adımı kaldı (~0 dk sürüyor).
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: backend
@@ -207,7 +209,28 @@ jobs:
       # roster_changes 3 Temmuz'dan beri boştu. Sona alınınca zaman aşımına
       # uğrasa bile diğer her şey tamamlanmış olur.
 
+      # ⛔ DEVRE DIŞI (2026-08-29, lansman öncesi). İki gerekçe:
+      #
+      # 1) HİÇBİR ŞEY ÜRETMİYOR. player_match_stats tablosuna son 14 günde
+      #    SIFIR satır yazıldı. Adım her gün 50 dakikalık iş zaman aşımını
+      #    baştan sona tüketiyor ve tek maç bile işleyemiyor.
+      #
+      # 2) LIQUIPEDIA YÜKÜMLÜLÜĞÜ RİSKİ. Adım v3 API'ye değil eski
+      #    liquipedia.net/<wiki>/api.php hattına düşüyor (cargoquery/wikitext
+      #    fallback) ve oradan %100 HTTP 429 alıyor. 1-2 saniyelik aralıkla
+      #    50 dakika boyunca 429 duvarına yeniden deneme yapmak, "doğru API
+      #    kullanımı" yükümlülüğümüzü ihlal eder ve API key'imizi riske atar.
+      #    Key askıya alınırsa ÇALIŞAN transfer hattı da ölür.
+      #
+      # Ayrıca bu adım her gün "cancelled" üretip dead-man's switch alarmını
+      # (Gemini #54) sahte alarma boğuyordu — güvenilmez alarm, alarmsızlıktan
+      # kötüdür.
+      #
+      # AÇMADAN ÖNCE YAPILACAK: adapter'ı v3'e (get_match_maps_v3_by_teams)
+      # zorla, legacy api.php fallback'ini kapat. Sonra repo'da
+      # Settings > Variables > HYBRID_STATS_ENABLED = true yap.
       - name: Hybrid stats backfill (map + player KDA → player_match_stats)
+        if: ${{ vars.HYBRID_STATS_ENABLED == 'true' }}
         continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

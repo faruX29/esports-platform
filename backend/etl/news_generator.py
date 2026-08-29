@@ -31,6 +31,12 @@ class NewsArticleSchema(BaseModel):
 
 logger = logging.getLogger(__name__)
 
+# Transfer haberi TTL'i (Gemini #53, 2026-08-28): bundan eski transferlerden haber
+# üretilmez. Sebep: news_articles'ta ayrı yayın tarihi alanı yok; eski bir transferden
+# bugün üretilen haber "bugünün haberi" gibi görünür ve platformun güncellik algısını
+# bozar. Kayıtlar roster_changes'te korunur, yalnızca haber kuyruğuna girmezler.
+TRANSFER_NEWS_TTL_DAYS = 14
+
 # ── Editor persona injected as system prompt ──────────────────────────────────
 SYSTEM_PROMPT = (
     "Sen profesyonel bir espor editörüsün. Maç verilerinden ÖZGÜN, tarafsız Türkçe "
@@ -894,10 +900,17 @@ class NewsGenerator:
                     LEFT JOIN teams tt ON tt.id = rc.target_team_id
                     WHERE rc.news_generated = false
                       AND rc.player_id IS NOT NULL
+                      -- TTL (Gemini #53, 2026-08-28): TRANSFER_NEWS_TTL_DAYS'ten eski
+                      -- kayıtlardan haber ÜRETİLMEZ. news_articles'ta ayrı bir yayın
+                      -- tarihi alanı yok (yalnız created_at) → eski bir transferden
+                      -- bugün üretilen haber "bugünün haberi" gibi görünüyordu.
+                      -- Tarihsel kayıt roster_changes'te korunur, sadece haber
+                      -- kuyruğuna girmez.
+                      AND rc.transfer_date >= NOW() - make_interval(days => %s)
                     ORDER BY rc.transfer_date DESC
                     LIMIT %s
                     """,
-                    (limit,),
+                    (TRANSFER_NEWS_TTL_DAYS, limit,),
                 )
                 cols = [d[0] for d in cur.description]
                 return [dict(zip(cols, row)) for row in cur.fetchall()]

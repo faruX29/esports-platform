@@ -59,7 +59,39 @@ jobs:
           LIQUIPEDIA_API_KEY: ${{ secrets.LIQUIPEDIA_API_KEY }}
         run: python run.py --generate-transfers
 
-
+      # ── Dead-man's switch (Gemini #54, 2026-08-28) ────────────────────────
+      # Liquipedia hattı 8+ gün sessizce ölü kaldı. Sebep: koşular zaman
+      # aşımından "cancelled" bitiyordu; GitHub'ın varsayılan hata e-postası ise
+      # YALNIZCA "failure"da gider, "cancelled"da GİTMEZ. Eski "Notify on
+      # failure" adımları da sadece log'a echo yapıyordu, hiçbir yere bildirim
+      # gitmiyordu.
+      #
+      # Bu adım hem failure hem cancelled durumunda Resend ile alarm basar.
+      # Alıcı iletisim@fextesports.com (Cloudflare Email Routing ile kurucunun
+      # gelen kutusuna düşer) — public repo olduğu için kişisel adres yazılmadı.
+      - name: "ETL alarmi (Resend)"
+        if: ${{ failure() || cancelled() }}
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          WF_NAME: ${{ github.workflow }}
+          JOB_ID: "transfers"
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$RESEND_API_KEY" ]; then
+            echo "::warning::RESEND_API_KEY secret'i tanimli degil - alarm gonderilemedi."
+            exit 0
+          fi
+          SUBJECT="[feXt ETL Alarm] $WF_NAME / $JOB_ID -> $JOB_STATUS"
+          BODY="$WF_NAME is akisinda '$JOB_ID' isi $JOB_STATUS durumuyla bitti. Loglar: $RUN_URL -- 'cancelled' genellikle is zaman asimi demektir ve sonraki adimlarin atlandigi anlamina gelir."
+          jq -n --arg s "$SUBJECT" --arg b "$BODY" \
+            '{from:"feXt ETL <noreply@fextesports.com>",to:["iletisim@fextesports.com"],subject:$s,text:$b}' \
+            > /tmp/alert.json
+          curl -sS -X POST https://api.resend.com/emails \
+            -H "Authorization: Bearer $RESEND_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/alert.json
+          echo
   content:
     # Maç önizlemesi + turnuva özeti. Transfer LLM yığınına takılmasın diye ayrı iş.
     runs-on: ubuntu-latest
@@ -103,7 +135,39 @@ jobs:
       # (limit 5/gün) + işlenmişi atla (adapter targeted mod) → ~2 haftada liste dolar,
       # compliance'a saygılı. Geri kalan 5300+ oyuncuda veri boşsa UI zaten gizliyor.
 
-
+      # ── Dead-man's switch (Gemini #54, 2026-08-28) ────────────────────────
+      # Liquipedia hattı 8+ gün sessizce ölü kaldı. Sebep: koşular zaman
+      # aşımından "cancelled" bitiyordu; GitHub'ın varsayılan hata e-postası ise
+      # YALNIZCA "failure"da gider, "cancelled"da GİTMEZ. Eski "Notify on
+      # failure" adımları da sadece log'a echo yapıyordu, hiçbir yere bildirim
+      # gitmiyordu.
+      #
+      # Bu adım hem failure hem cancelled durumunda Resend ile alarm basar.
+      # Alıcı iletisim@fextesports.com (Cloudflare Email Routing ile kurucunun
+      # gelen kutusuna düşer) — public repo olduğu için kişisel adres yazılmadı.
+      - name: "ETL alarmi (Resend)"
+        if: ${{ failure() || cancelled() }}
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          WF_NAME: ${{ github.workflow }}
+          JOB_ID: "content"
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$RESEND_API_KEY" ]; then
+            echo "::warning::RESEND_API_KEY secret'i tanimli degil - alarm gonderilemedi."
+            exit 0
+          fi
+          SUBJECT="[feXt ETL Alarm] $WF_NAME / $JOB_ID -> $JOB_STATUS"
+          BODY="$WF_NAME is akisinda '$JOB_ID' isi $JOB_STATUS durumuyla bitti. Loglar: $RUN_URL -- 'cancelled' genellikle is zaman asimi demektir ve sonraki adimlarin atlandigi anlamina gelir."
+          jq -n --arg s "$SUBJECT" --arg b "$BODY" \
+            '{from:"feXt ETL <noreply@fextesports.com>",to:["iletisim@fextesports.com"],subject:$s,text:$b}' \
+            > /tmp/alert.json
+          curl -sS -X POST https://api.resend.com/emails \
+            -H "Authorization: Bearer $RESEND_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/alert.json
+          echo
   enrichment:
     # Liquipedia zenginlestirme. En pahalı ve en az acil olan; kendi işinde.
     runs-on: ubuntu-latest
@@ -152,3 +216,36 @@ jobs:
           LIQUIPEDIA_API_KEY: ${{ secrets.LIQUIPEDIA_API_KEY }}
         run: python run.py --hybrid-stats --hybrid-limit 50
 
+      # ── Dead-man's switch (Gemini #54, 2026-08-28) ────────────────────────
+      # Liquipedia hattı 8+ gün sessizce ölü kaldı. Sebep: koşular zaman
+      # aşımından "cancelled" bitiyordu; GitHub'ın varsayılan hata e-postası ise
+      # YALNIZCA "failure"da gider, "cancelled"da GİTMEZ. Eski "Notify on
+      # failure" adımları da sadece log'a echo yapıyordu, hiçbir yere bildirim
+      # gitmiyordu.
+      #
+      # Bu adım hem failure hem cancelled durumunda Resend ile alarm basar.
+      # Alıcı iletisim@fextesports.com (Cloudflare Email Routing ile kurucunun
+      # gelen kutusuna düşer) — public repo olduğu için kişisel adres yazılmadı.
+      - name: "ETL alarmi (Resend)"
+        if: ${{ failure() || cancelled() }}
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          WF_NAME: ${{ github.workflow }}
+          JOB_ID: "enrichment"
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$RESEND_API_KEY" ]; then
+            echo "::warning::RESEND_API_KEY secret'i tanimli degil - alarm gonderilemedi."
+            exit 0
+          fi
+          SUBJECT="[feXt ETL Alarm] $WF_NAME / $JOB_ID -> $JOB_STATUS"
+          BODY="$WF_NAME is akisinda '$JOB_ID' isi $JOB_STATUS durumuyla bitti. Loglar: $RUN_URL -- 'cancelled' genellikle is zaman asimi demektir ve sonraki adimlarin atlandigi anlamina gelir."
+          jq -n --arg s "$SUBJECT" --arg b "$BODY" \
+            '{from:"feXt ETL <noreply@fextesports.com>",to:["iletisim@fextesports.com"],subject:$s,text:$b}' \
+            > /tmp/alert.json
+          curl -sS -X POST https://api.resend.com/emails \
+            -H "Authorization: Bearer $RESEND_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/alert.json
+          echo

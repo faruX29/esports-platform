@@ -206,8 +206,8 @@ function TransferTimeline({ transfers }) {
                   <span style={{ fontSize: 10, fontWeight: 800, color: accent, border: `1px solid ${accent}77`, borderRadius: 999, padding: '2px 7px', background: `${accent}1A` }}>{label}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                  {item.oldTeam && <span style={{ fontSize: 11, color: 'var(--text-3)' }}>From: {item.oldTeam}</span>}
-                  {item.newTeam && <span style={{ fontSize: 11, color: 'var(--text-1)' }}>To: {item.newTeam}</span>}
+                  {item.oldTeam && <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Eski: {item.oldTeam}</span>}
+                  {item.newTeam && <span style={{ fontSize: 11, color: 'var(--text-1)' }}>Yeni: {item.newTeam}</span>}
                   {item.role && <span style={{ fontSize: 10, color: '#ffadb8', border: '1px solid rgba(200,16,46,.35)', borderRadius: 7, padding: '1px 6px' }}>{item.role}</span>}
                   <span style={{ fontSize: 10, color: 'var(--text-4)', marginLeft: 'auto' }}>{dateLabel}</span>
                 </div>
@@ -759,7 +759,7 @@ export default function TeamPage() {
 
         {/* Stats row */}
         <div style={{ display: 'flex', gap: 12, marginTop: 24, flexWrap: 'wrap' }}>
-          <StatBox Icon={Swords}      value={wins + losses}          label="Total Maç"   color="var(--text-3)"  />
+          <StatBox Icon={Swords}      value={wins + losses}          label="Toplam Maç"   color="var(--text-3)"  />
           <StatBox Icon={CircleCheck} value={wins}                   label="Galibiyet"   color="#4CAF50"  />
           <StatBox Icon={XIcon}       value={losses}                 label="Mağlubiyet"  color="#FF4655"  />
           {draws > 0 && <StatBox Icon={Handshake} value={draws}      label="Beraberlik (Bo2)" color="#FFB800" />}
@@ -778,7 +778,7 @@ export default function TeamPage() {
         <div style={{ display: 'flex', gap: 8, borderBottom: '1px solid var(--surface-2)', paddingBottom: 12 }}>
           {[
             { key: 'roster',   label: 'Kadro',    Icon: Users,       count: players.length },
-            { key: 'upcoming', label: 'Upcoming', Icon: Clock,       count: upcomingMatches.length },
+            { key: 'upcoming', label: 'Yaklaşan', Icon: Clock,       count: upcomingMatches.length },
             { key: 'past',     label: 'Geçmiş',   Icon: CircleCheck, count: pastMatches.length },
           ].map(t => {
             const active = activeTab === t.key

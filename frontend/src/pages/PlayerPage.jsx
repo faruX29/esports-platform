@@ -454,7 +454,7 @@ function ScoutPanel({ analytics, individual }) {
       {/* Map win rates */}
       <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--surface-2)', padding: '14px 16px', marginBottom: 10 }}>
         <div style={{ fontSize: 11, color: 'var(--text-5)', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <MapIcon size={13} /> {individual ? 'Oyun Bazı Performans' : 'Takım Bazlı Performans'}
+          <MapIcon size={13} /> {individual ? 'Oyun Bazlı Performans' : 'Takım Bazlı Performans'}
         </div>
         {[1, 2, 3].map(pos => {
           const d = mapWinRates[pos]
@@ -1160,7 +1160,7 @@ export default function PlayerPage() {
             {socials.length > 0 && (
               <div style={{ marginTop: 12 }}>
                 <div style={{ fontSize: 10, color: 'var(--text-4)', marginBottom: 6, letterSpacing: '.8px', textTransform: 'uppercase' }}>
-                  Social Links
+                  Sosyal Medya
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {socials.map(([network, href]) => {

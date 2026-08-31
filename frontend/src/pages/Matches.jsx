@@ -829,7 +829,7 @@ function Matches() {
                         <div style={{ width: `${Math.round(match.prediction_team_a * 100)}%`, height: '100%', background: predUncertain ? 'var(--track)' : 'linear-gradient(90deg,#667eea,#764ba2)', transition: 'width .5s' }} />
                       </div>
                       {predUncertain ? (
-                        <div style={{ fontSize: 10, color: 'var(--text-4)', marginTop: 3, textAlign: 'center', fontWeight: 700 }}>AI · Belirsiz</div>
+                        <div style={{ fontSize: 10, color: 'var(--text-4)', marginTop: 3, textAlign: 'center', fontWeight: 700 }}>Fextopus · Belirsiz</div>
                       ) : (
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-5)', marginTop: 3 }}>
                           <span style={{ color: match.prediction_team_a >= match.prediction_team_b ? '#818cf8' : 'var(--text-5)' }}>

@@ -430,7 +430,7 @@ function MatchCard({ match, teamId, navigate }) {
               <div style={{ height: 4, borderRadius: 2, background: 'var(--surface)', overflow: 'hidden' }}>
                 <div style={{ width: '50%', height: '100%', background: 'var(--track)' }} />
               </div>
-              <div style={{ fontSize: 10, marginTop: 3, color: 'var(--text-4)', textAlign: 'center', fontWeight: 700 }}>AI · Belirsiz</div>
+              <div style={{ fontSize: 10, marginTop: 3, color: 'var(--text-4)', textAlign: 'center', fontWeight: 700 }}>Fextopus · Belirsiz</div>
             </>
           ) : (
             <>
@@ -439,7 +439,7 @@ function MatchCard({ match, teamId, navigate }) {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginTop: 3, color: 'var(--text-5)' }}>
                 <span style={{ color: myPred >= oppPred ? '#818cf8' : 'var(--text-5)' }}>{Math.round(myPred * 100)}%</span>
-                <span style={{ color: 'var(--text-5)' }}>AI</span>
+                <span style={{ color: 'var(--text-5)' }}>Fextopus</span>
                 <span style={{ color: oppPred > myPred ? '#818cf8' : 'var(--text-5)' }}>{Math.round(oppPred * 100)}%</span>
               </div>
             </>

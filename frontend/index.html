@@ -14,7 +14,10 @@
         try {
           var t = localStorage.getItem('fext-theme');
           if (t !== 'light' && t !== 'dark') {
-            t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+            // Ilk ziyaret: HER ZAMAN koyu. Derin lacivert (#0B0F19) markanin
+            // rengi; isletim sistemi tercihi bilerek yok sayiliyor ki siteyi
+            // ilk acan herkes ayni marka kimligini gorsun (2026-08-31).
+            t = 'dark';
           }
           document.documentElement.setAttribute('data-theme', t);
           var m = document.querySelector('meta[name="theme-color"]');

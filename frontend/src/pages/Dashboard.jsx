@@ -836,7 +836,7 @@ function WinBar({ predA, predB, confidence }) {
           {uncertain ? '' : `${pctA}%`}
         </span>
         <span style={{ fontSize: 8, color: uncertain ? 'var(--text-4)' : (isHot ? '#ff8c42' : 'var(--line-2)'), fontWeight: uncertain || isHot ? 700 : 400, display: 'inline-flex', alignItems: 'center', gap: 2, letterSpacing: uncertain ? '.4px' : 0 }}>
-          {isHot && <Flame size={9} strokeWidth={2.5} />}{uncertain ? 'AI · Belirsiz' : 'AI'}
+          {isHot && <Flame size={9} strokeWidth={2.5} />}{uncertain ? 'Fextopus · Belirsiz' : 'Fextopus'}
         </span>
         <span style={{ fontSize: 8, color: bFav ? 'var(--ai)' : 'var(--text-5)', fontWeight: bFav ? 700 : 400 }}>
           {uncertain ? '' : `${pctB}%`}
@@ -2287,7 +2287,7 @@ export default function Dashboard() {
       }}>
         <div>
           <div style={{ fontSize: 11, fontWeight: 800, color: '#c4c4c4', letterSpacing: '.8px', textTransform: 'uppercase' }}>
-            Tournament Tier Filter
+            Turnuva Seviye Filtresi
           </div>
           <div style={{ fontSize: 11, color: 'var(--text-5)', marginTop: 3 }}>
             {showAllTournamentTiers ? 'Tüm turnuvalar gösteriliyor' : 'Sadece S-Tier ve A-Tier'}
@@ -2307,7 +2307,7 @@ export default function Dashboard() {
             cursor: 'pointer',
           }}
         >
-          {showAllTournamentTiers ? 'Sadece S/A Goster' : 'Hepsini Goster'}
+          {showAllTournamentTiers ? 'Sadece S/A Göster' : 'Hepsini Göster'}
         </button>
       </div>
 

@@ -1711,11 +1711,11 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
                 <div style={{ width: `${pA}%`, height: '100%', background: predUncertain ? 'var(--track)' : 'linear-gradient(90deg,#667eea,#764ba2)', transition: 'width .5s' }} />
               </div>
               {predUncertain ? (
-                <div style={{ fontSize: 9, color: 'var(--text-4)', marginTop: 3, textAlign: 'center', fontWeight: 700, letterSpacing: '.4px' }}>AI · BELİRSİZ</div>
+                <div style={{ fontSize: 9, color: 'var(--text-4)', marginTop: 3, textAlign: 'center', fontWeight: 700, letterSpacing: '.4px' }}>FEXTOPUS · BELİRSİZ</div>
               ) : (
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, marginTop: 3, fontWeight: 700 }}>
                   <span style={{ color: m.prediction_team_a >= m.prediction_team_b ? '#818cf8' : 'var(--text-5)' }}>%{pA}</span>
-                  <span style={{ color: 'var(--text-6)' }}>AI</span>
+                  <span style={{ color: 'var(--text-6)' }}>Fextopus</span>
                   <span style={{ color: m.prediction_team_b > m.prediction_team_a ? '#818cf8' : 'var(--text-5)' }}>%{100 - pA}</span>
                 </div>
               )}

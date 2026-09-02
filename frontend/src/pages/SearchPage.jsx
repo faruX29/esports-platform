@@ -900,8 +900,12 @@ export default function SearchPage() {
   }
 
   // ── Arama fonksiyonu ───────────────────────────────────────────
-  const runSearch = useCallback(async (q) => {
+  const runSearch = useCallback(async (rawQuery) => {
     setLoading(true); setSearchDone(false)
+    // PostgREST .or() filtresinde virgul ve parantez AYIRACTIR. Temizlenmezse
+    // "a,b" veya "Team (EU)" gibi bir arama filtre ifadesini bozar ve sorgu
+    // hata dondurur. (2026-09-02 — ayni acik navbar aramasinda da kapatildi.)
+    const q = String(rawQuery ?? '').replace(/[,()]/g, ' ').trim()
     try {
       const [teamRes, playerRes] = await Promise.all([
         supabase

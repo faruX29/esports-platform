@@ -9,11 +9,11 @@ name: Fextopus Mac Radari (gunluk sosyal video)
 # Bu yuzden URETIM otomatik, PAYLASIM elde.
 on:
   schedule:
-    - cron: '35 4 * * *'      # 07:35 TSI -- gunun maclari netlesmis olur
+    - cron: '30 20 * * *'     # 23:30 TSI -- kurucu gece yarisi paylasip yatiyor
   workflow_dispatch:
     inputs:
       gun:
-        description: 'Hangi gun (YYYY-AA-GG). Bos birakilirsa bugun.'
+        description: 'Hangi gun (YYYY-AA-GG). Bos birakilirsa YARIN.'
         required: false
         type: string
 
@@ -42,14 +42,18 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: ffmpeg kontrolu
-        run: ffmpeg -version | head -1      # runner'da kurulu gelir
+        # DIKKAT: "ffmpeg -version | head -1" YAZMA. ffmpeg yoksa hata stderr'e
+        # gider, head sifirla cikar ve adim YESIL gorunur (2026-09-02'de tam
+        # olarak bu oldu). Python'un gordugu ikiliyi dogrudan sor.
+        run: python -c "import imageio_ffmpeg,subprocess,sys; e=imageio_ffmpeg.get_ffmpeg_exe(); print('ffmpeg:', e); sys.exit(subprocess.run([e,'-version'],capture_output=True).returncode)"
 
       - name: Gunu belirle
         id: tarih
-        # Zamanlanmis kosuda inputs bos gelir -> bugunun TSI tarihi kullanilir.
+        # Kosu 23:30 TSI'de -- yani ERTESI gunun maclari uretilir ki kurucu
+        # gece yarisi, gun baslarken paylasabilsin.
         run: |
           GUN="${{ inputs.gun }}"
-          if [ -z "$GUN" ]; then GUN=$(TZ=Europe/Istanbul date +%F); fi
+          if [ -z "$GUN" ]; then GUN=$(TZ=Europe/Istanbul date -d tomorrow +%F); fi
           echo "gun=$GUN" >> "$GITHUB_OUTPUT"
           echo "Hedef gun: $GUN"
 

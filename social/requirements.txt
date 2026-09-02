@@ -1,3 +1,8 @@
 pillow>=11.0
 psycopg[binary]>=3.2
 python-dotenv>=1.0
+# ffmpeg GitHub runner'larinda KURULU DEGIL (2026-09-02'de dogrulandi:
+# "ffmpeg -version | head -1" adimi yesil gorunuyordu cunku boru hatti
+# cikis kodunu maskeliyordu). Statik ikili tasiyan bu paket hem yerelde
+# hem CI'da ayni surumu kullanmayi garantiler.
+imageio-ffmpeg>=0.5

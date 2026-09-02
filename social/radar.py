@@ -29,13 +29,22 @@ except Exception:
     pass
 
 def ffmpeg_yolu():
-    """GitHub runner'larinda ffmpeg zaten kurulu; yerelde imageio-ffmpeg'e duser."""
-    import shutil
-    exe = shutil.which('ffmpeg')
-    if exe:
-        return exe
-    import imageio_ffmpeg
-    return imageio_ffmpeg.get_ffmpeg_exe()
+    """Once imageio-ffmpeg'in tasidigi statik ikili (yerel ve CI ayni surumu
+    kullansin diye), yoksa sistemdeki ffmpeg.
+
+    NOT: GitHub ubuntu-latest runner'inda ffmpeg KURULU DEGIL -- 2026-09-02'de
+    bu varsayim yuzunden is patladi. Bu yuzden imageio-ffmpeg artik
+    requirements.txt'te zorunlu bagimlilik.
+    """
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        import shutil
+        exe = shutil.which('ffmpeg')
+        if exe:
+            return exe
+        raise RuntimeError('ffmpeg bulunamadi: imageio-ffmpeg kurulu degil ve sistemde ffmpeg yok')
 W, H, FPS, SEC = 1080, 1920, 30, 6
 N = FPS * SEC
 BG, INK, MUTED, FAINT, MOR, MOR_D, GRI = (11,15,25),(240,243,248),(139,148,166),(104,113,133),(167,139,250),(124,58,237),(52,62,82)

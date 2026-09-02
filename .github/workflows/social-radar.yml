@@ -73,12 +73,6 @@ jobs:
             echo "var=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: E-posta ile gonder
-        if: steps.liste.outputs.var == 'true'
-        env:
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-        run: python gonder.py cikti "${{ steps.tarih.outputs.gun }}"
-
       - name: Artifact olarak yukle (yedek)
         if: steps.liste.outputs.var == 'true'
         uses: actions/upload-artifact@v4
@@ -86,6 +80,12 @@ jobs:
           name: mac-radari-${{ github.run_id }}
           path: social/cikti/*.mp4
           retention-days: 14
+
+      - name: E-posta ile gonder
+        if: steps.liste.outputs.var == 'true'
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: python gonder.py cikti "${{ steps.tarih.outputs.gun }}"
 
       # ── Dead-man's switch (Gemini #54) ────────────────────────────────
       - name: "ETL alarmi (Resend)"

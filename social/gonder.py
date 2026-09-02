@@ -53,14 +53,23 @@ def main():
         'attachments': ekler,
     }).encode()
 
+    # DIKKAT - User-Agent zorunlu: Resend API'sinin onunde Cloudflare var ve
+    # urllib'in varsayilan "Python-urllib/3.13" imzasini engelliyor
+    # (2026-09-02: HTTP 403, "error code: 1010"). ETL alarmlari curl ile
+    # gittigi icin bu sorunu yasamiyordu.
     req = urllib.request.Request('https://api.resend.com/emails', data=veri, method='POST',
-        headers={'Authorization': f'Bearer {ANAHTAR}', 'Content-Type': 'application/json'})
+        headers={'Authorization': f'Bearer {ANAHTAR}',
+                 'Content-Type': 'application/json',
+                 'User-Agent': 'feXt-Radar/1.0 (+https://fextesports.com)'})
     try:
-        with urllib.request.urlopen(req, timeout=60) as r:
-            print('mail gonderildi:', r.read().decode()[:120])
+        with urllib.request.urlopen(req, timeout=90) as r:
+            print('mail gonderildi:', r.read().decode()[:160])
+            return 0
     except Exception as e:
-        detay = getattr(e, 'read', lambda: b'')()[:200]
-        print(f'::warning::mail gonderilemedi: {e} {detay!r}')
-    return 0
+        detay = getattr(e, 'read', lambda: b'')()[:300]
+        # Sessiz uyari DEGIL, gercek hata: mail gitmezse kurucu videoyu
+        # gormez. Artifact yedegi zaten bu adimdan ONCE yuklendi.
+        print(f'::error::mail gonderilemedi: {e} {detay!r}')
+        return 1
 
 sys.exit(main())

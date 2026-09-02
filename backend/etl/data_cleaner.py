@@ -15,12 +15,23 @@ class DataCleaner:
 
     @staticmethod
     def _normalize_tier(raw_tier):
+        """PandaScore tier'ini tek harfe indirger.
+
+        D ve E de KABUL EDILIR (2026-09-02). Onceden yalnizca S/A/B/C
+        aliniyordu ve PandaScore maclarinin %73'u D-tier oldugu icin
+        hepsi NULL kaydediliyordu. Sonuc: 3.139 turnuvanin 1.233'unde
+        (%39) tier bos kaliyordu ve "veri yok" ile "dusuk seviye"
+        birbirinden ayirt edilemiyordu.
+
+        Frontend zaten SABCDE bekliyordu (Dashboard.jsx tierLetter),
+        yani asil tutarsizlik buradaydi.
+        """
         if not raw_tier:
             return None
         token = str(raw_tier).strip().lower().replace("_", "-")
         token = token.replace("tier", "")
         letter = re.sub(r"[^a-z]", "", token)[:1].upper()
-        return letter if letter in {"S", "A", "B", "C"} else None
+        return letter if letter in {"S", "A", "B", "C", "D", "E"} else None
 
     @staticmethod
     def _normalize_token(token):

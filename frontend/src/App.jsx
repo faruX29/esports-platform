@@ -119,21 +119,30 @@ function NavSearch() {
     }
     setLoading(true)
     try {
+      // PostgREST .or() filtresinde virgul/parantez ayirac oldugu icin temizlenir;
+      // aksi halde "a,b" gibi bir arama filtreyi bozup sorguyu patlatir.
+      const q = query.replace(/[,()]/g, ' ').trim()
+
       const [teamRes, playerRes, tourRes] = await Promise.all([
+        // Kisaltmayla arama (2026-09-02, beta geri bildirimi #004/#005):
+        // kullanici navbar'a "fnc" yaziyordu, sonuc gelmiyordu. /search sayfasi
+        // acronym'e zaten bakiyordu, hizli arama bakmiyordu. 2.836 takimin
+        // 2.156'sinda acronym dolu -> veri hazirdi, sorgu eksikti.
         supabase
           .from('teams')
-          .select('id, name, logo_url')
-          .ilike('name', `%${query}%`)
+          .select('id, name, acronym, logo_url')
+          .or(`name.ilike.%${q}%,acronym.ilike.%${q}%`)
           .limit(4),
+        // Gercek isimle de aranabilsin (ayni gerekce: /search bakiyordu, bu bakmiyordu)
         supabase
           .from('players')
-          .select('id, nickname, role, image_url')
-          .ilike('nickname', `%${query}%`)
+          .select('id, nickname, real_name, role, image_url')
+          .or(`nickname.ilike.%${q}%,real_name.ilike.%${q}%`)
           .limit(4),
         supabase
           .from('tournaments')
           .select('id, name, tier, game:games(name)')
-          .ilike('name', `%${query}%`)
+          .ilike('name', `%${q}%`)
           .order('begin_at', { ascending: false, nullsFirst: false })
           .limit(4),
       ])
@@ -278,6 +287,10 @@ function NavSearch() {
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {t.name}
                   </span>
+                  {t.acronym && (
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-5)',
+                      flexShrink: 0 }}>{t.acronym}</span>
+                  )}
                   <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-6)' }}>→</span>
                 </div>
               ))}
@@ -316,6 +329,12 @@ function NavSearch() {
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {p.nickname}
                   </span>
+                  {p.real_name && (
+                    <span style={{ fontSize: 11, color: 'var(--text-5)', flexShrink: 1,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {p.real_name}
+                    </span>
+                  )}
                   {p.role && (
                     <span style={{ marginLeft: 'auto', fontSize: 9, padding: '2px 6px',
                       borderRadius: 4, background: 'var(--surface-2)', color: 'var(--text-4)',

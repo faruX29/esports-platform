@@ -10,7 +10,7 @@ import { isTurkishTeam }                   from '../constants'
 import { useUser }                          from '../context/UserContext'
 import { useAuth }                          from '../context/AuthContext'
 import BRANDING                             from '../branding.config'
-import { Radio, Flag, CalendarDays, Sparkles, Zap, SlidersHorizontal, Clock, Gamepad2, Shield, Trophy, FlaskConical, Newspaper, Flame, Star, TriangleAlert, Moon } from 'lucide-react'
+import { Radio, Flag, CalendarDays, Sparkles, Zap, SlidersHorizontal, Clock, Gamepad2, Shield, Trophy, FlaskConical, Newspaper, Flame, Star, TriangleAlert } from 'lucide-react'
 import { buildFinishedStory, buildUpcomingStory } from '../utils/newsStories'
 import { isStoryFollowedTeam, prioritizeStoriesForYou } from '../utils/newsPersonalization'
 import { calculatePredictionAccuracy } from '../utils/accuracyTracker'
@@ -2423,6 +2423,13 @@ export default function Dashboard() {
       </div>}
 
       {/* ── LIVE Section ─────────────────────────────────────────────────── */}
+      {/* Canlı maç yokken BÖLÜMÜN TAMAMI gizlenir (Gemini #68, 2026-09-02).
+          Önceden başlık + "Şu an canlı maç yok" kutusu duruyordu ve boş
+          durumda ~145px ölü alan bırakıyordu. İki ayrı beta kullanıcısı ana
+          sayfayı "aşırı boşluklu" / "çok aşağı kaydırıyorum" diye tarif etti.
+          HLTV ve VLR.gg de canlı maç yokken bölümü hiç göstermiyor.
+          Yükleme sırasında gösterilmeye devam eder → iskelet korunur, CLS olmaz. */}
+      {(loading || liveMatches.length > 0) && (
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
           <span style={{ fontSize: 11, fontWeight: 800, color: '#FF4655', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
@@ -2448,11 +2455,6 @@ export default function Dashboard() {
             {/* Skeleton yüksekliği gerçek LiveMatchCard ile aynı (248px) → CLS'i önler */}
             {[1,2,3].map(i => <Sk key={i} h="248px" r="16px" />)}
           </div>
-        ) : liveMatches.length === 0 ? (
-          <div style={{ padding: '20px', borderRadius: 16, background: 'var(--surface)', border: '1px solid var(--line)', textAlign: 'center' }}>
-            <div style={{ marginBottom: 6, display: 'flex', justifyContent: 'center' }}><Moon size={22} color="var(--text-6)" /></div>
-            <div style={{ fontSize: 11, color: 'var(--line-2)' }}>Şu an canlı maç yok</div>
-          </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill,minmax(230px,1fr))', gap: 12 }}>
             {liveMatches.map(m => (
@@ -2468,6 +2470,7 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+      )}
 
       {/* ── Aktif Turnuvalar (süregelen üst-tier — canlı maçların altında) ─── */}
       {activeTournaments.length > 0 && (() => {

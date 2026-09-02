@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import FextopusIcon from './FextopusIcon'
 
@@ -92,6 +93,11 @@ export default function PredictionAccuracyBadge({ variant = 'card' }) {
           Elo tabanlı Fextopus, yüksek güvenli tahminlerinde ({sample} maçta ölçüldü) bu isabeti tutturuyor.
           Genel isabet %{overall}. <span style={{ color: '#8f8f8f' }}>Her maçı değil — en emin olduklarını.</span>
         </div>
+        {/* Rakamin arkasindaki tam dagilim: iddiayi dogrulanabilir kilar */}
+        <Link to="/stats" style={{ display: 'inline-block', marginTop: 8, fontSize: 11.5,
+          fontWeight: 700, color: 'var(--accent-fg)', textDecoration: 'none' }}>
+          Tüm güven katmanlarını gör →
+        </Link>
       </div>
     </div>
   )

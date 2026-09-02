@@ -80,6 +80,7 @@ export default function Footer() {
               <FLink to="/matches">Maçlar</FLink>
               <FLink to="/tournaments">Turnuvalar</FLink>
               <FLink to="/rankings">Sıralamalar</FLink>
+              <FLink to="/stats">Fextopus İsabet</FLink>
             </Col>
             <Col title="İçerik">
               <FLink to="/news">Haberler</FLink>

@@ -30,6 +30,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Matches = lazy(() => import('./pages/Matches'))
 const MatchDetailPage = lazy(() => import('./pages/MatchDetailPage'))
 const RankingsPage = lazy(() => import('./pages/RankingsPage'))
+const StatsPage = lazy(() => import('./pages/StatsPage'))
 const TeamPage = lazy(() => import('./pages/TeamPage'))
 const TournamentPage = lazy(() => import('./pages/TournamentPage'))
 const PlayersPage = lazy(() => import('./pages/PlayersPage'))
@@ -668,6 +669,7 @@ function AppShell() {
           <Route path="/tournaments"              element={<TournamentsListPage />} />
           <Route path="/match/:id"                element={<MatchDetailPage />} />
           <Route path="/rankings"                 element={<RankingsPage />}   />
+          <Route path="/stats"                    element={<StatsPage />}      />
           <Route path="/team/:teamId"             element={<TeamPage />}       />
           <Route path="/tournament/:tournamentId" element={<TournamentPage />} />
           <Route path="/players"                  element={<PlayersPage />}    />

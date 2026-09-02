@@ -278,6 +278,60 @@ def kare(oyun, renk, maclar, gun, ilerleme=1.0, glow=1.0, zoom=1.0):
         c = c.resize((nw,nh), Image.LANCZOS).crop(((nw-W)//2,(nh-H)//2,(nw-W)//2+W,(nh-H)//2+H))
     return c
 
+# ── Paylaşım metni ────────────────────────────────────────────────────────
+# Her gün aynı metni yazmak paylaşımı öldürür. Kanca GÜNÜN VERİSİNDEN
+# üretilir: önce Türk takımı, sonra en emin tahmin, sonra en dengeli maç.
+TURK_TAKIMLARI = (
+    'eternal fire', 'fut esports', 'futbolist', 'fire flux', 'dark passage',
+    'papara', 'supermassive', 'galatasaray', 'besiktas', 'beşiktaş',
+    'fenerbahce', 'fenerbahçe', 'misa', 'bushido', 'nasr', 'aurora',
+    'sangal', 'ultra prime', 'wolves', 'bbl', 'bbl esports',
+)
+
+def _turk_mu(ad):
+    a = (ad or '').casefold()
+    return any(t in a for t in TURK_TAKIMLARI)
+
+def paylasim_metni(oyun, maclar, gun):
+    """Videonun yanına konacak hazır açıklama."""
+    n = len(maclar)
+    # En emin ve en dengeli maçları bul
+    def favp(m):
+        pa = round(m['pa']*100)
+        return max(pa, 100-pa)
+    en_emin = max(maclar, key=favp)
+    en_dengeli = min(maclar, key=favp)
+    def taraflar(m):
+        pa = round(m['pa']*100)
+        return (m['a'], pa) if pa >= 100-pa else (m['b'], 100-pa)
+
+    # Kanca sırası: Türk takımı > çok emin tahmin > dengeli maç
+    turk = next((m for m in maclar if _turk_mu(m['a']) or _turk_mu(m['b'])), None)
+    if turk:
+        ad = turk['a'] if _turk_mu(turk['a']) else turk['b']
+        rakip = turk['b'] if ad == turk['a'] else turk['a']
+        saat = (turk['saat'] + timedelta(hours=3)).strftime('%H:%M')
+        kanca = f"{ad} bugün {saat}'te {rakip} karşısında."
+    elif favp(en_emin) >= 72:
+        ad, p = taraflar(en_emin)
+        kanca = f"Fextopus'un bugün en emin olduğu maç: {ad} %{p}."
+    else:
+        p = favp(en_dengeli)
+        kanca = (f'Bugünün en dengeli maçı: {en_dengeli["a"]} - {en_dengeli["b"]} '
+                 f'(%{p} - %{100-p}). Fextopus bile kararsız.')
+
+    etiket = {'VALORANT': '#valorant', 'COUNTER-STRIKE 2': '#cs2',
+              'LEAGUE OF LEGENDS': '#leagueoflegends', 'DOTA 2': '#dota2'}
+    tags = ['#espor'] + sorted({etiket.get(m['oyun'], '') for m in maclar} - {''})
+
+    return '\n'.join([
+        kanca, '',
+        f"{n} maç, hepsi S/A seviye. Tahminler Fextopus'tan — "
+        'en güvendiği maçlarda %75 isabetli.', '',
+        "Tümü fextesports.com'da, link profilde.", '',
+        ' '.join(tags[:4]),
+    ])
+
 def uret(oyun, renk, maclar, gun, dosya):
     exe = ffmpeg_yolu()
     pr = subprocess.Popen([exe,'-y','-f','rawvideo','-pix_fmt','rgb24','-s',f'{W}x{H}','-r',str(FPS),
@@ -290,6 +344,9 @@ def uret(oyun, renk, maclar, gun, dosya):
         pr.stdin.write(kare(oyun, renk, maclar, gun,
                             ilerleme=min(1.0, t/0.62), glow=1.0, zoom=1.0+0.03*t).tobytes())
     pr.stdin.close(); pr.wait()
+    # Videonun yanina hazir paylasim metni
+    with open(os.path.splitext(dosya)[0] + '.txt', 'w', encoding='utf-8') as f:
+        f.write(paylasim_metni(oyun, maclar, gun))
     print(f'  {dosya}  ({os.path.getsize(dosya)//1024} KB, {len(maclar)} maç)')
 
 # Bir oyunun KENDI videosunu hak etmesi icin gereken maç sayısı.

@@ -42,6 +42,17 @@ def main():
     satirlar += ['',
         'Paylasmadan once: videoyu galeriye kaydet, Instagram/TikTok\'a yukle,',
         'muzigi UYGULAMA ICINDEN sec (lisansli + erisimi artiriyor).', '']
+
+    # Hazir aciklama metni: her gun ayni metni elle yazmak paylasimi oldurur.
+    # Kanca GUNUN VERISINDEN uretiliyor (radar.py -> paylasim_metni):
+    # once Turk takimi, sonra en emin tahmin, sonra en dengeli mac.
+    for ad in dosyalar:
+        metin_yolu = os.path.join(KLASOR, os.path.splitext(ad)[0] + '.txt')
+        if not os.path.exists(metin_yolu):
+            continue
+        with open(metin_yolu, encoding='utf-8') as f:
+            satirlar += ['-' * 52, f'ACIKLAMA - {ad}', '-' * 52, '', f.read().rstrip(), '']
+
     if atlanan:
         satirlar.append('Eke sigmayanlar Actions artifact\'inden indirilebilir.')
 

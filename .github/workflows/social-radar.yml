@@ -1,0 +1,99 @@
+name: Fextopus Mac Radari (gunluk sosyal video)
+
+# Gunun S/A maclarindan dikey video (1080x1920) uretir ve e-posta ile yollar.
+#
+# YARI OTOMATIK, bilerek: Instagram/TikTok'un lisansli muzik kutuphanesine
+# YALNIZCA uygulama icinden erisilebiliyor. API ile paylasilan Reels'e o
+# muzikler eklenemez; kendi ses dosyani gomersen telif riski alirsin ve
+# platform kendi kutuphanesinden muzik kullanan videolari daha cok dagitiyor.
+# Bu yuzden URETIM otomatik, PAYLASIM elde.
+on:
+  schedule:
+    - cron: '35 4 * * *'      # 07:35 TSI -- gunun maclari netlesmis olur
+  workflow_dispatch:
+    inputs:
+      gun:
+        description: 'Hangi gun (YYYY-AA-GG). Bos birakilirsa bugun.'
+        required: false
+        type: string
+
+concurrency:
+  group: social-radar
+  cancel-in-progress: false
+
+jobs:
+  radar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: social
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: social/requirements.txt
+
+      - name: Bagimliliklar
+        run: pip install -r requirements.txt
+
+      - name: ffmpeg kontrolu
+        run: ffmpeg -version | head -1      # runner'da kurulu gelir
+
+      - name: Videolari uret
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python radar.py ${{ inputs.gun }}
+
+      - name: Uretilenleri listele
+        id: liste
+        run: |
+          if [ -d cikti ] && [ -n "$(ls -A cikti 2>/dev/null)" ]; then
+            ls -la cikti
+            echo "var=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Bugun S/A mac yok - video uretilmedi."
+            echo "var=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: E-posta ile gonder
+        if: steps.liste.outputs.var == 'true'
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: python gonder.py cikti "${{ inputs.gun || '' }}"
+
+      - name: Artifact olarak yukle (yedek)
+        if: steps.liste.outputs.var == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-radari-${{ github.run_id }}
+          path: social/cikti/*.mp4
+          retention-days: 14
+
+      # ── Dead-man's switch (Gemini #54) ────────────────────────────────
+      - name: "ETL alarmi (Resend)"
+        if: ${{ failure() || cancelled() }}
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          WF_NAME: ${{ github.workflow }}
+          JOB_ID: "radar"
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$RESEND_API_KEY" ]; then
+            echo "::warning::RESEND_API_KEY secret'i tanimli degil - alarm gonderilemedi."
+            exit 0
+          fi
+          SUBJECT="[feXt ETL Alarm] $WF_NAME / $JOB_ID -> $JOB_STATUS"
+          BODY="$WF_NAME is akisinda '$JOB_ID' isi $JOB_STATUS durumuyla bitti. Loglar: $RUN_URL"
+          jq -n --arg s "$SUBJECT" --arg b "$BODY" \
+            '{from:"feXt ETL <noreply@fextesports.com>",to:["iletisim@fextesports.com"],subject:$s,text:$b}' \
+            > /tmp/alert.json
+          curl -sS -X POST https://api.resend.com/emails \
+            -H "Authorization: Bearer $RESEND_API_KEY" \
+            -H "Content-Type: application/json" -d @/tmp/alert.json
+          echo

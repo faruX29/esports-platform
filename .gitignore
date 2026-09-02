@@ -13,3 +13,7 @@ frontend/public/sitemap*.xml
 
 # Yerel hata ayıklama/ekran görüntüsü kalıntıları
 frontend/_*
+
+# Sosyal medya radar ciktilari (uretilen video + logo onbellegi)
+social/cikti/
+social/onbellek/

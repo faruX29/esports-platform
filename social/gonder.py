@@ -1,0 +1,66 @@
+# -*- coding: utf-8 -*-
+"""Üretilen videoları Resend ile e-posta ekinde gönderir.
+
+Neden e-posta: kurucu paylaşımı telefondan yapıyor. GitHub artifact'i
+telefonda indirmek zahmetli; mail eki galeriye tek dokunuşla kaydediliyor.
+Artifact yine de yükleniyor (yedek).
+"""
+import base64, json, os, sys, urllib.request
+
+ANAHTAR = os.environ.get('RESEND_API_KEY')
+ALICI   = os.environ.get('RADAR_ALICI', 'iletisim@fextesports.com')
+KLASOR  = sys.argv[1] if len(sys.argv) > 1 else 'cikti'
+GUN     = sys.argv[2] if len(sys.argv) > 2 else ''
+
+MB = 1024 * 1024
+EK_SINIRI = 20 * MB          # Resend toplam ek sınırı ~40MB; yarısında duruyoruz
+
+def main():
+    if not os.path.isdir(KLASOR):
+        print('cikti klasoru yok, gonderilecek video bulunamadi'); return 0
+    dosyalar = sorted(f for f in os.listdir(KLASOR) if f.endswith('.mp4'))
+    if not dosyalar:
+        print('video yok - bugun S/A mac olmamis olabilir, mail gonderilmedi'); return 0
+    if not ANAHTAR:
+        print('::warning::RESEND_API_KEY yok - videolar yalnizca artifact olarak kaldi'); return 0
+
+    ekler, toplam, atlanan = [], 0, []
+    for ad in dosyalar:
+        p = os.path.join(KLASOR, ad)
+        b = os.path.getsize(p)
+        if toplam + b > EK_SINIRI:
+            atlanan.append(ad); continue
+        with open(p, 'rb') as f:
+            ekler.append({'filename': ad, 'content': base64.b64encode(f.read()).decode()})
+        toplam += b
+
+    satirlar = [f'{GUN} icin {len(dosyalar)} video uretildi.', '']
+    for ad in dosyalar:
+        kb = os.path.getsize(os.path.join(KLASOR, ad)) // 1024
+        isaret = ' (ekte degil - boyut)' if ad in atlanan else ''
+        satirlar.append(f'  - {ad}  {kb} KB{isaret}')
+    satirlar += ['',
+        'Paylasmadan once: videoyu galeriye kaydet, Instagram/TikTok\'a yukle,',
+        'muzigi UYGULAMA ICINDEN sec (lisansli + erisimi artiriyor).', '']
+    if atlanan:
+        satirlar.append('Eke sigmayanlar Actions artifact\'inden indirilebilir.')
+
+    veri = json.dumps({
+        'from': 'feXt Radar <noreply@fextesports.com>',
+        'to': [ALICI],
+        'subject': f'[feXt] {GUN} mac radari - {len(dosyalar)} video',
+        'text': '\n'.join(satirlar),
+        'attachments': ekler,
+    }).encode()
+
+    req = urllib.request.Request('https://api.resend.com/emails', data=veri, method='POST',
+        headers={'Authorization': f'Bearer {ANAHTAR}', 'Content-Type': 'application/json'})
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            print('mail gonderildi:', r.read().decode()[:120])
+    except Exception as e:
+        detay = getattr(e, 'read', lambda: b'')()[:200]
+        print(f'::warning::mail gonderilemedi: {e} {detay!r}')
+    return 0
+
+sys.exit(main())

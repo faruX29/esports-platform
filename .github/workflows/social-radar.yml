@@ -44,10 +44,19 @@ jobs:
       - name: ffmpeg kontrolu
         run: ffmpeg -version | head -1      # runner'da kurulu gelir
 
+      - name: Gunu belirle
+        id: tarih
+        # Zamanlanmis kosuda inputs bos gelir -> bugunun TSI tarihi kullanilir.
+        run: |
+          GUN="${{ inputs.gun }}"
+          if [ -z "$GUN" ]; then GUN=$(TZ=Europe/Istanbul date +%F); fi
+          echo "gun=$GUN" >> "$GITHUB_OUTPUT"
+          echo "Hedef gun: $GUN"
+
       - name: Videolari uret
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: python radar.py ${{ inputs.gun }}
+        run: python radar.py "${{ steps.tarih.outputs.gun }}"
 
       - name: Uretilenleri listele
         id: liste
@@ -64,7 +73,7 @@ jobs:
         if: steps.liste.outputs.var == 'true'
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-        run: python gonder.py cikti "${{ inputs.gun || '' }}"
+        run: python gonder.py cikti "${{ steps.tarih.outputs.gun }}"
 
       - name: Artifact olarak yukle (yedek)
         if: steps.liste.outputs.var == 'true'

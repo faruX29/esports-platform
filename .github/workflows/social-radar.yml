@@ -9,7 +9,10 @@ name: Fextopus Mac Radari (gunluk sosyal video)
 # Bu yuzden URETIM otomatik, PAYLASIM elde.
 on:
   schedule:
-    - cron: '30 20 * * *'     # 23:30 TSI -- kurucu gece yarisi paylasip yatiyor
+    # 19:00 TSI. GitHub zamanlanmis kosulari SAATLERCE geciktirebiliyor
+    # (2 Eylul: 23:30'a kurulan is 01:46'da calisti). Erken kurup gecikmeyi
+    # sogurmak, gece yarisindan once elde olmasini garantiliyor.
+    - cron: '0 16 * * *'
   workflow_dispatch:
     inputs:
       gun:
@@ -49,11 +52,24 @@ jobs:
 
       - name: Gunu belirle
         id: tarih
-        # Kosu 23:30 TSI'de -- yani ERTESI gunun maclari uretilir ki kurucu
-        # gece yarisi, gun baslarken paylasabilsin.
+        # Kosu aksam calisir ve ERTESI gunun maclarini uretir ki kurucu gece
+        # yarisi, gun baslarken paylasabilsin.
+        #
+        # DIKKAT - "date -d tomorrow" TEK BASINA YANLIS: tarih kosu ANINDA
+        # hesaplanir, zamanlama aninda degil. Is gece yarisini gecerek
+        # gecikirse "yarin" bir gun KAYAR (2 Eylul'de tam bu oldu).
+        # Cozum: TSI saati 12'den buyukse yarin, kucukse bugun. Boylece
+        # 12 saate kadar gecikme tarihi bozmaz.
         run: |
           GUN="${{ inputs.gun }}"
-          if [ -z "$GUN" ]; then GUN=$(TZ=Europe/Istanbul date -d tomorrow +%F); fi
+          if [ -z "$GUN" ]; then
+            SAAT=$(TZ=Europe/Istanbul date +%H)
+            if [ "$SAAT" -ge 12 ]; then
+              GUN=$(TZ=Europe/Istanbul date -d tomorrow +%F)
+            else
+              GUN=$(TZ=Europe/Istanbul date +%F)
+            fi
+          fi
           echo "gun=$GUN" >> "$GITHUB_OUTPUT"
           echo "Hedef gun: $GUN"
 

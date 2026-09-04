@@ -74,7 +74,14 @@ GitHub Actions syncs matches automatically every 15 minutes.
 
 \## 📄 License
 
+**GNU AGPL-3.0** — see [LICENSE](LICENSE).
 
+You are free to use, modify and redistribute this code. If you run a modified
+version as a network service, you must publish your modified source as well.
 
-MIT License
+\## 🙏 Data attribution
 
+- **Liquipedia** — transfer and roster data, used under
+  [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
+  Credited in-app next to the data it powers. https://liquipedia.net
+- **PandaScore** — match, team and tournament data. https://pandascore.co

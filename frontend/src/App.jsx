@@ -518,6 +518,33 @@ function GameSelectorBar() {
   )
 }
 
+/* ─── RouteTransition ───────────────────────────────────────────────────────
+ * Sayfa geçiş animasyonu.
+ *
+ * NEDEN key={pathname} DEĞİL: rotalar lazy. Yeni rotanın chunk'ı henüz
+ * inmemişse Suspense birincil ağacı display:none ile gizler; key'e bağlı CSS
+ * animasyonu o sırada GİZLİYKEN oynayıp biter, içerik göründüğünde animasyon
+ * çoktan tükenmiştir — ilk ziyarette hiç görünmez. Üstelik key değişimi tüm
+ * rotayı remount ederdi (gereksiz veri çekimi).
+ *
+ * Bunun yerine efekt kullanıyoruz: React, askıya alınmış bir ağacın
+ * efektlerini ağaç GERÇEKTEN gösterilene kadar çalıştırmaz. Sınıfı silip
+ * reflow zorlayarak animasyonu tam o anda baştan başlatıyoruz; remount yok.
+ */
+function RouteTransition({ pathname, children }) {
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.classList.remove('route-in')
+    void el.offsetWidth        // reflow — animasyonun yeniden başlaması için şart
+    el.classList.add('route-in')
+  }, [pathname])
+
+  return <div ref={ref} className="route-in">{children}</div>
+}
+
 function RealtimeToastBridge() {
   const { user, profile } = useAuth()
   const { followedTeamIds } = useUser()
@@ -720,10 +747,7 @@ function AppShell() {
           <style>{`@keyframes appRouteLoad { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`}</style>
         </div>
       )}>
-        {/* key={pathname} → her sayfa geçişinde animasyon yeniden çalışır.
-            Sayfa içeriği zaten route değişiminde değişiyor; ekstra remount
-            maliyeti yok. Hareket hassasiyeti index.css'te kısılıyor. */}
-        <div key={pathname} style={{ animation: 'routeIn .42s cubic-bezier(.2,.8,.3,1)' }}>
+        <RouteTransition pathname={pathname}>
         <Routes>
           <Route path="/"                         element={<Dashboard />}      />
           <Route path="/matches"                  element={<Matches />}        />
@@ -751,7 +775,7 @@ function AppShell() {
           <Route path="/kullanim-kosullari"       element={<LegalPage doc="terms" />} />
           <Route path="/kvkk"                     element={<LegalPage doc="kvkk" />} />
         </Routes>
-        </div>
+        </RouteTransition>
       </Suspense>
       </ErrorBoundary>
       </main>

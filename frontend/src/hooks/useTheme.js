@@ -6,22 +6,38 @@ function readTheme() {
   return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'
 }
 
-let animTimer = 0
+function reduceMotion() {
+  if (typeof window === 'undefined' || !window.matchMedia) return false
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
 
+/**
+ * Temayı uygular. Geçişi View Transitions API yapar.
+ *
+ * NEDEN: önce <html>'e geçici bir sınıf ekleyip `*` üzerinden 8 özelliği
+ * (box-shadow ve background-image dahil) 500ms geçiriyorduk. 1183 elemanda
+ * bu her karede tam repaint demekti — ölçümde kareler 103-138ms'ye çıkıyor,
+ * 11 karenin 8'i düşüyordu; sayfa kasıyormuş gibi hissettiriyordu.
+ *
+ * View Transitions eski ve yeni görüntünün anlık görüntüsünü alıp GPU'da
+ * çapraz geçiş yapar: eleman sayısından bağımsız, tek kompozit katman.
+ * Desteklemeyen tarayıcıda geçiş anlık olur — kasmadansa anlık iyidir.
+ */
 function applyTheme(t) {
   const root = document.documentElement
 
-  // `theme-anim` sınıfı yalnızca geçiş süresince duruyor: tüm yüzeylerin rengi
-  // ani takla atmak yerine yumuşakça çözülüyor (kural index.css'te). Kalıcı
-  // global transition BIRAKILMIYOR — her hover/render'ı yavaşlatırdı.
-  root.classList.add('theme-anim')
-  window.clearTimeout(animTimer)
-  animTimer = window.setTimeout(() => root.classList.remove('theme-anim'), 560)
+  const commit = () => {
+    root.setAttribute('data-theme', t)
+    try { localStorage.setItem('fext-theme', t) } catch { /* yok say */ }
+    const m = document.querySelector('meta[name="theme-color"]')
+    if (m) m.setAttribute('content', t === 'light' ? '#f5f7fb' : '#0B0F19')
+  }
 
-  root.setAttribute('data-theme', t)
-  try { localStorage.setItem('fext-theme', t) } catch { /* yok say */ }
-  const m = document.querySelector('meta[name="theme-color"]')
-  if (m) m.setAttribute('content', t === 'light' ? '#f5f7fb' : '#0B0F19')
+  if (typeof document.startViewTransition === 'function' && !reduceMotion()) {
+    document.startViewTransition(commit)
+  } else {
+    commit()
+  }
 }
 
 export function useTheme() {

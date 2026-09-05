@@ -147,34 +147,31 @@ button { font-family: inherit; }
 /* Sayfa (route) geçişi — içerik aşağıdan hafifçe süzülerek gelir.
    Anlık "pat" yerine yönü olan bir geçiş; yükleniyor hissini de yumuşatır. */
 @keyframes routeIn {
-  /* 7px/300ms fark edilmiyordu — mesafe ve süre belirgin hale getirildi. */
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
+  /* Sadece kaydırma fark edilmiyordu; hafif bir ölçek gözün yakaladığı
+     asıl ipucu — sayfa "yerine oturuyor" gibi okunuyor. */
+  from { opacity: 0; transform: translateY(14px) scale(.986); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+.route-in {
+  animation: routeIn .45s cubic-bezier(.2, .8, .3, 1);
+  /* scale sırasında alt pikseller bulanmasın */
+  transform-origin: 50% 0;
 }
 
-/* Tema geçişi: useTheme, <html>'e ~560ms boyunca .theme-anim ekliyor.
-   Kalıcı global transition bırakmıyoruz — her hover'ı yavaşlatırdı.
-   no-preference guard'ı sayesinde "reduce motion" kullanıcısı etkilenmez. */
-@media (prefers-reduced-motion: no-preference) {
-  html.theme-anim,
-  html.theme-anim *,
-  html.theme-anim *::before,
-  html.theme-anim *::after {
-    /* transform ve opacity LİSTEDE OLMAK ZORUNDA. Bu kural `!important`
-       olduğu için elemanların kendi inline `transition`'ını komple ezer;
-       ikisi eksik kalınca tema düğmesindeki güneş/ay kayması anında
-       zıplıyordu (5 Eyl). Yeni özellik eklerken buraya da ekle. */
-    transition:
-      background-color .5s ease,
-      background-image .5s ease,
-      border-color     .5s ease,
-      color            .5s ease,
-      fill             .5s ease,
-      box-shadow       .5s ease,
-      opacity          .5s ease,
-      transform        .5s cubic-bezier(.34,1.15,.5,1) !important;
-  }
+/* Tema geçişi — View Transitions API (bkz. hooks/useTheme.js).
+   Tarayıcı eski/yeni görüntüyü GPU'da çapraz geçirir; eleman sayısından
+   bağımsızdır. Önceki yaklaşım (`*` üzerinde geçici global transition)
+   1183 elemanda her kareyi tam repaint'e zorluyor ve 8fps'e düşürüyordu. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: .42s;
+  animation-timing-function: cubic-bezier(.2, .8, .3, 1);
+  /* Karışım modu yok: iki kat üst üste bindiğinde renkler yıkanıyordu. */
+  mix-blend-mode: normal;
 }
+/* Eski görüntü üstte sönerken yeni görüntü altında hazır bekler. */
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 0; animation: none; opacity: 1; }
 
 /* Erişilebilirlik: hareket hassasiyeti olan kullanıcılar için animasyonları
    ve geçişleri kıs (canlı nabız/spin/kayma dahil). Sadece OS'ta "reduce motion"

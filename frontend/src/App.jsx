@@ -409,6 +409,33 @@ function NavSearch() {
 function GameSelectorBar() {
   const { activeGame, setActiveGame } = useGame()
   const location = useLocation()
+  const rowRef = useRef(null)
+  // Aktif sekmenin altındaki çizgi artık her butonun kendi border'ı değil;
+  // tek bir şerit ölçülen konuma KAYIYOR. Filtre değişimi anlık sıçrama
+  // yerine yönü olan bir harekete dönüşüyor.
+  const [indicator, setIndicator] = useState({ left: 0, width: 0, color: 'transparent', ready: false })
+
+  useEffect(() => {
+    const measure = () => {
+      const row = rowRef.current
+      const el = row?.querySelector('[data-game-active="true"]')
+      if (!row || !el) { setIndicator(prev => ({ ...prev, width: 0 })); return }
+      setIndicator({
+        left: el.offsetLeft,
+        width: el.offsetWidth,
+        color: el.dataset.gameColor || 'var(--accent-fg)',
+        ready: true,
+      })
+    }
+    // Yazı tipi geç yüklenirse genişlik kayar → bir frame sonra tekrar ölç.
+    measure()
+    const raf = window.requestAnimationFrame(measure)
+    window.addEventListener('resize', measure)
+    return () => {
+      window.cancelAnimationFrame(raf)
+      window.removeEventListener('resize', measure)
+    }
+  }, [activeGame, location.pathname])
 
   // Sadece belirli sayfalarda göster
   const showOn = ['/', '/matches', '/rankings', '/tournaments']
@@ -419,29 +446,59 @@ function GameSelectorBar() {
       background: 'var(--bg)', borderBottom: '1px solid var(--line)',
       overflowX: 'auto', scrollbarWidth: 'none',
     }}>
-      <div style={{
+      <div ref={rowRef} style={{
+        position: 'relative',
         display: 'flex', gap: 4,
         maxWidth: 1440, margin: '0 auto', padding: '6px 16px',
       }}>
+        <span
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            bottom: 4,
+            left: 0,
+            height: 2,
+            width: indicator.width,
+            borderRadius: 2,
+            background: indicator.color,
+            transform: `translateX(${indicator.left}px)`,
+            opacity: indicator.width ? 1 : 0,
+            // İlk ölçümde kaymasın (soldan fırlamış gibi durur), sonra kaysın.
+            transition: indicator.ready
+              ? 'transform .32s cubic-bezier(.2,.8,.3,1), width .32s cubic-bezier(.2,.8,.3,1), background .25s, opacity .2s'
+              : 'none',
+            pointerEvents: 'none',
+          }}
+        />
         {GAMES.map(g => {
           const active = activeGame === g.id
           return (
             <button
               key={g.id}
+              data-game-active={active ? 'true' : 'false'}
+              data-game-color={g.color}
               onClick={() => setActiveGame(g.id)}
               disabled={g.soon}
               style={{
                 display: 'flex', alignItems: 'center', gap: 7,
                 padding: '8px 12px', border: 'none', background: 'transparent',
-                borderBottom: active ? `2px solid ${g.color}` : '2px solid transparent',
                 color: active ? 'var(--text)' : g.soon ? 'var(--text-5)' : 'var(--text-3)',
                 fontSize: 11, fontWeight: active ? 800 : 600,
                 letterSpacing: '.5px', textTransform: 'uppercase',
                 cursor: g.soon ? 'default' : 'pointer',
-                transition: 'all .15s', whiteSpace: 'nowrap', flexShrink: 0,
+                transition: 'color .2s, transform .2s cubic-bezier(.2,.8,.3,1)',
+                whiteSpace: 'nowrap', flexShrink: 0,
               }}
-              onMouseEnter={e => { if (!active && !g.soon) e.currentTarget.style.color = g.color }}
-              onMouseLeave={e => { if (!active && !g.soon) e.currentTarget.style.color = 'var(--text-3)' }}
+              onMouseEnter={e => {
+                if (g.soon) return
+                if (!active) e.currentTarget.style.color = g.color
+                e.currentTarget.style.transform = 'translateY(-1px)'
+              }}
+              onMouseLeave={e => {
+                if (g.soon) return
+                if (!active) e.currentTarget.style.color = 'var(--text-3)'
+                e.currentTarget.style.transform = 'translateY(0)'
+              }}
             >
               {/* Oyun marka logosu (yoksa "all" → brand-renkli nokta) */}
               {GAME_ICON_PATHS[g.id]
@@ -663,6 +720,10 @@ function AppShell() {
           <style>{`@keyframes appRouteLoad { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`}</style>
         </div>
       )}>
+        {/* key={pathname} → her sayfa geçişinde animasyon yeniden çalışır.
+            Sayfa içeriği zaten route değişiminde değişiyor; ekstra remount
+            maliyeti yok. Hareket hassasiyeti index.css'te kısılıyor. */}
+        <div key={pathname} style={{ animation: 'routeIn .3s cubic-bezier(.2,.8,.3,1)' }}>
         <Routes>
           <Route path="/"                         element={<Dashboard />}      />
           <Route path="/matches"                  element={<Matches />}        />
@@ -690,6 +751,7 @@ function AppShell() {
           <Route path="/kullanim-kosullari"       element={<LegalPage doc="terms" />} />
           <Route path="/kvkk"                     element={<LegalPage doc="kvkk" />} />
         </Routes>
+        </div>
       </Suspense>
       </ErrorBoundary>
       </main>

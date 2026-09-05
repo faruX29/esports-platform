@@ -19,6 +19,7 @@ import { roundLabel }                        from '../utils/roundLabel'
 import { clickableProps }                    from '../utils/a11y'
 import TurkishBadge                          from '../components/TurkishBadge'
 import InitialsImage                        from '../components/InitialsImage'
+import { CountUp }                          from '../components/AnimatedNumber'
 import {
   CalendarDays, Clock, CircleCheck, Radio, Search, Star, RefreshCw, Repeat,
   BarChart3, Flame, Sparkles, Trophy, Tv, Swords, Map as MapIcon, Users,
@@ -636,8 +637,8 @@ function Matches() {
       {/* Stats chips */}
       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 22 }}>
         {liveCount > 0 && <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: '#FF4655', background: 'rgba(255,70,85,.15)', border: '1px solid #FF465555', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Radio size={13} /> {liveCount} Canlı</div>}
-        <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: 'var(--text-3)', background: 'rgba(148,163,184,.12)', border: '1px solid #94a3b855', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Clock size={13} /> {upcomingCount} Yaklaşan</div>
-        <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: 'var(--text-3)', background: 'var(--hover)', border: '1px solid var(--line-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}><BarChart3 size={13} /> {totalCount.toLocaleString()} Toplam</div>
+        <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: 'var(--text-3)', background: 'rgba(148,163,184,.12)', border: '1px solid #94a3b855', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Clock size={13} /> <CountUp value={upcomingCount} /> Yaklaşan</div>
+        <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: 'var(--text-3)', background: 'var(--hover)', border: '1px solid var(--line-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}><BarChart3 size={13} /> <CountUp value={totalCount} /> Toplam</div>
         {followedTeamIds.length > 0 && <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: '#FFD700', background: 'rgba(255,215,0,.12)', border: '1px solid #FFD70055', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Star size={13} fill="#FFD700" /> {followedTeamIds.length} Favori</div>}
         <div style={{ color: 'var(--text-5)', fontSize: 11, display: 'flex', alignItems: 'center' }}>
           Güncellendi: {lastUpdate.toLocaleTimeString('tr-TR')}
@@ -665,7 +666,7 @@ function Matches() {
           )}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 16 }}>
+        <div className='content-in' style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 16 }}>
           {(filteredMatches || []).map(match => {
             const statusBadge = getStatusBadge(match.status)
             const cs          = correctedScores(match)  // ters-atanmış skor quirk'ini düzelt
@@ -826,7 +827,7 @@ function Matches() {
                     return (
                     <div style={{ marginBottom: 10 }}>
                       <div style={{ height: 6, borderRadius: 3, background: 'var(--surface)', overflow: 'hidden', position: 'relative' }}>
-                        <div style={{ width: `${Math.round(match.prediction_team_a * 100)}%`, height: '100%', background: predUncertain ? 'var(--track)' : 'linear-gradient(90deg,#667eea,#764ba2)', transition: 'width .5s' }} />
+                        <div style={{ width: `${Math.round(match.prediction_team_a * 100)}%`, height: '100%', background: predUncertain ? 'var(--track)' : 'linear-gradient(90deg,#667eea,#764ba2)', transition: 'width .5s', transformOrigin: 'left', animation: 'winBarFill .8s cubic-bezier(.2,.8,.3,1)' }} />
                       </div>
                       {predUncertain ? (
                         <div style={{ fontSize: 10, color: 'var(--text-4)', marginTop: 3, textAlign: 'center', fontWeight: 700 }}>Fextopus · Belirsiz</div>

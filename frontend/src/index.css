@@ -119,6 +119,56 @@ button { font-family: inherit; }
 @keyframes spin  { to { transform: rotate(360deg); } }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
 
+/* Canlı skor değişimi — rakam dikey takla atar + kısa bir vurgu alır.
+   Gösterilen değeri FlipNumber taklanın ortasında değiştiriyor. */
+@keyframes scoreFlip {
+  0%   { transform: rotateX(0deg)   scale(1);    filter: none; }
+  45%  { transform: rotateX(-88deg) scale(1.16); filter: brightness(1.5); }
+  55%  { transform: rotateX(88deg)  scale(1.16); filter: brightness(1.5); }
+  100% { transform: rotateX(0deg)   scale(1);    filter: none; }
+}
+
+/* Skeleton → gerçek içerik geçişi. İçerik "pat" diye belirmek yerine
+   süzülerek gelir; iskelet ile içerik arasındaki kopukluğu kapatır. */
+@keyframes contentIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.content-in { animation: contentIn .34s cubic-bezier(.2,.8,.3,1); }
+
+/* Fextopus tahmin barı — kart göründüğünde soldan sağa dolar.
+   width yerine scaleX: GPU'da çalışır, layout tetiklemez ve barın gerçek
+   genişliği reaktif kalır (canlı maçta oran değişince transition devralır). */
+@keyframes winBarFill {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* Sayfa (route) geçişi — içerik aşağıdan hafifçe süzülerek gelir.
+   Anlık "pat" yerine yönü olan bir geçiş; yükleniyor hissini de yumuşatır. */
+@keyframes routeIn {
+  from { opacity: 0; transform: translateY(7px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Tema geçişi: useTheme, <html>'e ~560ms boyunca .theme-anim ekliyor.
+   Kalıcı global transition bırakmıyoruz — her hover'ı yavaşlatırdı.
+   no-preference guard'ı sayesinde "reduce motion" kullanıcısı etkilenmez. */
+@media (prefers-reduced-motion: no-preference) {
+  html.theme-anim,
+  html.theme-anim *,
+  html.theme-anim *::before,
+  html.theme-anim *::after {
+    transition:
+      background-color .5s ease,
+      background-image .5s ease,
+      border-color     .5s ease,
+      color            .5s ease,
+      fill             .5s ease,
+      box-shadow       .5s ease !important;
+  }
+}
+
 /* Erişilebilirlik: hareket hassasiyeti olan kullanıcılar için animasyonları
    ve geçişleri kıs (canlı nabız/spin/kayma dahil). Sadece OS'ta "reduce motion"
    açık olanları etkiler. */

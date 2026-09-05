@@ -27,6 +27,7 @@ import { correctedScores }                   from '../utils/matchResult'
 import { isUncertainPrediction }             from '../utils/prediction'
 import { clickableProps }                     from '../utils/a11y'
 import PredictionAccuracyBadge              from '../components/PredictionAccuracyBadge'
+import { CountUp, FlipNumber }              from '../components/AnimatedNumber'
 
 const MVP_HIDE_DREAM_TEAM = true
 const MVP_HIDE_PREDICTIONS = false
@@ -399,22 +400,27 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
       placeItems: 'center',
       padding: '16px',
     }}>
+      {/* Panel eski temadan kalma kırmızı/lacivert renkleri taşıyordu (#2b3a58
+          kenarlık, kırmızı radial gradient) ve başlıkta İngilizce "For You"
+          geçiyordu. 5 Eyl: tamamen marka moruna ve Türkçeye çevrildi. */}
       <div style={{
         width: 'min(720px, 100%)',
         maxHeight: '85vh',
         overflowY: 'auto',
         borderRadius: 18,
-        border: '1px solid #2b3a58',
-        background: 'radial-gradient(circle at 14% 12%, rgba(255,70,85,.2), transparent 42%), var(--surface)',
+        border: `1px solid ${FEXT.accentBorder}`,
+        background: `radial-gradient(circle at 14% 12%, ${FEXT.accentGlow}, transparent 46%), var(--surface)`,
         boxShadow: '0 28px 70px rgba(0,0,0,.55)',
+        animation: 'prefModalIn .26s cubic-bezier(.2,.8,.3,1)',
       }}>
-        <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid var(--surface-2)' }}>
+        <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid var(--line)' }}>
           <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.9px', color: 'var(--accent-fg)', textTransform: 'uppercase' }}>
             Takip Tercihleri
           </div>
-          <h3 style={{ margin: '8px 0 0', fontSize: 22, color: 'var(--text-1)' }}>For You akışını özelleştir</h3>
+          <h3 style={{ margin: '8px 0 0', fontSize: 22, color: 'var(--text-1)' }}>Akışını özelleştir</h3>
           <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>
-            Oyun ve takım seçimlerini kaydet. Dashboard ticker içeriği seçimlerine göre anında sıralanır.
+            Takip ettiğin oyun ve takımları seç. Ana sayfadaki haber akışı ve
+            Hızlı Erişim bu seçimlere göre sıralanır.
           </p>
         </div>
 
@@ -458,7 +464,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
                 borderRadius: 9,
                 border: '1px solid var(--line-2)',
                 background: 'var(--surface-2)',
-                color: '#f1f1f1',
+                color: 'var(--text-1)',
                 fontSize: 12,
                 padding: '8px 10px',
                 outline: 'none',
@@ -478,15 +484,18 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
                     width: '100%',
                     textAlign: 'left',
                     borderRadius: 11,
-                    border: `1px solid ${active ? '#ff6f7e' : '#262626'}`,
-                    background: active ? 'rgba(255,70,85,.18)' : 'var(--surface-2)',
-                    color: active ? '#ffd9de' : '#cdcdcd',
+                    border: `1px solid ${active ? FEXT.accentBorder : 'var(--line)'}`,
+                    background: active ? FEXT.accentSoftBg : 'var(--surface-2)',
+                    color: active ? 'var(--accent-fg)' : 'var(--text-3)',
                     padding: '8px 10px',
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: 8,
                     cursor: 'pointer',
+                    transition: 'background .16s, border-color .16s, color .16s, transform .16s',
                   }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.borderColor = FEXT.accentBorder }}
+                  onMouseLeave={e => { if (!active) e.currentTarget.style.borderColor = 'var(--line)' }}
                 >
                   <InitialsImage
                     src={team.logo_url}
@@ -499,8 +508,8 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
                   />
                   <span style={{ minWidth: 0, display: 'grid', gap: 2 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.name}</span>
-                    <span style={{ fontSize: 10, color: active ? '#ffb2bc' : '#8e8e8e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: gameMeta?.color || 'var(--text-4)', flexShrink: 0 }} /> {gameMeta?.label || team?.game?.name || 'Unknown Game'}
+                    <span style={{ fontSize: 10, color: active ? 'var(--accent-fg)' : 'var(--text-5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: gameMeta?.color || 'var(--text-4)', flexShrink: 0 }} /> {gameMeta?.label || team?.game?.name || 'Oyun bilinmiyor'}
                     </span>
                   </span>
                 </button>
@@ -512,13 +521,13 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
               </div>
             )}
             {searchActive && !searching && displayedTeams.length === 0 && (
-              <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--text-5)', border: '1px dashed #262626', borderRadius: 10, padding: '12px 10px', textAlign: 'center' }}>
+              <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--text-5)', border: '1px dashed var(--line)', borderRadius: 10, padding: '12px 10px', textAlign: 'center' }}>
                 "{teamSearch.trim()}" için takım bulunamadı.
               </div>
             )}
             {!searchActive && !loading && (!popularTeams || popularTeams.length === 0) && (
-              <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--text-5)', border: '1px dashed #262626', borderRadius: 10, padding: '12px 10px', textAlign: 'center' }}>
-                Takim onerileri yuklenemedi. Yukaridan arayarak takim ekleyebilirsin.
+              <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--text-5)', border: '1px dashed var(--line)', borderRadius: 10, padding: '12px 10px', textAlign: 'center' }}>
+                Takım önerileri yüklenemedi. Yukarıdan arayarak takım ekleyebilirsin.
               </div>
             )}
             {!searchActive && loading && (
@@ -534,7 +543,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
             onClick={onClose}
             style={{
               borderRadius: 10,
-              border: '1px solid #2d2d2d',
+              border: '1px solid var(--line)',
               background: 'var(--surface-2)',
               color: 'var(--text-3)',
               fontSize: 12,
@@ -563,14 +572,17 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
             }}
             style={{
               borderRadius: 10,
-              border: '1px solid rgba(255,70,85,.72)',
-              background: 'linear-gradient(135deg, rgba(255,70,85,.26), rgba(255,70,85,.14))',
-              color: '#ffe8eb',
+              border: '1px solid rgba(194,92,208,.72)',
+              background: 'linear-gradient(135deg, rgba(194,92,208,.3), rgba(194,92,208,.15))',
+              color: 'var(--accent-fg)',
               fontSize: 12,
               fontWeight: 800,
               padding: '8px 12px',
               cursor: 'pointer',
+              transition: 'filter .16s, transform .16s',
             }}
+            onMouseEnter={e => { e.currentTarget.style.filter = 'brightness(1.18)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+            onMouseLeave={e => { e.currentTarget.style.filter = 'none'; e.currentTarget.style.transform = 'translateY(0)' }}
           >
             Tercihleri Kaydet
           </button>
@@ -700,6 +712,15 @@ const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
   )
 })
 
+/**
+ * QuickAccessBar — takip edilen takım/oyuncular.
+ *
+ * Eskiden 42px yuvarlak avatarlardan ibaretti: kullanıcı logodan takımı
+ * tanımak zorundaydı ve satır kimliksiz duruyordu. Artık ad + oyun yazan
+ * yatay kartlar; hover'da marka moru. Başlık satırı burada DEĞİL — Dashboard
+ * onu "Tercihlerin" butonuyla aynı satırda çiziyor (eskiden tercih butonu
+ * tek başına tam satır kaplayıp bu barı bir satır aşağı itiyordu).
+ */
 const QuickAccessBar = memo(function QuickAccessBar({ entries, loading, onOpen }) {
   const [ripple, setRipple] = useState({ key: null, token: 0, x: 0, y: 0 })
 
@@ -723,8 +744,8 @@ const QuickAccessBar = memo(function QuickAccessBar({ entries, loading, onOpen }
 
   if (loading) {
     return (
-      <div style={{ marginBottom: 12, display: 'flex', gap: 10, alignItems: 'center', overflowX: 'auto', paddingBottom: 2 }}>
-        {[1, 2, 3, 4, 5].map(i => <Sk key={i} w="42px" h="42px" r="999px" />)}
+      <div className="fav-scroll" style={{ marginBottom: 16, display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 3 }}>
+        {[1, 2, 3, 4].map(i => <Sk key={i} w="164px" h="48px" r="12px" />)}
       </div>
     )
   }
@@ -732,46 +753,82 @@ const QuickAccessBar = memo(function QuickAccessBar({ entries, loading, onOpen }
   if (!entries?.length) return null
 
   return (
-    <div style={{ marginBottom: 12 }}>
-      <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '.9px', textTransform: 'uppercase', marginBottom: 8 }}>
-        Hızlı Erişim
-      </div>
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', overflowX: 'auto', paddingBottom: 3 }}>
-        {entries.map(entry => (
+    <div className="fav-scroll" style={{ marginBottom: 16, display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 3 }}>
+      {entries.map((entry, idx) => {
+        const key = `${entry.type}_${entry.id}`
+        return (
           <button
-            key={`${entry.type}_${entry.id}`}
+            key={key}
             onClick={event => handleEntryOpen(event, entry)}
             title={entry.label}
             style={{
-              width: 42,
-              height: 42,
-              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 9,
               flexShrink: 0,
-              border: entry.isLive ? '1.5px solid rgba(255,70,85,.75)' : '1px solid var(--line-2)',
-              boxShadow: entry.isLive ? '0 0 16px rgba(255,70,85,.42)' : 'none',
+              maxWidth: 208,
+              padding: '7px 14px 7px 8px',
+              borderRadius: 12,
+              textAlign: 'left',
+              border: `1px solid ${entry.isLive ? 'rgba(255,70,85,.4)' : 'var(--line)'}`,
               background: 'var(--surface)',
               cursor: 'pointer',
-              padding: 0,
               position: 'relative',
               overflow: 'hidden',
-              transition: 'transform .16s, box-shadow .16s, border-color .16s',
+              // Kademeli giriş: kartlar sırayla süzülerek gelir (statik blok hissini kırar).
+              animation: `quickCardIn .34s cubic-bezier(.2,.8,.3,1) ${Math.min(idx, 8) * 45}ms both`,
+              transition: 'transform .18s cubic-bezier(.2,.8,.3,1), border-color .18s, background .18s, box-shadow .18s',
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.transform = 'translateY(-2px) scale(1.04)'
-              e.currentTarget.style.boxShadow = entry.isLive
-                ? '0 0 20px rgba(255,70,85,.5)'
-                : '0 0 14px rgba(255,255,255,.12)'
+              e.currentTarget.style.transform = 'translateY(-2px)'
+              e.currentTarget.style.borderColor = FEXT.accentBorder
+              e.currentTarget.style.background = FEXT.accentSoftBg
+              e.currentTarget.style.boxShadow = `0 6px 18px -8px ${FEXT.accentGlow}`
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.transform = 'translateY(0) scale(1)'
-              e.currentTarget.style.boxShadow = entry.isLive ? '0 0 16px rgba(255,70,85,.42)' : 'none'
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.borderColor = entry.isLive ? 'rgba(255,70,85,.4)' : 'var(--line)'
+              e.currentTarget.style.background = 'var(--surface)'
+              e.currentTarget.style.boxShadow = 'none'
             }}
           >
-            {entry.image
-              ? <img src={entry.image} alt={entry.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <span style={{ fontSize: 11, fontWeight: 800, color: '#d4d4d4' }}>{entry.fallback || '?'}</span>}
+            <span style={{
+              position: 'relative',
+              width: 32, height: 32, flexShrink: 0,
+              borderRadius: entry.type === 'player' ? '50%' : 9,
+              overflow: 'hidden',
+              background: 'var(--surface-2)',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {entry.image
+                ? <img src={entry.image} alt="" style={{ width: '100%', height: '100%', objectFit: entry.type === 'player' ? 'cover' : 'contain' }} />
+                : <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-4)' }}>{entry.fallback || '?'}</span>}
+            </span>
 
-            {ripple.key === `${entry.type}_${entry.id}` && (
+            <span style={{ minWidth: 0, display: 'grid', gap: 2 }}>
+              <span style={{
+                fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {entry.label}
+              </span>
+              <span style={{
+                fontSize: 10, fontWeight: 600, letterSpacing: '.2px',
+                // --danger-fg: açık temada sabit pembe beyaz zeminde kayboluyordu.
+                color: entry.isLive ? 'var(--danger-fg)' : 'var(--text-5)',
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                <span style={{
+                  width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                  background: entry.isLive ? '#ff4655' : (entry.gameColor || 'var(--text-5)'),
+                  animation: entry.isLive ? 'liveNeonBlink 1.05s infinite' : 'none',
+                }} />
+                {entry.isLive ? 'Canlı maç' : (entry.gameLabel || (entry.type === 'player' ? 'Oyuncu' : 'Takım'))}
+              </span>
+            </span>
+
+            {ripple.key === key && (
               <span
                 style={{
                   position: 'absolute',
@@ -780,35 +837,30 @@ const QuickAccessBar = memo(function QuickAccessBar({ entries, loading, onOpen }
                   width: 12,
                   height: 12,
                   borderRadius: '50%',
-                  background: 'rgba(255,255,255,.55)',
+                  background: 'rgba(194,92,208,.45)',
                   transform: 'translate(-50%, -50%)',
                   pointerEvents: 'none',
                   animation: 'dashRipple .42s ease-out forwards',
                 }}
               />
             )}
-
-            {entry.isLive && (
-              <span style={{
-                position: 'absolute',
-                right: 2,
-                bottom: 2,
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: '#ff4655',
-                boxShadow: '0 0 10px rgba(255,70,85,.95)',
-                animation: 'liveNeonBlink 1.05s infinite',
-              }} />
-            )}
           </button>
-        ))}
-      </div>
+        )
+      })}
     </div>
   )
 })
 
 function WinBar({ predA, predB, confidence }) {
+  // Kart göründüğünde bar 0'dan hedefe doğru dolar — günlük radar videolarındaki
+  // dolum efektinin sitedeki karşılığı. Sonraki (canlı) güncellemeler yine aynı
+  // transition üzerinden akar; animasyon donmuş bir değere kilitlemez.
+  const [grown, setGrown] = useState(false)
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => setGrown(true))
+    return () => window.cancelAnimationFrame(id)
+  }, [])
+
   if (predA == null || predB == null) return null
   const total = (predA + predB) || 1
   const pctA  = Math.round((predA / total) * 100)
@@ -826,8 +878,8 @@ function WinBar({ predA, predB, confidence }) {
         overflow: 'hidden', background: 'var(--line)',
         marginBottom: 3,
       }}>
-        <div style={{ width: `${pctA}%`, background: aFav ? 'var(--ai)' : 'var(--track)', transition: 'width .5s' }} />
-        <div style={{ width: `${pctB}%`, background: bFav ? 'var(--ai)' : 'var(--track)', transition: 'width .5s' }} />
+        <div style={{ width: grown ? `${pctA}%` : 0, background: aFav ? 'var(--ai)' : 'var(--track)', transition: 'width .75s cubic-bezier(.2,.8,.3,1)' }} />
+        <div style={{ width: grown ? `${pctB}%` : 0, background: bFav ? 'var(--ai)' : 'var(--track)', transition: 'width .75s cubic-bezier(.2,.8,.3,1)' }} />
       </div>
 
       {/* Yüzde + AI etiketi */}
@@ -881,14 +933,22 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
         cursor: 'pointer',
         border: '1px solid var(--line)',
         boxShadow: '0 8px 24px rgba(0,0,0,.35)',
-        transition: 'border-color .18s, transform .18s',
+        transition: 'border-color .2s, transform .2s cubic-bezier(.34,1.4,.64,1), box-shadow .2s',
         /* üst vurgu şeridi köşe yarıçapına göre kırpılsın (sol-üst kayma fix) */
         overflow: 'hidden',
         /* kart yüksekliği içerikle büyüsün, min sabit */
         minHeight: 0,
       }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(194,92,208,.55)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line)';  e.currentTarget.style.transform = 'translateY(0)' }}
+      onMouseEnter={e => {
+        e.currentTarget.style.borderColor = 'rgba(194,92,208,.55)'
+        e.currentTarget.style.transform = 'translateY(-4px) scale(1.008)'
+        e.currentTarget.style.boxShadow = '0 14px 34px rgba(194,92,208,.22)'
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.borderColor = 'var(--line)'
+        e.currentTarget.style.transform = 'translateY(0) scale(1)'
+        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,.35)'
+      }}
     >
       {/* Üst ince kırmızı vurgu — yavaş süzülen soft hareket (glow yok) */}
       <div style={{
@@ -998,9 +1058,11 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
             fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px', lineHeight: 1,
             textShadow: 'none',
           }}>
-            {m.team_a_score ?? 0}
+            {/* Realtime abonelik skoru güncellediğinde rakam takla atıyor —
+                canlılık hissi veriyor ve değişimi gözden kaçırtmıyor. */}
+            <FlipNumber value={m.team_a_score ?? 0} />
             <span style={{ color: 'var(--text-5)', margin: '0 3px' }}>:</span>
-            {m.team_b_score ?? 0}
+            <FlipNumber value={m.team_b_score ?? 0} />
           </div>
           <div style={{
             fontSize: 8, color: 'var(--text-4)', marginTop: 3,
@@ -1786,7 +1848,8 @@ export default function Dashboard() {
             : { data: [], error: null },
           supabase
             .from('teams')
-            .select('id,name,logo_url')
+            // game: Hızlı Erişim kartı takımın oyununu yazıyor (sadece logo yetmiyordu).
+            .select('id,name,logo_url,game_id,game:games(id,name,slug)')
             .in('id', [...new Set([...followedTeamIds, ...myFeedMatches.flatMap(m => [m.team_a_id, m.team_b_id]).filter(Boolean)])]),
         ])
 
@@ -1808,6 +1871,13 @@ export default function Dashboard() {
           })
         }
 
+        // Takımın oyununu kart alt satırında göstermek için tek yerden çöz.
+        const gameMetaOf = team => {
+          const gid = normalizeGameId(team?.game?.slug ?? team?.game?.name ?? team?.game_id)
+          const meta = GAMES.find(g => g.id === gid)
+          return { gameLabel: meta?.shortLabel || meta?.label || null, gameColor: meta?.color || null }
+        }
+
         const teamEntries = followedTeamIds.map(id => {
           const key = String(id)
           const team = teamsById.get(key)
@@ -1815,11 +1885,12 @@ export default function Dashboard() {
           return {
             type: 'team',
             id,
-            label: team?.name || `Team ${id}`,
+            label: team?.name || `Takım ${id}`,
             image: team?.logo_url || null,
             fallback: String(team?.name || 'T').slice(0, 2).toUpperCase(),
             isLive: liveTeamSet.has(key),
             matchId: teamMatchMap.get(key) || null,
+            ...gameMetaOf(team),
             score: (liveTeamSet.has(key) ? 100 : 0) + (freq * 8) + 40,
           }
         })
@@ -1827,14 +1898,16 @@ export default function Dashboard() {
         const playerEntries = (playersRes.data || []).map(player => {
           const teamKey = player.team_pandascore_id ? String(player.team_pandascore_id) : null
           const freq = teamKey ? (teamFrequency.get(teamKey) || 0) : 0
+          const meta = teamKey ? gameMetaOf(teamsById.get(teamKey)) : {}
           return {
             type: 'player',
             id: player.id,
-            label: player.nickname || 'Player',
+            label: player.nickname || 'Oyuncu',
             image: player.image_url || null,
             fallback: String(player.nickname || 'P').slice(0, 2).toUpperCase(),
             isLive: teamKey ? liveTeamSet.has(teamKey) : false,
             matchId: teamKey ? (teamMatchMap.get(teamKey) || null) : null,
+            ...meta,
             score: (teamKey && liveTeamSet.has(teamKey) ? 90 : 0) + (freq * 6) + 30,
           }
         })
@@ -2210,10 +2283,12 @@ export default function Dashboard() {
 
   /* ── Stat tile tanımları ── */
   const statTiles = useMemo(() => [
-    { Icon: Radio,    value: loading ? '…' : stats.live,  label: 'Canlı',    color: '#FF4655' },
-    { Icon: Clock,    value: loading ? '…' : stats.today, label: 'Bugün',    color: '#FFB800' },
-    { Icon: Gamepad2, value: loading ? '…' : stats.total, label: 'Toplam',   color: '#6366f1' },
-    { Icon: Shield,   value: loading ? '…' : stats.teams, label: 'Takımlar', color: '#4CAF50' },
+    // value SAYI kalıyor (string '…' değil) — CountUp 0'dan sayabilsin diye.
+    // Yükleniyor durumu ayrı bayrak; sayaç ancak veri gelince başlar.
+    { Icon: Radio,    value: stats.live,  label: 'Canlı',    color: '#FF4655' },
+    { Icon: Clock,    value: stats.today, label: 'Bugün',    color: '#FFB800' },
+    { Icon: Gamepad2, value: stats.total, label: 'Toplam',   color: '#6366f1' },
+    { Icon: Shield,   value: stats.teams, label: 'Takımlar', color: '#4CAF50' },
   ], [loading, stats.live, stats.today, stats.total, stats.teams])
 
   return (
@@ -2237,8 +2312,20 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Kompakt tercih butonu — eskiden tam satır kaplayan banttı; sağ üste alındı. */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+      {/* Hızlı Erişim başlığı + tercih butonu AYNI satırda.
+          Eskiden tercih butonu tek başına tam satır kaplıyor ve Hızlı Erişim'i
+          bir satır aşağı itiyordu — üstte gereksiz boşluk oluşuyordu. */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 10, marginBottom: 10, minHeight: 38,
+      }}>
+        <span style={{
+          fontSize: 10, fontWeight: 800, color: 'var(--text-3)',
+          letterSpacing: '.9px', textTransform: 'uppercase',
+        }}>
+          {(quickLoading || quickAccess.length > 0) ? 'Hızlı Erişim' : ''}
+        </span>
+
         <button
           onClick={() => setShowPreferenceWizard(true)}
           title="Akışını kişiselleştir — favori oyun ve takımlarını seç"
@@ -2247,8 +2334,8 @@ export default function Dashboard() {
             alignItems: 'center',
             gap: 7,
             borderRadius: 999,
-            border: '1px solid rgba(194,92,208,.4)',
-            background: 'rgba(194,92,208,.1)',
+            border: `1px solid ${FEXT.accentBorder}`,
+            background: FEXT.accentSoftBg,
             color: 'var(--accent-fg)',
             fontSize: 11,
             fontWeight: 700,
@@ -2257,9 +2344,19 @@ export default function Dashboard() {
             minHeight: 38,
             cursor: 'pointer',
             whiteSpace: 'nowrap',
+            flexShrink: 0,
+            transition: 'background .18s, border-color .18s, transform .18s cubic-bezier(.2,.8,.3,1)',
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(194,92,208,.18)'; e.currentTarget.style.borderColor = 'rgba(194,92,208,.6)' }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(194,92,208,.1)'; e.currentTarget.style.borderColor = 'rgba(194,92,208,.4)' }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = 'rgba(194,92,208,.2)'
+            e.currentTarget.style.borderColor = 'rgba(194,92,208,.62)'
+            e.currentTarget.style.transform = 'translateY(-1px)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = FEXT.accentSoftBg
+            e.currentTarget.style.borderColor = FEXT.accentBorder
+            e.currentTarget.style.transform = 'translateY(0)'
+          }}
         >
           <SlidersHorizontal size={13} strokeWidth={2.2} />
           {(preferredGameLabels.length > 0 || followedTeamIds.length > 0)
@@ -2268,47 +2365,74 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* AI güven metrikleri birleştirildi ve aşağı alındı (bkz. AI Güven Paneli) */}
-
       <QuickAccessBar entries={quickAccess} loading={quickLoading} onOpen={handleQuickAccessOpen} />
-      <LiveTicker items={tickerItems} loading={tickerLoading} onItemOpen={handleTickerItemOpen} />
 
+      {/* Turnuva seviye filtresi — eskiden başlık + açıklama + buton olan iki
+          satırlık bir karttı. Artık tek satır segmented control; aktif seçimin
+          altındaki mor kapsül kayarak geçiyor (transform → GPU, layout yok). */}
       <div style={{
-        marginBottom: 18,
-        padding: '10px 12px',
-        borderRadius: 12,
-        border: '1px solid var(--line)',
-        background: 'var(--surface)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 10,
-        flexWrap: 'wrap',
+        display: 'flex', alignItems: 'center', gap: 10,
+        flexWrap: 'wrap', marginBottom: 18,
       }}>
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 800, color: '#c4c4c4', letterSpacing: '.8px', textTransform: 'uppercase' }}>
-            Turnuva Seviye Filtresi
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--text-5)', marginTop: 3 }}>
-            {showAllTournamentTiers ? 'Tüm turnuvalar gösteriliyor' : 'Sadece S-Tier ve A-Tier'}
-          </div>
+        <span style={{
+          fontSize: 10, fontWeight: 800, color: 'var(--text-4)',
+          letterSpacing: '.9px', textTransform: 'uppercase',
+        }}>
+          Turnuva seviyesi
+        </span>
+
+        <div style={{
+          position: 'relative',
+          display: 'inline-flex',
+          padding: 3,
+          borderRadius: 999,
+          background: 'var(--surface-2)',
+          border: '1px solid var(--line)',
+        }}>
+          <span
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              top: 3, bottom: 3, left: 3,
+              width: 'calc(50% - 3px)',
+              borderRadius: 999,
+              background: FEXT.accentSoftBg,
+              border: `1px solid ${FEXT.accentBorder}`,
+              transform: showAllTournamentTiers ? 'translateX(100%)' : 'translateX(0)',
+              transition: 'transform .28s cubic-bezier(.2,.8,.3,1)',
+              pointerEvents: 'none',
+            }}
+          />
+          {[
+            { key: false, label: 'Sadece S/A' },
+            { key: true,  label: 'Tümü' },
+          ].map(opt => {
+            const active = showAllTournamentTiers === opt.key
+            return (
+              <button
+                key={String(opt.key)}
+                onClick={() => setShowAllTournamentTiers(opt.key)}
+                aria-pressed={active}
+                style={{
+                  position: 'relative',
+                  minWidth: 92,
+                  border: 'none',
+                  background: 'transparent',
+                  color: active ? 'var(--accent-fg)' : 'var(--text-4)',
+                  borderRadius: 999,
+                  padding: '6px 14px',
+                  fontSize: 11,
+                  fontWeight: 800,
+                  letterSpacing: '.3px',
+                  cursor: 'pointer',
+                  transition: 'color .2s',
+                }}
+              >
+                {opt.label}
+              </button>
+            )
+          })}
         </div>
-        <button
-          onClick={() => setShowAllTournamentTiers(prev => !prev)}
-          style={{
-            border: `1px solid ${showAllTournamentTiers ? '#4CAF50' : '#2f2f2f'}`,
-            background: showAllTournamentTiers ? 'rgba(76,175,80,.14)' : 'var(--surface-2)',
-            color: showAllTournamentTiers ? '#9ee6a3' : '#c9c9c9',
-            borderRadius: 999,
-            padding: '7px 14px',
-            fontSize: 11,
-            fontWeight: 800,
-            letterSpacing: '.3px',
-            cursor: 'pointer',
-          }}
-        >
-          {showAllTournamentTiers ? 'Sadece S/A Göster' : 'Hepsini Göster'}
-        </button>
       </div>
 
       {/* ── Takip Ettiklerim (takip edilen takım/oyuncu maçları) ── */}
@@ -2456,7 +2580,7 @@ export default function Dashboard() {
             {[1,2,3].map(i => <Sk key={i} h="248px" r="16px" />)}
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill,minmax(230px,1fr))', gap: 12 }}>
+          <div className="content-in" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill,minmax(230px,1fr))', gap: 12 }}>
             {liveMatches.map(m => (
               <LiveMatchCard
                 key={m.id}
@@ -2585,6 +2709,12 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Haber/canlı akış şeridi — eskiden sayfanın EN ÜSTÜNDEYDİ.
+          Kurucu kararı (5 Eyl): üstte duracak kadar kritik değil, üstelik
+          "ana sayfa aşırı boşluklu" geri bildirimini besliyordu. Artık
+          "olan bitti" ile "gelecek maçlar" arasında ayraç görevi görüyor. */}
+      <LiveTicker items={tickerItems} loading={tickerLoading} onItemOpen={handleTickerItemOpen} />
+
       {/* ── Maç Programı ─────────────────────────────────────────────────── */}
       {(() => {
         const now = new Date()
@@ -2651,7 +2781,7 @@ export default function Dashboard() {
                 Yaklaşan maç bulunamadı
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              <div className="content-in" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                 {groups.map((g, gi) => (
                   <div key={g.key}>
                     {/* Gün ayırıcı */}
@@ -2846,7 +2976,7 @@ export default function Dashboard() {
           >
             <s.Icon size={18} strokeWidth={2} color={s.color} style={{ marginBottom: 6 }} />
             <div style={{ fontSize: 22, fontWeight: 900, color: s.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-              {s.value}
+              {loading ? '…' : <CountUp value={s.value} />}
             </div>
             <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.6px', marginTop: 4 }}>
               {s.label}
@@ -2909,6 +3039,16 @@ export default function Dashboard() {
         @keyframes dashRipple {
           0% { opacity: .8; transform: translate(-50%, -50%) scale(0.2); }
           100% { opacity: 0; transform: translate(-50%, -50%) scale(9); }
+        }
+        /* Hızlı Erişim kartları sırayla süzülerek girer */
+        @keyframes quickCardIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        /* Tercih paneli — sert "pat" yerine yumuşak açılış */
+        @keyframes prefModalIn {
+          from { opacity: 0; transform: translateY(12px) scale(.985); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
         }
         /* FavoritesBar scroll — webkit için de gizle */
         .fav-scroll::-webkit-scrollbar { display: none }

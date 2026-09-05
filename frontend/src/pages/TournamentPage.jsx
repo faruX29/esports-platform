@@ -1708,7 +1708,7 @@ const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
           return (
             <div style={{ marginTop: 10 }}>
               <div style={{ height: 5, borderRadius: 3, background: 'var(--surface-2)', overflow: 'hidden' }}>
-                <div style={{ width: `${pA}%`, height: '100%', background: predUncertain ? 'var(--track)' : 'linear-gradient(90deg,#667eea,#764ba2)', transition: 'width .5s' }} />
+                <div style={{ width: `${pA}%`, height: '100%', background: predUncertain ? 'var(--track)' : 'linear-gradient(90deg,#667eea,#764ba2)', transition: 'width .5s', transformOrigin: 'left', animation: 'winBarFill .8s cubic-bezier(.2,.8,.3,1)' }} />
               </div>
               {predUncertain ? (
                 <div style={{ fontSize: 9, color: 'var(--text-4)', marginTop: 3, textAlign: 'center', fontWeight: 700, letterSpacing: '.4px' }}>FEXTOPUS · BELİRSİZ</div>

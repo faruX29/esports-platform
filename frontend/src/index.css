@@ -147,7 +147,8 @@ button { font-family: inherit; }
 /* Sayfa (route) geçişi — içerik aşağıdan hafifçe süzülerek gelir.
    Anlık "pat" yerine yönü olan bir geçiş; yükleniyor hissini de yumuşatır. */
 @keyframes routeIn {
-  from { opacity: 0; transform: translateY(7px); }
+  /* 7px/300ms fark edilmiyordu — mesafe ve süre belirgin hale getirildi. */
+  from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
@@ -159,13 +160,19 @@ button { font-family: inherit; }
   html.theme-anim *,
   html.theme-anim *::before,
   html.theme-anim *::after {
+    /* transform ve opacity LİSTEDE OLMAK ZORUNDA. Bu kural `!important`
+       olduğu için elemanların kendi inline `transition`'ını komple ezer;
+       ikisi eksik kalınca tema düğmesindeki güneş/ay kayması anında
+       zıplıyordu (5 Eyl). Yeni özellik eklerken buraya da ekle. */
     transition:
       background-color .5s ease,
       background-image .5s ease,
       border-color     .5s ease,
       color            .5s ease,
       fill             .5s ease,
-      box-shadow       .5s ease !important;
+      box-shadow       .5s ease,
+      opacity          .5s ease,
+      transform        .5s cubic-bezier(.34,1.15,.5,1) !important;
   }
 }
 

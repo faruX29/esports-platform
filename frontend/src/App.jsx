@@ -723,7 +723,7 @@ function AppShell() {
         {/* key={pathname} → her sayfa geçişinde animasyon yeniden çalışır.
             Sayfa içeriği zaten route değişiminde değişiyor; ekstra remount
             maliyeti yok. Hareket hassasiyeti index.css'te kısılıyor. */}
-        <div key={pathname} style={{ animation: 'routeIn .3s cubic-bezier(.2,.8,.3,1)' }}>
+        <div key={pathname} style={{ animation: 'routeIn .42s cubic-bezier(.2,.8,.3,1)' }}>
         <Routes>
           <Route path="/"                         element={<Dashboard />}      />
           <Route path="/matches"                  element={<Matches />}        />

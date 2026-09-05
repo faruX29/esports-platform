@@ -16,17 +16,39 @@ function reduceMotion() {
 }
 
 /**
- * Açılışta 0'dan `value`'ya sayar. Sonraki değişimlerde 0'a DÖNMEZ —
- * o anki gösterilen sayıdan yeni değere geçer (canlı sayaç zıplamasın).
+ * 0'dan `value`'ya sayar — ama SAYAÇ EKRANA GİRİNCE başlar.
+ *
+ * Önceden sayfa yüklenir yüklenmez sayıyordu; ekranın altındaki kutular
+ * kullanıcı oraya kaydırana kadar çoktan bitmiş oluyordu, yani animasyon
+ * hiç görülmüyordu (5 Eyl geri bildirimi). IntersectionObserver ile
+ * görünürlüğü bekliyoruz; bir kez tetiklendikten sonra izlemeyi bırakır.
+ *
+ * Sonraki değer değişimlerinde 0'a DÖNMEZ — o anki sayıdan yeni değere geçer,
+ * böylece canlı güncellemeler sıfırdan saymaya başlamaz.
  */
 export function CountUp({ value, duration = 900, format = n => n.toLocaleString('tr-TR') }) {
   const numeric = typeof value === 'number' && Number.isFinite(value) ? value : null
   const rm = reduceMotion()
   const [shown, setShown] = useState(0)
+  const [visible, setVisible] = useState(false)
   const fromRef = useRef(0)
+  const hostRef = useRef(null)
 
   useEffect(() => {
-    if (numeric == null || rm) return undefined
+    if (rm) return undefined
+    const el = hostRef.current
+    // IntersectionObserver yoksa (çok eski tarayıcı) animasyonu bloklama.
+    if (!el || typeof IntersectionObserver === 'undefined') { setVisible(true); return undefined }
+
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry?.isIntersecting) { setVisible(true); io.disconnect() }
+    }, { threshold: 0.35 })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [rm])
+
+  useEffect(() => {
+    if (numeric == null || rm || !visible) return undefined
 
     const from = fromRef.current
     if (from === numeric) return undefined
@@ -44,10 +66,11 @@ export function CountUp({ value, duration = 900, format = n => n.toLocaleString(
     }
     raf = window.requestAnimationFrame(tick)
     return () => window.cancelAnimationFrame(raf)
-  }, [numeric, duration, rm])
+  }, [numeric, duration, rm, visible])
 
-  if (numeric == null) return <>{value}</>
-  return <>{format(rm ? numeric : shown)}</>
+  // ref taşıyabilmek için span şart. `shown` görünür olana kadar 0'da bekler.
+  if (numeric == null) return <span ref={hostRef}>{value}</span>
+  return <span ref={hostRef}>{format(rm ? numeric : shown)}</span>
 }
 
 /**

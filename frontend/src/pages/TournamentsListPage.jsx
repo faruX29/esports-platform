@@ -7,6 +7,7 @@ import { clickableProps } from '../utils/a11y'
 import InitialsImage from '../components/InitialsImage'
 import GameLogo, { GAME_ICON_PATHS } from '../components/GameLogo'
 import { tournamentDisplayName, isGenericStageName, displayRegion } from '../utils/tournamentDisplay'
+import { FEXT } from '../theme'
 
 // Kanonik oyuna ait TÜM game_id'ler (mükerrer kayıtlar dahil: CS2 2/8, LoL 3/9).
 function resolveGameIds(activeGame, games) {
@@ -211,51 +212,61 @@ export default function TournamentsListPage() {
         <span style={{ fontSize: 11, color: 'var(--text-3)', letterSpacing: '.4px' }}>
           Varsayilan filtre: S-Tier + A-Tier
         </span>
+        {/* Ana sayfadaki seviye filtresiyle AYNI davranış: aktif seçimin
+            kapsülü kayarak geçiyor, butonlar kendi arka planını taşımıyor.
+            Eskiden iki buton ayrı ayrı renk değiştiriyordu → geçiş anlıktı. */}
         <div style={{
+          position: 'relative',
           display: 'inline-flex',
           borderRadius: 999,
           padding: 3,
-          gap: 4,
-          background: 'linear-gradient(120deg, rgba(194,92,208,.18), var(--surface-2))',
-          border: '1px solid rgba(194,92,208,.28)',
-          boxShadow: '0 0 16px rgba(194,92,208,.14)',
+          background: 'var(--surface-2)',
+          border: '1px solid var(--line)',
         }}>
-          <button
-            onClick={() => setShowAllTiers(false)}
+          <span
+            aria-hidden="true"
             style={{
-              border: '1px solid transparent',
-              background: showAllTiers ? 'transparent' : 'linear-gradient(135deg, rgba(223,72,136,.24), rgba(106,41,127,.2))',
-              color: showAllTiers ? 'var(--text-2)' : 'var(--accent-fg)',
+              position: 'absolute',
+              top: 3, bottom: 3, left: 3,
+              width: 'calc(50% - 3px)',
               borderRadius: 999,
-              fontSize: 11,
-              fontWeight: 800,
-              letterSpacing: '.2px',
-              padding: '9px 14px',
-              minHeight: 38,
-              cursor: 'pointer',
-              boxShadow: showAllTiers ? 'none' : 'inset 0 0 0 1px rgba(194,92,208,.35), 0 0 14px rgba(194,92,208,.2)',
+              background: FEXT.accentSoftBg,
+              border: `1px solid ${FEXT.accentBorder}`,
+              transform: showAllTiers ? 'translateX(100%)' : 'translateX(0)',
+              transition: 'transform .28s cubic-bezier(.2,.8,.3,1)',
+              pointerEvents: 'none',
             }}
-          >
-            S/A Pro Pool
-          </button>
-          <button
-            onClick={() => setShowAllTiers(true)}
-            style={{
-              border: '1px solid transparent',
-              background: showAllTiers ? 'linear-gradient(135deg, rgba(223,72,136,.24), rgba(106,41,127,.2))' : 'transparent',
-              color: showAllTiers ? 'var(--accent-fg)' : 'var(--text-2)',
-              borderRadius: 999,
-              fontSize: 11,
-              fontWeight: 800,
-              letterSpacing: '.2px',
-              padding: '9px 14px',
-              minHeight: 38,
-              cursor: 'pointer',
-              boxShadow: showAllTiers ? 'inset 0 0 0 1px rgba(100,220,120,.34), 0 0 14px rgba(100,200,120,.18)' : 'none',
-            }}
-          >
-            Tümü
-          </button>
+          />
+          {[
+            { key: false, label: 'S/A Pro Pool' },
+            { key: true,  label: 'Tümü' },
+          ].map(opt => {
+            const active = showAllTiers === opt.key
+            return (
+              <button
+                key={String(opt.key)}
+                onClick={() => setShowAllTiers(opt.key)}
+                aria-pressed={active}
+                style={{
+                  position: 'relative',
+                  minWidth: 112,
+                  border: 'none',
+                  background: 'transparent',
+                  color: active ? 'var(--accent-fg)' : 'var(--text-4)',
+                  borderRadius: 999,
+                  fontSize: 11,
+                  fontWeight: 800,
+                  letterSpacing: '.2px',
+                  padding: '8px 14px',
+                  minHeight: 36,
+                  cursor: 'pointer',
+                  transition: 'color .2s',
+                }}
+              >
+                {opt.label}
+              </button>
+            )
+          })}
         </div>
         {!showAllTiers && hiddenCount > 0 && (
           <span style={{ fontSize: 11, color: 'var(--text-3)' }}>

@@ -115,7 +115,12 @@ export function UserProvider({ children }) {
   const [playerIds, setPlayerIds] = useState(() => Array.isArray(storedState.playerIds) ? storedState.playerIds : [])
   const [gameIds, setGameIds] = useState(() => uniqueCanonicalGames(storedState.gameIds))
   const [teamGameMap, setTeamGameMap] = useState(() => sanitizeTeamGameMap(storedState.teamGameMap))
-  const [hydratedFromDb, setHydratedFromDb] = useState(false)
+  // Durumun HANGI kimlik icin cozuldugu: 'anon' veya user.id. Duz bir boolean
+  // yetmiyordu: anonim dal true birakinca, giristen SONRA ama hydrate
+  // BITMEDEN calisan efektler anonim durumu girisli kullanicinin durumu
+  // saniyordu (asagidaki iki yaris durumu).
+  const [hydratedFor, setHydratedFor] = useState(null)
+  const authKey = authLoading ? null : (user?.id || 'anon')
   // Duvar: beğeni/yorum gibi gerçekten hesap gerektiren işlemlerde açılır.
   const [authPromptOpen, setAuthPromptOpen] = useState(false)
   // Teklif: anonim ilk takipte bir kez açılır, takibi ENGELLEMEZ (Karar #70).
@@ -127,18 +132,21 @@ export function UserProvider({ children }) {
   useEffect(() => { profileRef.current = profile }, [profile])
 
   useEffect(() => {
-    // authLoading sürerken user geçici olarak null olabilir — o anda yazmak
-    // girişli kullanıcının önbelleğini anonim kutusuna taşırdı.
-    if (authLoading) return
+    // YARIŞ #1: giriş anında `user.id` DOLU ama state hâlâ anonim takipleri
+    // tutuyor (hydrate bitmedi). Bu efekt burada SESSION_KEY'i silseydi,
+    // hemen ardından çalışan hydrate devralınacak takipleri bulamazdı —
+    // "kalıcı kaydet" dedikten sonra takipler kaybolurdu. Aynı şekilde çıkışta
+    // da eski kullanıcının takiplerini anonim kutusuna yazardı.
+    // Çözüm: durum HANGİ kimlik için çözüldüyse yalnızca ona yaz.
+    if (!authKey || hydratedFor !== authKey) return
     const payload = JSON.stringify({ teamIds, playerIds, gameIds, teamGameMap })
     if (user?.id) {
       safeSet(localStorage, STORAGE_KEY, payload)
-      safeRemove(sessionStorage, SESSION_KEY)
     } else {
       safeSet(sessionStorage, SESSION_KEY, payload)
       safeRemove(localStorage, STORAGE_KEY)
     }
-  }, [teamIds, playerIds, gameIds, teamGameMap, user?.id, authLoading])
+  }, [teamIds, playerIds, gameIds, teamGameMap, user?.id, authKey, hydratedFor])
 
   // Girisli kullanicida follow datayi veritabanindan hydrate et.
   useEffect(() => {
@@ -161,7 +169,7 @@ export function UserProvider({ children }) {
         setGameIds(uniqueCanonicalGames(anon.gameIds))
         setTeamGameMap(sanitizeTeamGameMap(anon.teamGameMap))
         safeRemove(localStorage, STORAGE_KEY)
-        setHydratedFromDb(true)
+        setHydratedFor('anon')
         return
       }
 
@@ -173,8 +181,11 @@ export function UserProvider({ children }) {
       if (cancelled) return
 
       if (error) {
+        // Okuma başarısızsa hydrate'i TAMAMLANMIŞ SAYMA. Saysaydık, elimizdeki
+        // eksik durum "kullanıcının tam listesi" muamelesi görür ve persist
+        // adımı DB'deki gerçek takipleri fazlalık sanıp silerdi. Yazma kapalı
+        // kalsın; bir sonraki hydrate denemesi doğrusunu getirir.
         console.warn('UserContext follows load:', error.message)
-        setHydratedFromDb(true)
         return
       }
 
@@ -251,7 +262,7 @@ export function UserProvider({ children }) {
       setPlayerIds(playerIdsMerged)
       setGameIds(mergedGames)
       setTeamGameMap(mappedTeamGames)
-      setHydratedFromDb(true)
+      setHydratedFor(user.id)
     }
 
     loadFromDb()
@@ -264,7 +275,14 @@ export function UserProvider({ children }) {
   // Simdi: her degisiklik 300ms sonra SON durumu tek persist eder; yazmalar
   // writeLockRef zincirinde sirayla kosar (cakisma/duplicate yok).
   useEffect(() => {
-    if (!user?.id || !hydratedFromDb) return
+    // YARIŞ #2 (bu hata #70'ten ESKİ ve YIKICI): giriş anında `user.id` dolu
+    // ama state hâlâ anonim/önceki takipleri tutuyor. Eski koşul
+    // (`hydratedFromDb`) anonim dalda true bırakıldığı için burası hydrate
+    // bitmeden ateşleniyordu; persistSnapshot `desired` kümesini o eksik
+    // duruma göre kurup FAZLALIKLARI SİLDİĞİ için kullanıcının DB'deki
+    // takiplerini uçurabiliyordu. Artık yalnızca durum BU kullanıcı için
+    // çözülmüşse yazıyoruz.
+    if (!user?.id || hydratedFor !== user.id) return
 
     const snapshot = {
       userId: user.id,
@@ -284,7 +302,7 @@ export function UserProvider({ children }) {
 
     return () => clearTimeout(handle)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, hydratedFromDb, teamIds, playerIds, gameIds, teamGameMap])
+  }, [user?.id, hydratedFor, teamIds, playerIds, gameIds, teamGameMap])
 
   async function persistSnapshot({ userId, teamIds: tIds, playerIds: pIds, persistedGameIds }) {
     // Hedef durumu anahtar->satir haritasi olarak kur.

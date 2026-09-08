@@ -110,6 +110,28 @@ html, body {
 
 a { color: inherit; text-decoration: inherit; }
 
+/* Mobilde dokunma parlaması.
+   Android Chrome ve iOS Safari, dokunulan her tıklanabilir elemanın üstüne
+   varsayılan yarı saydam bir dikdörtgen boyar. Koyu mor temamızın üstünde bu
+   mavimsi bir kutu gibi görünüyor ve düğmeyi bozuk gösteriyordu (turnuva
+   seviyesi filtresi, /tournaments'taki aynı filtre ve diğer tüm düğmeler).
+   Tek kural site genelinde geçerli — eleman eleman düzeltmeye gerek yok. */
+html { -webkit-tap-highlight-color: transparent; }
+
+/* Parlama kalkınca dokunuşun tuttuğu hissi de kaybolmasın diye hafif bir
+   :active geri bildirimi. YALNIZCA dokunmatik cihazlarda (hover: none) —
+   masaüstündeki mevcut hover davranışlarına karışmaz.
+   `filter` seçildi: bu kod tabanında hover'lar transform/background'ı satır içi
+   stille değiştiriyor, filter'a neredeyse hiç dokunulmuyor → çakışma olmaz. */
+@media (hover: none) {
+  a:active,
+  button:active,
+  [role="button"]:active,
+  [tabindex]:active {
+    filter: brightness(1.28);
+  }
+}
+
 /* Görseller kapsayıcıyı asla taşırmasın */
 img, svg, video { max-width: 100%; }
 

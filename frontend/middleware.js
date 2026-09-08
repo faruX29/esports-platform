@@ -7,6 +7,25 @@
  * Çözüm: bot user-agent'ları algıla → /news/* ve /match/* için Supabase'den veri
  * çek → OG meta + og:image=/api/og?... içeren minimal HTML döndür. Gerçek
  * kullanıcı → next() (normal SPA). Her hata → next() (asla sayfayı bozma).
+ *
+ * ─── Kardeş kural: vercel.json → headers ────────────────────────────────────
+ * `*.vercel.app` host'larına `X-Robots-Tag: noindex, nofollow` basılıyor.
+ * Sebep: 2026-09-08'e kadar esports-platform-brown.vercel.app HTTP 200
+ * dönüyordu ve kendi robots.txt'i "Allow: /" diyordu — sitenin TAMAMI ikinci
+ * bir alan adında taranabilir haldeydi. GSC bunu "Kopya, Google kullanıcıdan
+ * farklı bir standart sayfa seçti" olarak raporluyordu.
+ *
+ * robots.txt `Disallow` YERİNE `noindex` seçildi: Disallow yalnızca taramayı
+ * engeller, ZATEN dizinde olan sayfaları çıkarmaz — Google noindex'i
+ * görebilmek için sayfayı tarayabilmek zorunda.
+ *
+ * Alan adını Vercel'den silmek çözüm DEĞİL: her dağıtımın kendi
+ * <proje>-<hash>.vercel.app adresi var, sabit takma adı silmek onları
+ * kapsamaz. Joker host kuralı hepsini birden kapsıyor.
+ *
+ * ⚠️ vercel.json KATI ŞEMA doğrular: şemada olmayan üst düzey anahtar
+ * (ör. açıklama için eklenen `_comment_*`) dağıtımı komple başarısız yapar.
+ * 2026-09-08'de bu yüzden bir dağıtım sessizce düştü. Açıklamalar buraya.
  */
 import { next } from '@vercel/edge'
 

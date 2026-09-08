@@ -3,6 +3,19 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "_comment_headers": "vercel.app kopyasi 2026-09-08'e kadar HTTP 200 donuyor ve kendi robots.txt'i 'Allow: /' diyordu → sitenin TAMAMI ikinci bir alan adinda taranabilir haldeydi. GSC bunu 'Kopya, Google kullanicidan farkli bir standart sayfa secti' olarak raporluyordu. X-Robots-Tag ile o alan adi dizinden cikariliyor; onizleme dagitimlarini gormek yine mumkun. robots.txt Disallow YERINE noindex: Disallow sadece taramayi engeller, ZATEN dizindeki sayfalari cikarmaz (Google noindex'i gorebilmek icin sayfayi tarayabilmeli).",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "esports-platform-brown.vercel.app" }],
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "(?<sub>.*)\\.vercel\\.app" }],
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    }
+  ],
   "rewrites": [
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/sitemap-static.xml", "destination": "/api/sitemap?type=static" },

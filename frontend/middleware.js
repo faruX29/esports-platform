@@ -11,7 +11,28 @@
 import { next } from '@vercel/edge'
 
 export const config = {
-  matcher: ['/news/:path*', '/match/:path*', '/team/:path*', '/player/:path*', '/tournament/:path*'],
+  // Detay rotaları + liste rotaları. Liste rotaları 2026-09-08'de eklendi:
+  // öncesinde botlara canonical'sız, birbirinin AYNISI olan index.html kabuğu
+  // gidiyordu (bkz. buildForStatic). Matcher bilerek dar tutuluyor — her
+  // istekte middleware çalıştırmak Vercel çağrı bütçesini yer.
+  matcher: [
+    '/',
+    '/matches',
+    '/rankings',
+    '/tournaments',
+    '/stats',
+    '/players',
+    '/scout',
+    '/gizlilik',
+    '/kullanim-kosullari',
+    '/kvkk',
+    '/news',
+    '/news/:path*',
+    '/match/:path*',
+    '/team/:path*',
+    '/player/:path*',
+    '/tournament/:path*',
+  ],
 }
 
 // Geniş kapsam: isimli crawler'lar + jenerik önizleme/araç token'ları. Gerçek
@@ -295,6 +316,167 @@ async function buildForTournament(id, origin, url) {
   return htmlDoc({ title, desc, url, img: '', type: 'article', jsonLd, body })
 }
 
+/* ── Statik (liste) rotalar ────────────────────────────────────────────────
+ * SORUN (2026-09-08, GSC "duplicate without user-selected canonical"):
+ * middleware yalnızca detay rotalarını kapsıyordu. `/`, `/matches`,
+ * `/rankings`, `/news`, `/tournaments`, `/stats`, `/players` botlara
+ * index.html kabuğunu döndürüyordu — beşi de BAYT BAYT AYNI 7491 baytlık
+ * belge, üstelik canonical etiketi olmadan (index.html'de hiç yok; React
+ * onu ancak JS çalışınca ekliyor). Googlebot için bunlar tek bir dokümanın
+ * kopyalarıydı ve hangisinin asıl olduğunu söyleyen bir işaret yoktu.
+ *
+ * Çözüm: her liste sayfasına kendi canonical'ı, kendi başlığı/açıklaması ve
+ * gerçek iç linkleri olan hafif bir belge. Böylece belgeler artık birbirinin
+ * kopyası değil ve her biri kendi canonical'ını beyan ediyor.
+ */
+const STATIC_ROUTES = {
+  '/': {
+    title: 'feXt — Espor Maçları, Skorlar ve Fextopus Tahminleri',
+    desc: 'VALORANT, CS2 ve League of Legends maçları: canlı skorlar, maç programı, turnuvalar ve Fextopus tahmin oranları.',
+    heading: 'Günün espor maçları',
+    feed: 'matches',
+  },
+  '/matches': {
+    title: 'Maç Programı — Canlı, Yaklaşan ve Geçmiş Espor Maçları',
+    desc: 'VALORANT, CS2 ve LoL maç takvimi. Canlı skorlar, yaklaşan karşılaşmalar ve sonuçlanmış maçlar tek sayfada.',
+    heading: 'Yaklaşan ve canlı maçlar',
+    feed: 'matches',
+  },
+  '/rankings': {
+    title: 'Takım Sıralaması — Espor Güç Sıralaması',
+    desc: 'VALORANT, CS2 ve LoL takımlarının form ve galibiyet oranına göre sıralaması.',
+    heading: 'Öne çıkan takımlar',
+    feed: 'teams',
+  },
+  '/tournaments': {
+    title: 'Turnuvalar — Aktif ve Yaklaşan Espor Turnuvaları',
+    desc: 'S-Tier ve A-Tier espor turnuvaları; bracket, takvim ve puan durumu.',
+    heading: 'Aktif turnuvalar',
+    feed: 'tournaments',
+  },
+  '/news': {
+    title: 'Haberler — Espor Transferleri ve Maç Analizleri',
+    desc: 'Kadro değişiklikleri, transferler ve maç sonrası analizler. Veriler Liquipedia ve resmi kaynaklardan.',
+    heading: 'Son haberler',
+    feed: 'news',
+  },
+  '/stats': {
+    title: 'Fextopus İsabet Oranları',
+    desc: 'Fextopus tahmin motorunun güven katmanına göre isabet oranları — sonuçlanmış maçlar üzerinde canlı hesaplanır.',
+    heading: 'Fextopus isabet matrisi',
+    feed: null,
+  },
+  '/players': {
+    title: 'Oyuncular — Espor Oyuncu Profilleri ve İstatistikleri',
+    desc: 'VALORANT, CS2 ve LoL oyuncularının profilleri, takımları ve maç istatistikleri.',
+    heading: 'Oyuncu profilleri',
+    feed: null,
+  },
+  '/news/archive': {
+    title: 'Haber Arşivi — Geçmiş Espor Haberleri',
+    desc: 'feXt haber arşivi: geçmiş transferler, kadro değişiklikleri ve maç analizleri.',
+    heading: 'Haber arşivi',
+    feed: 'news',
+  },
+  '/scout': {
+    title: 'Scout Engine — Kulüpler ve Ajanslar için Espor Veri Aracı',
+    desc: 'Oyuncu ve takım performansını veriye dayalı karşılaştıran B2B scout aracı.',
+    heading: 'Scout Engine',
+    feed: null,
+  },
+  // Yasal sayfalar: içerikleri statik ve SPA içinde. Buraya konmalarının tek
+  // sebebi canonical — sitemap'te oldukları için Google onları tarıyor ve
+  // canonical'sız kabuk kopya sayılıyordu.
+  '/gizlilik': {
+    title: 'Gizlilik Politikası',
+    desc: 'feXt gizlilik politikası: hangi verileri topluyoruz, nasıl kullanıyoruz ve haklarınız.',
+    heading: 'Gizlilik Politikası',
+    feed: null,
+  },
+  '/kullanim-kosullari': {
+    title: 'Kullanım Koşulları',
+    desc: 'feXt kullanım koşulları ve veri kaynakları (Liquipedia CC BY-SA 3.0) hakkında bilgi.',
+    heading: 'Kullanım Koşulları',
+    feed: null,
+  },
+  '/kvkk': {
+    title: 'KVKK Aydınlatma Metni',
+    desc: 'Kişisel verilerin korunması kapsamında feXt aydınlatma metni.',
+    heading: 'KVKK Aydınlatma Metni',
+    feed: null,
+  },
+}
+
+// Her liste sayfasının altına aynı gezinme bloğu → Googlebot site yapısını
+// tek taramada çıkarır (iç link derinliği).
+function siteNavHtml(origin) {
+  const links = [
+    ['/matches', 'Maç programı'],
+    ['/tournaments', 'Turnuvalar'],
+    ['/rankings', 'Takım sıralaması'],
+    ['/news', 'Haberler'],
+    ['/stats', 'Fextopus isabet oranları'],
+  ]
+  return `<nav><h2>feXt bölümleri</h2><ul>${
+    links.map(([p, t]) => `<li><a href="${origin}${p}">${esc(t)}</a></li>`).join('')
+  }</ul></nav>`
+}
+
+async function staticFeedHtml(feed, origin) {
+  try {
+    if (feed === 'matches') {
+      const rows = await sbFetchAll(
+        `matches?status=in.(running,not_started)&select=${ENC(MATCH_SEL)}&order=scheduled_at.asc&limit=25`,
+      )
+      return matchListHtml(origin, rows, 'Yaklaşan ve canlı maçlar')
+    }
+    if (feed === 'teams') {
+      const rows = await sbFetchAll('teams?select=id,name&order=name.asc&limit=30')
+      if (!rows.length) return ''
+      return `<h2>Takımlar</h2><ul>${
+        rows.map(t => `<li><a href="${origin}/team/${t.id}">${esc(t.name)}</a></li>`).join('')
+      }</ul>`
+    }
+    if (feed === 'tournaments') {
+      const rows = await sbFetchAll(
+        `tournaments?tier=in.(S,s,A,a)&select=id,name,tier&order=begin_at.desc&limit=25`,
+      )
+      if (!rows.length) return ''
+      return `<h2>Turnuvalar</h2><ul>${
+        rows.map(t => `<li><a href="${origin}/tournament/${t.id}">${esc(t.name)}${t.tier ? ` (${esc(String(t.tier).toUpperCase())}-Tier)` : ''}</a></li>`).join('')
+      }</ul>`
+    }
+    if (feed === 'news') {
+      const rows = await sbFetchAll(
+        'news_articles?select=id,title&order=created_at.desc&limit=25',
+      )
+      if (!rows.length) return ''
+      return `<h2>Son haberler</h2><ul>${
+        rows.map(n => `<li><a href="${origin}/news/${n.id}">${esc(n.title)}</a></li>`).join('')
+      }</ul>`
+    }
+  } catch {
+    // Veri gelmezse sayfa yine canonical + gezinme ile döner; boş kabuktan iyi.
+  }
+  return ''
+}
+
+async function buildForStatic(path, origin, url) {
+  const meta = STATIC_ROUTES[path]
+  if (!meta) return null
+  const feed = meta.feed ? await staticFeedHtml(meta.feed, origin) : ''
+  const body = `<h1>${esc(meta.title)}</h1><p>${esc(meta.desc)}</p>${feed}${siteNavHtml(origin)}`
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': path === '/' ? 'WebSite' : 'CollectionPage',
+    name: meta.title,
+    description: meta.desc,
+    url,
+    publisher: { '@type': 'Organization', name: 'feXt', url: origin },
+  }
+  return htmlDoc({ title: meta.title, desc: meta.desc, url, img: `${origin}${STATIC_OG}`, type: 'website', jsonLd, body })
+}
+
 export default async function middleware(req) {
   const ua = req.headers.get('user-agent') || ''
   const url = new URL(req.url)
@@ -310,7 +492,11 @@ export default async function middleware(req) {
     const canon = SITE_ORIGIN + path
     let html = null
     const seg = path.split('/')[2]
-    if (path.startsWith('/match/')) {
+    // Liste rotaları önce denenir: '/news' (segment yok) buraya düşer,
+    // '/news/<slug>' aşağıdaki detay dalına gider.
+    if (STATIC_ROUTES[path]) {
+      html = await buildForStatic(path, SITE_ORIGIN, canon)
+    } else if (path.startsWith('/match/')) {
       if (seg) html = await buildForMatch(seg, SITE_ORIGIN, canon)
     } else if (path.startsWith('/news/') && path !== '/news/archive') {
       const ref = parseNewsRef(seg)

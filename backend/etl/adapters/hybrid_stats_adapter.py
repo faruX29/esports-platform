@@ -258,9 +258,16 @@ class LiquipediaV3StatsSource(BaseMatchStatsSource):
     """
 
     source_name = "liquipedia_v3"
-    # LoL match2games'te participants KDA formatı farklı (index boş dönüyor);
-    # şu an KDA-zengin oyunlar: Valorant + CS.
-    SUPPORTED_GAMES = {"valorant", "csgo", "cs2"}
+    # YALNIZ VALORANT — 2026-09-09'da canlı v3 API'sinde ölçüldü.
+    #   valorant      → match2games[].participants DOLU (oyuncu başına
+    #                   kills/deaths/assists + agent). 10/10 maçta çalıştı.
+    #   counterstrike → map ve scores geliyor ama participants BOŞ LİSTE.
+    #                   Yani v3'te CS oyuncu verisi YOK.
+    #   lol           → participants index'i boş (eskiden beri biliniyordu).
+    # CS/LoL'ü burada tutmak zararsız değildi: kuyruk CS2 ağırlıklı olduğu için
+    # her denemede boş dönüp zinciri eski api.php yedeğine düşürüyordu ve
+    # oradan %100 HTTP 429 alınıyordu (29 Ağu'da hattın kapatılma sebebi).
+    SUPPORTED_GAMES = {"valorant"}
 
     def __init__(self) -> None:
         self._services: Dict[str, Any] = {}
@@ -466,15 +473,22 @@ class HybridStatsBackfiller:
     """
 
     def __init__(self, sources: Optional[List[BaseMatchStatsSource]] = None) -> None:
-        # Öncelik sırası listedeki sıradır (ilk dolu sonuç kazanır).
-        # Birincil: Wikitext (API key gerektirmez). Yedek: Cargo (key gelince
-        # öne alınabilir). Wikitext zaten oyuncu KDA'sı da verdiği için şu an
-        # daha zengin; Cargo onaylanınca iki kaynak birbirini tamamlar.
+        # ⚖️ TEK KAYNAK: v3. Bu bir tercih değil, Liquipedia'ya verilmiş YAZILI
+        # SÖZ (9 Eylül 2026 maili): "eski modülü kapattık, yalnızca tamamen v3
+        # üzerinde çalıştığında yeniden açacağız."
+        #
+        # Zincirden çıkarılan yedekler ve sebepleri:
+        #   LiquipediaWikitextSource → liquipedia.net/<wiki>/api.php (eski
+        #     MediaWiki ucu). v3 boş dönünce buraya düşülüyordu ve %100 HTTP
+        #     429 alınıyordu; 50 dakika boyunca yeniden deneniyordu. Hattın
+        #     29 Ağu'da kapatılma sebebi buydu (b39b0b9).
+        #   LiquipediaStatsSource → aynı ucun cargoquery hâli, her zaman
+        #     "Unrecognized action" döndürüyordu.
+        #
+        # ⚠️ Buraya api.php'ye giden bir kaynak EKLEME. Key askıya alınırsa
+        # ÇALIŞAN transfer hattı da ölür.
         self.sources: List[BaseMatchStatsSource] = sources or [
-            LiquipediaV3StatsSource(),     # birincil: v3 API (per-match opponent lookup)
-            LiquipediaWikitextSource(),    # yedek: wikitext (key gerektirmez)
-            # NOT: LiquipediaStatsSource (eski api.php cargoquery) KAPALI — zincirden
-            # çıkarıldı (her zaman "Unrecognized action" fail'i + boşa sorgu).
+            LiquipediaV3StatsSource(),
         ]
 
     # ── 1) Eksik maç tespiti ──────────────────────────────────────────────────
@@ -513,8 +527,26 @@ class HybridStatsBackfiller:
                         return False  # en az bir KDA var → eksik değil
         return True
 
+    def _servable_slugs(self) -> List[str]:
+        """Zincirdeki kaynakların GERÇEKTEN besleyebildiği oyun slug'ları."""
+        slugs = set()
+        for source in self.sources:
+            slugs |= {s.lower() for s in getattr(source, "SUPPORTED_GAMES", set())}
+        return sorted(slugs)
+
     def find_incomplete_matches(self, limit: int = 50) -> List[MatchContext]:
-        """Harita/KDA verisi eksik, finished maçları bağlamlarıyla döner."""
+        """Harita/KDA verisi eksik, finished maçları bağlamlarıyla döner.
+
+        ⚠️ Yalnızca kaynakların besleyebildiği oyunlar sorgulanır. Eskiden bu
+        filtre YOKTU ve sıralama tier öncelikliydi: aday havuzunun tamamı
+        CS2 ile doluyordu (S-tier CS maçları en yeni ve en çok). v3 CS için
+        oyuncu verisi vermediğinden her aday boş dönüyor, zincir eski api.php
+        yedeğine düşüyor ve 429 duvarına toslıyordu. VALORANT — v3'ün tek
+        beslediği oyun — kuyruğa HİÇ giremiyordu. 2026-09-09'da teşhis edildi.
+        """
+        servable = self._servable_slugs()
+        if not servable:
+            return []
         candidates: List[MatchContext] = []
         with Database.get_connection() as conn:
             with conn.cursor() as cur:
@@ -531,6 +563,7 @@ class HybridStatsBackfiller:
                     LEFT JOIN tournaments t ON m.tournament_id = t.id
                     WHERE m.status = 'finished'
                       AND m.raw_data IS NOT NULL
+                      AND LOWER(g.slug) = ANY(%s)
                     -- TIER ÖNCELİĞİ: Liquipedia üst-tier'i kapsar; alt-lig maçları
                     -- için veri yok. S→A→B→C→D→? sırası hem eşleşme hem değer artırır.
                     ORDER BY
@@ -540,7 +573,7 @@ class HybridStatsBackfiller:
                       m.scheduled_at DESC NULLS LAST
                     LIMIT %s
                     """,
-                    (limit * 4,),  # filtre Python'da; aday havuzunu geniş tut
+                    (servable, limit * 4),  # filtre Python'da; aday havuzunu geniş tut
                 )
                 rows = cur.fetchall()
 

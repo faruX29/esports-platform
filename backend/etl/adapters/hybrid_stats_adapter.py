@@ -30,12 +30,18 @@ import logging
 import os
 import re
 from abc import ABC, abstractmethod
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from database import Database
 
 logger = logging.getLogger(__name__)
+
+# Kaynakta veri bulunamayan maç kaç gün sonra tekrar denensin.
+# Liquipedia topluluk-güdümlü: bugün olmayan bir maç sayfası bir ay sonra
+# eklenmiş olabilir. Ama HER koşuda yeniden denemek boşa istek demek.
+HYBRID_MISS_RETRY_DAYS = 30
 
 
 # ── Normalize veri şekilleri ──────────────────────────────────────────────────
@@ -510,6 +516,20 @@ class HybridStatsBackfiller:
         if raw_data.get('map_source'):
             return False  # zaten bir kaynaktan dolduruldu
 
+        # Yakın zamanda denendi ve kaynakta veri YOKTU → tekrar deneme.
+        # Bazı takımlar (ör. XLG Gaming) Liquipedia'da hiç yok; onları her
+        # koşuda yeniden sorgulamak hem boşuna hem de "doğru API kullanımı"
+        # yükümlülüğüne aykırı. Pencere dolunca yeniden denenir: Liquipedia
+        # topluluk-güdümlüdür, eksik sayfalar sonradan eklenebiliyor.
+        tried = raw_data.get('hybrid_miss_at')
+        if tried:
+            try:
+                when = datetime.fromisoformat(str(tried))
+                if (datetime.now(timezone.utc) - when).days < HYBRID_MISS_RETRY_DAYS:
+                    return False
+            except (TypeError, ValueError):
+                pass  # bozuk damga → normal akışa devam, yeniden denensin
+
         games = raw_data.get('games') or []
         if not games:
             return True
@@ -706,6 +726,35 @@ class HybridStatsBackfiller:
                 conn.commit()
 
     @staticmethod
+    def _mark_miss(ctx: MatchContext) -> None:
+        """Kaynakta veri bulunamayan maçı damgalar (raw_data.hybrid_miss_at).
+
+        Damga OLMADAN bu maçlar kuyrukta kalıcı olarak birikiyordu: her koşu
+        aynı bulunamayan maçları baştan sorguluyor, koşu başına verim düşüyor
+        ve Liquipedia'ya sürekli aynı boş istekler gidiyordu.
+        HYBRID_MISS_RETRY_DAYS sonra yeniden denenir.
+        """
+        try:
+            with Database.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        UPDATE matches
+                           SET raw_data = COALESCE(raw_data, '{}'::jsonb)
+                                          -- ::text ŞART: tipsiz parametreyle
+                                          -- Postgres "could not determine data
+                                          -- type of parameter $1" hatası verir
+                                          -- ve damga sessizce yazılmaz.
+                                          || jsonb_build_object('hybrid_miss_at', %s::text)
+                         WHERE id = %s
+                        """,
+                        (datetime.now(timezone.utc).isoformat(), ctx.match_id),
+                    )
+        except Exception as err:
+            # Damgalayamamak akışı durdurmaz; en kötü ihtimalle tekrar denenir.
+            logger.warning("⚠️  match %s miss damgası yazılamadı: %s", ctx.match_id, err)
+
+    @staticmethod
     def _load_players_by_name(cur) -> Dict[str, Any]:
         cur.execute("SELECT id, nickname FROM players WHERE nickname IS NOT NULL")
         mapping: Dict[str, Any] = {}
@@ -733,6 +782,12 @@ class HybridStatsBackfiller:
         for ctx in candidates:
             result = self._resolve(ctx)
             if result is None:
+                # Kaynakta veri yok → İŞARETLE. Eskiden hiçbir şey yazılmıyordu;
+                # yalnızca BAŞARILI maçlar map_source ile damgalandığı için
+                # başarısızlar kuyrukta sonsuza dek kalıyordu. Sonuç: her koşu
+                # aynı maçları baştan sorguluyor, verim koşu başına düşüyor ve
+                # Liquipedia'ya sürekli aynı boş istekler gidiyordu.
+                self._mark_miss(ctx)
                 continue
             try:
                 self._persist(ctx, result)

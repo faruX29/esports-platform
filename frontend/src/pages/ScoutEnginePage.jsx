@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { CountUp } from '../components/AnimatedNumber'
 import { supabase } from '../supabaseClient'
 import SeoHead from '../components/SeoHead'
 import InitialsImage from '../components/InitialsImage'
@@ -45,10 +46,13 @@ const SAMPLE_REPORTS = [
 ]
 
 /* ── Sayıyı dürüst eşiğe yuvarla ("+" ile) — asla abartmaz ── */
-function plusFloor(n, step) {
+// Yuvarlanmış SAYIYI döndürür (metni değil) — <CountUp /> sayı ister.
+// Biçimlendirme (binlik ayraç + "+") format fonksiyonuna bırakıldı.
+function floorTo(n, step) {
   if (!n || n < step) return null
-  return (Math.floor(n / step) * step).toLocaleString('tr-TR') + '+'
+  return Math.floor(n / step) * step
 }
+const artiBicim = n => `${n.toLocaleString('tr-TR')}+`
 
 /* ── Gerçek player_match_stats'ten scouting raporu üret ── */
 function buildRealReports(rows) {
@@ -181,13 +185,16 @@ function DepthStrip({ depth }) {
   const loading = depth == null
 
   const tiles = loading ? [] : [
-    { Icon: Gamepad2,     value: plusFloor(depth.matches, 1000),     label: 'Arşivdeki maç' },
-    { Icon: Trophy,       value: plusFloor(depth.tournaments, 100),  label: 'Turnuva' },
-    { Icon: Shield,       value: plusFloor(depth.teams, 100),        label: 'Takım profili' },
-    { Icon: User,         value: plusFloor(depth.players, 100),      label: 'Oyuncu profili' },
+    { Icon: Gamepad2,     num: floorTo(depth.matches, 1000),     format: artiBicim, label: 'Arşivdeki maç' },
+    { Icon: Trophy,       num: floorTo(depth.tournaments, 100),  format: artiBicim, label: 'Turnuva' },
+    { Icon: Shield,       num: floorTo(depth.teams, 100),        format: artiBicim, label: 'Takım profili' },
+    { Icon: User,         num: floorTo(depth.players, 100),      format: artiBicim, label: 'Oyuncu profili' },
+    // Yıl BİLEREK sayılmıyor: 0'dan 2014'e saymak tarihi bir değeri sayaç
+    // gibi gösterir, anlamsız durur.
     { Icon: CalendarDays, value: depth.earliestYear ? `${depth.earliestYear}→` : null, label: 'Veri derinliği' },
-    { Icon: Target,       value: depth.confidentPct != null ? `%${Math.round(depth.confidentPct)}` : null, label: 'Fextopus emin katman' },
-  ].filter(t => t.value)
+    { Icon: Target,       num: depth.confidentPct != null ? Math.round(depth.confidentPct) : null,
+                          format: n => `%${n}`, label: 'Fextopus emin katman' },
+  ].filter(t => t.num != null || t.value)
 
   if (!loading && tiles.length === 0) return null
 
@@ -216,7 +223,9 @@ function DepthStrip({ depth }) {
           : tiles.map(t => (
               <div key={t.label} style={tileBox}>
                 <div style={{ marginBottom: 6, display: 'flex', justifyContent: 'center', opacity: .85 }}>{t.Icon && <t.Icon size={18} color={ACCENT} />}</div>
-                <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{t.value}</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+                  {t.num != null ? <CountUp value={t.num} format={t.format} /> : t.value}
+                </div>
                 <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: 6 }}>{t.label}</div>
               </div>
             ))}

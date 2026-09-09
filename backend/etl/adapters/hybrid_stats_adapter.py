@@ -584,6 +584,18 @@ class HybridStatsBackfiller:
                     WHERE m.status = 'finished'
                       AND m.raw_data IS NOT NULL
                       AND LOWER(g.slug) = ANY(%s)
+                      -- ⚠️ İŞLENMİŞLERİ SQL'DE DIŞLA — Python tarafındaki
+                      -- filtre TEK BAŞINA YETMEZ. Sorgu LIMIT ile ilk N satırı
+                      -- çekip elemeyi sonra yaptığı için, o N satırın hepsi
+                      -- işlenmiş olduğunda pencere KAYMIYOR ve kuyruk kalıcı
+                      -- olarak 0 aday dönüyordu: 4.284 maç sırada beklerken
+                      -- backfill 74 maçta takılı kaldı (2026-09-09).
+                      AND m.raw_data->>'map_source' IS NULL
+                      AND (
+                            m.raw_data->>'hybrid_miss_at' IS NULL
+                         OR (m.raw_data->>'hybrid_miss_at')::timestamptz
+                              < now() - make_interval(days => %s)
+                      )
                     -- TIER ÖNCELİĞİ: Liquipedia üst-tier'i kapsar; alt-lig maçları
                     -- için veri yok. S→A→B→C→D→? sırası hem eşleşme hem değer artırır.
                     ORDER BY
@@ -593,7 +605,7 @@ class HybridStatsBackfiller:
                       m.scheduled_at DESC NULLS LAST
                     LIMIT %s
                     """,
-                    (servable, limit * 4),  # filtre Python'da; aday havuzunu geniş tut
+                    (servable, HYBRID_MISS_RETRY_DAYS, limit * 4),
                 )
                 rows = cur.fetchall()
 

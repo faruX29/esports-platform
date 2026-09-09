@@ -171,9 +171,13 @@ jobs:
   enrichment:
     # Liquipedia zenginlestirme. En pahalı ve en az acil olan; kendi işinde.
     # timeout 50 -> 20 (2026-08-29): hybrid backfill devre dışı bırakılınca
-    # geriye yalnızca düşük hacimli yıldız oyuncu adımı kaldı (~0 dk sürüyor).
+    # geriye yalnızca düşük hacimli yıldız oyuncu adımı kaldı.
+    # 20 -> 35 (2026-09-09): hybrid backfill v3 ile geri açılıyor. ÖLÇÜLDÜ:
+    # 60 aday = 25 dakika (~25 sn/aday; Liquipedia'ya 1 istek/sn temposu).
+    # limit 50 ≈ 21 dk → 20 dk'lık tavan HER GÜN "cancelled" üretirdi ve bu,
+    # dead-man's switch'i sahte alarma boğan tam olarak o eski hatadır.
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     defaults:
       run:
         working-directory: backend
@@ -226,9 +230,15 @@ jobs:
       # (Gemini #54) sahte alarma boğuyordu — güvenilmez alarm, alarmsızlıktan
       # kötüdür.
       #
-      # AÇMADAN ÖNCE YAPILACAK: adapter'ı v3'e (get_match_maps_v3_by_teams)
-      # zorla, legacy api.php fallback'ini kapat. Sonra repo'da
-      # Settings > Variables > HYBRID_STATS_ENABLED = true yap.
+      # ✅ ÖN KOŞULLAR TAMAMLANDI (2026-09-09, commit 06b0ad7):
+      #   - Zincir tek kaynak: LiquipediaV3StatsSource. Legacy api.php'ye giden
+      #     LiquipediaWikitextSource ÇIKARILDI (Liquipedia'ya verilen yazılı söz).
+      #   - v3 yalnız VALORANT'ı besliyor (CS/LoL'de participants boş geliyor);
+      #     kuyruk da yalnız beslenebilir oyunları sorguluyor. Eskiden kuyruk
+      #     CS2 ile doluyor, her aday boş dönüyor ve zincir api.php'ye düşüp
+      #     %100 429 alıyordu — hattın 29 Ağu'da kapatılma sebebi buydu.
+      #   - Canlıda doğrulandı: 25 aday → 11 zenginleştirme; 60 aday → 11.
+      # Kalan tek adım: repo'da Settings > Variables > HYBRID_STATS_ENABLED=true.
       - name: Hybrid stats backfill (map + player KDA → player_match_stats)
         if: ${{ vars.HYBRID_STATS_ENABLED == 'true' }}
         continue-on-error: true

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import SeoHead from '../components/SeoHead'
 import InitialsImage from '../components/InitialsImage'
@@ -169,19 +170,23 @@ function SampleReportCard({ report, player, real = false }) {
 /* ── Canlı arşiv-derinliği kanıt şeridi (gerçek DB sayıları) ──
    depth: null = yükleniyor (skeleton) · false = hata (gizle) · obj = veri.
    Skeleton, gerçek kutularla aynı boyutta → layout shift (CLS) olmaz. */
-const DEPTH_LABELS = ['Analiz edilen maç', 'Turnuva', 'Takım profili', 'Oyuncu', 'Veri derinliği', 'AI net isabet']
+// ⚠️ ETİKETLER ARŞİV sayılarını anlatır, scouting DERİNLİĞİNİ değil. Eskiden
+// "Analiz edilen maç / Oyuncu" yazıyordu; bir ajans analisti bunu "6.400 oyuncuyu
+// scout edebilirim" diye okur, oysa oyuncu-seviyesi istatistiği olan maç sayısı
+// çok daha az. İlk temasta yakalanmak, küçük görünmekten pahalıdır (2026-09-09).
+const DEPTH_LABELS = ['Arşivdeki maç', 'Turnuva', 'Takım profili', 'Oyuncu profili', 'Veri derinliği', 'Fextopus emin katman']
 
 function DepthStrip({ depth }) {
   if (depth === false) return null
   const loading = depth == null
 
   const tiles = loading ? [] : [
-    { Icon: Gamepad2,     value: plusFloor(depth.matches, 1000),     label: 'Analiz edilen maç' },
+    { Icon: Gamepad2,     value: plusFloor(depth.matches, 1000),     label: 'Arşivdeki maç' },
     { Icon: Trophy,       value: plusFloor(depth.tournaments, 100),  label: 'Turnuva' },
     { Icon: Shield,       value: plusFloor(depth.teams, 100),        label: 'Takım profili' },
-    { Icon: User,         value: plusFloor(depth.players, 100),      label: 'Oyuncu' },
+    { Icon: User,         value: plusFloor(depth.players, 100),      label: 'Oyuncu profili' },
     { Icon: CalendarDays, value: depth.earliestYear ? `${depth.earliestYear}→` : null, label: 'Veri derinliği' },
-    { Icon: Target,       value: depth.confidentPct != null ? `%${Math.round(depth.confidentPct)}` : null, label: 'AI net isabet' },
+    { Icon: Target,       value: depth.confidentPct != null ? `%${Math.round(depth.confidentPct)}` : null, label: 'Fextopus emin katman' },
   ].filter(t => t.value)
 
   if (!loading && tiles.length === 0) return null
@@ -196,7 +201,7 @@ function DepthStrip({ depth }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
         <span style={{ width: 7, height: 7, borderRadius: '50%', background: ACCENT, boxShadow: `0 0 8px ${ACCENT}`, flexShrink: 0, animation: 'scoutPulse 1.6s ease-in-out infinite' }} />
         <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--ai)' }}>
-          Canlı arşiv — şu an bu derinlikte çalışıyor
+          Canlı arşiv — veriler her istekte veritabanından okunur
         </span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 10 }}>
@@ -216,6 +221,19 @@ function DepthStrip({ depth }) {
               </div>
             ))}
       </div>
+      {/* İsabet oranını İDDİA etmek yerine GÖSTER. Bir ajans analisti sayıyı
+          sorgular; kırılımın tamamını önüne koymak, tek bir yüzdeden çok daha
+          güçlü bir güven sinyali. (Genel isabet emin katmandan düşüktür ve
+          /stats bunu saklamadan yazar — asıl ikna edici olan da bu.) */}
+      {!loading && (
+        <div style={{ marginTop: 10, fontSize: 11.5, color: 'var(--text-4)', lineHeight: 1.6 }}>
+          "Emin katman", Fextopus'un bir takıma %70+ şans verdiği maçlardır — genel
+          isabet oranı bundan düşüktür.{' '}
+          <Link to="/stats" style={{ color: 'var(--accent-fg)', fontWeight: 700 }}>
+            Tüm katmanların kırılımını gör →
+          </Link>
+        </div>
+      )}
       <style>{`@keyframes scoutPulse{0%,100%{opacity:1}50%{opacity:.45}}`}</style>
     </section>
   )
@@ -252,7 +270,12 @@ export default function ScoutEnginePage() {
     let cancelled = false
     ;(async () => {
       try {
-        const countOf = (table) => supabase.from(table).select('*', { count: 'exact', head: true })
+        // count: 'exact' DEĞİL — matches 37 bin satır ve tam sayım Supabase'de
+        // zaman aşımına düşüyordu. Promise.all reddediliyor, catch setDepth(false)
+        // yapıyor ve "B2B güven sinyali" diye konan şerit canlıda HİÇ
+        // görünmüyordu (2026-09-09'da fark edildi). Sayılar zaten plusFloor ile
+        // binliğe/yüzlüğe yuvarlanıyor → planlayıcı tahmini fazlasıyla yeterli.
+        const countOf = (table) => supabase.from(table).select('*', { count: 'estimated', head: true })
         const [mc, tc, tec, pc, earliest, acc] = await Promise.all([
           countOf('matches'),
           countOf('tournaments'),
@@ -337,9 +360,10 @@ export default function ScoutEnginePage() {
             Scout Engine — Ajanslar için Veri Odaklı Espor Scouting
           </h1>
           <p style={{ margin: 0, fontSize: 16, lineHeight: 1.7, color: 'var(--text-2)', maxWidth: 680 }}>
-            Yüzlerce oyuncuyu manuel izlemeyi bırak. Hibrit veri hattımız harita bazlı KDA,
-            Impact skoru ve form trendlerini otomatik analiz eder; sana sadece doğru
-            transfer kararını sunar. Rakiplerinden önce yeteneği keşfet.
+            Yüzlerce oyuncuyu manuel izlemeyi bırak. Liquipedia v3 veri hattımız harita
+            bazlı KDA, ajan tercihi ve form trendlerini işler; sana sadece doğru transfer
+            kararını sunar. Kapsam şu an <b style={{ color: 'var(--text-2)' }}>VALORANT</b>;
+            CS2 ve LoL için oyuncu-seviyesi veri yol haritasında.
           </p>
           <a href="#waitlist" style={{
             display: 'inline-block', marginTop: 20, background: ACCENT, color: '#fff',
@@ -382,9 +406,9 @@ export default function ScoutEnginePage() {
           </div>
           {realReports.length > 0 && (
             <p style={{ margin: '12px 2px 0', fontSize: 12, color: 'var(--text-4)', lineHeight: 1.6 }}>
-              Bu kartlar 2014'ten bugüne uzanan <b style={{ color: 'var(--text-3)' }}>33.000+ gerçek maçlık</b> arşiv
-              ve hibrit istatistik hattından otomatik süzüldü. Beta'da her oyuncu ve takım için,
-              aradığın role ve oyun tarzına göre anında üretilir.
+              Bu kartlar 2014'ten bugüne uzanan gerçek maç arşivinden, oyuncu-seviyesi
+              istatistiği bulunan VALORANT maçları üzerinden üretildi. Kapsam her gün
+              genişliyor. Beta'da aradığın role ve oyun tarzına göre anında üretilir.
             </p>
           )}
         </section>

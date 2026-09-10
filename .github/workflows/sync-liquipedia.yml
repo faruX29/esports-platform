@@ -239,6 +239,23 @@ jobs:
       #     %100 429 alıyordu — hattın 29 Ağu'da kapatılma sebebi buydu.
       #   - Canlıda doğrulandı: 25 aday → 11 zenginleştirme; 60 aday → 11.
       # Kalan tek adım: repo'da Settings > Variables > HYBRID_STATS_ENABLED=true.
+      # Bayrağın durumunu HER KOŞUDA yaz. Aşağıdaki adım `if:` ile atlandığında
+      # GitHub hiçbir şey söylemez — ne hata, ne uyarı, sadece gri bir satır.
+      # 10 Eylül'de tam bu oldu: bayrak Variables yerine Secrets'a eklendiği
+      # sanıldı, adım sessizce atlandı ve ancak veritabanına bakınca fark edildi.
+      # Bu adım, sebebi koşu günlüğünde görünür kılar.
+      - name: Hybrid bayrak durumu
+        run: |
+          echo "vars.HYBRID_STATS_ENABLED = '${{ vars.HYBRID_STATS_ENABLED }}'"
+          if [ "${{ vars.HYBRID_STATS_ENABLED }}" = "true" ]; then
+            echo "✅ Hybrid stats backfill CALISACAK."
+          else
+            echo "⏭️  Hybrid stats backfill ATLANACAK."
+            echo "   Beklenen deger tam olarak: true  (kucuk harf, bosluksuz)"
+            echo "   Yer: Settings > Secrets and variables > Actions > VARIABLES"
+            echo "   sekmesi -- SECRETS sekmesi DEGIL. vars.* yalnizca Variables okur."
+          fi
+
       - name: Hybrid stats backfill (map + player KDA → player_match_stats)
         if: ${{ vars.HYBRID_STATS_ENABLED == 'true' }}
         continue-on-error: true

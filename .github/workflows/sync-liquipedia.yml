@@ -36,7 +36,13 @@ jobs:
       # başarısız oluyordu (yerelde 275 transfer buluyor, Actions'ta 0 yazıyordu)
       # ve hata yutulduğu için haftalarca fark edilmedi. Artık patlarsa iş kırmızı
       # olur ve bildirim gelir — sessiz bozulmaktansa gürültülü kırılsın.
+      # ⏱️ Adım sınırı (2026-09-10). Bu iş akışında HİÇBİR adımın sınırı yoktu:
+      # yavaşlayan bir adım kendi işini rehin alıyor, iş timeout-minutes'ta
+      # "cancelled" oluyor ve ARDINDAKİ TÜM ADIMLAR atlanıyordu. Bu tuzağa üç kez
+      # düşüldü: 25 Ağu, 10 Eyl (enrichment), 10 Eyl (transfers). Sınırlar
+      # toplamı işin bütçesinden küçük tutuldu.
       - name: Sync transfers (v3 → roster_changes)
+        timeout-minutes: 15
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
@@ -45,12 +51,14 @@ jobs:
         run: python run.py --sync-transfers --transfer-days 14
 
       - name: Apply transfers to rosters (Liquipedia → players.team_pandascore_id)
+        timeout-minutes: 10
         continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python apply_roster_changes.py --apply
 
       - name: Generate transfer news (LLM, bekleyen roster_changes)
+        timeout-minutes: 25
         continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -113,6 +121,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Generate match previews (yaklaşan S/A + B-tier büyük turnuva, 72s)
+        timeout-minutes: 15
         continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -122,6 +131,7 @@ jobs:
         run: python run.py --generate-previews --preview-hours 72
 
       - name: Generate tournament recaps (biten tier S/A turnuva sonuç özetleri)
+        timeout-minutes: 15
         continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -271,6 +281,7 @@ jobs:
           fi
 
       - name: Hybrid stats backfill (map + player KDA → player_match_stats)
+        timeout-minutes: 22
         if: ${{ vars.HYBRID_STATS_ENABLED == 'true' }}
         continue-on-error: true
         env:

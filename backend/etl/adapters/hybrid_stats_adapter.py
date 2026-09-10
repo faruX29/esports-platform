@@ -29,6 +29,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import time
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from dataclasses import dataclass, field
@@ -778,20 +779,40 @@ class HybridStatsBackfiller:
 
     # ── Orkestrasyon girişi ───────────────────────────────────────────────────
 
-    def backfill(self, limit: int = 50) -> Dict[str, int]:
+    def backfill(self, limit: int = 50, max_seconds: Optional[float] = None) -> Dict[str, int]:
         """
         Eksik maçları bulur, kaynaklardan doldurmaya çalışır, DB'ye yazar.
+
+        max_seconds: duvar-saati bütçesi. Dolunca döngü TEMİZCE kırılır ve o ana
+        kadar yazılanlar korunur.
+
+        ⚠️ Bu bütçe olmadan adım, CI işinin `timeout-minutes` sınırına dayanıyor
+        ve GitHub işi "cancelled" ile kesiyordu. Kesilen iş: (a) ardındaki tüm
+        adımları "skipped" bırakır, (b) dead-man's switch'i sahte alarma boğar,
+        (c) ne kadar ilerlendiğini loglayamaz. 10 Eylül'de tam bu oldu: 35
+        dakikalık iş kesildi, yalnızca 7 aday işlenebilmişti.
 
         Returns:
             dict: {'candidates', 'enriched', 'skipped'}
         """
+        basladi = time.monotonic()
         candidates = self.find_incomplete_matches(limit=limit)
         logger.info(
             "🔍 Harita/KDA verisi eksik %d maç bulundu (limit=%d)",
             len(candidates), limit,
         )
         enriched = 0
+        islenen = 0
+        butce_doldu = False
         for ctx in candidates:
+            if max_seconds is not None and (time.monotonic() - basladi) >= max_seconds:
+                butce_doldu = True
+                logger.info(
+                    "⏱️  Süre bütçesi doldu (%.0f sn) — %d/%d aday işlendi, temiz çıkılıyor.",
+                    max_seconds, islenen, len(candidates),
+                )
+                break
+            islenen += 1
             result = self._resolve(ctx)
             if result is None:
                 # Kaynakta veri yok → İŞARETLE. Eskiden hiçbir şey yazılmıyordu;
@@ -807,12 +828,16 @@ class HybridStatsBackfiller:
             except Exception as err:
                 logger.warning("⚠️  match %s yazılamadı: %s", ctx.match_id, err)
 
-        skipped = len(candidates) - enriched
+        skipped = islenen - enriched
         logger.info(
-            "✅ Hybrid stats backfill: %d zenginleştirildi, %d kaynaktan veri yok",
-            enriched, skipped,
+            "✅ Hybrid stats backfill: %d zenginleştirildi, %d kaynaktan veri yok "
+            "(%d/%d aday işlendi%s, %.0f sn)",
+            enriched, skipped, islenen, len(candidates),
+            " — SÜRE BÜTÇESİ DOLDU" if butce_doldu else "",
+            time.monotonic() - basladi,
         )
-        return {'candidates': len(candidates), 'enriched': enriched, 'skipped': skipped}
+        return {'candidates': len(candidates), 'enriched': enriched,
+                'skipped': skipped, 'processed': islenen, 'budget_hit': butce_doldu}
 
 
 # ── Yardımcılar ───────────────────────────────────────────────────────────────

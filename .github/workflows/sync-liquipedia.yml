@@ -194,7 +194,13 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # ⏱️ ADIM SEVİYESİNDE SINIR. Bu adımın sınırı yoktu ve 10 Eylül'de
+      # 35 dakikalık iş bütçesinin neredeyse tamamını yedi: ardındaki hybrid
+      # adımı yalnızca 7 aday işleyebildi ve iş "cancelled" ile kesildi.
+      # Aynı desen 25 Ağustos'ta da yaşanmıştı (aşağıdaki nota bak) — sınırsız
+      # bir adım, işin tamamını rehin alıyor.
       - name: Curated star-player enrichment (career/social/age, düşük hacim)
+        timeout-minutes: 8
         continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -264,7 +270,14 @@ jobs:
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           LIQUIPEDIA_API_KEY: ${{ secrets.LIQUIPEDIA_API_KEY }}
-        run: python run.py --hybrid-stats --hybrid-limit 50
+        # --hybrid-max-minutes, işin timeout-minutes (35) sınırından KÜÇÜK.
+        # Böylece adım kendi kendine temiz çıkar; GitHub'ın işi "cancelled"
+        # ile kesmesine gerek kalmaz. Kesilen iş ardındaki adımları atlar ve
+        # ne kadar ilerlendiğini loglayamaz.
+        # NOT: runner'da aday başına ~5 dk sürüyor (yerelde ~3 sn). GitHub IP
+        # aralıkları Liquipedia tarafından sert frenleniyor → CI'dan gelen
+        # katkı küçük kalacak; asıl hacim elle koşudan gelir.
+        run: python run.py --hybrid-stats --hybrid-limit 50 --hybrid-max-minutes 18
 
       # ── Dead-man's switch (Gemini #54, 2026-08-28) ────────────────────────
       # Liquipedia hattı 8+ gün sessizce ölü kaldı. Sebep: koşular zaman

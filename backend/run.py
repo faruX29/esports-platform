@@ -180,6 +180,17 @@ def main():
         default=50,
         help='--hybrid-stats için bir seferde işlenecek max maç (varsayılan: 50)',
     )
+    parser.add_argument(
+        '--hybrid-max-minutes',
+        type=float,
+        default=18.0,
+        help=(
+            '--hybrid-stats için duvar-saati bütçesi (varsayılan: 18 dk). Dolunca '
+            'döngü TEMİZ çıkar. CI işinin timeout-minutes sınırından KÜÇÜK olmalı: '
+            'yoksa GitHub işi "cancelled" ile keser, ardındaki adımlar atlanır ve '
+            'ne kadar ilerlendiği loglanamaz.'
+        ),
+    )
 
     parser.add_argument(
         '--roster-flush',
@@ -457,10 +468,15 @@ def main():
         logger.info("🧩 HYBRID STATS BACKFILL (PandaScore NULL → Liquipedia)")
         logger.info("=" * 60)
         backfiller = HybridStatsBackfiller()
-        result = backfiller.backfill(limit=args.hybrid_limit)
+        result = backfiller.backfill(
+            limit=args.hybrid_limit,
+            max_seconds=args.hybrid_max_minutes * 60 if args.hybrid_max_minutes else None,
+        )
         logger.info(
             f"📊 Hybrid stats: aday={result['candidates']} | "
+            f"işlenen={result.get('processed', '?')} | "
             f"zenginleştirildi={result['enriched']} | veri yok={result['skipped']}"
+            + (" | ⏱️ SÜRE BÜTÇESİ DOLDU" if result.get('budget_hit') else "")
         )
         logger.info("=" * 60)
 

@@ -19,10 +19,13 @@ export const config = { runtime: 'edge' }
 const SB = process.env.VITE_SUPABASE_URL
 const KEY = process.env.VITE_SUPABASE_ANON_KEY
 
-const CHILDREN = ['static', 'news', 'matches', 'tournaments', 'teams']
-// NOT: 'players' listeden ÇIKARILDI (2026-08-25) — 5.882 ince oyuncu sayfası
-// crawl bütçesini yiyordu. /sitemap-players.xml artık 404 döner; Google
-// böylece onu dizinden düşürür. Sayfaların kendisi erişilebilir kalır.
+const CHILDREN = ['static', 'news', 'matches', 'tournaments', 'teams', 'players']
+// 'players' 2026-08-25'te ÇIKARILMIŞTI (5.882 ince sayfa crawl bütçesini yiyordu),
+// 2026-09-12'de KALİTE FİLTRESİYLE geri eklendi. O günkü karar doğruydu: sayfalarda
+// hiç veri yoktu. Koşul değişti — player_match_stats artık 6.330 satır / 340 oyuncu
+// taşıyor ve sayfa gerçek sayı (maç, K/D, kazanma oranı, kafa vuruşu) basıyor.
+// Filtre aşağıda: yalnız PLAYER_MIN_MATCHES ve üzeri maçı olanlar (~233 sayfa,
+// 6.509 değil). Hepsini değil, hak edeni taratıyoruz.
 
 const TR = { ç: 'c', ğ: 'g', ı: 'i', İ: 'i', ö: 'o', ş: 's', ü: 'u' }
 function slugify(t) {
@@ -65,6 +68,7 @@ function baseUrl(req) {
 const SITEMAP_MATCH_DAYS = 365   // maç + turnuva penceresi
 const TOP_TIERS = ['S', 'A']     // yalnız üst-tier (tier değerleri büyük harf)
 const TEAM_MIN_MATCHES = 10      // takım sayfası için son 1 yıldaki asgari maç sayısı
+const PLAYER_MIN_MATCHES = 3     // oyuncu sayfası için asgari istatistikli maç (scout eşiğiyle aynı)
 
 async function fetchAll(table, select, filter) {
   if (!SB || !KEY) return []
@@ -168,14 +172,28 @@ async function buildChild(type, base) {
     return urlset(rows.map(r => ({ loc: `${base}/team/${r.id}`, lastmod: lastmod(r), changefreq: 'weekly', priority: '0.6' })))
   }
   if (type === 'players') {
-    // OYUNCU SAYFALARI SITEMAP'TEN ÇIKARILDI (2026-08-25).
-    // 5.882 URL'in neredeyse tamamı ince: 5.383 oyuncunun yalnız 41'inde kariyer
-    // verisi var, gerisinde UI zaten alanları gizliyor. Google'ın "ince içerik"
-    // değerlendirmesinde bunlar site geneli kalite puanını aşağı çekiyordu.
-    // Sayfalar ERİŞİLEBİLİR kalıyor (noindex yok, iç linklerden bulunabilir);
-    // sadece "bunları öncelikli tara" demeyi bıraktık. Oyuncu profilleri
-    // zenginleştikçe (küratör yıldız listesi) filtreyle geri eklenebilir.
-    return urlset([])
+    // 2026-08-25'te boş döndürülüyordu: 5.882 oyuncu sayfasının neredeyse hiçbirinde
+    // veri yoktu ve ince içerik site geneli kalite puanını düşürüyordu. O kararın
+    // dayanağı artık geçerli değil — ama dayanağı geçersiz kılan şey "hepsini geri
+    // ekleyelim" demek değil: yalnız ÖLÇÜLEBİLİR geçmişi olan oyuncular giriyor.
+    // PLAYER_MIN_MATCHES = 3 → ~233 sayfa (6.509 değil). Her biri maç sayısı, K/D,
+    // kazanma oranı ve kafa vuruşu oranı taşıyor (bkz. middleware buildForPlayer).
+    const sat = await fetchAll('player_match_stats', 'player_id,match_id')
+    const macSayisi = new Map()
+    for (const r of sat) {
+      if (r.player_id == null || r.match_id == null) continue
+      let set = macSayisi.get(r.player_id)
+      if (!set) { set = new Set(); macSayisi.set(r.player_id, set) }
+      set.add(r.match_id)
+    }
+    const kalanlar = new Set(
+      [...macSayisi.entries()].filter(([, m]) => m.size >= PLAYER_MIN_MATCHES).map(([id]) => id),
+    )
+    if (!kalanlar.size) return urlset([])
+    const rows = (await fetchAll('players', 'id,created_at')).filter(r => kalanlar.has(r.id))
+    return urlset(rows.map(r => ({
+      loc: `${base}/player/${r.id}`, lastmod: lastmod(r), changefreq: 'weekly', priority: '0.6',
+    })))
   }
   return null
 }

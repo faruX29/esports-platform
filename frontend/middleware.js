@@ -383,15 +383,84 @@ async function buildForPlayer(id, origin, url) {
     team = await sbFetch(`teams?id=eq.${ENC(p.team_pandascore_id)}&select=id,name&limit=1`)
   }
   const teamName = team?.name
-  const title = `${nick} — Espor Oyuncu Profili`
-  const desc = `${nick}${teamName ? ` (${teamName})` : ''} espor oyuncu profili: rol, KDA, kazanma oranı, kariyer ve istatistikler — feXt.`
+  // ---- Gerçek maç istatistikleri --------------------------------------
+  // ÖLÇÜLDÜ (12 Eylül 2026): oyuncu sayfaları bot'a 27 KELİME ve 1 link
+  // dönüyördu — salt kalıp cümle, tek bir sayı yok. Oyuncu sayfaları
+  // 25 Ağustos'ta tam bu yüzden sitemap'ten çıkarılmıştı ("ince içerik").
+  // Artık player_match_stats dolu (6.330 satır / 340 oyuncu) → sayfa gerçek
+  // sayı taşıyabilir. Toplama PostgREST'te değil JS'te yapılıyor: RPC eklemek
+  // şema değişikliği gerektirirdi, bot yanıtları zaten 24 saat önbellekli.
+  const satir = await sbFetchAll(
+    `player_match_stats?player_id=eq.${ENC(id)}` +
+    `&select=${ENC('match_id,kills,deaths,assists,is_win,hs_percentage,played_at')}` +
+    `&order=played_at.desc&limit=1000`,
+  )
+  let ist = null
+  if (satir.length) {
+    const maclar = new Set()
+    let k = 0, d = 0, a = 0, hsTop = 0, hsAdet = 0
+    const macKazanc = new Map()
+    for (const r of satir) {
+      if (r.match_id != null) maclar.add(r.match_id)
+      k += Number(r.kills) || 0
+      d += Number(r.deaths) || 0
+      a += Number(r.assists) || 0
+      if (r.hs_percentage != null) { hsTop += Number(r.hs_percentage); hsAdet++ }
+      if (r.match_id != null && r.is_win != null && !macKazanc.has(r.match_id)) {
+        macKazanc.set(r.match_id, r.is_win)
+      }
+    }
+    const galip = [...macKazanc.values()].filter(Boolean).length
+    ist = {
+      mac: maclar.size,
+      harita: satir.length,
+      k, d, a,
+      kd: d > 0 ? (k / d).toFixed(2) : String(k),
+      kazanmaOrani: macKazanc.size ? Math.round((100 * galip) / macKazanc.size) : null,
+      hs: hsAdet ? Math.round(hsTop / hsAdet) : null,
+      sonMaclar: [...maclar].slice(0, 5),
+    }
+  }
+
+  const title = ist
+    ? `${nick} — ${ist.mac} Maç İstatistiği, KDA ve Kazanma Oranı`
+    : `${nick} — Espor Oyuncu Profili`
+  const desc = ist
+    ? `${nick}${teamName ? ` (${teamName})` : ''}: ${ist.mac} maç, ${ist.harita} harita. ` +
+      `${ist.k} kill / ${ist.d} ölüm / ${ist.a} asist, K/D ${ist.kd}` +
+      `${ist.kazanmaOrani != null ? `, kazanma oranı %${ist.kazanmaOrani}` : ''}` +
+      `${ist.hs != null ? `, kafa vuruşu %${ist.hs}` : ''}. Harita bazında istatistikler — feXt.`
+    : `${nick}${teamName ? ` (${teamName})` : ''} espor oyuncu profili: rol, KDA, kazanma oranı, kariyer ve istatistikler — feXt.`
   const jsonLd = {
     '@context': 'https://schema.org', '@type': 'Person', name: nick, jobTitle: 'Espor Oyuncusu',
     nationality: p.nationality || undefined, image: p.image_url || undefined,
     memberOf: teamName ? { '@type': 'SportsTeam', name: teamName } : undefined, url,
   }
   const teamLink = team?.id ? `<p>Takım: <a href="${origin}/team/${team.id}">${esc(teamName)}</a></p>` : ''
-  const body = `<h1>${esc(nick)}</h1><p>${esc(desc)}</p>${p.role ? `<p>Rol: ${esc(p.role)}</p>` : ''}${teamLink}`
+
+  let istBlok = ''
+  if (ist) {
+    const sat = [
+      ['Oynanan maç', ist.mac],
+      ['Oynanan harita', ist.harita],
+      ['Kill / Ölüm / Asist', `${ist.k} / ${ist.d} / ${ist.a}`],
+      ['K/D oranı', ist.kd],
+    ]
+    if (ist.kazanmaOrani != null) sat.push(['Kazanma oranı', `%${ist.kazanmaOrani}`])
+    if (ist.hs != null) sat.push(['Kafa vuruşu oranı', `%${ist.hs}`])
+    istBlok = `<h2>Maç İstatistikleri</h2><ul>${
+      sat.map(([kk, vv]) => `<li>${esc(kk)}: ${esc(String(vv))}</li>`).join('')
+    }</ul>`
+    if (ist.sonMaclar.length) {
+      istBlok += `<h2>Son Maçlar</h2><ul>${
+        ist.sonMaclar.map(mid => `<li><a href="${origin}/match/${mid}">Maç detayı ve harita skorları</a></li>`).join('')
+      }</ul>`
+    }
+  }
+
+  const body = `<h1>${esc(nick)}</h1><p>${esc(desc)}</p>` +
+    `${p.role ? `<p>Rol: ${esc(p.role)}</p>` : ''}${teamLink}${istBlok}` +
+    siteNavHtml(origin)
   return htmlDoc({ title, desc, url, img: '', type: 'profile', jsonLd, body })
 }
 

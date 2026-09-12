@@ -431,7 +431,7 @@ async function buildForPlayer(id, origin, url) {
     ? `${nick}${teamName ? ` (${teamName})` : ''}: ${ist.mac} maçta ` +
       `${ist.k} kill / ${ist.d} ölüm / ${ist.a} asist, K/D ${ist.kd}` +
       `${ist.kazanmaOrani != null ? `, kazanma oranı %${ist.kazanmaOrani}` : ''}` +
-      `${ist.hs != null ? `, kafa vuruşu %${ist.hs}` : ''}. Harita bazında istatistikler — feXt.`
+      `${ist.hs != null ? `, kafa vuruşu %${ist.hs}` : ''}. Maç bazında istatistikler — feXt.`
     : `${nick}${teamName ? ` (${teamName})` : ''} espor oyuncu profili: rol, KDA, kazanma oranı, kariyer ve istatistikler — feXt.`
   const jsonLd = {
     '@context': 'https://schema.org', '@type': 'Person', name: nick, jobTitle: 'Espor Oyuncusu',

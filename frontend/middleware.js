@@ -587,13 +587,13 @@ const STATIC_ROUTES = {
     title: 'Fextopus İsabet Oranları',
     desc: 'Fextopus tahmin motorunun güven katmanına göre isabet oranları — sonuçlanmış maçlar üzerinde canlı hesaplanır.',
     heading: 'Fextopus isabet matrisi',
-    feed: null,
+    feed: 'stats',
   },
   '/players': {
     title: 'Oyuncular — Espor Oyuncu Profilleri ve İstatistikleri',
     desc: 'VALORANT, CS2 ve LoL oyuncularının profilleri, takımları ve maç istatistikleri.',
     heading: 'Oyuncu profilleri',
-    feed: null,
+    feed: 'players',
   },
   '/news/archive': {
     title: 'Haber Arşivi — Geçmiş Espor Haberleri',
@@ -605,7 +605,7 @@ const STATIC_ROUTES = {
     title: 'Scout Engine — Kulüpler ve Ajanslar için Espor Veri Aracı',
     desc: 'Oyuncu ve takım performansını veriye dayalı karşılaştıran B2B scout aracı.',
     heading: 'Scout Engine',
-    feed: null,
+    feed: 'scout',
   },
   // Yasal sayfalar: içerikleri statik ve SPA içinde. Buraya konmalarının tek
   // sebebi canonical — sitemap'te oldukları için Google onları tarıyor ve
@@ -647,6 +647,78 @@ function siteNavHtml(origin) {
 
 async function staticFeedHtml(feed, origin) {
   try {
+    // /stats — EN AYIRT EDİCİ İÇERİĞİMİZ. ÖLÇÜLDÜ (12 Eylül 2026): bot'a
+    // 47 kelime gidiyordu, tek bir sayı yok. Oysa tahmin sicilini bu şeffaflıkla
+    // yayınlayan neredeyse kimse yok; sayfanın değeri tam olarak o sayılar.
+    // get_prediction_accuracy STABLE olduğu için PostgREST GET ile çağrılabiliyor.
+    if (feed === 'stats') {
+      const base = process.env.VITE_SUPABASE_URL
+      const key = process.env.VITE_SUPABASE_ANON_KEY
+      if (!base || !key) return ''
+      const res = await fetch(`${base}/rest/v1/rpc/get_prediction_accuracy?days_back=0`, {
+        headers: { apikey: key, Authorization: `Bearer ${key}` },
+      })
+      if (!res.ok) return ''
+      const a = await res.json()
+      if (!a || a.total == null) return ''
+      const tr = n => Number(n).toLocaleString('tr-TR')
+      return `<h2>Fextopus isabet oranları</h2><ul>` +
+        `<li>Değerlendirilen maç: ${tr(a.total)}</li>` +
+        `<li>Doğru tahmin: ${tr(a.correct)}</li>` +
+        `<li>Genel isabet oranı: %${String(a.accuracy_pct).replace('.', ',')}</li>` +
+        `<li>Emin katman (favori olasılığı %65 ve üzeri): ${tr(a.confident_total)} maçta ` +
+        `%${String(a.confident_pct).replace('.', ',')} isabet</li>` +
+        `</ul><p>Oranlar sonuçlanmış maçlar üzerinde canlı hesaplanır; 50/50 biten ` +
+        `tahminler hariç tutulur.</p>`
+    }
+
+    // /players — istatistiği olan oyunculara iç link. Oyuncu sayfaları 12 Eylül'de
+    // sitemap'e geri alındı; liste sayfasından da linklenmezlerse yalnız sitemap'e
+    // kalmış olurlardı ve iç link derinliği sıfır olurdu.
+    if (feed === 'players') {
+      const sat = await sbFetchAll(
+        `player_match_stats?select=${ENC('player_id,played_at')}&order=played_at.desc&limit=1000`,
+      )
+      const sayac = new Map()
+      for (const r of sat) {
+        if (r.player_id) sayac.set(r.player_id, (sayac.get(r.player_id) || 0) + 1)
+      }
+      const idler = [...sayac.entries()].sort((x, y) => y[1] - x[1]).slice(0, 40).map(([id]) => id)
+      if (!idler.length) return ''
+      const oyuncular = await sbFetchAll(
+        `players?id=in.(${idler.join(',')})&select=${ENC('id,nickname')}`,
+      )
+      if (!oyuncular.length) return ''
+      return `<h2>İstatistikli oyuncu profilleri</h2><ul>${
+        oyuncular.map(o => `<li><a href="${origin}/player/${o.id}">${esc(o.nickname || 'Oyuncu')} ` +
+          `maç istatistikleri</a></li>`).join('')
+      }</ul>`
+    }
+
+    // /scout — bekleme listesi sayfası; gösterecek tek somut şey arşiv derinliği.
+    if (feed === 'scout') {
+      const kafa = async (yol) => {
+        const base = process.env.VITE_SUPABASE_URL
+        const key = process.env.VITE_SUPABASE_ANON_KEY
+        if (!base || !key) return null
+        const res = await fetch(`${base}/rest/v1/${yol}`, {
+          headers: { apikey: key, Authorization: `Bearer ${key}`, Prefer: 'count=estimated', Range: '0-0' },
+        })
+        const cr = res.headers.get('content-range') || ''
+        const n = Number(cr.split('/')[1])
+        return Number.isFinite(n) ? n : null
+      }
+      const [mac, oyuncu] = await Promise.all([kafa('matches?select=id'), kafa('players?select=id')])
+      const tr = n => Number(n).toLocaleString('tr-TR')
+      const ogeler = []
+      if (mac) ogeler.push(`<li>Arşivdeki maç: ${tr(mac)}</li>`)
+      if (oyuncu) ogeler.push(`<li>Oyuncu profili: ${tr(oyuncu)}</li>`)
+      if (!ogeler.length) return ''
+      return `<h2>Arşiv derinliği</h2><ul>${ogeler.join('')}</ul>` +
+        `<p>Maç bazında oyuncu istatistikleri şu an VALORANT için toplanıyor. ` +
+        `<a href="${origin}/stats">Fextopus isabet oranlarının kırılımını gör</a>.</p>`
+    }
+
     if (feed === 'matches') {
       const rows = await sbFetchAll(
         `matches?status=in.(running,not_started)&select=${ENC(MATCH_SEL)}&order=scheduled_at.asc&limit=25`,

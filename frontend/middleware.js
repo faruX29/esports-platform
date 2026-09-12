@@ -139,6 +139,37 @@ function ogImageUrl(origin, p) {
   return `${origin}/api/og?${qs.toString()}`
 }
 
+// PandaScore turnuva adları PARÇALI gelir: lig ("VCT") + etkinlik
+// ("Champions 2026") + turnuva ("Playoffs"). Biz yalnızca sonuncusunu
+// kullanıyorduk ve ÖLÇÜLDÜ (12 Eylül 2026): 3.212 turnuvanın 1.016'sının adı
+// "Playoffs", 410'u "Group A", 406'sı "Group B". Sitemap kapsamındaki 131
+// turnuva sayfası birbirinin aynı başlığı taşıyordu ve her maç sayfası
+// "· Playoffs" diyordu — "· VCT Champions 2026" demesi gerekirken.
+//
+// display_name kolonu var ama 3.212 kaydın hepsinde NULL; doldurulduğunda
+// otomatik olarak tercih edilir.
+function turnuvaAdi(t, sahneDahil = true) {
+  if (!t) return ''
+  if (t.display_name) return t.display_name
+  const lig = String(t.league_name || '').trim()
+  const etkinlik = String(t.event_name || '').trim()
+  const sahne = String(t.name || '').trim()
+
+  // "VCT" + "Champions 2026" -> "VCT Champions 2026". Etkinlik zaten lig adıyla
+  // başlıyorsa tekrar etme ("China Evolution Series" + "China Evolution ...").
+  let tam = etkinlik
+  if (lig && etkinlik && !etkinlik.toLowerCase().startsWith(lig.toLowerCase())) {
+    tam = `${lig} ${etkinlik}`
+  } else if (lig && !etkinlik) {
+    tam = lig
+  }
+  if (!tam) return sahne
+  if (!sahneDahil || !sahne) return tam
+  // Sahne adı zaten tam adın içindeyse tekrar etme.
+  if (tam.toLowerCase().includes(sahne.toLowerCase())) return tam
+  return `${tam} · ${sahne}`
+}
+
 // Edge runtime'da Intl/ICU garantisi yok -> tarih elle bicimlenir.
 const AYLAR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
   'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
@@ -218,7 +249,7 @@ async function buildForMatch(id, origin, url) {
     'team_a_id,team_b_id,tournament_id,' +
     'team_a:teams!matches_team_a_id_fkey(name,logo_url),' +
     'team_b:teams!matches_team_b_id_fkey(name,logo_url),' +
-    'tournament:tournaments(name,tier),game:games(slug,name)'
+    'tournament:tournaments(name,tier,league_name,event_name,display_name),game:games(slug,name)'
   const row = await sbFetch(`matches?id=eq.${encodeURIComponent(id)}&select=${encodeURIComponent(sel)}&limit=1`)
   if (!row) return null
   const a = row.team_a?.name || 'Takım A'
@@ -241,7 +272,10 @@ async function buildForMatch(id, origin, url) {
   const bitti = row.status === 'finished' && score
   const skorK = score.replace(/\s+/g, '')   // "2 - 1" -> "2-1" (başlıkta daha doğal, arama sorgusuna daha yakın)
   const tarih = trTarih(row.scheduled_at)
-  const turAd = row.tournament?.name || ''
+  // Başlıkta sahne adı ("Playoffs") YOK, etkinlik adı var: insanlar
+  // "champions 2026" diye arar, "playoffs" diye değil. Sahne künye satırında.
+  const turAd = turnuvaAdi(row.tournament, false)
+  const turSahne = turnuvaAdi(row.tournament, true)
   const oyunAd = row.game?.name || gm.label
 
   const title = bitti
@@ -291,7 +325,7 @@ async function buildForMatch(id, origin, url) {
   if (haber?.id) satirlar.push(`<li><a href="${origin}/news/${haber.id}">${esc(haber.title || 'Maç haberi')}</a></li>`)
 
   const tahminP = p ? `<p>Fextopus tahmin motoru bu maçta ${esc(p.replace('AI: ', ''))} veriyordu.</p>` : ''
-  const kunye = `<p>${esc(oyunAd)}${turAd ? ` · ${esc(turAd)}` : ''}${row.tournament?.tier ? ` · ${esc(String(row.tournament.tier).toUpperCase())}-Tier` : ''}${tarih ? ` · ${esc(tarih)}` : ''}</p>`
+  const kunye = `<p>${esc(oyunAd)}${turSahne ? ` · ${esc(turSahne)}` : ''}${row.tournament?.tier ? ` · ${esc(String(row.tournament.tier).toUpperCase())}-Tier` : ''}${tarih ? ` · ${esc(tarih)}` : ''}</p>`
   const body = `<h1>${esc(title)}</h1><p>${esc(desc)}</p>${kunye}${tahminP}` +
     (satirlar.length ? `<h2>İlgili Sayfalar</h2><ul>${satirlar.join('')}</ul>` : '') +
     siteNavHtml(origin)
@@ -485,9 +519,12 @@ async function buildForPlayer(id, origin, url) {
 }
 
 async function buildForTournament(id, origin, url) {
-  const t = await sbFetch(`tournaments?id=eq.${ENC(id)}&select=${ENC('name,tier,begin_at,end_at')}&limit=1`)
+  const t = await sbFetch(
+    `tournaments?id=eq.${ENC(id)}` +
+    `&select=${ENC('name,tier,begin_at,end_at,league_name,event_name,display_name')}&limit=1`,
+  )
   if (!t) return null
-  const name = t.name || 'Turnuva'
+  const name = turnuvaAdi(t, true) || t.name || 'Turnuva'
   const matches = await sbFetchAll(`matches?tournament_id=eq.${ENC(id)}&select=${ENC(MATCH_SEL)}&order=scheduled_at.desc&limit=15`)
   const title = `${name} — Fikstür, Puan Durumu ve Sonuçlar`
   const desc = `${name} espor turnuvası: maç programı, sonuçlar ve puan durumu — feXt.`

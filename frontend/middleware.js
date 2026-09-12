@@ -247,7 +247,23 @@ async function buildForNews(ref, origin, url) {
   } else {
     query = `news_articles?match_id=eq.${encodeURIComponent(ref.id)}&variant=neq.preview&select=${encodeURIComponent(sel)}&order=created_at.desc&limit=1`
   }
-  const row = await sbFetch(query)
+  let row = await sbFetch(query)
+  // Maç haberlerinde önce maç SONRASI yazı aranır (variant≠preview) — aynı maçın
+  // hem önizlemesi hem özeti olabilir, doğru olan özettir. Ama maç henüz
+  // oynanmadıysa elde YALNIZCA preview vardır; eskiden burada null dönülüp bot
+  // SPA kabuğuna düşüyordu.
+  //
+  // ÖLÇÜLDÜ (12 Eylül 2026): match_id'li 685 haber URL'inin 110'u (%16)
+  // Googlebot'a BAYT BAYT AYNI, canonical'sız, <p> içermeyen 7,5 KB'lık kabuk
+  // dönüyordu — hepsinin <title>'ı "feXt — Espor Maçları, Skorlar ve Haberler".
+  // Üstelik bunlar en TAZE sayfalar: preview = yaklaşan maç, yani Google'ın en
+  // istekli taradığı içerik. Bu, GSC'deki "kopya, kullanıcı tarafından seçilmiş
+  // canonical yok" uyarısının ayakta kalan son kaynağıydı.
+  if (!row && ref.type === 'match') {
+    row = await sbFetch(
+      `news_articles?match_id=eq.${ENC(ref.id)}&select=${ENC(sel)}&order=created_at.desc&limit=1`,
+    )
+  }
   if (!row) return null
   const gm = gameMeta(row.game_slug)
   const img = ogImageUrl(origin, {

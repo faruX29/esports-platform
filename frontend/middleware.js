@@ -258,7 +258,7 @@ async function buildForMatch(id, origin, url) {
         // çevirmezsek "100 Thieves, NRG karşısında 0-2 kazandı" gibi yanlış çıkıyor.
         `${ax > bx ? ax : bx}-${ax > bx ? bx : ax} kazandı.`
     desc = `${sonuc}${turAd ? ` ${turAd},` : ''}${tarih ? ` ${tarih}.` : ''} ` +
-      `${oyunAd} maç sonucu, harita skorları ve istatistikler — feXt.`
+      `${oyunAd} maç sonucu, Fextopus tahmini ve istatistikler — feXt.`
   } else {
     desc = `${a} – ${b} maçı${tarih ? `, ${tarih}` : ''}.` +
       `${p ? ` Fextopus tahmini: ${p.replace('AI: ', '')}.` : ''} ` +
@@ -411,9 +411,11 @@ async function buildForPlayer(id, origin, url) {
       }
     }
     const galip = [...macKazanc.values()].filter(Boolean).length
+    // NOT: player_match_stats maç başına TEK satır tutar (6.330 satırın
+    // tümü oyuncu+maç başına 1). Yani "harita" diye ayrı bir sayı YOK;
+    // öyle yazmak sayfada olmayan bir kırılımı vaat etmek olurdu.
     ist = {
       mac: maclar.size,
-      harita: satir.length,
       k, d, a,
       kd: d > 0 ? (k / d).toFixed(2) : String(k),
       kazanmaOrani: macKazanc.size ? Math.round((100 * galip) / macKazanc.size) : null,
@@ -426,7 +428,7 @@ async function buildForPlayer(id, origin, url) {
     ? `${nick} — ${ist.mac} Maç İstatistiği, KDA ve Kazanma Oranı`
     : `${nick} — Espor Oyuncu Profili`
   const desc = ist
-    ? `${nick}${teamName ? ` (${teamName})` : ''}: ${ist.mac} maç, ${ist.harita} harita. ` +
+    ? `${nick}${teamName ? ` (${teamName})` : ''}: ${ist.mac} maçta ` +
       `${ist.k} kill / ${ist.d} ölüm / ${ist.a} asist, K/D ${ist.kd}` +
       `${ist.kazanmaOrani != null ? `, kazanma oranı %${ist.kazanmaOrani}` : ''}` +
       `${ist.hs != null ? `, kafa vuruşu %${ist.hs}` : ''}. Harita bazında istatistikler — feXt.`
@@ -442,7 +444,6 @@ async function buildForPlayer(id, origin, url) {
   if (ist) {
     const sat = [
       ['Oynanan maç', ist.mac],
-      ['Oynanan harita', ist.harita],
       ['Kill / Ölüm / Asist', `${ist.k} / ${ist.d} / ${ist.a}`],
       ['K/D oranı', ist.kd],
     ]
@@ -451,10 +452,29 @@ async function buildForPlayer(id, origin, url) {
     istBlok = `<h2>Maç İstatistikleri</h2><ul>${
       sat.map(([kk, vv]) => `<li>${esc(kk)}: ${esc(String(vv))}</li>`).join('')
     }</ul>`
+    // Bağlantı metinleri BENZERSİZ olmalı: beş linkin de üzerinde "Maç detayı"
+    // yazması hem okuyucuya hiçbir şey söylemiyor hem de arama motoruna hepsi
+    // aynı sayfaymış sinyali veriyor. Takım adlarını çekip yazıyoruz.
     if (ist.sonMaclar.length) {
-      istBlok += `<h2>Son Maçlar</h2><ul>${
-        ist.sonMaclar.map(mid => `<li><a href="${origin}/match/${mid}">Maç detayı ve harita skorları</a></li>`).join('')
-      }</ul>`
+      const macSat = await sbFetchAll(
+        `matches?id=in.(${ist.sonMaclar.join(',')})` +
+        `&select=${ENC('id,team_a_score,team_b_score,scheduled_at,' +
+          'team_a:teams!matches_team_a_id_fkey(name),team_b:teams!matches_team_b_id_fkey(name)')}`,
+      )
+      const macAdi = new Map(macSat.map(m => {
+        const an = m.team_a?.name || '?', bn = m.team_b?.name || '?'
+        const sk = (m.team_a_score != null && m.team_b_score != null)
+          ? `${m.team_a_score}-${m.team_b_score}` : 'vs'
+        const tr = trTarih(m.scheduled_at)
+        return [String(m.id), `${an} ${sk} ${bn}${tr ? ` · ${tr}` : ''}`]
+      }))
+      const ogeler = ist.sonMaclar
+        .map(mid => {
+          const ad = macAdi.get(String(mid))
+          return ad ? `<li><a href="${origin}/match/${mid}">${esc(ad)}</a></li>` : ''
+        })
+        .filter(Boolean)
+      if (ogeler.length) istBlok += `<h2>Son Maçlar</h2><ul>${ogeler.join('')}</ul>`
     }
   }
 

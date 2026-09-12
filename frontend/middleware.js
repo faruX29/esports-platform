@@ -139,6 +139,17 @@ function ogImageUrl(origin, p) {
   return `${origin}/api/og?${qs.toString()}`
 }
 
+// Edge runtime'da Intl/ICU garantisi yok -> tarih elle bicimlenir.
+const AYLAR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+  'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
+
+function trTarih(iso) {
+  if (!iso) return ''
+  const t = new Date(iso)
+  if (Number.isNaN(t.getTime())) return ''
+  return `${t.getUTCDate()} ${AYLAR[t.getUTCMonth()]} ${t.getUTCFullYear()}`
+}
+
 function predHook(pa, pb, aName, bName) {
   if (pa == null || pb == null) return ''
   const fa = Number(pa), fb = Number(pb)
@@ -203,10 +214,11 @@ function matchListHtml(origin, rows, heading) {
 
 async function buildForMatch(id, origin, url) {
   const sel =
-    'team_a_score,team_b_score,scheduled_at,prediction_team_a,prediction_team_b,' +
+    'team_a_score,team_b_score,scheduled_at,status,prediction_team_a,prediction_team_b,' +
+    'team_a_id,team_b_id,tournament_id,' +
     'team_a:teams!matches_team_a_id_fkey(name,logo_url),' +
     'team_b:teams!matches_team_b_id_fkey(name,logo_url),' +
-    'tournament:tournaments(name,tier),game:games(slug)'
+    'tournament:tournaments(name,tier),game:games(slug,name)'
   const row = await sbFetch(`matches?id=eq.${encodeURIComponent(id)}&select=${encodeURIComponent(sel)}&limit=1`)
   if (!row) return null
   const a = row.team_a?.name || 'Takım A'
@@ -220,8 +232,35 @@ async function buildForMatch(id, origin, url) {
         s: score, g: gm.label, t: row.tournament?.tier, tn: row.tournament?.name, p, c: gm.accent,
       })
     : `${origin}${STATIC_OG}`
-  const title = `${a} vs ${b}${row.tournament?.name ? ' · ' + row.tournament.name : ''}`
-  const desc = p ? `${p} · feXt AI analizi ve canlı skor.` : 'feXt — AI analizi, canlı skor ve istatistikler.'
+  // ---- Başlık / açıklama / gövde ----------------------------------------
+  // ÖLÇÜLDÜ (12 Eylül 2026): maç sayfaları Googlebot'a 36-56 KELİME
+  // dönüyördu (gövde = varsayılan `<h1>+<p>+<a>`), 12 örneğin 5'inde açıklama
+  // birebir aynı kalıp cümleydi ve 36.796 biten maçın HİÇBİRİNDE skor
+  // başlıkta yoktu. Oysa insanlar "takim1 takim2 sonuc/skor" diye arar:
+  // başlıkta skor olmayan sayfa, tam da karşılaması gereken sorguyu kaçırır.
+  const bitti = row.status === 'finished' && score
+  const skorK = score.replace(/\s+/g, '')   // "2 - 1" -> "2-1" (başlıkta daha doğal, arama sorgusuna daha yakın)
+  const tarih = trTarih(row.scheduled_at)
+  const turAd = row.tournament?.name || ''
+  const oyunAd = row.game?.name || gm.label
+
+  const title = bitti
+    ? `${a} ${skorK} ${b}${turAd ? ' · ' + turAd : ''}`
+    : `${a} vs ${b}${turAd ? ' · ' + turAd : ''}`
+
+  let desc
+  if (bitti) {
+    const ax = Number(row.team_a_score), bx = Number(row.team_b_score)
+    const sonuc = ax === bx
+      ? `${a} ile ${b} ${skorK} berabere kaldı.`
+      : `${ax > bx ? a : b}, ${ax > bx ? b : a} karşısında ${skorK} kazandı.`
+    desc = `${sonuc}${turAd ? ` ${turAd},` : ''}${tarih ? ` ${tarih}.` : ''} ` +
+      `${oyunAd} maç sonucu, harita skorları ve istatistikler — feXt.`
+  } else {
+    desc = `${a} – ${b} maçı${tarih ? `, ${tarih}` : ''}.` +
+      `${p ? ` Fextopus tahmini: ${p.replace('AI: ', '')}.` : ''} ` +
+      `${oyunAd} canlı skor, kadro ve maç analizi — feXt.`
+  }
   const teams = [{ '@type': 'SportsTeam', name: a }, { '@type': 'SportsTeam', name: b }]
   // Event şeması YALNIZCA startDate varsa basılır (startDate = Google zorunlu alanı;
   // tarih yoksa geçersiz Event yerine hiç şema basmamak daha doğru).
@@ -234,7 +273,27 @@ async function buildForMatch(id, origin, url) {
     // (GSC 10 öğe). Ana maç Event'i zaten tam; superEvent opsiyonel, kaldırınca temiz.
     url,
   } : null
-  return htmlDoc({ title, desc, url, img, jsonLd })
+
+  // Gövde: gerçek cümle + iç linkler. Eskiden htmlDoc'un varsayılan gövdesi
+  // kullanılıyordu (`<h1>+<p>+kendine link`) — 40 kelime ve tek bir iç link
+  // bile yok. Takım/turnuva sayfaları zaten gövde basıyordu; maç sayfaları
+  // (sitemap'in en kalabalık bölümü, 2.477 URL) boşta kalmıştı.
+  const satirlar = []
+  if (row.team_a_id) satirlar.push(`<li><a href="${origin}/team/${row.team_a_id}">${esc(a)} kadro ve istatistikler</a></li>`)
+  if (row.team_b_id) satirlar.push(`<li><a href="${origin}/team/${row.team_b_id}">${esc(b)} kadro ve istatistikler</a></li>`)
+  if (row.tournament_id) satirlar.push(`<li><a href="${origin}/tournament/${row.tournament_id}">${esc(turAd || 'Turnuva')} fikstürü</a></li>`)
+  const haber = await sbFetch(
+    `news_articles?match_id=eq.${ENC(id)}&select=id,title&order=created_at.desc&limit=1`,
+  )
+  if (haber?.id) satirlar.push(`<li><a href="${origin}/news/${haber.id}">${esc(haber.title || 'Maç haberi')}</a></li>`)
+
+  const tahminP = p ? `<p>Fextopus tahmin motoru bu maçta ${esc(p.replace('AI: ', ''))} veriyordu.</p>` : ''
+  const kunye = `<p>${esc(oyunAd)}${turAd ? ` · ${esc(turAd)}` : ''}${row.tournament?.tier ? ` · ${esc(String(row.tournament.tier).toUpperCase())}-Tier` : ''}${tarih ? ` · ${esc(tarih)}` : ''}</p>`
+  const body = `<h1>${esc(title)}</h1><p>${esc(desc)}</p>${kunye}${tahminP}` +
+    (satirlar.length ? `<h2>İlgili Sayfalar</h2><ul>${satirlar.join('')}</ul>` : '') +
+    siteNavHtml(origin)
+
+  return htmlDoc({ title, desc, url, img, jsonLd, body })
 }
 
 async function buildForNews(ref, origin, url) {

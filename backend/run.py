@@ -13,7 +13,7 @@ from etl.predict import MatchPredictor
 from etl.sync_players import PlayerStatsSyncer
 from etl.adapters import (
     LiquipediaAdapter, GeminiAdapter, HybridStatsBackfiller,
-    LiquipediaV3TransferAdapter, LiquipediaWikitextTransferAdapter,
+    LiquipediaV3TransferAdapter,
 )
 from etl.news_generator import NewsGenerator
 
@@ -576,12 +576,34 @@ def main():
                 atlanan_oyunlar.append(tgame)
                 continue
             try:
-                # Birincil: v3 API (scraper yok, kural #2). Boş/key yoksa wikitext yedek.
+                # YALNIZ v3. api.php'ye giden wikitext yedegi 2026-09-12'de
+                # ZINCIRDEN CIKARILDI.
+                #
+                # Liquipedia'ya 9 Eylul'de yazili olarak "The v3 API is our
+                # primary and ONLY active path" dedik. O gun bu pratikte
+                # dogruydu (wikitext en son 30 Haziran'da yazmis). Ama kod
+                # hala bagliydi ve tetikleyicisi tam olarak su: v3 SIFIR
+                # donerse devreye gir.
+                #
+                # 12 Eylul'de Liquipedia okul-projesi anahtarinin birkac hafta
+                # icinde gecersizlesecegini bildirdi. Anahtar oldugu an v3 her
+                # oyun icin sifir doner -> bu yedek HER GUN, gozetimsiz,
+                # api.php'ye gitmeye baslardi. Yani soylediğimizin tersi,
+                # tam da yenileme talep ettigimiz sirada.
+                #
+                # Artik v3 bos donerse uyari yazilir ve gecilir.
                 r = {'found': 0, 'inserted': 0, 'skipped': 0, 'failed': 0}
                 if has_key:
                     r = LiquipediaV3TransferAdapter(tgame).ingest(days_back=args.transfer_days)
-                if r.get('found', 0) == 0:
-                    r = LiquipediaWikitextTransferAdapter(tgame).ingest(days_back=args.transfer_days)
+                    if r.get('found', 0) == 0:
+                        logger.warning(
+                            f"  {tgame}: v3 sifir dondu. api.php yedegi BILEREK yok "
+                            "(Liquipedia'ya verilen soz). Anahtar gecerli mi kontrol et."
+                        )
+                else:
+                    logger.warning(
+                        f"  {tgame}: LIQUIPEDIA_API_KEY yok -> transfer senkronu atlandi."
+                    )
                 logger.info(f"  {tgame}: {r}")
                 for k in grand:
                     grand[k] += r.get(k, 0)

@@ -407,8 +407,19 @@ class LiquipediaWikitextTransferAdapter(BaseTransferAdapter):
     Cargo API KEY GEREKTİRMEYEN transfer kaynağı — aylık 'Player Transfers/<yıl>/<ay>'
     wikitext sayfalarından roster değişikliklerini çeker (action=parse).
 
-    YEDEK hat: key yoksa veya v3 boş dönerse kullanılır (Chain of Responsibility).
-    Liquipedia kural #2 gereği v3 birincil; bu scraper minimal/yedek tutulur.
+    ⛔ 2026-09-12'DEN İTİBAREN KULLANILMIYOR — ZINCIRE GERİ BAĞLAMA.
+
+    Liquipedia'ya 9 Eylül 2026'da yazılı olarak "The v3 API is our primary and
+    ONLY active path" denildi. Bu sınıf api.php'ye gidiyor (LiquipediaService
+    .base_url), dolayısıyla çağrıldığı an o ifade yalan olur.
+
+    Tetikleyicisi özellikle tehlikeliydi: "v3 sıfır dönerse devreye gir".
+    Anahtar geçersizleştiği an v3 her oyunda sıfır döner ve bu yedek her gün,
+    gözetimsiz çalışmaya başlardı.
+
+    Sınıf silinmedi çünkü geçmiş veriyi (18 satır, son yazım 30 Haziran 2026)
+    açıklıyor, ama hiçbir yerden çağrılmıyor. Yeniden kullanmadan önce
+    Liquipedia'dan AÇIK izin al.
     """
 
     data_source = "liquipedia_wikitext"

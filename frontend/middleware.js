@@ -253,7 +253,10 @@ async function buildForMatch(id, origin, url) {
     const ax = Number(row.team_a_score), bx = Number(row.team_b_score)
     const sonuc = ax === bx
       ? `${a} ile ${b} ${skorK} berabere kaldı.`
-      : `${ax > bx ? a : b}, ${ax > bx ? b : a} karşısında ${skorK} kazandı.`
+      : `${ax > bx ? a : b}, ${ax > bx ? b : a} karşısında ` +
+        // skorK daima "A-B" sırasında. Kazananı cümlenin başına alırken skoru da
+        // çevirmezsek "100 Thieves, NRG karşısında 0-2 kazandı" gibi yanlış çıkıyor.
+        `${ax > bx ? ax : bx}-${ax > bx ? bx : ax} kazandı.`
     desc = `${sonuc}${turAd ? ` ${turAd},` : ''}${tarih ? ` ${tarih}.` : ''} ` +
       `${oyunAd} maç sonucu, harita skorları ve istatistikler — feXt.`
   } else {

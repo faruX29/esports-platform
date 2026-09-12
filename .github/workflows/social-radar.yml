@@ -27,7 +27,9 @@ concurrency:
 jobs:
   radar:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 20 -> 30 (2026-09-12): adim sinirlari eklendi, toplamlari 24 -> is
+    # butcesi ondan buyuk olmali ki is seviyesinde "cancelled" olmasin.
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: social
@@ -41,16 +43,29 @@ jobs:
           cache: 'pip'
           cache-dependency-path: social/requirements.txt
 
+      # ADIM SINIRLARI (2026-09-12). Bu is akisinda da hicbir adimin siniri
+      # yoktu -- sync-liquipedia'da uc kez basimizi yakan tuzagin aynisi:
+      # takilan bir adim isi rehin alir, is 20. dakikada "cancelled" olur ve
+      # ARDINDAKI ADIMLAR (e-posta gonderimi dahil) atlanir. Yani video
+      # uretilse bile kurucuya ulasmaz.
+      #
+      # Artik kritik: gunluk dagitim bu videoya bagli.
+      #
+      # OLCULDU (10 kosu, 2-11 Eylul): "Videolari uret" 0,5-1,6 dk; diger tum
+      # adimlar <0,1 dk. Sinirlar olculen en uzun surenin ~5 katina kondu.
       - name: Bagimliliklar
+        timeout-minutes: 5
         run: pip install -r requirements.txt
 
       - name: ffmpeg kontrolu
+        timeout-minutes: 2
         # DIKKAT: "ffmpeg -version | head -1" YAZMA. ffmpeg yoksa hata stderr'e
         # gider, head sifirla cikar ve adim YESIL gorunur (2026-09-02'de tam
         # olarak bu oldu). Python'un gordugu ikiliyi dogrudan sor.
         run: python -c "import imageio_ffmpeg,subprocess,sys; e=imageio_ffmpeg.get_ffmpeg_exe(); print('ffmpeg:', e); sys.exit(subprocess.run([e,'-version'],capture_output=True).returncode)"
 
       - name: Gunu belirle
+        timeout-minutes: 2
         id: tarih
         # Kosu aksam calisir ve ERTESI gunun maclarini uretir ki kurucu gece
         # yarisi, gun baslarken paylasabilsin.
@@ -74,11 +89,13 @@ jobs:
           echo "Hedef gun: $GUN"
 
       - name: Videolari uret
+        timeout-minutes: 8
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python radar.py "${{ steps.tarih.outputs.gun }}"
 
       - name: Uretilenleri listele
+        timeout-minutes: 2
         id: liste
         run: |
           if [ -d cikti ] && [ -n "$(ls -A cikti 2>/dev/null)" ]; then
@@ -98,6 +115,7 @@ jobs:
           retention-days: 14
 
       - name: E-posta ile gonder
+        timeout-minutes: 5
         if: steps.liste.outputs.var == 'true'
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}

@@ -15,7 +15,7 @@ jobs:
   transfers:
     # Transfer hattı. LLM adımı yavaş; kendi işinde izole → tıkanırsa diğerlerini etkilemez.
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 75
     defaults:
       run:
         working-directory: backend
@@ -41,17 +41,23 @@ jobs:
       # "cancelled" oluyor ve ARDINDAKİ TÜM ADIMLAR atlanıyordu. Bu tuzağa üç kez
       # düşüldü: 25 Ağu, 10 Eyl (enrichment), 10 Eyl (transfers). Sınırlar
       # toplamı işin bütçesinden küçük tutuldu.
+      # 15 -> 30 (2026-09-12): 15 dk ÖLÇÜLMEDEN seçilmişti. Gerçek dağılım
+      # (10 koşu, 1-11 Eylül) 8.7-14.7 dk; 12 Eylül'de 15'i aştı, adım
+      # öldürüldü ve ARDINDAKI İKİ ADIM atlandı. Artık içeride 18 dk'lık kendi
+      # bütçesi var: dolunca kalan oyunu atlayıp TEMİZ çıkar. 30'luk tavan
+      # yalnızca son çare.
       - name: Sync transfers (v3 → roster_changes)
-        timeout-minutes: 15
+        timeout-minutes: 30
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           LIQUIPEDIA_API_KEY: ${{ secrets.LIQUIPEDIA_API_KEY }}
-        run: python run.py --sync-transfers --transfer-days 14
+        run: python run.py --sync-transfers --transfer-days 14 --transfer-max-minutes 18
 
+      # 10 -> 5 (2026-09-12): ölçüldü, 10 koşunun hepsinde <6 sn.
       - name: Apply transfers to rosters (Liquipedia → players.team_pandascore_id)
-        timeout-minutes: 10
+        timeout-minutes: 5
         continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

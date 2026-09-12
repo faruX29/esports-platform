@@ -5,6 +5,7 @@ Usage: python run.py [options]
 import argparse
 import logging
 import os
+import time
 from datetime import datetime, timezone
 from utils.logger import setup_logging
 from etl.sync_matches import MatchSyncer
@@ -238,6 +239,19 @@ def main():
         type=int,
         default=14,
         help='--sync-transfers için kaç günlük geriye bakılsın (varsayılan: 14)',
+    )
+    parser.add_argument(
+        '--transfer-max-minutes',
+        type=float,
+        default=18.0,
+        help=(
+            '--sync-transfers icin duvar-saati butcesi (varsayilan: 18 dk). OLCULDU '
+            '(10 kosu, Eyl 1-11): tum dongu 8.7-14.7 dk, ortalama 11.3 -> oyun basi '
+            '~4 dk. Butce oyunlar ARASINDA bakilir, oyun ortasinda kesmez; bu yuzden '
+            'CI adiminin timeout-minutes sinirindan bir oyunluk pay kadar KUCUK '
+            'olmali (18 + ~10 en kotu oyun < 30). Yoksa GitHub adimi oldurur ve '
+            'ardindaki adimlar (roster uygulama, transfer haberi) atlanir.'
+        ),
     )
 
     parser.add_argument(
@@ -535,7 +549,19 @@ def main():
         logger.info("=" * 60)
         grand = {'found': 0, 'inserted': 0, 'skipped': 0, 'failed': 0}
         has_key = bool(os.getenv('LIQUIPEDIA_API_KEY'))
+        # Duvar-saati butcesi (2026-09-12). 12 Eylul kosusunda bu adim 15 dk'lik
+        # CI sinirini asti, GitHub adimi oldurdu ve ARDINDAKI IKI ADIM atlandi
+        # (roster uygulama + transfer haberi). Sinir olcumsuz secilmisti: gercek
+        # dagilim 8.7-14.7 dk. Artik butce oyunlar ARASINDA kontrol edilir;
+        # dolarsa kalan oyun atlanir ama adim 0 ile cikar, sonraki adimlar calisir.
+        basladi = time.monotonic()
+        butce_sn = args.transfer_max_minutes * 60
+        atlanan_oyunlar = []
         for tgame in ['valorant', 'cs2', 'lol']:
+            gecen = time.monotonic() - basladi
+            if gecen >= butce_sn:
+                atlanan_oyunlar.append(tgame)
+                continue
             try:
                 # Birincil: v3 API (scraper yok, kural #2). Boş/key yoksa wikitext yedek.
                 r = {'found': 0, 'inserted': 0, 'skipped': 0, 'failed': 0}
@@ -552,6 +578,11 @@ def main():
             f"✅ Transfer sync — bulundu:{grand['found']} | yazıldı:{grand['inserted']} | "
             f"atlandı:{grand['skipped']} | hata:{grand['failed']}"
         )
+        if atlanan_oyunlar:
+            logger.warning(
+                f"TRANSFER SURE BUTCESI DOLDU ({args.transfer_max_minutes:.0f} dk) - "
+                f"atlanan oyunlar: {', '.join(atlanan_oyunlar)}"
+            )
         logger.info("=" * 60)
 
     if args.generate_transfers:

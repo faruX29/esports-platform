@@ -400,10 +400,44 @@ async function buildForTeam(id, origin, url) {
   const name = team.name || 'Takım'
   const gm = gameMeta(team.game?.slug)
   const matches = await sbFetchAll(`matches?or=(team_a_id.eq.${ENC(id)},team_b_id.eq.${ENC(id)})&status=eq.finished&select=${ENC(MATCH_SEL)}&order=scheduled_at.desc&limit=10`)
+  // Başlık "Kadro, Maçlar ve İstatistikler" vaat ediyordu ama gövdede ne kadro
+  // ne istatistik vardı: 77 kelime ve 10 linkin hepsi maça gidiyordu, oyuncu
+  // sayfalarına TEK link yoktu (ölçüldü 12 Eylül 2026). Hem vaat tutmuyordu
+  // hem de oyuncu sayfaları iç linkten tamamen yoksundu.
+  // NOT: players↔teams arasında FK yok; players.team_pandascore_id === teams.id.
+  const kadro = await sbFetchAll(
+    `players?team_pandascore_id=eq.${ENC(id)}&select=${ENC('id,nickname,role')}&limit=12`,
+  )
+  // Galibiyet dökümü zaten çekilmiş maçlardan hesaplanır; ekstra sorgu yok.
+  let galip = 0, maglup = 0
+  for (const m of matches) {
+    if (m.team_a_score == null || m.team_b_score == null) continue
+    const bizA = String(m.team_a?.name || '') === String(name)
+    const bizim = bizA ? m.team_a_score : m.team_b_score
+    const rakip = bizA ? m.team_b_score : m.team_a_score
+    if (bizim > rakip) galip++
+    else if (bizim < rakip) maglup++
+  }
+  const dokum = (galip + maglup) > 0
+    ? `Son ${galip + maglup} maçta ${galip} galibiyet, ${maglup} yenilgi.` : ''
+
   const title = `${name} — Kadro, Maçlar ve İstatistikler`
-  const desc = `${name} espor takımı (${gm.label}): son maç sonuçları, kazanma oranı, transferler ve istatistikler — feXt.`
-  const jsonLd = { '@context': 'https://schema.org', '@type': 'SportsTeam', name, sport: 'Esports', logo: team.logo_url || undefined, url }
-  const body = `<h1>${esc(name)}</h1><p>${esc(desc)}</p>${matchListHtml(origin, matches, 'Son Maçlar')}`
+  const desc = `${name} espor takımı (${gm.label}): ` +
+    `${dokum ? dokum + ' ' : ''}Kadro, son maç sonuçları ve oyuncu istatistikleri — feXt.`
+  const jsonLd = {
+    '@context': 'https://schema.org', '@type': 'SportsTeam', name, sport: 'Esports',
+    logo: team.logo_url || undefined, url,
+    athlete: kadro.length
+      ? kadro.map(o => ({ '@type': 'Person', name: o.nickname || 'Oyuncu' }))
+      : undefined,
+  }
+  const kadroHtml = kadro.length
+    ? `<h2>Kadro</h2><ul>${kadro.map(o =>
+        `<li><a href="${origin}/player/${o.id}">${esc(o.nickname || 'Oyuncu')}</a>` +
+        `${o.role ? ` — ${esc(o.role)}` : ''}</li>`).join('')}</ul>`
+    : ''
+  const body = `<h1>${esc(name)}</h1><p>${esc(desc)}</p>` +
+    `${kadroHtml}${matchListHtml(origin, matches, 'Son Maçlar')}`
   return htmlDoc({ title, desc, url, img: '', type: 'profile', jsonLd, body })
 }
 

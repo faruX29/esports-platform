@@ -192,6 +192,15 @@ def main():
             'ne kadar ilerlendiği loglanamaz.'
         ),
     )
+    parser.add_argument(
+        '--hybrid-priority-teams',
+        type=str,
+        default='',
+        help=('Virgulle ayrilmis takim adlari: bu takimlarin maclari kuyrugun EN '
+              'BASINA alinir (tier sirasi onlarin icinde gecerli kalir). Belirli '
+              'bir etkinlige hazirlanirken kullanilir, or. Valorant Champions '
+              'kadrolari. Bos birakilirsa oncelik uygulanmaz.'),
+    )
 
     parser.add_argument(
         '--roster-flush',
@@ -482,9 +491,13 @@ def main():
         logger.info("🧩 HYBRID STATS BACKFILL (PandaScore NULL → Liquipedia)")
         logger.info("=" * 60)
         backfiller = HybridStatsBackfiller()
+        oncelikli = [t.strip() for t in (args.hybrid_priority_teams or '').split(',') if t.strip()]
+        if oncelikli:
+            logger.info(f"⭐ Oncelikli takim: {len(oncelikli)} adet -> {', '.join(oncelikli[:4])}...")
         result = backfiller.backfill(
             limit=args.hybrid_limit,
             max_seconds=args.hybrid_max_minutes * 60 if args.hybrid_max_minutes else None,
+            priority_teams=oncelikli,
         )
         logger.info(
             f"📊 Hybrid stats: aday={result['candidates']} | "

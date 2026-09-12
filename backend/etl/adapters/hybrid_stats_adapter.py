@@ -555,7 +555,9 @@ class HybridStatsBackfiller:
             slugs |= {s.lower() for s in getattr(source, "SUPPORTED_GAMES", set())}
         return sorted(slugs)
 
-    def find_incomplete_matches(self, limit: int = 50) -> List[MatchContext]:
+    def find_incomplete_matches(
+        self, limit: int = 50, priority_teams: Optional[List[str]] = None,
+    ) -> List[MatchContext]:
         """Harita/KDA verisi eksik, finished maçları bağlamlarıyla döner.
 
         ⚠️ Yalnızca kaynakların besleyebildiği oyunlar sorgulanır. Eskiden bu
@@ -568,6 +570,9 @@ class HybridStatsBackfiller:
         servable = self._servable_slugs()
         if not servable:
             return []
+        # Bos liste = oncelik yok: `= ANY('{}')` her satir icin false doner,
+        # dolayisiyla siralama eskisi gibi salt tier + tarih olur.
+        prio = [t for t in (priority_teams or []) if t]
         candidates: List[MatchContext] = []
         with Database.get_connection() as conn:
             with conn.cursor() as cur:
@@ -597,16 +602,21 @@ class HybridStatsBackfiller:
                          OR (m.raw_data->>'hybrid_miss_at')::timestamptz
                               < now() - make_interval(days => %s)
                       )
+                    -- ÖNCELİKLİ TAKIMLAR en başa: belirli bir etkinliğe (örn.
+                    -- Valorant Champions) hazırlanırken o kadroların geçmişini
+                    -- önce doldurmak için. Boş liste verilirse siralama değişmez.
                     -- TIER ÖNCELİĞİ: Liquipedia üst-tier'i kapsar; alt-lig maçları
                     -- için veri yok. S→A→B→C→D→? sırası hem eşleşme hem değer artırır.
                     ORDER BY
+                      CASE WHEN ta.name = ANY(%s) OR tb.name = ANY(%s)
+                           THEN 0 ELSE 1 END,
                       CASE UPPER(COALESCE(t.tier, 'Z'))
                         WHEN 'S' THEN 0 WHEN 'A' THEN 1 WHEN 'B' THEN 2
                         WHEN 'C' THEN 3 WHEN 'D' THEN 4 ELSE 5 END,
                       m.scheduled_at DESC NULLS LAST
                     LIMIT %s
                     """,
-                    (servable, HYBRID_MISS_RETRY_DAYS, limit * 4),
+                    (servable, HYBRID_MISS_RETRY_DAYS, prio, prio, limit * 4),
                 )
                 rows = cur.fetchall()
 
@@ -779,7 +789,10 @@ class HybridStatsBackfiller:
 
     # ── Orkestrasyon girişi ───────────────────────────────────────────────────
 
-    def backfill(self, limit: int = 50, max_seconds: Optional[float] = None) -> Dict[str, int]:
+    def backfill(
+        self, limit: int = 50, max_seconds: Optional[float] = None,
+        priority_teams: Optional[List[str]] = None,
+    ) -> Dict[str, int]:
         """
         Eksik maçları bulur, kaynaklardan doldurmaya çalışır, DB'ye yazar.
 
@@ -796,7 +809,7 @@ class HybridStatsBackfiller:
             dict: {'candidates', 'enriched', 'skipped'}
         """
         basladi = time.monotonic()
-        candidates = self.find_incomplete_matches(limit=limit)
+        candidates = self.find_incomplete_matches(limit=limit, priority_teams=priority_teams)
         logger.info(
             "🔍 Harita/KDA verisi eksik %d maç bulundu (limit=%d)",
             len(candidates), limit,

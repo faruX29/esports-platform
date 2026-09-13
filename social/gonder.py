@@ -15,14 +15,38 @@ GUN     = sys.argv[2] if len(sys.argv) > 2 else ''
 MB = 1024 * 1024
 EK_SINIRI = 20 * MB          # Resend toplam ek sınırı ~40MB; yarısında duruyoruz
 
+def bos_gun_maili():
+    """S/A maç olmayan gün: video yok, ama bunu HABER VER (kurucu kararı, 13 Eyl).
+
+    Eskiden burada sessizce çıkılıyordu; 13 Eylül'de e-posta gelmeyince radar
+    bozulmuş sanıldı. Alt seviye maçlarla video üretmek BİLEREK yapılmıyor.
+    """
+    not_yolu = os.path.join(KLASOR, 'bos-gun.txt')
+    ek_not = ''
+    if os.path.exists(not_yolu):
+        with open(not_yolu, encoding='utf-8') as f:
+            ek_not = f.read().strip()
+    satirlar = [
+        f'{GUN} icin S/A seviyesinde mac yok, video uretilmedi.',
+        'Bu bir hata degil: radar calisti, sadece o gun buyuk turnuva maci yok.',
+        '',
+    ]
+    if ek_not:
+        satirlar += [ek_not, '']
+    return {
+        'from': 'feXt Radar <noreply@fextesports.com>',
+        'to': [ALICI],
+        'subject': f'[feXt] {GUN} mac radari - video yok (S/A mac yok)',
+        'text': '\n'.join(satirlar),
+    }
+
 def main():
-    if not os.path.isdir(KLASOR):
-        print('cikti klasoru yok, gonderilecek video bulunamadi'); return 0
-    dosyalar = sorted(f for f in os.listdir(KLASOR) if f.endswith('.mp4'))
-    if not dosyalar:
-        print('video yok - bugun S/A mac olmamis olabilir, mail gonderilmedi'); return 0
+    dosyalar = sorted(f for f in os.listdir(KLASOR) if f.endswith('.mp4')) if os.path.isdir(KLASOR) else []
     if not ANAHTAR:
-        print('::warning::RESEND_API_KEY yok - videolar yalnizca artifact olarak kaldi'); return 0
+        print('::warning::RESEND_API_KEY yok - mail gonderilemedi'); return 0
+    if not dosyalar:
+        print('video yok - "video yok" bilgilendirme maili gonderiliyor')
+        return gonder(bos_gun_maili())
 
     ekler, toplam, atlanan = [], 0, []
     for ad in dosyalar:
@@ -56,14 +80,16 @@ def main():
     if atlanan:
         satirlar.append('Eke sigmayanlar Actions artifact\'inden indirilebilir.')
 
-    veri = json.dumps({
+    return gonder({
         'from': 'feXt Radar <noreply@fextesports.com>',
         'to': [ALICI],
         'subject': f'[feXt] {GUN} mac radari - {len(dosyalar)} video',
         'text': '\n'.join(satirlar),
         'attachments': ekler,
-    }).encode()
+    })
 
+def gonder(govde):
+    veri = json.dumps(govde).encode()
     # DIKKAT - User-Agent zorunlu: Resend API'sinin onunde Cloudflare var ve
     # urllib'in varsayilan "Python-urllib/3.13" imzasini engelliyor
     # (2026-09-02: HTTP 403, "error code: 1010"). ETL alarmlari curl ile

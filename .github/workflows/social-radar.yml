@@ -97,8 +97,10 @@ jobs:
       - name: Uretilenleri listele
         timeout-minutes: 2
         id: liste
+        # mp4 ARANIR, klasorun bos olmamasi degil: macsiz gunde radar.py
+        # cikti/bos-gun.txt yaziyor, klasor dolu gorunur ama video yoktur.
         run: |
-          if [ -d cikti ] && [ -n "$(ls -A cikti 2>/dev/null)" ]; then
+          if ls cikti/*.mp4 >/dev/null 2>&1; then
             ls -la cikti
             echo "var=true" >> "$GITHUB_OUTPUT"
           else
@@ -114,9 +116,11 @@ jobs:
           path: social/cikti/*.mp4
           retention-days: 14
 
+      # Her gun calisir (13 Eyl): video varsa ekli mail, yoksa "video yok"
+      # bilgilendirmesi. Eskiden yalniz video varken calisiyordu; macsiz gunde
+      # hic mail gelmedi ve radar bozuk sanildi.
       - name: E-posta ile gonder
         timeout-minutes: 5
-        if: steps.liste.outputs.var == 'true'
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: python gonder.py cikti "${{ steps.tarih.outputs.gun }}"

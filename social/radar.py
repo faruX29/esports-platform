@@ -90,6 +90,28 @@ def gunun_maclari(gun):
         })
     return gruplar
 
+def sonraki_sa_gunu(gun, ufuk=14):
+    """Maçsız günün e-postası için: `gun`den sonraki ilk S/A maç günü ve maç sayısı.
+
+    gunun_maclari ile AYNI filtreler (iki takım belli + tahmin var) — yoksa
+    e-posta "17 Eylül'de 2 maç" deyip radar o gün yine boş çıkabilirdi.
+    """
+    sql = """
+      SELECT (m.scheduled_at AT TIME ZONE 'Europe/Istanbul')::date AS gun, COUNT(*)
+      FROM matches m
+      JOIN tournaments t ON t.id = m.tournament_id
+      JOIN teams ta ON ta.id = m.team_a_id
+      JOIN teams tb ON tb.id = m.team_b_id
+      WHERE UPPER(LEFT(COALESCE(t.tier,''),1)) IN ('S','A')
+        AND m.scheduled_at >= %s AND m.scheduled_at < %s
+        AND m.prediction_team_a IS NOT NULL
+      GROUP BY 1 ORDER BY 1 LIMIT 1
+    """
+    bas = datetime.combine(gun + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc) - timedelta(hours=3)
+    with psycopg.connect(os.environ['DATABASE_URL']) as cn, cn.cursor() as c:
+        c.execute(sql, (bas, bas + timedelta(days=ufuk)))
+        return c.fetchone()
+
 # ── Logo ──────────────────────────────────────────────────────────────────
 _cache = {}
 def logo(tid, url, ad, ac, box):
@@ -358,7 +380,21 @@ if __name__ == '__main__':
     gun = datetime.strptime(sys.argv[1], '%Y-%m-%d').date() if len(sys.argv) > 1 else datetime.now().date()
     gruplar = gunun_maclari(gun)
     if not gruplar:
-        print(f'{gun}: S/A maç yok — video üretilmedi.'); sys.exit(0)
+        print(f'{gun}: S/A maç yok — video üretilmedi.')
+        # Kurucu kararı (13 Eyl): maçsız günde alt seviye maçlarla video YOK, ama
+        # sessiz de kalma — gonder.py bu notla "video yok" e-postası atar.
+        # Eskiden hiçbir şey gelmiyordu ve radar bozulmuş gibi görünüyordu.
+        os.makedirs(CIKTI, exist_ok=True)
+        sonraki = sonraki_sa_gunu(gun)
+        if sonraki:
+            not_ = f'Siradaki S/A mac gunu: {sonraki[0].day} {AY[sonraki[0].month]} ({sonraki[1]} mac).'
+        else:
+            not_ = ('Onumuzdeki 14 gunde kayitli S/A mac yok. '
+                    'PandaScore maclari tarih yaklastikca ekliyor; liste degisebilir.')
+        with open(os.path.join(CIKTI, 'bos-gun.txt'), 'w', encoding='utf-8') as f:
+            f.write(not_ + '\n')
+        print(not_)
+        sys.exit(0)
     os.makedirs(CIKTI, exist_ok=True)
 
     tekil  = {k: v for k, v in gruplar.items() if len(v) >= TEK_BASINA_ESIK}

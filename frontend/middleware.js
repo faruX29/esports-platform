@@ -636,9 +636,9 @@ const STATIC_ROUTES = {
     feed: 'news',
   },
   '/scout': {
-    title: 'Scout Engine — Kulüpler ve Ajanslar için Espor Veri Aracı',
-    desc: 'Oyuncu ve takım performansını veriye dayalı karşılaştıran B2B scout aracı.',
-    heading: 'Scout Engine',
+    title: 'Scout — VALORANT Oyuncu Karşılaştırma',
+    desc: 'Profesyonel VALORANT oyuncularını yan yana karşılaştır: K/D, harita başına kill, galibiyet oranı, son 5 maç formu, ajan ve harita havuzu.',
+    heading: 'VALORANT oyuncu karşılaştırma',
     feed: 'scout',
   },
   // Yasal sayfalar: içerikleri statik ve SPA içinde. Buraya konmalarının tek
@@ -729,28 +729,25 @@ async function staticFeedHtml(feed, origin) {
       }</ul>`
     }
 
-    // /scout — bekleme listesi sayfası; gösterecek tek somut şey arşiv derinliği.
+    // /scout — VALORANT karşılaştırma aracı (13 Eyl). Arayüzle aynı RPC; STABLE
+    // olduğu için GET ile çağrılabiliyor. Bot, K/D sıralamasını ve oyuncu linklerini görür.
     if (feed === 'scout') {
-      const kafa = async (yol) => {
-        const base = process.env.VITE_SUPABASE_URL
-        const key = process.env.VITE_SUPABASE_ANON_KEY
-        if (!base || !key) return null
-        const res = await fetch(`${base}/rest/v1/${yol}`, {
-          headers: { apikey: key, Authorization: `Bearer ${key}`, Prefer: 'count=estimated', Range: '0-0' },
-        })
-        const cr = res.headers.get('content-range') || ''
-        const n = Number(cr.split('/')[1])
-        return Number.isFinite(n) ? n : null
-      }
-      const [mac, oyuncu] = await Promise.all([kafa('matches?select=id'), kafa('players?select=id')])
-      const tr = n => Number(n).toLocaleString('tr-TR')
-      const ogeler = []
-      if (mac) ogeler.push(`<li>Arşivdeki maç: ${tr(mac)}</li>`)
-      if (oyuncu) ogeler.push(`<li>Oyuncu profili: ${tr(oyuncu)}</li>`)
-      if (!ogeler.length) return ''
-      return `<h2>Arşiv derinliği</h2><ul>${ogeler.join('')}</ul>` +
-        `<p>Maç bazında oyuncu istatistikleri şu an VALORANT için toplanıyor. ` +
-        `<a href="${origin}/stats">Fextopus isabet oranlarının kırılımını gör</a>.</p>`
+      const rows = await sbFetchAll('rpc/get_scout_players?p_min_matches=10')
+      const liste = rows
+        .filter(p => p.deaths > 0 && p.maps_played > 0)
+        .map(p => ({ ...p, kd: p.kills / p.deaths, kpm: p.kills / p.maps_played }))
+        .sort((a, b) => b.kd - a.kd)
+        .slice(0, 20)
+      if (!liste.length) return ''
+      const ondalik = (n, h) => n.toFixed(h).replace('.', ',')
+      return `<h2>K/D sıralaması (en az 10 maç)</h2><ol>${
+        liste.map(p => `<li><a href="${origin}/player/${p.id}">${esc(p.nickname)}</a>` +
+          `${p.team_name ? ` (${esc(p.team_name)})` : ''}: K/D ${ondalik(p.kd, 2)}, ` +
+          `harita başına ${ondalik(p.kpm, 1)} kill, ${p.matches} maç</li>`).join('')
+      }</ol>` +
+        `<p>${rows.length} oyuncu en az 10 maç verisine sahip. Kill, ölüm, asist ve galibiyet ` +
+        `maç toplamlarından hesaplanır; rol, ajan ve harita havuzu harita bazındadır. ` +
+        `<a href="${origin}/players">Tüm oyuncu profilleri</a>.</p>`
     }
 
     if (feed === 'matches') {

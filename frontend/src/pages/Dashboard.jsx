@@ -2990,7 +2990,7 @@ export default function Dashboard() {
         {[
           { to: '/matches',  Icon: CalendarDays, label: 'Maç Takvimi', sub: 'Yaklaşan & Biten',  color: '#FF4655' },
           { to: '/tournaments', Icon: Trophy, label: 'Turnuvalar', sub: 'Aktif ve Geçmiş',  color: '#FFB800' },
-          { to: '/scout',    Icon: FlaskConical, label: 'Scout Engine', sub: 'B2B · Private Beta', color: '#C25CD0' },
+          { to: '/scout',    Icon: FlaskConical, label: 'Scout', sub: 'Oyuncu karşılaştırma', color: '#C25CD0' },
           { to: '/news',     Icon: Newspaper, label: 'Haberler',    sub: 'Son gelişmeler',     color: '#4CAF50' },
         ].map(l => (
           <Link key={l.to} to={l.to} style={{ textDecoration: 'none' }}>

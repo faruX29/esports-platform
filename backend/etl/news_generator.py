@@ -124,12 +124,36 @@ TOURNAMENT_SYSTEM_PROMPT = (
 )
 
 # ── Tier display labels ───────────────────────────────────────────────────────
+# ⚠️ Etiketlere "Major"/"Premier" gibi ÖZEL AD yazma: LLM bunu turnuvanın adı sanıyor.
+# 15 Eyl'de VCT Americas Stage 2 önizlemeleri "VALORANT Major Playoff'ları" diye
+# yazılmıştı; kaynağı buradaki "A-Tier (Major)" etiketiydi.
 _TIER_LABELS = {
-    "S": "S-Tier (Premier)",
-    "A": "A-Tier (Major)",
+    "S": "S-Tier (en üst seviye)",
+    "A": "A-Tier (üst seviye)",
     "B": "B-Tier",
     "C": "C-Tier",
 }
+
+
+def tam_turnuva_adi(lig: Optional[str], etkinlik: Optional[str], sahne: Optional[str]) -> str:
+    """PandaScore adı parçalı verir: lig (VCT) + etkinlik (Champions 2026) + sahne (Group C).
+
+    tournaments.name YALNIZ sahnedir. 15 Eyl ölçümü: son 30 günün 657 haberinin
+    337'sinde turnuva adı "Playoffs"/"Group Alpha" gibi tek başına anlamsız bir sahneydi
+    ve LLM boşluğu uyduruyordu. Site middleware'indeki turnuvaAdi() ile aynı kural:
+    etkinlik ligle başlıyorsa lig tekrar edilmez, sahne zaten adın içindeyse eklenmez.
+    """
+    lig, etkinlik, sahne = (str(x or "").strip() for x in (lig, etkinlik, sahne))
+    tam = etkinlik
+    if lig and etkinlik and not etkinlik.lower().startswith(lig.lower()):
+        tam = f"{lig} {etkinlik}"
+    elif lig and not etkinlik:
+        tam = lig
+    if not tam:
+        return sahne
+    if not sahne or sahne.lower() in tam.lower():
+        return tam
+    return f"{tam} · {sahne}"
 
 
 class FactSheetBuilder:
@@ -255,7 +279,9 @@ class FactSheetBuilder:
 
         # PandaScore turnuvaları AŞAMA'dır (Playoffs/Group Stage). Yalnızca
         # eleme/final aşamasında "şampiyon" gerçekçi; grup aşamasında "lider".
-        name_l = t_name.lower()
+        # ⚠️ Tespit SAHNE adından yapılır, tam addan DEĞİL: "VCT Champions 2026 · Group C"
+        # içinde "champion" geçer ve grup aşaması "şampiyon belli oldu" diye yazılırdı.
+        name_l = str(tournament.get("stage") or t_name).lower()
         is_final = any(k in name_l for k in (
             "playoff", "final", "knockout", "bracket", "grand", "elimination", "şampiyon", "champion"
         ))
@@ -454,6 +480,8 @@ class NewsGenerator:
                         t_b.logo_url AS tb_logo,
                         tn.id        AS tn_id,
                         tn.name      AS tn_name,
+                        tn.league_name AS tn_league,
+                        tn.event_name  AS tn_event,
                         tn.tier      AS tn_tier,
                         g.slug       AS game_slug
                     FROM matches m
@@ -612,7 +640,12 @@ class NewsGenerator:
             **row,
             "team_a": {"id": row["ta_id"], "name": row["ta_name"], "logo_url": row["ta_logo"]},
             "team_b": {"id": row["tb_id"], "name": row["tb_name"], "logo_url": row["tb_logo"]},
-            "tournament": {"id": row["tn_id"], "name": row["tn_name"], "tier": row["tn_tier"]},
+            "tournament": {
+                "id": row["tn_id"],
+                "name": tam_turnuva_adi(row.get("tn_league"), row.get("tn_event"), row["tn_name"]),
+                "stage": row["tn_name"],
+                "tier": row["tn_tier"],
+            },
             "game": {"slug": row["game_slug"]},
         }
 
@@ -785,6 +818,7 @@ class NewsGenerator:
                         t_a.id AS ta_id, t_a.name AS ta_name, t_a.logo_url AS ta_logo,
                         t_b.id AS tb_id, t_b.name AS tb_name, t_b.logo_url AS tb_logo,
                         tn.id AS tn_id, tn.name AS tn_name, tn.tier AS tn_tier,
+                        tn.league_name AS tn_league, tn.event_name AS tn_event,
                         g.slug AS game_slug
                     FROM matches m
                     LEFT JOIN teams       t_a ON t_a.id = m.team_a_id
@@ -1018,6 +1052,7 @@ class NewsGenerator:
                 cur.execute(
                     """
                     SELECT tn.id, tn.name, tn.tier, g.slug AS game_slug,
+                           tn.league_name, tn.event_name,
                            COUNT(m.id) AS finished_count, MAX(m.scheduled_at) AS last_match
                     FROM tournaments tn
                     JOIN games g ON g.id = tn.game_id
@@ -1028,7 +1063,7 @@ class NewsGenerator:
                           SELECT 1 FROM news_articles na
                           WHERE na.tournament_id = tn.id AND na.content_type = 'tournament'
                       )
-                    GROUP BY tn.id, tn.name, tn.tier, g.slug
+                    GROUP BY tn.id, tn.name, tn.tier, g.slug, tn.league_name, tn.event_name
                     HAVING COUNT(m.id) >= 4
                        AND MAX(m.scheduled_at) >= %s AND MAX(m.scheduled_at) < NOW()
                     ORDER BY last_match DESC
@@ -1037,7 +1072,12 @@ class NewsGenerator:
                     (since, limit),
                 )
                 cols = [d[0] for d in cur.description]
-                return [dict(zip(cols, row)) for row in cur.fetchall()]
+                rows = [dict(zip(cols, row)) for row in cur.fetchall()]
+        # name = tam ad (haber ve kayıt için), stage = ham sahne (final mi grup mu tespiti için)
+        for r in rows:
+            r["stage"] = r["name"]
+            r["name"] = tam_turnuva_adi(r.pop("league_name"), r.pop("event_name"), r["stage"])
+        return rows
 
     def _fetch_tournament_context(self, tournament_id) -> dict:
         """Bitmiş maçlardan şampiyon + puan durumu + öne çıkan sonuçları çıkarır."""

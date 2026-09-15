@@ -64,7 +64,7 @@ def gunun_maclari(gun):
       SELECT m.id, ta.id, ta.name, ta.acronym, ta.logo_url,
                     tb.id, tb.name, tb.acronym, tb.logo_url,
              m.prediction_team_a, m.prediction_team_b, m.scheduled_at,
-             t.name, t.tier, g.slug, g.name
+             t.name, t.tier, g.slug, g.name, t.league_name, t.event_name
       FROM matches m
       JOIN tournaments t ON t.id = m.tournament_id
       JOIN games g       ON g.id = m.game_id
@@ -86,9 +86,26 @@ def gunun_maclari(gun):
             'a_id': r[1], 'a': r[2], 'a_ac': r[3], 'a_logo': r[4],
             'b_id': r[5], 'b': r[6], 'b_ac': r[7], 'b_logo': r[8],
             'pa': float(r[9]), 'pb': float(r[10]), 'saat': r[11], 'tur': r[12],
+            'etkinlik': etkinlik_adi(r[16], r[17]),
             'oyun': etiket, 'ikon': IKON.get(etiket),
         })
     return gruplar
+
+def etkinlik_adi(lig, etkinlik):
+    """PandaScore adı parçalı verir: lig (VCT) + etkinlik (Champions 2026) + sahne
+    (Group C). t.name yalnız sahnedir ve tek başına bir şey anlatmaz. Site
+    middleware'indeki turnuvaAdi() ile aynı birleştirme: etkinlik ligle
+    başlıyorsa lig tekrar edilmez."""
+    if not etkinlik:
+        return None
+    if lig and not etkinlik.casefold().startswith(lig.casefold()):
+        return f'{lig} {etkinlik}'
+    return etkinlik
+
+def tek_etkinlik(maclar):
+    """Videodaki bütün maçlar aynı etkinliktense onun adı, değilse None."""
+    adlar = {m['etkinlik'] for m in maclar}
+    return adlar.pop() if len(adlar) == 1 else None
 
 def sonraki_sa_gunu(gun, ufuk=14):
     """Maçsız günün e-postası için: `gun`den sonraki ilk S/A maç günü ve maç sayısı.
@@ -149,7 +166,10 @@ def logo(tid, url, ad, ac, box):
             if alf > 40: ts += sv; tv += vv; say += 1
         doygunluk = (ts/say) if say else 255
         parlaklik = (tv/say) if say else 255
-        if doygunluk < 60 and parlaklik < 95:
+        # elle/ klasöründeki logolar koyu zemin için ELLE hazırlanmıştır → dokunma.
+        # (15 Eyl: EDward Gaming'in siyah daire + beyaz yazılı logosu bu kuralla
+        # düz beyaz bir diske dönüşüyordu.)
+        if yol != elle and doygunluk < 60 and parlaklik < 95:
             im = Image.merge('RGBA', (Image.new('L', im.size, 236),)*3 + (a,))
         # Kaynak cizim hedef boyuttan kucukse buyutulur; basit sekiller buna
         # iyi dayanir, detayli/yazili logolar bulaniklasir -> log'a dusur ki
@@ -208,7 +228,15 @@ def kare(oyun, renk, maclar, gun, ilerleme=1.0, glow=1.0, zoom=1.0):
         gi = gi.resize((int(gi.width*72/gi.height), 72), Image.LANCZOS)
         c.paste(gi, ((W-gi.width)//2, top_y), gi)
     ort(d, top_y+96,  'GÜNÜN MAÇLARI', _f('Inter-Bold.ttf', 52), sol(INK, 1))
-    ort(d, top_y+166, f'{oyun} · {gun.day} {AY[gun.month]}', f_eye, sol(R, 1))
+    # Tüm maçlar tek etkinliktense (ör. VCT Champions 2026) oyun adı yerine o yazılır:
+    # büyük turnuva en güçlü kanca, eskiden videonun hiçbir yerinde geçmiyordu (15 Eyl).
+    alt_baslik = f'{oyun} · {gun.day} {AY[gun.month]}'
+    etk = tek_etkinlik(maclar)
+    if etk:
+        aday = f'{etk} · {gun.day} {AY[gun.month]}'
+        if d.textlength(aday, font=f_eye) <= W - 120:
+            alt_baslik = aday
+    ort(d, top_y+166, alt_baslik, f_eye, sol(R, 1))
     # Fextopus imzasi: maskot ikonu + "Fextopus'un tahminleri"
     # (Ahtapot emojisi DEGIL -- markanin kendi maskot gorseli kullanilir.)
     imza = "Fextopus'un tahminleri"
@@ -333,14 +361,22 @@ def paylasim_metni(oyun, maclar, gun):
         ad = turk['a'] if _turk_mu(turk['a']) else turk['b']
         rakip = turk['b'] if ad == turk['a'] else turk['a']
         saat = (turk['saat'] + timedelta(hours=3)).strftime('%H:%M')
-        kanca = f"{ad} bugün {saat}'te {rakip} karşısında."
+        pa = round(turk['pa']*100)
+        p_turk = pa if ad == turk['a'] else 100 - pa
+        kanca = f"{ad} bugün {saat}'te {rakip} karşısında. Fextopus'un tahmini: {ad} %{p_turk}."
     elif favp(en_emin) >= 72:
         ad, p = taraflar(en_emin)
         kanca = f"Fextopus'un bugün en emin olduğu maç: {ad} %{p}."
     else:
-        p = favp(en_dengeli)
+        # Yüzdeler takımların YAZILDIĞI SIRAYLA: önceden favorinin oranı hep önce
+        # yazılıyordu → "Team Liquid - Paper Rex (%57 - %43)" (favori Paper Rex'ti).
+        pa = round(en_dengeli['pa']*100)
         kanca = (f'Bugünün en dengeli maçı: {en_dengeli["a"]} - {en_dengeli["b"]} '
-                 f'(%{p} - %{100-p}). Fextopus bile kararsız.')
+                 f'(%{pa} - %{100-pa}). Fextopus bile kararsız.')
+
+    etk = tek_etkinlik(maclar)
+    ozet = (f"{etk}: {n} maç. Tahminler Fextopus'tan — " if etk
+            else f"{n} maç, hepsi S/A seviye. Tahminler Fextopus'tan — ")
 
     etiket = {'VALORANT': '#valorant', 'COUNTER-STRIKE 2': '#cs2',
               'LEAGUE OF LEGENDS': '#leagueoflegends', 'DOTA 2': '#dota2'}
@@ -348,8 +384,7 @@ def paylasim_metni(oyun, maclar, gun):
 
     return '\n'.join([
         kanca, '',
-        f"{n} maç, hepsi S/A seviye. Tahminler Fextopus'tan — "
-        'en güvendiği maçlarda %75 isabetli.', '',
+        ozet + 'en güvendiği maçlarda %75 isabetli.', '',
         "Tümü fextesports.com'da, link profilde.", '',
         ' '.join(tags[:4]),
     ])

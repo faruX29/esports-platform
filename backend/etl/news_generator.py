@@ -717,7 +717,9 @@ class NewsGenerator:
                     ON CONFLICT (match_id) DO UPDATE SET
                         title = EXCLUDED.title, summary = EXCLUDED.summary,
                         content = EXCLUDED.content, variant = EXCLUDED.variant,
-                        hero_score = EXCLUDED.hero_score, created_at = now()
+                        hero_score = EXCLUDED.hero_score, created_at = now(),
+                        -- Önizleme eski adla ("Group A") yazılmış olabilir (15 Eyl öncesi)
+                        tournament_name = EXCLUDED.tournament_name
                     WHERE news_articles.variant = 'preview'
                     """,
                     (

@@ -194,6 +194,7 @@ f_eye  = _f('Inter-SemiBold.ttf', 34)
 f_date = _f('Inter-Regular.ttf', 30)
 f_tag  = _f('Inter-Regular.ttf', 30)
 f_foot = _f('Inter-Regular.ttf', 27)
+f_site = _f('Inter-SemiBold.ttf', 34)
 
 def sol(renk, a):
     a = max(0.0, min(1.0, a))
@@ -205,7 +206,7 @@ def ort(d, y, t, f, c):
 MARKA = Image.open(YOL('assets', 'logo-yatay-seffaf.png')).convert('RGBA')
 MARKA = MARKA.resize((int(MARKA.width*74/MARKA.height), 74), Image.LANCZOS)
 
-def kare(oyun, renk, maclar, gun, ilerleme=1.0, glow=1.0, zoom=1.0):
+def kare(oyun, renk, maclar, gun, ilerleme=1.0, glow=1.0, zoom=1.0, parca=None):
     """ilerleme 0..1 — satırlar sırayla belirir, yüzdeler sayarak dolar."""
     c = Image.new('RGB', (W, H), BG)
     if glow > 0:
@@ -236,6 +237,8 @@ def kare(oyun, renk, maclar, gun, ilerleme=1.0, glow=1.0, zoom=1.0):
         aday = f'{etk} · {gun.day} {AY[gun.month]}'
         if d.textlength(aday, font=f_eye) <= W - 120:
             alt_baslik = aday
+    if parca:  # aynı günün birden çok parçası: "1/2"
+        alt_baslik = f'{alt_baslik} · {parca}'
     ort(d, top_y+166, alt_baslik, f_eye, sol(R, 1))
     # Fextopus imzasi: maskot ikonu + "Fextopus'un tahminleri"
     # (Ahtapot emojisi DEGIL -- markanin kendi maskot gorseli kullanilir.)
@@ -320,8 +323,11 @@ def kare(oyun, renk, maclar, gun, ilerleme=1.0, glow=1.0, zoom=1.0):
 
     d.line([(110, 1710), (W-110, 1710)], fill=(30,37,52), width=2)
     c.paste(MARKA, (110, 1748), MARKA)
-    t = '@fextesports'
-    d.text((W-110-d.textlength(t, font=f_tag), 1770), t, font=f_tag, fill=FAINT)
+    # Site adresi + hesap adı (19 Eyl, kurucu kararı): TikTok açıklama ve bio
+    # linklerini tıklatmıyor; izleyenin siteye ulaşmasının tek yolu adresi görmek.
+    site, hesap = 'fextesports.com', '@fextesports'
+    d.text((W-110-d.textlength(site, font=f_site), 1744), site, font=f_site, fill=sol(INK, .92))
+    d.text((W-110-d.textlength(hesap, font=f_tag), 1790), hesap, font=f_tag, fill=FAINT)
 
     if zoom != 1.0:
         nw, nh = int(W*zoom), int(H*zoom)
@@ -389,7 +395,7 @@ def paylasim_metni(oyun, maclar, gun):
         ' '.join(tags[:4]),
     ])
 
-def uret(oyun, renk, maclar, gun, dosya):
+def uret(oyun, renk, maclar, gun, dosya, parca=None):
     exe = ffmpeg_yolu()
     pr = subprocess.Popen([exe,'-y','-f','rawvideo','-pix_fmt','rgb24','-s',f'{W}x{H}','-r',str(FPS),
         '-i','-','-f','lavfi','-i','anullsrc=r=44100:cl=stereo','-shortest',
@@ -399,7 +405,8 @@ def uret(oyun, renk, maclar, gun, dosya):
     for i in range(N):
         t = i/(N-1)
         pr.stdin.write(kare(oyun, renk, maclar, gun,
-                            ilerleme=min(1.0, t/0.62), glow=1.0, zoom=1.0+0.03*t).tobytes())
+                            ilerleme=min(1.0, t/0.62), glow=1.0, zoom=1.0+0.03*t,
+                            parca=parca).tobytes())
     pr.stdin.close(); pr.wait()
     # Videonun yanina hazir paylasim metni
     with open(os.path.splitext(dosya)[0] + '.txt', 'w', encoding='utf-8') as f:
@@ -410,6 +417,68 @@ def uret(oyun, renk, maclar, gun, dosya):
 # Altında kalanlar tek bir "GÜNÜN MAÇLARI" videosunda birleştirilir —
 # 1-2 maçlık ayrı videolar ekranın yarısını boş bırakıyordu.
 TEK_BASINA_ESIK = 4
+# Bir videoya sığan en fazla satır: alan 1096px, satır en az 158px → 6.
+# 19 Eyl'e kadar sınır YOKTU: 11 maçlı günlerde son satırlar ekran dışına taşıyor,
+# 9. satır alt bilgi logosunun üstüne biniyordu (2 Ağustos LoL, 11 maç).
+MAKS_SATIR = 6
+KISA_AD = {'VALORANT': 'VALORANT', 'COUNTER-STRIKE 2': 'CS2', 'LEAGUE OF LEGENDS': 'LoL', 'DOTA 2': 'DOTA 2'}
+
+def _saat(m):
+    return m['saat']
+
+def parcala(maclar, maks=MAKS_SATIR):
+    """Saat sırasıyla DENGELİ parçalar: 11 → 6+5, 7 → 4+3 (6+1 değil)."""
+    maclar = sorted(maclar, key=_saat)
+    adet = -(-len(maclar) // maks)
+    boy = -(-len(maclar) // adet)
+    return [maclar[i:i + boy] for i in range(0, len(maclar), boy)]
+
+def video_plani(gruplar):
+    """Günün maçlarını videolara böler (kurucu kararı, 19 Eyl).
+
+    - Toplam ≤ MAKS_SATIR → TEK video (4+1 gibi günler artık iki video olmaz).
+    - Fazlaysa ≥ TEK_BASINA_ESIK maçlı her oyun kendi videosu (gerekirse dengeli
+      parçalar), kalanlar birleşik videoda.
+    - Tek maçlık video çıkmaz: tek maç artarsa yeri olan videoya eklenir.
+    Dönen liste: [(baslik, renk, maclar, dosya_eki, parca)]
+    """
+    renkler = {oyun: renk for (oyun, renk) in gruplar}
+    tum = [m for v in gruplar.values() for m in v]
+    if len(tum) <= MAKS_SATIR:
+        videolar = [sorted(tum, key=_saat)]
+    else:
+        videolar, kalan = [], []
+        for maclar in gruplar.values():
+            if len(maclar) >= TEK_BASINA_ESIK:
+                videolar += parcala(maclar)
+            else:
+                kalan += maclar
+        if len(kalan) == 1:
+            yer = min((p for p in videolar if len(p) < MAKS_SATIR), key=len, default=None)
+            if yer is not None:
+                yer.append(kalan.pop())
+                yer.sort(key=_saat)
+            else:  # bütün videolar dolu → birinden bir maç al, kalan iki maç olsun
+                kalan.append(max(videolar, key=len).pop())
+        if kalan:
+            videolar += parcala(kalan)
+    videolar.sort(key=lambda p: _saat(p[0]))
+
+    plan = []
+    for maclar in videolar:
+        oyunlar = sorted({m['oyun'] for m in maclar})
+        if len(oyunlar) == 1:
+            baslik, renk, ek = oyunlar[0], renkler[oyunlar[0]], IKON.get(oyunlar[0], 'x')
+        else:
+            baslik, renk, ek = ' · '.join(KISA_AD.get(o, o) for o in oyunlar), '#a78bfa', 'gunun-maclari'
+        plan.append([baslik, renk, maclar, ek, None])
+    # Aynı dosya adına düşen parçaları numarala: "1/2", "2/2"
+    for ek in {p[3] for p in plan}:
+        ayni = [p for p in plan if p[3] == ek]
+        if len(ayni) > 1:
+            for i, p in enumerate(ayni, 1):
+                p[3], p[4] = f'{ek}-{i}', f'{i}/{len(ayni)}'
+    return [tuple(p) for p in plan]
 
 if __name__ == '__main__':
     gun = datetime.strptime(sys.argv[1], '%Y-%m-%d').date() if len(sys.argv) > 1 else datetime.now().date()
@@ -432,21 +501,10 @@ if __name__ == '__main__':
         sys.exit(0)
     os.makedirs(CIKTI, exist_ok=True)
 
-    tekil  = {k: v for k, v in gruplar.items() if len(v) >= TEK_BASINA_ESIK}
-    kalan  = [m for k, v in gruplar.items() if len(v) < TEK_BASINA_ESIK for m in v]
-
+    plan = video_plani(gruplar)
     toplam = sum(len(v) for v in gruplar.values())
-    print(f'{gun} | {toplam} mac, {len(gruplar)} oyun '
-          f'-> {len(tekil)} ayri video' + (f' + 1 birlesik ({len(kalan)} mac)' if kalan else ''))
+    print(f'{gun} | {toplam} mac, {len(gruplar)} oyun -> {len(plan)} video: '
+          + ', '.join(f'{b} ({len(m)})' for b, _, m, _, _ in plan))
 
-    for (oyun, renk), maclar in tekil.items():
-        uret(oyun, renk, maclar, gun, os.path.join(CIKTI, f"{gun}-{IKON.get(oyun,'x')}.mp4"))
-
-    if kalan:
-        kalan.sort(key=lambda m: m['saat'])
-        oyunlar = sorted({m['oyun'] for m in kalan})
-        # Tek oyun kaldıysa adını yaz, birkaçı varsa hepsini ayır
-        baslik = oyunlar[0] if len(oyunlar) == 1 else ' · '.join(
-            {'VALORANT':'VALORANT','COUNTER-STRIKE 2':'CS2','LEAGUE OF LEGENDS':'LoL','DOTA 2':'DOTA 2'}.get(o,o)
-            for o in oyunlar)
-        uret(baslik, '#a78bfa', kalan, gun, os.path.join(CIKTI, f'{gun}-gunun-maclari.mp4'))
+    for baslik, renk, maclar, ek, parca in plan:
+        uret(baslik, renk, maclar, gun, os.path.join(CIKTI, f'{gun}-{ek}.mp4'), parca=parca)

@@ -395,7 +395,43 @@ class MatchSyncer:
 
                 conn.commit()
 
+                try:
+                    self._refresh_team_countries(cur)
+                    conn.commit()
+                except psycopg.Error as e:
+                    # Ülke kodu yalnız SEO noindex kararını besliyor; maç senkronunu düşürmesin.
+                    conn.rollback()
+                    logger.warning(f"⚠️  Takım ülke kodu güncellenemedi: {e}")
+
         return synced_count
+
+    def _refresh_team_countries(self, cur, days: int = 3):
+        """teams.country_code'u maçların ham rakip verisinden (opponent.location) doldurur.
+
+        Neden: botlara giden maç sayfasında C/D seviye maçlar noindex, AMA Türk takımı
+        oynuyorsa dizinde kalır (kurucu kararı, 19 Eyl). PandaScore ülke bilgisini
+        takım objesinde değil yalnız maçın opponents listesinde veriyor.
+        Tam doldurma 19 Eyl'de bir kez yapıldı; burada yalnız son `days` günün maçları.
+        """
+        cur.execute(
+            """
+            UPDATE teams t SET country_code = x.loc
+            FROM (
+              SELECT DISTINCT ON (tid) tid, loc FROM (
+                SELECT (o->'opponent'->>'id')::bigint AS tid,
+                       o->'opponent'->>'location'   AS loc, m.scheduled_at
+                FROM matches m,
+                     jsonb_array_elements(COALESCE(m.raw_data->'opponents', '[]'::jsonb)) o
+                WHERE m.updated_at > NOW() - make_interval(days => %s)
+                  AND COALESCE(o->'opponent'->>'location', '') <> ''
+              ) s ORDER BY tid, scheduled_at DESC NULLS LAST
+            ) x
+            WHERE t.id = x.tid AND t.country_code IS DISTINCT FROM x.loc
+            """,
+            (days,),
+        )
+        if cur.rowcount:
+            logger.info(f"🌍 {cur.rowcount} takımın ülke kodu güncellendi")
 
     def _upsert_with_retry(self, cleaned, attempts: int = 4):
         """Lean upsert — geçici DB bağlantı düşmelerinde taze bağlantıyla retry."""

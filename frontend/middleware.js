@@ -205,8 +205,9 @@ function eventCommon(url, startDate, desc, img) {
   }
 }
 
-function htmlDoc({ title, desc, url, img, type = 'article', jsonLd = null, body = '' }) {
+function htmlDoc({ title, desc, url, img, type = 'article', jsonLd = null, body = '', robots = '' }) {
   const t = esc(title), d = esc(desc), u = esc(url), i = esc(img)
+  const robotsTag = robots ? `<meta name="robots" content="${esc(robots)}"/>\n` : ''
   const imgTags = i ? `<meta property="og:image" content="${i}"/>
 <meta property="og:image:width" content="1200"/>
 <meta property="og:image:height" content="630"/>
@@ -218,7 +219,7 @@ function htmlDoc({ title, desc, url, img, type = 'article', jsonLd = null, body 
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>${t}</title>
 <meta name="description" content="${d}"/>
-<link rel="canonical" href="${u}"/>
+${robotsTag}<link rel="canonical" href="${u}"/>
 <meta property="og:type" content="${type}"/>
 <meta property="og:site_name" content="feXt"/>
 <meta property="og:title" content="${t}"/>
@@ -243,12 +244,28 @@ function matchListHtml(origin, rows, heading) {
   return `<h2>${esc(heading)}</h2><ul>${items}</ul>`
 }
 
+// Hangi maç sayfaları Google dizinine GİRMESİN (19 Eyl, GSC kopya uyarıları).
+// Aynı iki takım art arda iki küçük elemede oynayınca (Sinners–Nuclear TigeRES,
+// 10 ve 11 Eyl) sayfalar neredeyse aynı çıkıyor; Google birini "kopya" sayıyordu.
+// Kural site haritasıyla tutarlı (orada zaten yalnız S/A var):
+//   iptal edilen maç → noindex
+//   C/D/bilinmeyen seviye → noindex, AMA Türk takımı oynuyorsa dizinde kalır
+//   (kurucu kararı: Türkçe sitenin ayrıştığı yer Türk takımlarının küçük maçları)
+// Sayfalar silinmez, kullanıcıya açık kalır; `follow` ile linkler takip edilir.
+function macDizinDisi(row) {
+  if (row.status === 'canceled') return true
+  const tier = String(row.tournament?.tier || '').trim().toUpperCase().charAt(0)
+  if (['S', 'A', 'B'].includes(tier)) return false
+  const turk = row.team_a?.country_code === 'TR' || row.team_b?.country_code === 'TR'
+  return !turk
+}
+
 async function buildForMatch(id, origin, url) {
   const sel =
     'team_a_score,team_b_score,scheduled_at,status,prediction_team_a,prediction_team_b,' +
     'team_a_id,team_b_id,tournament_id,' +
-    'team_a:teams!matches_team_a_id_fkey(name,logo_url),' +
-    'team_b:teams!matches_team_b_id_fkey(name,logo_url),' +
+    'team_a:teams!matches_team_a_id_fkey(name,logo_url,country_code),' +
+    'team_b:teams!matches_team_b_id_fkey(name,logo_url,country_code),' +
     'tournament:tournaments(name,tier,league_name,event_name,display_name),game:games(slug,name)'
   const row = await sbFetch(`matches?id=eq.${encodeURIComponent(id)}&select=${encodeURIComponent(sel)}&limit=1`)
   if (!row) return null
@@ -330,7 +347,7 @@ async function buildForMatch(id, origin, url) {
     (satirlar.length ? `<h2>İlgili Sayfalar</h2><ul>${satirlar.join('')}</ul>` : '') +
     siteNavHtml(origin)
 
-  return htmlDoc({ title, desc, url, img, jsonLd, body })
+  return htmlDoc({ title, desc, url, img, jsonLd, body, robots: macDizinDisi(row) ? 'noindex, follow' : '' })
 }
 
 async function buildForNews(ref, origin, url) {

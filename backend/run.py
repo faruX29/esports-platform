@@ -207,6 +207,18 @@ def main():
         action='store_true',
         help='Roster Integrity Flush: kadroda olmayan oyuncuların team_id\'sini NULL yap',
     )
+    parser.add_argument(
+        '--roster-transfers',
+        action='store_true',
+        help='Önemli takımların (S/A/B + TR) kadrolarını güncelle, kadro farkından '
+             'transfer kaydı üret (Liquipedia 21 Eyl 2026 kapandı; yeni transfer kaynağı)',
+    )
+    parser.add_argument(
+        '--roster-baseline',
+        action='store_true',
+        help='--roster-transfers ile: TABAN ÇİZGİSİ, kadroları güncelle ama transfer YAZMA '
+             '(ilk koşu; Liquipedia/PandaScore farkları transfer değil)',
+    )
 
     parser.add_argument(
         '--accuracy-check',
@@ -362,6 +374,7 @@ def main():
         args.generate_previews,
         args.generate_tournament_recaps,
         args.liquipedia_enrich,
+        args.roster_transfers,
     ])
     should_sync_matches = has_non_enrichment_work or not enrichment_only
 
@@ -438,6 +451,16 @@ def main():
         )
         logger.info(f"✅ {result['players_upserted']} oyuncu | "
               f"{result['teams_processed']} takım")
+        logger.info("=" * 60)
+
+    # ── --roster-transfers: kadro güncelle + kadro farkından transfer ──────────
+    if args.roster_transfers:
+        logger.info("\n" + "=" * 60)
+        logger.info("🔁 KADRO + TRANSFER TESPİTİ (PandaScore kadro farkı)")
+        logger.info("=" * 60)
+        sonuc = PlayerStatsSyncer().sync_notable_rosters(kaydet=not args.roster_baseline)
+        logger.info(f"✅ {sonuc['takim']} takım | {sonuc['transfer']} transfer | "
+                    f"{sonuc['serbest']} serbest | {sonuc['coklu_oyuncu']} çoklu-takım oyuncu atlandı")
         logger.info("=" * 60)
 
     # ── --missing-rosters: DB'deki tüm eksik kadrolar ─────────────────────────

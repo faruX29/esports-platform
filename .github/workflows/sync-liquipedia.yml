@@ -38,9 +38,26 @@ jobs:
       # Liquipedia okul-projesi anahtarını yenilemedi; 21 Eylül'de kapatacağımızı
       # yazılı olarak bildirdik ve onayladılar. Mevcut veri sitede KALIR (izinli,
       # atıfla). Kod depoda duruyor; ücretli bir planla geri açılırsa buraya iki
-      # adım geri eklenir. Aşağıdaki haber adımı kuyrukta kalan transferleri
-      # işlemeye devam eder, yeni transfer girmez.
+      # adım geri eklenir.
+      #
+      # Transferin YENİ kaynağı (2026-09-21): PandaScore kadro farkı. S/A/B seviye +
+      # Türk takımlarının (~230) kadroları güncellenir; bir oyuncu takım değiştirdiyse
+      # roster_changes'e kayıt düşer (data_source='pandascore_roster'). Aynı koşuda
+      # birden çok takımda görünen oyuncu için kayıt yazılmaz (sahte gidip-gelme).
+      # İlk koşu 21 Eyl'de elle --roster-baseline ile yapıldı (Liquipedia/PandaScore
+      # farkları transfer sayılmasın diye).
+      # ÖLÇÜLDÜ: 226 takım ≈ 4 dk (0,4 sn/istek tempo). Sınır ~3,5 katı.
+      - name: Kadro guncelle + transfer tespiti (PandaScore kadro farki)
+        timeout-minutes: 15
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
+        run: python run.py --roster-transfers
+
       - name: Generate transfer news (LLM, bekleyen roster_changes)
+        # Kadro adımı patlasa da kuyruktaki transferler habere dönüşsün;
+        # iş yine kırmızı biter ve alarm gider.
+        if: ${{ !cancelled() }}
         timeout-minutes: 25
         continue-on-error: true
         env:

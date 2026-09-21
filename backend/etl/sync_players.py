@@ -689,19 +689,25 @@ class PlayerStatsSyncer:
 
     def _fetch_and_upsert_team_players(self, team_id, team_name, conn):
         """
-        PandaScore /teams/{team_id} endpoint'ini çağırır, oyuncuları players
-        tablosuna upsert eder.
+        PandaScore /teams/{team_id} kadrosunu çekip players tablosuna yazar.
+        (Eski davranış korunur; çekme ve yazma 21 Eyl'de ikiye bölündü ki
+        sync_notable_rosters önce TÜM kadroları toplayıp sonra yazabilsin.)
 
-        Exponential backoff: 429 → 10s, 20s, 40s (max 3 deneme)
-        image_url dahil tüm alanlar güncellenir.
+        Returns: {'upserted', 'flushed'} | None (hata)
+        """
+        api_players = self._fetch_team_roster(team_id, team_name)
+        if api_players is None:
+            return None
+        if not api_players:
+            return {'upserted': 0, 'flushed': 0}   # Boş kadro (bant dışı takım vb.)
+        return self._upsert_team_roster(team_id, team_name, api_players, conn)
 
-        Args:
-            team_id  : PandaScore takım ID'si (int)
-            team_name: Log için takım adı (str)
-            conn     : Aktif DB bağlantısı
+    def _fetch_team_roster(self, team_id, team_name):
+        """
+        PandaScore /teams/{team_id} → oyuncu listesi.
+        Exponential backoff: 429 → 10s, 20s, 40s (max 3 deneme).
 
-        Returns:
-            int | None  →  kaydedilen oyuncu sayısı; hata/boş ise None
+        Returns: list (boş olabilir) | None (404 / hata / denemeler tükendi)
         """
         url = f"{self.client.base_url}/teams/{team_id}"
         max_retries = 3
@@ -738,64 +744,187 @@ class PlayerStatsSyncer:
                 logger.warning(f"    ⚠️  {team_name}: API {resp.status_code}")
                 return None
 
-            # ── Başarılı yanıt ──────────────────────────────────────────────
-            api_players = resp.json().get('players', [])
-            if not api_players:
-                return {'upserted': 0, 'flushed': 0}   # Boş kadro (bant dışı takım vb.)
+            return resp.json().get('players', []) or []
 
-            api_ps_ids = [p['id'] for p in api_players]
-
-            with conn.cursor() as cur:
-                for p in api_players:
-                    parts     = [p.get('first_name', ''), p.get('last_name', '')]
-                    real_name = ' '.join(x for x in parts if x).strip() or None
-
-                    cur.execute("""
-                        INSERT INTO players
-                          (id, nickname, real_name, role, image_url,
-                           pandascore_id, team_pandascore_id)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (pandascore_id)
-                          WHERE pandascore_id IS NOT NULL
-                        DO UPDATE SET
-                          nickname           = EXCLUDED.nickname,
-                          real_name          = EXCLUDED.real_name,
-                          role               = EXCLUDED.role,
-                          image_url          = EXCLUDED.image_url,
-                          team_pandascore_id = EXCLUDED.team_pandascore_id
-                    """, (
-                        _player_uuid(p['id']),
-                        p.get('name') or 'Unknown',
-                        real_name,
-                        p.get('role'),
-                        p.get('image_url'),   # ← mutlaka çekiliyor
-                        p['id'],
-                        team_id,
-                    ))
-
-                # ── Roster Flush ──────────────────────────────────────────────
-                # Bu takımda kayıtlı ama güncel API kadrosunda olmayan oyuncuların
-                # team_pandascore_id'sini NULL'a çek (serbest oyuncu).
-                # psycopg3'te list → bigint[] array olarak geçirilir; != ALL(...) kullanılır.
-                cur.execute("""
-                    UPDATE players
-                    SET team_pandascore_id = NULL
-                    WHERE team_pandascore_id = %s
-                      AND pandascore_id IS NOT NULL
-                      AND pandascore_id != ALL(%s::bigint[])
-                """, (team_id, api_ps_ids))
-                flushed = cur.rowcount
-
-            conn.commit()
-
-            if flushed > 0:
-                logger.info(f"    🔄 {team_name}: {flushed} eski oyuncu serbest bırakıldı (kadro dışı)")
-
-            return {'upserted': len(api_players), 'flushed': flushed}
-
-        # Tüm denemeler başarısız
         logger.error(f"    ❌ {team_name}: {max_retries} denemede başarılı olunamadı")
         return None
+
+    def _upsert_team_roster(self, team_id, team_name, api_players, conn, transfer=None):
+        """
+        Oyuncuları upsert eder, kadroda olmayanları serbest bırakır (NULL).
+
+        transfer: None → transfer kaydı yok (eski davranış).
+                  dict → PandaScore kadro farkından roster_changes kaydı yazılır:
+                    {'coklu': set(pandascore_id)  — bu koşuda birden çok takımda
+                                                    görünen oyuncular (kayıt YOK),
+                     'oyun': 'valorant' | ...,
+                     'bugun': date}
+        Returns: {'upserted', 'flushed', 'transfers'}
+        """
+        api_ps_ids = [p['id'] for p in api_players]
+        transfers = 0
+
+        with conn.cursor() as cur:
+            onceki = {}
+            if transfer is not None:
+                # Upsert'ten ÖNCE eski takımı oku. Kadrodan düşmüş (NULL) oyuncu için
+                # son takım extra_metadata.son_takim'de saklanır (aşağıdaki flush).
+                cur.execute("""
+                    SELECT pandascore_id, id,
+                           COALESCE(team_pandascore_id,
+                                    NULLIF(extra_metadata->>'son_takim', '')::bigint)
+                    FROM players
+                    WHERE pandascore_id = ANY(%s::bigint[])
+                """, (api_ps_ids,))
+                onceki = {r[0]: (r[1], r[2]) for r in cur.fetchall()}
+
+            for p in api_players:
+                parts     = [p.get('first_name', ''), p.get('last_name', '')]
+                real_name = ' '.join(x for x in parts if x).strip() or None
+
+                cur.execute("""
+                    INSERT INTO players
+                      (id, nickname, real_name, role, image_url,
+                       pandascore_id, team_pandascore_id)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (pandascore_id)
+                      WHERE pandascore_id IS NOT NULL
+                    DO UPDATE SET
+                      nickname           = EXCLUDED.nickname,
+                      real_name          = EXCLUDED.real_name,
+                      role               = EXCLUDED.role,
+                      image_url          = EXCLUDED.image_url,
+                      team_pandascore_id = EXCLUDED.team_pandascore_id
+                """, (
+                    _player_uuid(p['id']),
+                    p.get('name') or 'Unknown',
+                    real_name,
+                    p.get('role'),
+                    p.get('image_url'),   # ← mutlaka çekiliyor
+                    p['id'],
+                    team_id,
+                ))
+
+                if transfer is None or p['id'] in transfer['coklu']:
+                    continue
+                player_uuid, eski_takim = onceki.get(p['id'], (None, None))
+                if not player_uuid or not eski_takim or eski_takim == team_id:
+                    continue   # yeni oyuncu / takımı değişmemiş
+                transfers += self._transfer_yaz(
+                    cur, player_uuid, p, eski_takim, team_id, team_name, transfer)
+
+            # ── Roster Flush ──────────────────────────────────────────────
+            # Bu takımda kayıtlı ama güncel API kadrosunda olmayan oyuncuların
+            # team_pandascore_id'sini NULL'a çek (serbest oyuncu). Son takım
+            # extra_metadata.son_takim'e yazılır: oyuncu günler sonra başka bir
+            # takımda belirirse transferin KAYNAĞI kaybolmasın (21 Eyl).
+            # psycopg3'te list → bigint[] array olarak geçirilir; != ALL(...) kullanılır.
+            cur.execute("""
+                UPDATE players
+                SET team_pandascore_id = NULL,
+                    extra_metadata = COALESCE(extra_metadata, '{}'::jsonb)
+                                     || jsonb_build_object('son_takim', %s::bigint)
+                WHERE team_pandascore_id = %s
+                  AND pandascore_id IS NOT NULL
+                  AND pandascore_id != ALL(%s::bigint[])
+            """, (team_id, team_id, api_ps_ids))
+            flushed = cur.rowcount
+
+        conn.commit()
+
+        if flushed > 0:
+            logger.info(f"    🔄 {team_name}: {flushed} eski oyuncu serbest bırakıldı (kadro dışı)")
+
+        return {'upserted': len(api_players), 'flushed': flushed, 'transfers': transfers}
+
+    def _transfer_yaz(self, cur, player_uuid, p, eski_takim, yeni_takim, yeni_ad, transfer):
+        """PandaScore kadro farkından tek roster_changes kaydı. Aynı gün tekrarı yazmaz."""
+        cur.execute("SELECT name FROM teams WHERE id = %s", (eski_takim,))
+        r = cur.fetchone()
+        eski_ad = r[0] if r else None
+        bugun = transfer['bugun']
+        payload = {
+            'old_team': eski_ad, 'new_team': yeni_ad, 'player': p.get('name'),
+            'role': p.get('role'), 'game': transfer.get('oyun'),
+            'kaynak': 'pandascore_kadro_farki',
+        }
+        cur.execute("""
+            INSERT INTO roster_changes
+              (player_id, source_team_id, target_team_id, transfer_date,
+               transfer_type, data_source, raw_payload, idempotency_hash)
+            VALUES (%s, %s, %s, %s, 'permanent', 'pandascore_roster', %s::jsonb,
+                    md5(%s))
+            ON CONFLICT (idempotency_hash) DO NOTHING
+        """, (
+            player_uuid, eski_takim, yeni_takim, bugun, json.dumps(payload),
+            f"ps-roster:{p['id']}:{eski_takim}:{yeni_takim}:{bugun.isoformat()}",
+        ))
+        if cur.rowcount:
+            logger.info(f"    🔁 Transfer: {p.get('name')}  {eski_ad or eski_takim} → {yeni_ad}")
+        return cur.rowcount
+
+    def sync_notable_rosters(self, days=60, kaydet=True, pace=0.4):
+        """
+        Önemli takımların kadrolarını PandaScore'dan günceller ve kadro FARKINDAN
+        transfer kaydı üretir (Liquipedia 21 Eyl'de kapandı; transferin yeni kaynağı).
+
+        Kapsam: son `days` günde S/A/B seviyesinde maçı olan takımlar + Türk takımları
+        (teams.country_code='TR'). ~234 takım → günde ~234 istek (ücretsiz sınır 1000/saat).
+
+        kaydet=False → TABAN ÇİZGİSİ: kadrolar güncellenir, transfer yazılmaz. İlk
+        koşu böyle yapılmalı: mevcut kadrolar Liquipedia'dan geldiği için PandaScore
+        ile farklar transfer DEĞİL, iki kaynağın uyuşmazlığıdır → sahte haber seli.
+
+        İki aşamalı: önce TÜM kadrolar çekilir, sonra yazılır. Aynı oyuncu bu koşuda
+        birden çok takımda görünüyorsa (ana takım + akademi gibi) transfer yazılmaz;
+        yoksa her gün iki takım arasında gidip gelen sahte transferler oluşurdu.
+        """
+        from datetime import date
+        from collections import Counter
+
+        self.ensure_schema()
+        with Database.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT DISTINCT t.id, t.name, g.slug
+                    FROM teams t
+                    JOIN matches m ON m.team_a_id = t.id OR m.team_b_id = t.id
+                    LEFT JOIN tournaments tn ON tn.id = m.tournament_id
+                    LEFT JOIN games g ON g.id = t.game_id
+                    WHERE m.scheduled_at >= NOW() - make_interval(days => %s)
+                      AND (UPPER(LEFT(COALESCE(tn.tier, ''), 1)) IN ('S', 'A', 'B')
+                           OR t.country_code = 'TR')
+                    ORDER BY t.id
+                """, (days,))
+                takimlar = cur.fetchall()
+
+        logger.info(f"👥 {len(takimlar)} takımın kadrosu çekiliyor (son {days} gün, "
+                    f"{'transfer kaydıyla' if kaydet else 'TABAN ÇİZGİSİ, transfer yazılmaz'})")
+
+        kadrolar, hata = {}, 0
+        for tid, ad, oyun in takimlar:
+            oyuncular = self._fetch_team_roster(tid, ad)
+            if oyuncular is None:
+                hata += 1
+            elif oyuncular:
+                kadrolar[tid] = (ad, oyun, oyuncular)
+            time.sleep(pace)
+
+        sayac = Counter(p['id'] for _, _, oy in kadrolar.values() for p in oy)
+        coklu = {pid for pid, n in sayac.items() if n > 1}
+
+        toplam = {'takim': len(kadrolar), 'oyuncu': 0, 'serbest': 0,
+                  'transfer': 0, 'hata': hata, 'coklu_oyuncu': len(coklu)}
+        bugun = date.today()
+        with Database.get_connection() as conn:
+            for tid, (ad, oyun, oyuncular) in kadrolar.items():
+                tr = {'coklu': coklu, 'oyun': oyun, 'bugun': bugun} if kaydet else None
+                r = self._upsert_team_roster(tid, ad, oyuncular, conn, transfer=tr)
+                toplam['oyuncu'] += r['upserted']
+                toplam['serbest'] += r['flushed']
+                toplam['transfer'] += r['transfers']
+        logger.info(f"📊 Kadro+transfer: {toplam}")
+        return toplam
 
     # ── 1) Eksik Kadroları Tara (teams → players JOIN) ─────────────────────────
 

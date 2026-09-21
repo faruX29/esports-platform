@@ -4,6 +4,7 @@ import { CountUp } from '../components/AnimatedNumber'
 import { supabase } from '../supabaseClient'
 import SeoHead from '../components/SeoHead'
 import InitialsImage from '../components/InitialsImage'
+import { LIQUIPEDIA_SON_TARIH } from '../components/LiquipediaCredit'
 import { Gamepad2, Trophy, Shield, User, CalendarDays, Target, CircleCheck, Plus, X, ArrowUp, ArrowDown, Search, ChevronDown } from 'lucide-react'
 import { FEXT } from '../theme'
 
@@ -794,7 +795,7 @@ export default function ScoutEnginePage() {
                 Kill, ölüm, asist ve galibiyet maç toplamlarından hesaplanır; "/harita" değerleri bu toplamların
                 oynanan harita sayısına bölümüdür. Rol, ajan ve harita havuzu harita bazındadır. Galibiyet oranı
                 oyuncunun takımının başarısını da yansıtır. ACS yalnız en az {MIN_ACS_SAMPLES} maçlık veri olduğunda gösterilir.
-                {' '}Oyuncu verisi: <a href="https://liquipedia.net/valorant" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-3)' }}>Liquipedia</a>.
+                {' '}Oyuncu verisi: <a href="https://liquipedia.net/valorant" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-3)' }}>Liquipedia</a>, {LIQUIPEDIA_SON_TARIH} tarihine kadar oynanan maçlar.
               </p>
             </>
           )}

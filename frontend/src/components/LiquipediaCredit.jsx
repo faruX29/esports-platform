@@ -9,6 +9,11 @@
  *   align  — 'left' | 'center' | 'right' (varsayılan: left)
  *   compact — daha küçük varyant
  */
+// Liquipedia'dan son veri alındığı gün (API erişimi 21 Eylül 2026'da kapandı).
+// Veri sitede kalabilir (Liquipedia'nın yazılı onayı), ama DONMUŞTUR — tarih
+// yazılmazsa eski istatistik güncelmiş gibi okunur.
+export const LIQUIPEDIA_SON_TARIH = '21 Eylül 2026'
+
 export default function LiquipediaCredit({ align = 'left', compact = false }) {
   return (
     <div style={{
@@ -28,6 +33,7 @@ export default function LiquipediaCredit({ align = 'left', compact = false }) {
       >
         Liquipedia
       </a>
+      {' '}· {LIQUIPEDIA_SON_TARIH}'ye kadar
     </div>
   )
 }

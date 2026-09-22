@@ -58,6 +58,15 @@ export const config = {
 // tarayıcı UA'ları (Mozilla/Chrome/Safari/Edg) bu token'ları içermez → etkilenmez.
 const BOT_RE = /(bot|crawler|spider|slurp|preview|unfurl|embed|opengraph|open graph|metadata|validator|facebookexternalhit|whatsapp|telegram|slack|discord|twitter|reddit|linkedin|pinterest|applebot|skype|vkshare|iframely|curl|wget|python-requests|axios|go-http|okhttp|headless)/i
 
+// Bize ZİYARETÇİ GETİRMEYEN botlar: SEO araçları + yapay zekâ EĞİTİM tarayıcıları.
+// Bunlara bot HTML'i ÜRETİLMEZ, SPA kabuğu gider (statik, 0 CPU).
+// Neden (22 Eyl): middleware ÖNBELLEKTEN ÖNCE, HER istekte çalışır — yanıttaki
+// s-maxage onu atlatmaz. Vercel Fluid Active CPU kotasının %45'i middleware'den,
+// tüketimin %82'si ABD bölgelerinden (botlar). Googlebot/Bingbot, sosyal önizleme
+// botları ve arama odaklı AI botları (OAI-SearchBot, PerplexityBot) KAPSAM DIŞI:
+// onlar ziyaretçi getirir.
+const DEGERSIZ_BOT_RE = /(ahrefsbot|semrushbot|mj12bot|dotbot|petalbot|bytespider|dataforseobot|blexbot|serpstatbot|barkrowler|seekportbot|gptbot|ccbot|claudebot|anthropic-ai|amazonbot|meta-externalagent|imagesiftbot|omgili|diffbot|timpibot)/i
+
 // Canonical = DAİMA üretim domaini + temiz path (query yok). www/vercel.app/utm
 // varyantları tek canonical'da toplanır → "duplicate without user-selected canonical" biter.
 const SITE_ORIGIN = (process.env.SITE_URL || 'https://fextesports.com').replace(/\/+$/, '')
@@ -832,6 +841,7 @@ export default async function middleware(req) {
   // ?__og=1 → tarayıcıda elle doğrulama için OG HTML'i zorla (bot olmasan da)
   const force = url.searchParams.get('__og') === '1'
   if (!force && !BOT_RE.test(ua)) return next() // gerçek kullanıcı → SPA
+  if (!force && DEGERSIZ_BOT_RE.test(ua)) return next() // ziyaretçi getirmeyen bot → statik kabuk
 
   try {
     const path = url.pathname

@@ -351,7 +351,7 @@ async function buildForMatch(id, origin, url) {
 }
 
 async function buildForNews(ref, origin, url) {
-  const sel = 'title,summary,hero_score,game_slug,tier,tournament_name,team_a_name,team_b_name,team_a_logo,team_b_logo'
+  const sel = 'title,summary,hero_score,game_slug,tier,tournament_name,team_a_name,team_b_name,team_a_logo,team_b_logo,created_at'
   let query
   if (ref.type === 'transfer') {
     query = `news_articles?id=eq.${encodeURIComponent(ref.id)}&select=${encodeURIComponent(sel)}&limit=1`
@@ -379,10 +379,16 @@ async function buildForNews(ref, origin, url) {
   }
   if (!row) return null
   const gm = gameMeta(row.game_slug)
-  const img = ogImageUrl(origin, {
-    a: row.team_a_name, b: row.team_b_name, la: row.team_a_logo, lb: row.team_b_logo,
-    s: scoreFromHero(row.hero_score), g: gm.label, t: row.tier, tn: row.tournament_name, c: gm.accent,
-  })
+  // Maçlardaki OG_FRESH_DAYS kuralı haberlere de (22 Eyl). Haberde tarih sınırı
+  // YOKTU: 1.300+ haberin her biri bot geldiğinde ~1,7 sn CPU'luk kart üretiyordu
+  // ve Vercel Fluid Active CPU ücretsiz kotası (4 sa/ay) 22 Eylül'de %75'e dayandı.
+  // Eski haber paylaşılmıyor → statik marka kartı, CDN'den, 0 CPU.
+  const img = isShareableMatch(row.created_at)
+    ? ogImageUrl(origin, {
+        a: row.team_a_name, b: row.team_b_name, la: row.team_a_logo, lb: row.team_b_logo,
+        s: scoreFromHero(row.hero_score), g: gm.label, t: row.tier, tn: row.tournament_name, c: gm.accent,
+      })
+    : `${origin}${STATIC_OG}`
   const jsonLd = {
     '@context': 'https://schema.org', '@type': 'NewsArticle',
     headline: row.title || '', description: row.summary || '', inLanguage: 'tr-TR',

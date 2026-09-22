@@ -123,6 +123,17 @@ TOURNAMENT_SYSTEM_PROMPT = (
     '{"title": "...", "summary": "...", "paragraphs": ["1. paragraf", "2. paragraf"]}'
 )
 
+# Özel adlar çevrilmez (22 Eyl): Champions önizlemesinin başlığı "VCT Şampiyonlar
+# Ligi" çıktı — futboldaki turnuvanın adı. Dört persona da aynı kuralı alır.
+_AD_KURALI = (
+    "\n\nÖZEL ADLAR: Turnuva, lig ve takım adlarını ÇEVİRME; rapordaki yazımıyla kullan. "
+    "Örn. 'VCT Champions' ASLA 'Şampiyonlar Ligi' olmaz, 'Masters' 'Ustalar' olmaz."
+)
+SYSTEM_PROMPT += _AD_KURALI
+PREVIEW_SYSTEM_PROMPT += _AD_KURALI
+TRANSFER_SYSTEM_PROMPT += _AD_KURALI
+TOURNAMENT_SYSTEM_PROMPT += _AD_KURALI
+
 # ── Tier display labels ───────────────────────────────────────────────────────
 # ⚠️ Etiketlere "Major"/"Premier" gibi ÖZEL AD yazma: LLM bunu turnuvanın adı sanıyor.
 # 15 Eyl'de VCT Americas Stage 2 önizlemeleri "VALORANT Major Playoff'ları" diye
@@ -175,7 +186,15 @@ class FactSheetBuilder:
         """Takım form dict'ini tek satır metne çevirir. Veri yoksa None."""
         if not form or not form.get("n"):
             return None
-        return f"{name} son {form['n']} maç: {form['wins']}G-{form['losses']}M ({form['form']})"
+        # ⚠️ SIRA AÇIKÇA YAZILIR (22 Eyl). Eskiden "(LLWWW)" gibi çıplak dizi
+        # veriliyordu; LLM ters okudu ve son iki maçını KAYBEDEN NRG için "art arda
+        # gelen son iki galibiyet" yazdı (VCT Champions önizlemesi, yayında).
+        ad = {"W": "galibiyet", "L": "mağlubiyet", "D": "berabere/sonuçsuz"}
+        sira = ", ".join(ad[r] for r in form["form"])
+        son = ad[form["form"][0]]
+        skor = f"{form['wins']}G-{form['losses']}M" + (f"-{form['draws']}B" if form.get("draws") else "")
+        return (f"{name} son {form['n']} maç {skor}. En YENİDEN en ESKİYE: {sira}. "
+                f"En son maçı: {son}.")
 
     @staticmethod
     def _fmt_record(a_name: str, rec_a: Optional[dict], b_name: str, rec_b: Optional[dict]) -> Optional[str]:
@@ -573,9 +592,13 @@ class NewsGenerator:
         if not rows:
             return None
         tid = str(team_id)
-        results = ["W" if str(w[0] or "") == tid else "L" for w in rows]
-        wins = results.count("W")
-        return {"n": len(results), "wins": wins, "losses": len(results) - wins, "form": "".join(results)}
+        # Kazananı olmayan bitmiş maç (1-1, sonuçsuz; 271 maç) MAĞLUBİYET DEĞİL, "D".
+        # Eskiden L sayılıyordu → Paper Rex'in 1-1'i önizlemede yenilgi olarak yazıldı.
+        results = ["D" if w[0] is None else ("W" if str(w[0]) == tid else "L") for w in rows]
+        return {
+            "n": len(results), "wins": results.count("W"), "losses": results.count("L"),
+            "draws": results.count("D"), "form": "".join(results),
+        }
 
     def _fetch_tournament_record(self, tournament_id, team_id) -> Optional[dict]:
         """

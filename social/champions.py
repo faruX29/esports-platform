@@ -36,9 +36,17 @@ ETKINLIK = 'Champions 2026'
 # C: vlr.gg, 23 Eylül 2026'da bakıldı.
 # Saat doğrulaması: VLR, açılış maçı TL-PRX'i 12:00 gösteriyor; veritabanımızda
 # (PandaScore, UTC) aynı maç 12:00 TSİ → sayfa TSİ gösteriyor, sonraki maçlar da 12:00.
+# Dört grubun da açılış saatleri VLR'da bizim veritabanımızla aynı çıktı
+# (A 12:00, B 15:00, C 12:00, D 15:00) → sonraki maç saatleri de güvenilir.
 PROGRAM = {
+    'A': {'kazananlar': '30 Eylül · 12:00', 'elenme': '2 Ekim · 12:00',
+          'decider': '4 Ekim · 12:00'},
+    'B': {'kazananlar': '30 Eylül · 15:00', 'elenme': '2 Ekim · 15:00',
+          'decider': '4 Ekim · 15:00'},
     'C': {'kazananlar': '29 Eylül · 12:00', 'elenme': '1 Ekim · 12:00',
           'decider': '3 Ekim · 12:00'},
+    'D': {'kazananlar': '29 Eylül · 15:00', 'elenme': '1 Ekim · 15:00',
+          'decider': '3 Ekim · 15:00'},
 }
 PROGRAM_YOK = {'kazananlar': 'tarih açıklanınca', 'elenme': 'tarih açıklanınca',
                'decider': 'tarih açıklanınca'}

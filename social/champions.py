@@ -34,8 +34,11 @@ ETKINLIK = 'Champions 2026'
 # maçı var). Aşağıdakiler resmî programdan TEK TEK doğrulanır; doğrulanmamış grup
 # için tarih YAZILMAZ ("tarih açıklanınca"), UYDURMA.
 # C: vlr.gg, 23 Eylül 2026'da bakıldı.
+# Saat doğrulaması: VLR, açılış maçı TL-PRX'i 12:00 gösteriyor; veritabanımızda
+# (PandaScore, UTC) aynı maç 12:00 TSİ → sayfa TSİ gösteriyor, sonraki maçlar da 12:00.
 PROGRAM = {
-    'C': {'kazananlar': '29 Eylül', 'elenme': '1 Ekim', 'decider': '3 Ekim'},
+    'C': {'kazananlar': '29 Eylül · 12:00', 'elenme': '1 Ekim · 12:00',
+          'decider': '3 Ekim · 12:00'},
 }
 PROGRAM_YOK = {'kazananlar': 'tarih açıklanınca', 'elenme': 'tarih açıklanınca',
                'decider': 'tarih açıklanınca'}
@@ -223,17 +226,19 @@ def sahne_tanitim(g, t):
     return c.convert('RGB')
 
 # ── Sahne 2: az yazılı, renk dilli turnuva ağacı ──────────────────────────
-def _kart(im, d, y, h, etiket, tarih, renk):
-    """Program kartı: solda renkli kenar + maç adı, sağda tarih/saat."""
+def _kart(im, d, y, h, etiket, tarih, renk=MOR):
+    """Program kartı: solda ince marka şeridi + maç adı, sağda tarih/saat.
+    Renk kullanımı BİLEREK az (kurucu, 23 Eyl): yeşil/kırmızı/sarı yerine marka moru;
+    yalnız 'elenir' sözcüğü soluk kırmızı."""
     d.rounded_rectangle([50, y, W - 50, y + h], 26, fill=KUTU, outline=CIZGI, width=2)
-    d.rounded_rectangle([50, y + 14, 62, y + h - 14], 6, fill=renk)
-    d.text((88, y + 20), etiket, font=inter(900, 34), fill=renk)
+    d.rounded_rectangle([50, y + 14, 60, y + h - 14], 5, fill=renk)
+    d.text((88, y + 20), etiket, font=inter(900, 34), fill=INK)
     f = inter(700, 30)
     d.text((W - 84 - d.textlength(tarih, font=f), y + 22), tarih, font=f, fill=MUTED)
 
 def _kart_acilis(im, d, y, m, no, tarih):
-    """Açılış maçı kartı: logolar, kısaltmalar ve Fextopus yüzdeleri."""
-    h = 210
+    """Açılış maçı kartı: logolar, kısaltmalar, Fextopus yüzdeleri ve ihtimal barı."""
+    h = 262
     _kart(im, d, y, h, f'{no}. MAÇ', tarih, MOR)
     # Yüzde, takımın KENDİ tarafında (adın altında). Ortada dursaydı "vs" ile
     # üst üste biniyordu (23 Eyl'de görüldü: "%43s%57").
@@ -253,7 +258,17 @@ def _kart_acilis(im, d, y, m, no, tarih):
             d.text((W - 200 - d.textlength(s, font=f_ad), y + 84), s, font=f_ad, fill=INK)
             d.text((W - 200 - d.textlength(ps, font=f_p), y + 126), ps, font=f_p, fill=renk)
     d.text((W / 2 - d.textlength('vs', font=inter(800, 34)) / 2, y + 112), 'vs', font=inter(800, 34), fill=FAINT)
+    # Fextopus ihtimal barı: favorinin payı morla dolar, kalanı soluk kalır.
+    bx0, bx1, by = 96, W - 96, y + 208
+    d.rounded_rectangle([bx0, by, bx1, by + 20], 10, fill=GRI)
+    dolu = int((bx1 - bx0) * m['pa'])
+    kutu = [bx0, by, bx0 + dolu, by + 20] if pa >= 50 else [bx0 + dolu, by, bx1, by + 20]
+    d.rounded_rectangle(kutu, 10, fill=MOR)
     return h
+
+# Sonuç metinlerinde yalnız iki ton: marka moru (devam) ve soluk kırmızı (eleniyor).
+# Kurucu (23 Eyl): "yeşil kırmızı ve sarıyı çok kullanmak kötü görünüyor".
+ELENDI = (196, 92, 104)
 
 def _kart_sonraki(im, d, y, etiket, eslesme, sonuclar, tarih, renk):
     """Kazananlar / elenme / decider kartı: eşleşme tarifi + sonucun ne olduğu."""
@@ -281,11 +296,11 @@ def sahne_program(g, t):
         ('acilis', m1, 1, _tarih_saat(m1['saat'])),
         ('acilis', m2, 2, _tarih_saat(m2['saat'])),
         ('sonraki', 'KAZANANLAR MAÇI', '1. maç kazananı  vs  2. maç kazananı',
-         [('kazanan → playoff', YESIL), ('kaybeden → decider', MUTED)], g['program']['kazananlar'], YESIL),
+         [('kazanan → playoff', MOR), ('kaybeden → decider', MUTED)], g['program']['kazananlar'], MOR),
         ('sonraki', 'ELENME MAÇI', '1. maç kaybedeni  vs  2. maç kaybedeni',
-         [('kazanan → decider', MUTED), ('kaybeden → elenir', KIRMIZI)], g['program']['elenme'], KIRMIZI),
+         [('kazanan → decider', MUTED), ('kaybeden → elenir', ELENDI)], g['program']['elenme'], MOR),
         ('sonraki', 'DECIDER', 'kazananlar maçı kaybedeni  vs  elenme maçı kazananı',
-         [('kazanan → playoff', YESIL), ('kaybeden → elenir', KIRMIZI)], g['program']['decider'], ALTIN),
+         [('kazanan → playoff', MOR), ('kaybeden → elenir', ELENDI)], g['program']['decider'], MOR),
     ]
     for i, adim in enumerate(adimlar):
         ai = _eas((t - 0.1 - i * 0.11) / 0.2)
@@ -294,16 +309,16 @@ def sahne_program(g, t):
                 h = _kart_acilis(im, d, y, adim[1], adim[2], adim[3])
             else:
                 h = _kart_sonraki(im, d, y, adim[1], adim[2], adim[3], adim[4], adim[5])
-        y += h + 18
+        y += h + 34
 
     a5 = _eas((t - 0.72) / 0.16)
     with Katman(c, a5) as (im, d):
         f = inter(900, 44)
         s1, orta, s2 = "2 takım playoff'a", '  ·  ', '2 takım eve'
         x = (W - d.textlength(s1 + orta + s2, font=f)) / 2
-        d.text((x, 1560), s1, font=f, fill=YESIL); x += d.textlength(s1, font=f)
-        d.text((x, 1560), orta, font=f, fill=FAINT); x += d.textlength(orta, font=f)
-        d.text((x, 1560), s2, font=f, fill=KIRMIZI)
+        d.text((x, 1600), s1, font=f, fill=MOR); x += d.textlength(s1, font=f)
+        d.text((x, 1600), orta, font=f, fill=FAINT); x += d.textlength(orta, font=f)
+        d.text((x, 1600), s2, font=f, fill=MUTED)
     _alt_bilgi(c)
     return c.convert('RGB')
 

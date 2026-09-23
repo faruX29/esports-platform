@@ -28,12 +28,24 @@ from radar import W, H, FPS, BG, INK, MUTED, FAINT, MOR, GRI, YOL, AY, logo, MAR
 from gsl import gsl_olasiliklari
 
 ETKINLIK = 'Champions 2026'
+
+# Kazananlar / elenme / decider maçlarının tarihleri. PandaScore bunları eşleşme
+# belli olmadan YAYINLAMIYOR (23 Eyl: veritabanında grup başına yalnız 2 açılış
+# maçı var). Aşağıdakiler resmî programdan TEK TEK doğrulanır; doğrulanmamış grup
+# için tarih YAZILMAZ ("tarih açıklanınca"), UYDURMA.
+# C: vlr.gg, 23 Eylül 2026'da bakıldı.
+PROGRAM = {
+    'C': {'kazananlar': '29 Eylül', 'elenme': '1 Ekim', 'decider': '3 Ekim'},
+}
+PROGRAM_YOK = {'kazananlar': 'tarih açıklanınca', 'elenme': 'tarih açıklanınca',
+               'decider': 'tarih açıklanınca'}
+
 KIRMIZI = (255, 70, 85)
 YESIL = (64, 196, 110)
 ALTIN = (214, 178, 92)
 KUTU = (20, 25, 38)
 CIZGI = (78, 88, 112)
-S_TANITIM, S_AGAC, S_IHTIMAL, S_KAPANIS = 3.0, 6.5, 5.5, 4.0
+S_TANITIM, S_PROGRAM, S_IHTIMAL, S_KAPANIS = 3.0, 7.5, 5.0, 4.0
 
 # ── Yazı tipi: sitenin başlık dili (Inter) ────────────────────────────────
 @lru_cache(maxsize=None)
@@ -66,6 +78,11 @@ def ortala(d, y, metin, font, renk):
 
 def yapistir(im, lg, x, y):
     im.alpha_composite(lg, (int(x), int(y)))
+
+def _tarih_saat(ts):
+    """UTC zaman damgası → '24 Eylül · 12:00' (TSİ)."""
+    y = ts + timedelta(hours=3)
+    return f'{y.day} {AY[y.month]} · {y.strftime("%H:%M")}'
 
 def kisa(t, d, font, maks):
     s = t['ad']
@@ -113,8 +130,10 @@ def veri():
         for t in takimlar:
             t.update(olas[t['id']])
         takimlar.sort(key=lambda t: -t['cikar'])
-        gruplar.append({'ham': ad, 'harf': ad.split()[-1].upper(), 'maclar': [m1, m2],
-                        'takimlar': takimlar, 'gun': m1['saat'] + timedelta(hours=3)})
+        harf = ad.split()[-1].upper()
+        gruplar.append({'ham': ad, 'harf': harf, 'maclar': [m1, m2], 'takimlar': takimlar,
+                        'gun': m1['saat'] + timedelta(hours=3),
+                        'program': PROGRAM.get(harf, PROGRAM_YOK)})
     assert len(gruplar) == 4, f'4 grup bekleniyordu: {[g["ham"] for g in gruplar]}'
     _kapanis_turu_ata(gruplar)
     return gruplar
@@ -204,108 +223,87 @@ def sahne_tanitim(g, t):
     return c.convert('RGB')
 
 # ── Sahne 2: az yazılı, renk dilli turnuva ağacı ──────────────────────────
-def _dugum(d, x0, y0, x1, y1, metin, renk):
-    d.rounded_rectangle([x0, y0, x1, y1], 26, fill=KUTU, outline=renk, width=5)
-    f = inter(900, 40)
-    d.text(((x0 + x1 - d.textlength(metin, font=f)) / 2, (y0 + y1) / 2 - 26), metin, font=f, fill=INK)
+def _kart(im, d, y, h, etiket, tarih, renk):
+    """Program kartı: solda renkli kenar + maç adı, sağda tarih/saat."""
+    d.rounded_rectangle([50, y, W - 50, y + h], 26, fill=KUTU, outline=CIZGI, width=2)
+    d.rounded_rectangle([50, y + 14, 62, y + h - 14], 6, fill=renk)
+    d.text((88, y + 20), etiket, font=inter(900, 34), fill=renk)
+    f = inter(700, 30)
+    d.text((W - 84 - d.textlength(tarih, font=f), y + 22), tarih, font=f, fill=MUTED)
 
-def _etiket(d, cx, y, metin, renk):
-    """Dolu hap etiket: sonuç (1. SIRA / ELENİR)."""
-    f = inter(900, 32)
-    w = d.textlength(metin, font=f) + 56
-    d.rounded_rectangle([cx - w / 2, y, cx + w / 2, y + 64], 32, fill=renk)
-    d.text((cx - d.textlength(metin, font=f) / 2, y + 13), metin, font=f,
-           fill=(10, 14, 22) if renk == YESIL else INK)
-
-def _yol(d, noktalar, renk):
-    """Köşeli yol + ok ucu (son noktaya doğru)."""
-    d.line(noktalar, fill=renk, width=7, joint='curve')
-    (x0, y0), (x1, y1) = noktalar[-2], noktalar[-1]
-    if y1 > y0:      # aşağı ok
-        d.polygon([(x1, y1 + 2), (x1 - 15, y1 - 20), (x1 + 15, y1 - 20)], fill=renk)
-
-def _acilis_cipi(im, d, x0, y0, m):
-    """Açılış maçı: iki logo + kısaltma + Fextopus yüzdesi. Cümle yok."""
-    w, h = 470, 230
-    d.rounded_rectangle([x0, y0, x0 + w, y0 + h], 28, fill=KUTU, outline=CIZGI, width=2)
+def _kart_acilis(im, d, y, m, no, tarih):
+    """Açılış maçı kartı: logolar, kısaltmalar ve Fextopus yüzdeleri."""
+    h = 210
+    _kart(im, d, y, h, f'{no}. MAÇ', tarih, MOR)
+    # Yüzde, takımın KENDİ tarafında (adın altında). Ortada dursaydı "vs" ile
+    # üst üste biniyordu (23 Eyl'de görüldü: "%43s%57").
     pa = round(m['pa'] * 100)
-    for t, pct, cx in ((m['a'], pa, x0 + 120), (m['b'], 100 - pa, x0 + w - 120)):
-        lg = logo(t['id'], t['logo'], t['ad'], t['ac'], 96)
-        yapistir(im, lg, cx - lg.width / 2, y0 + 22 + (96 - lg.height) / 2)
-        f = inter(800, 30)
-        s = t['ac'] if t.get('ac') and len(t['ac']) <= 6 else kisa(t, d, f, 180)
-        d.text((cx - d.textlength(s, font=f) / 2, y0 + 128), s, font=f, fill=INK)
-        fav = pct >= 50
-        fp = inter(900, 38)
+    f_ad, f_p = inter(800, 34), inter(900, 46)
+    for t, pct, sag in ((m['a'], pa, False), (m['b'], 100 - pa, True)):
+        lg = logo(t['id'], t['logo'], t['ad'], t['ac'], 84)
+        s = t['ac'] if t.get('ac') and len(t['ac']) <= 6 else kisa(t, d, f_ad, 220)
         ps = f'%{pct}'
-        d.text((cx - d.textlength(ps, font=fp) / 2, y0 + 168), ps, font=fp, fill=MOR if fav else FAINT)
-    d.text((x0 + w / 2 - d.textlength('vs', font=inter(800, 30)) / 2, y0 + 58), 'vs', font=inter(800, 30), fill=FAINT)
+        renk = MOR if pct >= 50 else FAINT
+        if not sag:
+            yapistir(im, lg, 96, y + 84 + (84 - lg.height) / 2)
+            d.text((200, y + 84), s, font=f_ad, fill=INK)
+            d.text((200, y + 126), ps, font=f_p, fill=renk)
+        else:
+            yapistir(im, lg, W - 96 - lg.width, y + 84 + (84 - lg.height) / 2)
+            d.text((W - 200 - d.textlength(s, font=f_ad), y + 84), s, font=f_ad, fill=INK)
+            d.text((W - 200 - d.textlength(ps, font=f_p), y + 126), ps, font=f_p, fill=renk)
+    d.text((W / 2 - d.textlength('vs', font=inter(800, 34)) / 2, y + 112), 'vs', font=inter(800, 34), fill=FAINT)
+    return h
 
-def sahne_agac(g, t):
+def _kart_sonraki(im, d, y, etiket, eslesme, sonuclar, tarih, renk):
+    """Kazananlar / elenme / decider kartı: eşleşme tarifi + sonucun ne olduğu."""
+    h = 176
+    _kart(im, d, y, h, etiket, tarih, renk)
+    d.text((88, y + 74), eslesme, font=inter(700, 34), fill=INK)
+    x = 88
+    for metin, rk in sonuclar:
+        d.text((x, y + 124), metin, font=inter(700, 28), fill=rk)
+        x += d.textlength(metin, font=inter(700, 28)) + 34
+    return h
+
+def sahne_program(g, t):
+    """Grubun 5 maçı: tarih ve saatleriyle, akış sırasıyla."""
     c = _zemin()
     _ust_etiket(c, g['harf'])
     a0 = _eas(t / 0.12)
     with Katman(c, a0) as (im, d):
-        d.text((80, 140), 'GRUP NASIL OYNANIR?', font=inter(900, 68), fill=INK)
-        # Renk dili açıklaması (tek satır)
-        y = 244
-        d.line([(84, y + 18), (144, y + 18)], fill=YESIL, width=8)
-        d.text((158, y), 'kazanan', font=inter(700, 32), fill=INK)
-        x = 158 + d.textlength('kazanan', font=inter(700, 32)) + 50
-        d.line([(x, y + 18), (x + 60, y + 18)], fill=KIRMIZI, width=8)
-        d.text((x + 74, y), 'kaybeden', font=inter(700, 32), fill=INK)
-        d.text((W - 80 - d.textlength('Bo3', font=inter(800, 32)), y), 'Bo3', font=inter(800, 32), fill=MUTED)
+        d.text((80, 140), 'GRUP PROGRAMI', font=inter(900, 72), fill=INK)
+        d.text((82, 232), 'GSL · tüm maçlar Bo3 · saatler TSİ', font=inter(500, 30), fill=MUTED)
 
-    c1x, c2x, cy = 50, W - 50 - 470, 330          # açılış çipleri
-    kx0, kx1, ky0, ky1 = 70, 470, 720, 830          # KAZANANLAR
-    ex0, ex1, ey0, ey1 = W - 470, W - 70, 720, 830  # ELENME
-    bx0, bx1, by0, by1 = 290, W - 290, 1090, 1200   # BELİRLEYİCİ
-    kc, ec, bc = (kx0 + kx1) / 2, (ex0 + ex1) / 2, W / 2
+    y = 300
+    m1, m2 = g['maclar']
+    adimlar = [
+        ('acilis', m1, 1, _tarih_saat(m1['saat'])),
+        ('acilis', m2, 2, _tarih_saat(m2['saat'])),
+        ('sonraki', 'KAZANANLAR MAÇI', '1. maç kazananı  vs  2. maç kazananı',
+         [('kazanan → playoff', YESIL), ('kaybeden → decider', MUTED)], g['program']['kazananlar'], YESIL),
+        ('sonraki', 'ELENME MAÇI', '1. maç kaybedeni  vs  2. maç kaybedeni',
+         [('kazanan → decider', MUTED), ('kaybeden → elenir', KIRMIZI)], g['program']['elenme'], KIRMIZI),
+        ('sonraki', 'DECIDER', 'kazananlar maçı kaybedeni  vs  elenme maçı kazananı',
+         [('kazanan → playoff', YESIL), ('kaybeden → elenir', KIRMIZI)], g['program']['decider'], ALTIN),
+    ]
+    for i, adim in enumerate(adimlar):
+        ai = _eas((t - 0.1 - i * 0.11) / 0.2)
+        with Katman(c, ai) as (im, d):
+            if adim[0] == 'acilis':
+                h = _kart_acilis(im, d, y, adim[1], adim[2], adim[3])
+            else:
+                h = _kart_sonraki(im, d, y, adim[1], adim[2], adim[3], adim[4], adim[5])
+        y += h + 18
 
-    a1 = _eas((t - 0.06) / 0.16)
-    with Katman(c, a1) as (im, d):
-        _acilis_cipi(im, d, c1x, cy, g['maclar'][0])
-        _acilis_cipi(im, d, c2x, cy, g['maclar'][1])
-
-    a2 = _eas((t - 0.26) / 0.16)       # açılış → kazananlar / elenme
-    with Katman(c, a2) as (im, d):
-        # Her yatay çizgi AYRI yükseklikte: aynı y'de giden kırmızı ve yeşil üst üste
-        # biniyordu (22 Eyl, 3. tur). Yalnız dikey–yatay kesişme kalır, o okunur.
-        alt = cy + 230
-        _yol(d, [(c1x + 150, alt), (c1x + 150, alt + 45), (kc - 50, alt + 45), (kc - 50, ky0)], YESIL)
-        _yol(d, [(c1x + 320, alt), (c1x + 320, alt + 90), (ec - 50, alt + 90), (ec - 50, ey0)], KIRMIZI)
-        _yol(d, [(c2x + 150, alt), (c2x + 150, alt + 125), (kc + 50, alt + 125), (kc + 50, ky0)], YESIL)
-        _yol(d, [(c2x + 320, alt), (c2x + 320, alt + 45), (ec + 50, alt + 45), (ec + 50, ey0)], KIRMIZI)
-        _dugum(d, kx0, ky0, kx1, ky1, 'KAZANANLAR', YESIL)
-        _dugum(d, ex0, ey0, ex1, ey1, 'ELENME', KIRMIZI)
-
-    a3 = _eas((t - 0.46) / 0.16)       # kazananlar / elenme sonuçları
-    with Katman(c, a3) as (im, d):
-        _yol(d, [(kc - 90, ky1), (kc - 90, 910)], YESIL)
-        _etiket(d, kc - 90, 918, '1. SIRA', YESIL)
-        _yol(d, [(ec + 90, ey1), (ec + 90, 910)], KIRMIZI)
-        _etiket(d, ec + 90, 918, 'ELENİR', KIRMIZI)
-        _yol(d, [(kc + 90, ky1), (kc + 90, 1030), (bc - 60, 1030), (bc - 60, by0)], KIRMIZI)
-        _yol(d, [(ec - 90, ey1), (ec - 90, 1030), (bc + 60, 1030), (bc + 60, by0)], YESIL)
-        _dugum(d, bx0, by0, bx1, by1, 'BELİRLEYİCİ', ALTIN)
-
-    a4 = _eas((t - 0.64) / 0.16)       # belirleyici sonuçları
-    with Katman(c, a4) as (im, d):
-        _yol(d, [(bc - 110, by1), (bc - 110, 1250), (bc - 230, 1250), (bc - 230, 1290)], YESIL)
-        _etiket(d, bc - 230, 1298, '2. SIRA', YESIL)
-        _yol(d, [(bc + 110, by1), (bc + 110, 1250), (bc + 230, 1250), (bc + 230, 1290)], KIRMIZI)
-        _etiket(d, bc + 230, 1298, 'ELENİR', KIRMIZI)
-
-    a5 = _eas((t - 0.8) / 0.14)
+    a5 = _eas((t - 0.72) / 0.16)
     with Katman(c, a5) as (im, d):
         f = inter(900, 44)
-        s1, s2 = "2 takım playoff'a", '2 takım eve'
-        orta = '  ·  '
-        tw = d.textlength(s1 + orta + s2, font=f)
-        x = (W - tw) / 2
-        d.text((x, 1480), s1, font=f, fill=YESIL); x += d.textlength(s1, font=f)
-        d.text((x, 1480), orta, font=f, fill=FAINT); x += d.textlength(orta, font=f)
-        d.text((x, 1480), s2, font=f, fill=KIRMIZI)
+        s1, orta, s2 = "2 takım playoff'a", '  ·  ', '2 takım eve'
+        x = (W - d.textlength(s1 + orta + s2, font=f)) / 2
+        d.text((x, 1560), s1, font=f, fill=YESIL); x += d.textlength(s1, font=f)
+        d.text((x, 1560), orta, font=f, fill=FAINT); x += d.textlength(orta, font=f)
+        d.text((x, 1560), s2, font=f, fill=KIRMIZI)
     _alt_bilgi(c)
     return c.convert('RGB')
 
@@ -316,7 +314,7 @@ def sahne_ihtimal(g, t):
     a0 = _eas(t / 0.12)
     with Katman(c, a0) as (im, d):
         d.text((80, 140), "PLAYOFF'A KİM ÇIKAR?", font=inter(900, 72), fill=INK)
-    _fextopus_satiri(c, 240, 'Fextopus 32 olası sonucu hesapladı', a0, boyut=34, ortali=False)
+    _fextopus_satiri(c, 240, 'Fextopus tüm olasılıkları hesapladı', a0, boyut=34, ortali=False)
     satir_h = 300
     for i, tm in enumerate(g['takimlar']):
         ai = _eas((t - 0.15 - i * 0.1) / 0.22)
@@ -328,10 +326,9 @@ def sahne_ihtimal(g, t):
                                     outline=KIRMIZI, width=3)
             lg = logo(tm['id'], tm['logo'], tm['ad'], tm['ac'], 120)
             yapistir(im, lg, 90 + (120 - lg.width) / 2, y + 8 + (120 - lg.height) / 2)
-            f = inter(900, 50)
-            d.text((240, y + 14), kisa(tm, d, f, 440), font=f, fill=INK)
-            d.text((240, y + 82), f"1. sıra %{tm['birinci'] * 100:.0f}  ·  2. sıra %{tm['ikinci'] * 100:.0f}",
-                   font=inter(500, 28), fill=FAINT)
+            # 1./2. sıra kırılımı KALDIRILDI (kurucu: "karmaşık"). Tek sayı: playoff ihtimali.
+            f = inter(900, 54)
+            d.text((240, y + 34), kisa(tm, d, f, 460), font=f, fill=INK)
             s = f'%{tm["cikar"] * 100 * ai:.0f}'
             fp = inter(900, 104)
             d.text((W - 90 - d.textlength(s, font=fp), y - 10), s, font=fp, fill=MOR if cikiyor else MUTED)
@@ -425,7 +422,7 @@ def sahne_kapanis(g, t):
 
 # ── Video ve açıklama ─────────────────────────────────────────────────────
 def kareler(g):
-    sahneler = [(S_TANITIM, sahne_tanitim), (S_AGAC, sahne_agac),
+    sahneler = [(S_TANITIM, sahne_tanitim), (S_PROGRAM, sahne_program),
                 (S_IHTIMAL, sahne_ihtimal), (S_KAPANIS, sahne_kapanis)]
     for sure, ciz in sahneler:
         n = int(sure * FPS)
@@ -470,6 +467,10 @@ def uret(g, dosya):
     print(f'  {dosya}  ({os.path.getsize(dosya) // 1024} KB, kapanış: {g["kapanis"]})')
 
 if __name__ == '__main__':
+    # Argüman: hangi gruplar üretilsin (ör. `python champions.py C`). Boşsa hepsi.
+    istenen = {a.upper() for a in sys.argv[1:]}
     os.makedirs(radar.CIKTI, exist_ok=True)
     for g in veri():
+        if istenen and g['harf'] not in istenen:
+            continue
         uret(g, os.path.join(radar.CIKTI, f'champions-2026-grup-{g["harf"].lower()}.mp4'))

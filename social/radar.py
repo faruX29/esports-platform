@@ -59,6 +59,11 @@ IKON = {'VALORANT':'valorant','COUNTER-STRIKE 2':'cs2','LEAGUE OF LEGENDS':'lol'
 hx = lambda s: tuple(int(s[i:i+2],16) for i in (1,3,5))
 
 # ── Veri ──────────────────────────────────────────────────────────────────
+# Radar dışı tutulan etkinlikler (kurucu kararı, 24 Eyl). Champions'ın kendi
+# grup videoları var (social/champions.py); aynı maçlar radara da girince günün
+# diğer oyunlardaki maçları arada kaynıyordu. Turnuva bitince bu liste boşaltılır.
+HARIC_ETKINLIKLER = ['Champions 2026']
+
 def gunun_maclari(gun):
     sql = """
       SELECT m.id, ta.id, ta.name, ta.acronym, ta.logo_url,
@@ -73,11 +78,12 @@ def gunun_maclari(gun):
       WHERE UPPER(LEFT(COALESCE(t.tier,''),1)) IN ('S','A')
         AND m.scheduled_at >= %s AND m.scheduled_at < %s
         AND m.prediction_team_a IS NOT NULL
+        AND COALESCE(t.event_name,'') <> ALL(%s)
       ORDER BY m.scheduled_at
     """
     bas = datetime.combine(gun, datetime.min.time(), tzinfo=timezone.utc) - timedelta(hours=3)
     with psycopg.connect(os.environ['DATABASE_URL']) as cn, cn.cursor() as c:
-        c.execute(sql, (bas, bas + timedelta(days=1)))
+        c.execute(sql, (bas, bas + timedelta(days=1), HARIC_ETKINLIKLER))
         satir = c.fetchall()
     gruplar = {}
     for r in satir:
@@ -110,8 +116,9 @@ def tek_etkinlik(maclar):
 def sonraki_sa_gunu(gun, ufuk=14):
     """Maçsız günün e-postası için: `gun`den sonraki ilk S/A maç günü ve maç sayısı.
 
-    gunun_maclari ile AYNI filtreler (iki takım belli + tahmin var) — yoksa
-    e-posta "17 Eylül'de 2 maç" deyip radar o gün yine boş çıkabilirdi.
+    gunun_maclari ile AYNI filtreler (iki takım belli + tahmin var + radar dışı
+    etkinlikler hariç) — yoksa e-posta "17 Eylül'de 2 maç" deyip radar o gün
+    yine boş çıkabilirdi.
     """
     sql = """
       SELECT (m.scheduled_at AT TIME ZONE 'Europe/Istanbul')::date AS gun, COUNT(*)
@@ -122,11 +129,12 @@ def sonraki_sa_gunu(gun, ufuk=14):
       WHERE UPPER(LEFT(COALESCE(t.tier,''),1)) IN ('S','A')
         AND m.scheduled_at >= %s AND m.scheduled_at < %s
         AND m.prediction_team_a IS NOT NULL
+        AND COALESCE(t.event_name,'') <> ALL(%s)
       GROUP BY 1 ORDER BY 1 LIMIT 1
     """
     bas = datetime.combine(gun + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc) - timedelta(hours=3)
     with psycopg.connect(os.environ['DATABASE_URL']) as cn, cn.cursor() as c:
-        c.execute(sql, (bas, bas + timedelta(days=ufuk)))
+        c.execute(sql, (bas, bas + timedelta(days=ufuk), HARIC_ETKINLIKLER))
         return c.fetchone()
 
 # ── Logo ──────────────────────────────────────────────────────────────────

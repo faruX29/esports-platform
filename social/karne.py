@@ -73,6 +73,12 @@ def sahne_baslik(veriler, t):
     c = _zemin()
     a1, a2 = _eas(t / 0.3), _eas((t - 0.3) / 0.3)
     with Katman(c, a1) as (im, d):
+        # Maskot başlığın üstünde: karne "Fextopus'un" karnesi, marka yüzü görünsün.
+        fx = YOL('assets', 'fextopus-icon.png')
+        if os.path.exists(fx):
+            ikon = Image.open(fx).convert('RGBA')
+            ikon = ikon.resize((int(ikon.width * 210 / ikon.height), 210), Image.LANCZOS)
+            yapistir(im, ikon, (W - ikon.width) / 2, 300 + (1 - a1) * 26)
         ortala(d, 560, 'FEXTOPUS', inter(900, 150), INK)
         ortala(d, 720, 'KARNESİ', inter(900, 150), MOR)
     with Katman(c, a2) as (im, d):

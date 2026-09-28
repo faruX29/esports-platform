@@ -8,7 +8,7 @@
  * • Match List — Upcoming / Past sekmeleri
  * • Turkish Pride efekti
  */
-import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react'
+import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import { useParams, useNavigate }                     from 'react-router-dom'
 import { supabase }                                   from '../supabaseClient'
 import { isTurkishTeam }                              from '../constants'
@@ -24,7 +24,7 @@ import TurkishBadge                                   from '../components/Turkis
 import { normalizeGameId }                            from '../utils/gameUtils'
 import { GAMES }                                      from '../context/GameContext'
 import {
-  Swords, Flame, Trophy, Crown, Route, Flag, Gamepad2, Medal, CalendarDays,
+  Swords, Flame, Trophy, Crown, Route, Flag, Gamepad2,  CalendarDays,
   MapPin, Compass, Wallet, RefreshCw, CircleCheck, BarChart3, ClipboardList,
   Radio, Star, TriangleAlert, Zap, Target, Layers,
 } from 'lucide-react'
@@ -37,7 +37,7 @@ import DragScroll from '../components/DragScroll'
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 
 const TIER_META = {
-  S: { color: '#FFD700', bg: 'rgba(255,215,0,.15)',   border: 'rgba(255,215,0,.4)',   label: 'S-Tier · Premier'     },
+  S: { color: '#FFD700', bg: 'rgba(255,215,0,.15)',   border: 'rgba(255,215,0,.4)',   label: 'S-Tier'               },
   A: { color: '#FF4655', bg: 'rgba(255,70,85,.15)',   border: 'rgba(255,70,85,.4)',   label: 'A-Tier · Major'       },
   B: { color: '#FF8C00', bg: 'rgba(255,140,0,.15)',   border: 'rgba(255,140,0,.4)',   label: 'B-Tier · Regional'    },
   C: { color: '#818cf8', bg: 'rgba(129,140,248,.15)', border: 'rgba(129,140,248,.4)', label: 'C-Tier · Challenger'  },
@@ -517,6 +517,20 @@ function detectFormat(matches) {
   return rounds.length > 0 ? 'roundrobin' : 'elimination'
 }
 
+// GSL grubu (4 takım, çift eleme): açılış → kazananlar / elenme → decider.
+// PandaScore bu maçları "Winners Match" / "Elimination Match" / "Decider Match"
+// diye etiketliyor. 28 Eylül'de görüldü: metin içindeki "elimination" kelimesi
+// yüzünden turnuva ELEME AĞACI sanılıyor ve maçlar "Çeyrek Final / Yarı Final /
+// Büyük Final" kolonlarına dağıtılıyordu — grupta öyle bir aşama yok.
+// Veritabanında bu etiketi taşıyan 1.842 maç var, yani sorun Champions'a özel değil.
+const GSL_RE = /(winners?\s*match|elimination\s*match|decider\s*match|opening\s*match)/i
+
+function isGslStage(tournament, matches) {
+  const adGrup = /^group\b/i.test(String(tournament?.name || '').trim())
+  const gslEtiket = (matches || []).some(m => GSL_RE.test(String(m?.round_info || m?.name || '')))
+  return adGrup || gslEtiket
+}
+
 function detectStageMode(tournament, matches, format) {
   const rootStageText = [tournament?.stage_type, tournament?.stage_name]
     .filter(Boolean)
@@ -532,7 +546,8 @@ function detectStageMode(tournament, matches, format) {
     .join(' ')
     .toLowerCase()
 
-  const hasLeagueStyle = /(swiss|groups?|round\s*robin|\brr\b)/.test(stageText)
+  const gsl = isGslStage(tournament, matches)
+  const hasLeagueStyle = gsl || /(swiss|groups?|round\s*robin|\brr\b)/.test(stageText)
   const hasBracketSignals = /(play[\s_-]*offs?|elimination|knockout|bracket|quarter|semi|grand\s*final|lower|upper)/.test(stageText)
   const hasStageHints = Boolean(rootStageText) || (matches || []).some(m => Boolean(m?.stage_type || m?.stage_name))
   const stageUndetermined = !hasStageHints && !hasLeagueStyle && !hasBracketSignals
@@ -541,6 +556,7 @@ function detectStageMode(tournament, matches, format) {
   const bracketEnabled = !hasLeagueStyle && hasBracketSignals && !stageUndetermined
 
   return {
+    gsl,
     hasLeagueStyle,
     hasBracketSignals,
     hasStageHints,
@@ -753,7 +769,9 @@ function TopPerformers({ rows }) {
   )
 }
 
-function StandingsTable({ matches, navigate }) {
+// cikanSayisi: kaç takım bir sonraki aşamaya çıkıyor (GSL grubunda 2). 0 = bilinmiyor,
+// o zaman hiçbir sıra vurgulanmaz — "kim ödül aldı" izlenimi vermemek için.
+function StandingsTable({ matches, navigate, cikanSayisi = 0 }) {
   // Katılımcı takımları maçlardan türet
   const table = useMemo(() => {
     const map = {}
@@ -830,8 +848,10 @@ function StandingsTable({ matches, navigate }) {
             const total  = t.w + t.l
             const pct    = total > 0 ? Math.round((t.w / total) * 100) : 0
             const isTR   = isTurkishTeam(t.name)
-            const isTop3 = i < 3
-            const medalColors = ['#f0c040', 'var(--text-2)', '#cd7f32']
+            // Madalya YOK (28 Eylül): 4 takımlı GSL grubunda yalnız ilk 2 takım
+            // playoff'a çıkar; 3. sıraya bronz madalya koymak "ödül kazandı" gibi
+            // okunuyordu. Çıkanlar ayrıca işaretlenir (cikanSayisi).
+            const cikiyor = cikanSayisi > 0 && i < cikanSayisi
             return (
               <tr
                 key={t.id}
@@ -841,9 +861,10 @@ function StandingsTable({ matches, navigate }) {
                 {/* Rank */}
                 <td style={{ padding: '10px 12px', textAlign: 'center',
                   background: 'var(--surface)', borderRadius: '10px 0 0 10px',
-                  borderLeft: isTop3 ? `3px solid ${['#FFD700','var(--text-2)','#CD7F32'][i]}` : '3px solid transparent',
+                  borderLeft: `3px solid ${cikiyor ? 'var(--accent-fg)' : 'transparent'}`,
                 }}>
-                  {isTop3 ? <Medal size={16} color={medalColors[i]} strokeWidth={2.2} /> : <span style={{ fontSize: 14 }}>{i + 1}</span>}
+                  <span style={{ fontSize: 14, fontWeight: cikiyor ? 800 : 500,
+                    color: cikiyor ? 'var(--accent-fg)' : 'var(--text-3)' }}>{i + 1}</span>
                 </td>
 
                 {/* Team */}
@@ -2157,7 +2178,11 @@ export default function TournamentPage() {
                 color: '#818cf8',
                 display: 'inline-flex', alignItems: 'center', gap: 5,
               }}>
-                {format === 'roundrobin' ? <><RefreshCw size={11} /> Lig Usulü</> : <><Trophy size={11} /> Eleme</>}
+                {stageMode.gsl
+                  ? <><Swords size={11} /> GSL · çift eleme</>
+                  : format === 'roundrobin'
+                    ? <><RefreshCw size={11} /> Lig Usulü</>
+                    : <><Trophy size={11} /> Eleme</>}
               </span>
             )}
           </div>
@@ -2271,7 +2296,8 @@ export default function TournamentPage() {
         {format !== 'elimination' && pastMatches.length > 0 && (
           <div style={{ marginBottom: 36 }}>
             <ST Icon={BarChart3} label="Puan Durumu" />
-            <StandingsTable matches={pastMatches} navigate={navigate} />
+            <StandingsTable matches={pastMatches} navigate={navigate}
+              cikanSayisi={stageMode.gsl ? 2 : 0} />
           </div>
         )}
 
@@ -2403,7 +2429,9 @@ export default function TournamentPage() {
           <div style={{ marginBottom: 36 }}>
             <ST
               Icon={ClipboardList}
-              label={stageMode.hasLeagueStyle ? 'Aşama Maçları (İsviçre / Grup / Lig Usulü)' : 'Aşama Maç Listesi'}
+              label={stageMode.gsl
+                ? 'Grup maçları (açılış → kazananlar / elenme → decider)'
+                : stageMode.hasLeagueStyle ? 'Aşama Maçları (İsviçre / Grup / Lig Usulü)' : 'Aşama Maç Listesi'}
               right={<span style={{ fontSize: 10, color: 'var(--text-5)' }}>Tarih ve tur bazlı</span>}
             />
             <div style={{

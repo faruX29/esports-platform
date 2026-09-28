@@ -1238,8 +1238,15 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
     // If there are any real matches in this bracket, pad every stage from the
     // first active stage to the final with virtual TBD cards so the bracket
     // tree is always visually complete (VLR.gg / Liquipedia style).
+    // ⚠️ BİTMİŞ turnuvada doldurma YAPILMAZ (28 Eylül). LCK 2026 Playoffs 6 takımla
+    // oynandı; kod 8 takımlık ağaç varsayıp bitmiş turnuvaya 4 boş "TBD" kutusu
+    // ekliyordu — oynanmamış maçlar varmış gibi görünüyordu.
+    const gercekMaclar = roundOrder.flatMap(k => (main[k] || []).filter(m => !m.is_virtual))
+    const hepsiBitti = gercekMaclar.length > 0 &&
+      gercekMaclar.every(m => ['finished', 'canceled'].includes(m.status))
+
     const firstRealIdx = roundOrder.findIndex(k => main[k]?.some(m => !m.is_virtual))
-    if (firstRealIdx >= 0) {
+    if (firstRealIdx >= 0 && !hepsiBitti) {
       for (let i = firstRealIdx; i < roundOrder.length; i++) {
         const stage = roundOrder[i]
         const expected = STAGE_EXPECTED_COUNTS[stage] ?? 0

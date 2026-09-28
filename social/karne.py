@@ -90,39 +90,65 @@ def sahne_baslik(veriler, t):
     return c.convert('RGB')
 
 # ── Sahne 2: karne listesi ────────────────────────────────────────────────
+def _tik(d, cx, cy, renk, boy=46):
+    """Vektör tik — yazı tipi işaretine güvenmiyoruz, her yerde aynı görünsün."""
+    k = boy / 2
+    d.line([(cx - k, cy), (cx - k * 0.2, cy + k * 0.7), (cx + k, cy - k * 0.75)],
+           fill=renk, width=9, joint='curve')
+
+def _carpi(d, cx, cy, renk, boy=42):
+    k = boy / 2
+    d.line([(cx - k, cy - k), (cx + k, cy + k)], fill=renk, width=9)
+    d.line([(cx + k, cy - k), (cx - k, cy + k)], fill=renk, width=9)
+
 def _karne_satiri(im, d, y, m, a):
-    h = 128
+    """Maç satırı: solda maç, sağda tik/çarpı, altta Fextopus ihtimal barı.
+
+    Kurucu (28 Eyl): DOĞRU/YANILDI etiketleri maçın üstüne biniyordu →
+    içerik sola çekildi, sonuç işareti sağda kendi sütununda; tahmin
+    yüzdesine bar eklendi ve çerçevenin altında boşluk bırakıldı.
+    """
+    h = 156
+    isaret_x = W - 130           # sonuç sütununun merkezi
+    ic_son = W - 210             # içerik alanının sağ sınırı
     turk = _turk_mu(m['a']['ad']) or _turk_mu(m['b']['ad'])
     if turk:
-        d.rounded_rectangle([50, y, W - 50, y + h], 22, fill=(52, 20, 30), outline=KIRMIZI, width=3)
+        d.rounded_rectangle([50, y, W - 50, y + h], 24, fill=(52, 20, 30), outline=KIRMIZI, width=3)
     else:
-        d.rounded_rectangle([50, y, W - 50, y + h], 22, fill=KUTU, outline=CIZGI, width=2)
-    d.text((74, y + 14), f"GRUP {m['grup']}", font=inter(800, 20), fill=FAINT)
-    # Takımlar + skor
-    f_ad = inter(800, 32)
-    for tm, skor, x, sag in ((m['a'], m['sa'], 74, False), (m['b'], m['sb'], W - 74, True)):
-        lg = logo(tm['id'], tm['logo'], tm['ad'], tm['ac'], 52)
-        s = tm['ac'] if tm.get('ac') and len(tm['ac']) <= 6 else kisa(tm, d, f_ad, 160)
-        kazandi = m['kazanan']['id'] == tm['id']
-        renk = INK if kazandi else MUTED
+        d.rounded_rectangle([50, y, W - 50, y + h], 24, fill=KUTU, outline=CIZGI, width=2)
+    d.line([(ic_son + 34, y + 20), (ic_son + 34, y + h - 20)], fill=CIZGI, width=2)
+    d.text((76, y + 12), f"GRUP {m['grup']}", font=inter(800, 20), fill=FAINT)
+
+    f_ad = inter(800, 30)
+    for tm, x, sag in ((m['a'], 76, False), (m['b'], ic_son, True)):
+        lg = logo(tm['id'], tm['logo'], tm['ad'], tm['ac'], 46)
+        s = tm['ac'] if tm.get('ac') and len(tm['ac']) <= 6 else kisa(tm, d, f_ad, 150)
+        renk = INK if m['kazanan']['id'] == tm['id'] else MUTED
         if not sag:
-            yapistir(im, lg, x, y + 52)
-            d.text((x + 66, y + 58), s, font=f_ad, fill=renk)
+            yapistir(im, lg, x, y + 46)
+            d.text((x + 58, y + 50), s, font=f_ad, fill=renk)
         else:
-            yapistir(im, lg, x - lg.width, y + 52)
-            d.text((x - 66 - d.textlength(s, font=f_ad), y + 58), s, font=f_ad, fill=renk)
+            yapistir(im, lg, x - lg.width, y + 46)
+            d.text((x - 58 - d.textlength(s, font=f_ad), y + 50), s, font=f_ad, fill=renk)
     skor = f"{m['sa']} - {m['sb']}"
-    ortala(d, y + 52, skor, inter(900, 46), INK)
-    # Tahmin ve sonuç
-    tahmin = f"Fextopus: {m['fav']['ac'] or m['fav']['ad']} %{m['fav_yuzde']}"
-    d.text((W / 2 - d.textlength(tahmin, font=inter(600, 24)) / 2, y + 100), tahmin,
-           font=inter(600, 24), fill=FAINT)
-    isaret, renk = ('DOĞRU', MOR) if m['dogru'] else ('YANILDI', ELENDI)
-    f = inter(900, 26)
-    w = d.textlength(isaret, font=f) + 40
-    d.rounded_rectangle([W - 74 - w, y + 12, W - 74, y + 52], 20, fill=renk)
-    d.text((W - 74 - w / 2 - d.textlength(isaret, font=f) / 2, y + 19), isaret, font=f,
-           fill=(10, 14, 22) if m['dogru'] else INK)
+    f_s = inter(900, 42)
+    d.text(((76 + ic_son - d.textlength(skor, font=f_s)) / 2, y + 42), skor, font=f_s, fill=INK)
+
+    # Fextopus ihtimali: küçük etiket + bar (bar `a` ile dolar)
+    fav_sol = m['fav']['id'] == m['a']['id']
+    etiket = f"Fextopus: {m['fav']['ac'] or m['fav']['ad']} %{m['fav_yuzde']}"
+    d.text((76, y + 92), etiket, font=inter(600, 22), fill=FAINT)
+    bx0, bx1, by = 76, ic_son, y + 126
+    d.rounded_rectangle([bx0, by, bx1, by + 14], 7, fill=GRI)
+    dolu = int((bx1 - bx0) * (m['fav_yuzde'] / 100) * a)
+    if dolu > 4:
+        kutu = [bx0, by, bx0 + dolu, by + 14] if fav_sol else [bx1 - dolu, by, bx1, by + 14]
+        d.rounded_rectangle(kutu, 7, fill=MOR if m['dogru'] else ELENDI)
+
+    if m['dogru']:
+        _tik(d, isaret_x, y + h / 2, MOR)
+    else:
+        _carpi(d, isaret_x, y + h / 2, ELENDI)
     return h
 
 def sahne_karne(veriler, t):
@@ -137,7 +163,7 @@ def sahne_karne(veriler, t):
         ai = _eas((t - 0.08 - i * 0.085) / 0.16)
         with Katman(c, ai) as (im, d):
             h = _karne_satiri(im, d, y, m, ai)
-        y += h + 22
+        y += h + 12
     _alt_bilgi(c)
     return c.convert('RGB')
 

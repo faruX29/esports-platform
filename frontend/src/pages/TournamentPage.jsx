@@ -566,11 +566,27 @@ function detectStageMode(tournament, matches, format) {
   }
 }
 
-function getRoundDisplayLabel(match) {
-  return match?.round_info || match?.stage_name || 'Round'
+// PandaScore GSL etiketleri İngilizce geliyor ve başlıklar büyük harfe çevrildiği
+// için Türkçe kurallarıyla bozuluyordu ("WİNNERS MATCH"). Türkçe karşılıkları:
+const GSL_ETIKET_TR = [
+  [/winners?\s*match/i, 'Kazananlar Maçı'],
+  [/elimination\s*match/i, 'Elenme Maçı'],
+  [/decider\s*match/i, 'Decider Maçı'],
+  [/opening\s*match/i, 'Açılış Maçı'],
+]
+
+function getRoundDisplayLabel(match, gsl = false) {
+  const ham = match?.round_info || match?.stage_name || ''
+  for (const [re, tr] of GSL_ETIKET_TR) {
+    if (re.test(ham)) return tr
+  }
+  // GSL grubunda etiketsiz maç = açılış maçı (PandaScore oraya takım kodu yazıyor,
+  // ör. "TL vs PR" — tur adı değil).
+  if (gsl && /^\s*\S.*\bvs\b.*\S\s*$/i.test(ham)) return 'Açılış Maçı'
+  return ham || 'Round'
 }
 
-function StageListView({ matches, navigate, gc }) {
+function StageListView({ matches, navigate, gc, gsl = false }) {
   const [visibleDates, setVisibleDates] = useState(8)
   const grouped = useMemo(() => {
     const sorted = [...(matches || [])].sort((a, b) => {
@@ -587,13 +603,13 @@ function StageListView({ matches, navigate, gc }) {
         ? d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })
         : 'Tarih Bilinmiyor'
 
-      const roundKey = getRoundDisplayLabel(m)
+      const roundKey = getRoundDisplayLabel(m, gsl)
       if (!bucket[dateKey]) bucket[dateKey] = {}
       if (!bucket[dateKey][roundKey]) bucket[dateKey][roundKey] = []
       bucket[dateKey][roundKey].push(m)
     }
     return bucket
-  }, [matches])
+  }, [matches, gsl])
 
   const dateKeys = Object.keys(grouped)
   if (dateKeys.length === 0) {
@@ -2438,7 +2454,7 @@ export default function TournamentPage() {
               background: 'var(--bg)', borderRadius: 16,
               border: '1px solid var(--surface-2)', padding: '16px',
             }}>
-              <StageListView matches={matches} navigate={navigate} gc={gc} />
+              <StageListView matches={matches} navigate={navigate} gc={gc} gsl={stageMode.gsl} />
             </div>
           </div>
         )}

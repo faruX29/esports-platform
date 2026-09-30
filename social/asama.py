@@ -41,7 +41,7 @@ def veri(asama_kelime):
       JOIN teams ta ON ta.id = m.team_a_id
       JOIN teams tb ON tb.id = m.team_b_id
       WHERE t.event_name = %s AND m.round_info ILIKE %s
-        AND m.status <> 'finished' AND m.prediction_team_a IS NOT NULL
+        AND m.status = 'not_started' AND m.prediction_team_a IS NOT NULL
       ORDER BY m.scheduled_at
     """
     with psycopg.connect(os.environ['DATABASE_URL']) as cn, cn.cursor() as c:
@@ -71,7 +71,12 @@ def sahne_baslik(maclar, baslik, alt, t):
         ortala(d, 760, alt, inter(700, 44), MOR)
         gunler = sorted({(m['saat'].day, m['saat'].month) for m in maclar})
         metin = ' ve '.join(f'{g} {AY[ay]}' for g, ay in gunler)
-        ortala(d, 880, f'{len(maclar)} maç · {metin}', inter(600, 38), MUTED)
+        if len(maclar) == 1:
+            g = maclar[0]['saat']
+            alt_satir = f"GRUP {maclar[0]['grup']} · {g.day} {AY[g.month]} · {g:%H:%M}"
+        else:
+            alt_satir = f'{len(maclar)} maç · {metin}'
+        ortala(d, 880, alt_satir, inter(600, 38), MUTED)
     fx = YOL('assets', 'fextopus-icon.png')
     with Katman(c, a2) as (im, d):
         if os.path.exists(fx):
@@ -128,6 +133,26 @@ def sahne_maclar(maclar, baslik, alt, t):
         d.text((80, 96), 'VCT CHAMPIONS 2026', font=inter(800, 28), fill=KIRMIZI)
         d.text((80, 140), baslik, font=inter(900, 62), fill=INK)
         d.text((82, 226), alt, font=inter(600, 32), fill=MOR)
+    if len(maclar) == 1:
+        m = maclar[0]
+        a1 = _eas((t - 0.10) / 0.22)
+        with Katman(c, a1) as (im, d):
+            _mac_karti(im, d, 660, m, a1)
+        a2 = _eas((t - 0.34) / 0.22)
+        with Katman(c, a2) as (im, d):
+            ortala(d, 460, 'İkisi de açılış maçını 2-0 kazandı', inter(700, 40), INK)
+            ortala(d, 524, 'Grupta ikisi de kayıpsız', inter(600, 34), MUTED)
+        a3 = _eas((t - 0.56) / 0.22)
+        with Katman(c, a3) as (im, d):
+            for i, (etiket, metin, renk) in enumerate((
+                    ('KAZANAN', 'doğrudan playoff’a', MOR),
+                    ('KAYBEDEN', 'decider maçına kalıyor', MUTED))):
+                yy = 1120 + i * 190
+                d.rounded_rectangle([50, yy, W - 50, yy + 152], 24, fill=KUTU, outline=CIZGI, width=2)
+                d.text((84, yy + 32), etiket, font=inter(800, 30), fill=renk)
+                d.text((84, yy + 78), metin, font=inter(700, 42), fill=INK)
+        _alt_bilgi(c)
+        return c.convert('RGB')
     y = 300
     for i, m in enumerate(maclar):
         ai = _eas((t - 0.1 - i * 0.14) / 0.22)
@@ -187,7 +212,8 @@ def kareler(maclar, baslik, alt):
             yield im
 
 def aciklama(maclar, baslik, alt):
-    s = [f'VCT Champions 2026 · {baslik.lower().capitalize()}', alt + '.', '']
+    bas_tr = baslik.replace('I', 'ı').replace('İ', 'i').lower()
+    s = [f'VCT Champions 2026 · {bas_tr[0].upper() + bas_tr[1:]}', alt + '.', '']
     for m in maclar:
         pa = round(m['pa'] * 100)
         fav = m['a'] if pa >= 50 else m['b']
@@ -207,6 +233,8 @@ def uret(anahtar, dosya):
     kelime, baslik, alt = ASAMALAR[anahtar]
     maclar = veri(kelime)
     assert maclar, f'{kelime} için oynanmamış maç yok'
+    if len(maclar) == 1:
+        baslik = baslik.replace('MAÇLARI', 'MAÇI')
     pr = subprocess.Popen([ffmpeg_yolu(), '-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{W}x{H}',
         '-r', str(FPS), '-i', '-', '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo', '-shortest',
         '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '20', '-c:a', 'aac', '-b:a', '64k',

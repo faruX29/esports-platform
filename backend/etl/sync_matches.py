@@ -347,8 +347,21 @@ class MatchSyncer:
                             ON CONFLICT (id) DO UPDATE SET
                                 status          = EXCLUDED.status,
                                 winner_id       = EXCLUDED.winner_id,
-                                team_a_score    = EXCLUDED.team_a_score,
-                                team_b_score    = EXCLUDED.team_b_score,
+                                -- ⚠️ TAKIMLAR da güncellenir (30 Eylül 2026). Eskiden
+                                -- yalnız skorlar yenileniyordu; PandaScore maç bitince
+                                -- opponents sırasını değiştirdiğinde (hatta bazen
+                                -- rakibi düzelttiğinde) skorlar ters takıma yazılıyordu.
+                                -- 427 bitmiş maçta "Paper Rex 1-2 G2, kazanan Paper Rex"
+                                -- gibi kendi içinde çelişen satırlar oluşmuştu.
+                                -- Takım ve skor AYNI kaynaktan, birlikte yazılır.
+                                team_a_id       = COALESCE(EXCLUDED.team_a_id, matches.team_a_id),
+                                team_b_id       = COALESCE(EXCLUDED.team_b_id, matches.team_b_id),
+                                team_a_score    = CASE WHEN EXCLUDED.team_a_id IS NOT NULL
+                                                       THEN EXCLUDED.team_a_score
+                                                       ELSE matches.team_a_score END,
+                                team_b_score    = CASE WHEN EXCLUDED.team_b_id IS NOT NULL
+                                                       THEN EXCLUDED.team_b_score
+                                                       ELSE matches.team_b_score END,
                                 scheduled_at    = EXCLUDED.scheduled_at,
                                 tournament_id   = COALESCE(EXCLUDED.tournament_id,
                                                            matches.tournament_id),

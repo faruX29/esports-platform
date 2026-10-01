@@ -17,3 +17,6 @@ frontend/_*
 # Sosyal medya radar ciktilari (uretilen video + logo onbellegi)
 social/cikti/
 social/onbellek/
+
+# Claude Code geçici çalışma dizini dosyaları
+tmpclaude-*-cwd

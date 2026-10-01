@@ -1,0 +1,22 @@
+# Satır sonları: depoda daima LF. Windows'ta core.autocrlf=true olsa da
+# dosyalar LF kalır; "LF will be replaced by CRLF" uyarıları ve diske yazılan
+# satır sonu farkları biter.
+* text=auto eol=lf
+
+# Windows betikleri CRLF ister
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# İkili dosyalar — dönüştürme ve diff yok
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.gif  binary
+*.ico  binary
+*.mp4  binary
+*.ttf  binary
+*.otf  binary
+*.woff binary
+*.woff2 binary

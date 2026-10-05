@@ -53,6 +53,7 @@ python radar.py [YYYY-AA-GG] | python karne.py | python champions.py [grup] | py
 - **GitHub Actions kısa cron'ları eliyor:** `*/5` fiilen saatlerce gecikir. Sık iş için pg_cron kullan.
 - **PandaScore:** saatte 1000 istek (`X-Rate-Limit-Remaining` başlığı).
 - **Vercel ücretsiz CPU kotası** dar; middleware her istekte koşar, `api/og` pahalıdır.
+- **Vercel CDN Requests** (Hobby: ayda 1M) bot dahil her isteği sayar; kotayı yiyen botu Firewall → Top User Agents'ta bul, custom rule'u UA **Contains** ile kur ("Matches expression" eşleşmedi) ve bot UA'lı curl'de 403 gör. Değersiz bot listesi `middleware.js` `DEGERSIZ_BOT_RE` ile `public/robots.txt`'te eş tutulur.
 - `sync-liquipedia.yml` adı yanıltıcı: Liquipedia senkronu kapalı, iş akışı artık içerik (önizleme, turnuva özeti, transfer haberi) üretiyor.
 
 ## Kod kuralları

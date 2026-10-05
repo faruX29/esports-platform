@@ -65,6 +65,8 @@ const BOT_RE = /(bot|crawler|spider|slurp|preview|unfurl|embed|opengraph|open gr
 // tüketimin %82'si ABD bölgelerinden (botlar). Googlebot/Bingbot, sosyal önizleme
 // botları ve arama odaklı AI botları (OAI-SearchBot, PerplexityBot) KAPSAM DIŞI:
 // onlar ziyaretçi getirir.
+// Aynı liste public/robots.txt'te Disallow: (5 Eki) — SPA kabuğu da CDN Requests
+// kotasından (ayda 1M) yer; kurala uyan bot hiç istek atmasın. İkisini eş tut.
 const DEGERSIZ_BOT_RE = /(ahrefsbot|semrushbot|mj12bot|dotbot|petalbot|bytespider|dataforseobot|blexbot|serpstatbot|barkrowler|seekportbot|gptbot|ccbot|claudebot|anthropic-ai|amazonbot|meta-externalagent|imagesiftbot|omgili|diffbot|timpibot)/i
 
 // Canonical = DAİMA üretim domaini + temiz path (query yok). www/vercel.app/utm

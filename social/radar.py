@@ -61,8 +61,9 @@ hx = lambda s: tuple(int(s[i:i+2],16) for i in (1,3,5))
 # ── Veri ──────────────────────────────────────────────────────────────────
 # Radar dışı tutulan etkinlikler (kurucu kararı, 24 Eyl). Champions'ın kendi
 # grup videoları var (social/champions.py); aynı maçlar radara da girince günün
-# diğer oyunlardaki maçları arada kaynıyordu. Turnuva bitince bu liste boşaltılır.
-HARIC_ETKINLIKLER = ['Champions 2026']
+# diğer oyunlardaki maçları arada kaynıyordu. 12 Ekim'de boşaltıldı: Champions
+# videoları sürdürülmedi, maçları yine radarda.
+HARIC_ETKINLIKLER = []
 
 def gunun_maclari(gun):
     sql = """

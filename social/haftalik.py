@@ -261,7 +261,14 @@ def turk_haftasi(ekler):
             p_turk = round((ilk['pa'] if tk is ilk['a'] else 1 - ilk['pa']) * 100)
             s = ilk['saat']
             with Katman(c, a1) as (im, d):
-                ortala(d, 500, 'BU HAFTA', inter(900, 44), MUTED)
+                # Oyun ikonu "BU HAFTA"nın solunda: tek maç gösteriliyor, oyunu belli olsun
+                f = inter(900, 44)
+                oi = _ikon(YOL('assets', 'oyun', f"{ilk['ikon']}.png"), 52) if ilk.get('ikon') else None
+                gw = (oi.width + 18) if oi else 0
+                x0 = (W - gw - d.textlength('BU HAFTA', font=f)) / 2
+                if oi:
+                    yapistir(im, oi, x0, 496)
+                d.text((x0 + gw, 500), 'BU HAFTA', font=f, fill=MUTED)
                 for tm, cx in ((tk, 290), (rakip, W - 290)):
                     lg = logo(tm['id'], tm['logo'], tm['ad'], tm['ac'], 210)
                     yapistir(im, lg, cx - lg.width / 2, 600 + (210 - lg.height) / 2)

@@ -25,7 +25,7 @@ import NewsCover, { scoreFromHero } from '../components/NewsCover'
 import { cleanDisplayName } from '../utils/nameCleaner'
 import { buildNewsSlug, parseNewsRef } from '../utils/newsSlug'
 import { getEsportsName } from '../utils/esportsName'
-import { X as XIcon, MessageSquare, Swords, Trophy } from 'lucide-react'
+import { X as XIcon, MessageSquare, Swords, Trophy, UserRound } from 'lucide-react'
 import { FEXT } from '../theme'
 import { isUncertainPrediction } from '../utils/prediction'
 
@@ -127,11 +127,13 @@ function mapTransferRowToStory(row) {
       gameColor: FEXT.accent,
       tier: normalizeTier(row.tier),
       tournamentName: row.tournament_name || 'Transfer Haberi',
-      turkish: false,
-      teamA: { name: row.team_a_name, logo_url: row.team_a_logo },
-      teamB: { name: row.team_b_name, logo_url: row.team_b_logo },
+      turkish: Boolean(isTurkishTeam(row.team_a_name || '') || isTurkishTeam(row.team_b_name || '')),
+      // ID'ler ekler'den (backend/sql/news_ekler.sql); yoksa bağlantı çıkmaz, ad yine görünür
+      teamA: { id: row.ekler?.eski_takim_id ?? null, name: row.team_a_name, logo_url: row.team_a_logo },
+      teamB: { id: row.ekler?.yeni_takim_id ?? null, name: row.team_b_name, logo_url: row.team_b_logo },
     },
-    source: {},
+    player: row.ekler?.oyuncu_id ? { id: row.ekler.oyuncu_id, name: row.hero_score } : null,
+    source: { kaynak: row.ekler?.kaynak || null },
   }
 }
 
@@ -140,6 +142,7 @@ function mapTournamentRowToStory(row) {
   return {
     id: `tournament_${row.tournament_id}`,
     matchId: null,
+    tournamentId: row.tournament_id ?? null,
     status: 'tournament',
     variant: 'tournament',
     publishedAt: row.created_at,
@@ -286,10 +289,15 @@ function AIProbabilityBar({ story }) {
 
 function TrustLayer({ story, onReport, liked, likeCount, onToggleLike }) {
   const isTransfer = story?.variant === 'transfer' || story?.status === 'transfer'
+  // 22 Eyl'den beri transfer PandaScore kadro farkından geliyor; Liquipedia'lı eski
+  // haberlerde atıf kalmak ZORUNDA. Kaynağı bilinmeyen eski haber Liquipedia sayılır.
+  const pandascoreTransfer = isTransfer && String(story?.source?.kaynak || '').startsWith('pandascore')
   return (
     <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
       <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
-        {isTransfer
+        {pandascoreTransfer
+          ? 'Kadro verisi PandaScore kaynaklıdır; haber otomatik üretildi.'
+          : isTransfer
           ? <>Transfer verisi <a href="https://liquipedia.net" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-3)', textDecoration: 'underline' }}>Liquipedia</a> kaynaklıdır; haber otomatik üretildi.</>
           : 'PandaScore verileriyle otomatik üretilmiştir.'}
       </span>
@@ -314,6 +322,7 @@ function RelatedLinks({ story }) {
   const chips = []
   if (v.teamA?.id) chips.push({ key: 'ta', to: `/team/${v.teamA.id}`, label: v.teamA.name, logo: v.teamA.logo_url })
   if (v.teamB?.id) chips.push({ key: 'tb', to: `/team/${v.teamB.id}`, label: v.teamB.name, logo: v.teamB.logo_url })
+  if (story.player?.id) chips.push({ key: 'p', to: `/player/${story.player.id}`, label: story.player.name || 'Oyuncu', icon: 'player' })
   if (isMatch && story.matchId) chips.push({ key: 'm', to: `/match/${story.matchId}`, label: 'Maç Detayı', icon: 'match' })
   if (story.tournamentId) chips.push({ key: 'to', to: `/tournament/${story.tournamentId}`, label: v.tournamentName || 'Turnuva', icon: 'trophy' })
   if (!chips.length) return null
@@ -334,7 +343,7 @@ function RelatedLinks({ story }) {
           >
             {c.logo
               ? <InitialsImage src={c.logo} name={c.label} width={20} height={20} borderRadius={5} objectFit='contain' />
-              : c.icon === 'match' ? <Swords size={15} /> : <Trophy size={15} />}
+              : c.icon === 'match' ? <Swords size={15} /> : c.icon === 'player' ? <UserRound size={15} /> : <Trophy size={15} />}
             <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>{c.label}</span>
           </Link>
         ))}
@@ -726,6 +735,8 @@ export default function NewsDetailPage() {
 
         const storyWithRealtimeTier = {
           ...generated,
+          // RelatedLinks'in turnuva bağlantısı bunu bekliyordu ama hiç doldurulmuyordu
+          tournamentId: Number.isFinite(tournamentId) ? tournamentId : null,
           visuals: {
             ...generated.visuals,
             tier: normalizeTier(realtimeTournament?.tier ?? generated?.visuals?.tier),

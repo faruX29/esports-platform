@@ -18,6 +18,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+from psycopg.types.json import Jsonb
 from pydantic import BaseModel
 
 from database import Database
@@ -508,11 +509,30 @@ class NewsGenerator:
                     LEFT JOIN teams       t_b ON t_b.id = m.team_b_id
                     LEFT JOIN tournaments tn  ON tn.id  = m.tournament_id
                     LEFT JOIN games       g   ON g.id   = m.game_id
+                    CROSS JOIN LATERAL (
+                        SELECT UPPER(LEFT(COALESCE(tn.tier, ''), 1)) AS sev,
+                               COALESCE(m.number_of_games, 1) >= 3   AS bo3,
+                               EXISTS (SELECT 1 FROM turk_takimlar k WHERE k.team_id = m.team_a_id) AS tr_a,
+                               EXISTS (SELECT 1 FROM turk_takimlar k WHERE k.team_id = m.team_b_id) AS tr_b,
+                               COALESCE((m.prediction_team_a > m.prediction_team_b AND m.winner_id = m.team_b_id)
+                                     OR (m.prediction_team_b > m.prediction_team_a AND m.winner_id = m.team_a_id),
+                                        false) AS surpriz
+                    ) f
                     WHERE m.status = 'finished'
                       AND m.scheduled_at >= %s
                       AND NOT EXISTS (
                           SELECT 1 FROM news_articles na
                           WHERE na.match_id = m.id AND na.variant <> 'preview'
+                      )
+                      -- Kapsam (kurucu kararı, 24 Eki): S/A hepsi + seçili Türk takımı
+                      -- maçları; Türk olmayan B/C/D yok. Kural _is_newsworthy ile uyumlu
+                      -- tutulur: kapının atlayacağı maç burada seçilirse her koşuda
+                      -- yeniden seçilip LIMIT'i tıkar (atlananlar işaretlenmiyor).
+                      AND (
+                          f.sev IN ('S', 'A')
+                          OR ((f.tr_a OR f.tr_b) AND f.sev IN ('B', 'C') AND (f.bo3 OR f.surpriz))
+                          OR ((f.tr_a OR f.tr_b) AND f.sev NOT IN ('S', 'A', 'B', 'C')
+                              AND ((f.tr_a AND f.tr_b AND f.bo3) OR f.surpriz))
                       )
                     ORDER BY m.scheduled_at DESC
                     LIMIT 20
@@ -948,6 +968,7 @@ class NewsGenerator:
                 cur.execute(
                     """
                     SELECT rc.id AS rc_id, p.id AS player_id, p.nickname AS player,
+                           rc.source_team_id, rc.target_team_id, rc.data_source,
                            COALESCE(st.name, rc.raw_payload->>'old_team') AS old_team,
                            COALESCE(tt.name, rc.raw_payload->>'new_team') AS new_team,
                            rc.raw_payload->>'role' AS role,
@@ -1017,9 +1038,10 @@ class NewsGenerator:
                     """
                     INSERT INTO news_articles (
                         match_id, content_type, title, summary, content, variant,
-                        game_slug, tier, tournament_name, team_a_name, team_b_name, hero_score
+                        game_slug, tier, tournament_name, team_a_name, team_b_name, hero_score,
+                        ekler
                     )
-                    VALUES (NULL, 'transfer', %s, %s, %s, 'transfer', %s, 'C', %s, %s, %s, %s)
+                    VALUES (NULL, 'transfer', %s, %s, %s, 'transfer', %s, 'C', %s, %s, %s, %s, %s)
                     """,
                     (
                         article.get("title", ""), article.get("summary", ""), content,
@@ -1027,6 +1049,14 @@ class NewsGenerator:
                         "Transfer Haberi",
                         old_team, new_team,
                         transfer.get("player") or "",
+                        # Detay sayfası takım/oyuncu bağlantısını ve atfı buradan kurar
+                        # (backend/sql/news_ekler.sql).
+                        Jsonb({
+                            "oyuncu_id": str(transfer["player_id"]) if transfer.get("player_id") else None,
+                            "eski_takim_id": transfer.get("source_team_id"),
+                            "yeni_takim_id": transfer.get("target_team_id"),
+                            "kaynak": transfer.get("data_source"),
+                        }),
                     ),
                 )
                 cur.execute(

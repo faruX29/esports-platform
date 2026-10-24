@@ -114,6 +114,16 @@ class GeminiAdapter(BaseLLMAdapter):
                 contents=user_prompt,
                 config=types.GenerateContentConfig(**cfg_kwargs),
             )
+            # Harcamayı ölçmek için (24 Eki'ye kadar hiç loglanmıyordu): 2.5 Flash'ta
+            # düşünme token'ı çıktı fiyatından faturalanır, ayrı görünmeli.
+            u = getattr(response, "usage_metadata", None)
+            if u is not None:
+                logger.info(
+                    "🪙 Gemini token: girdi=%s çıktı=%s düşünme=%s",
+                    getattr(u, "prompt_token_count", None),
+                    getattr(u, "candidates_token_count", None),
+                    getattr(u, "thoughts_token_count", None),
+                )
             text = response.text.strip()
             if not text:
                 raise LLMAdapterError("Gemini returned an empty response")

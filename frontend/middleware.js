@@ -218,7 +218,9 @@ function eventCommon(url, startDate, desc, img) {
 
 function htmlDoc({ title, desc, url, img, type = 'article', jsonLd = null, body = '', robots = '' }) {
   const t = esc(title), d = esc(desc), u = esc(url), i = esc(img)
-  const robotsTag = robots ? `<meta name="robots" content="${esc(robots)}"/>\n` : ''
+  // Dizine açık sayfada büyük görsel izni: Google Discover'ın şartı (görsel ≥1200px,
+  // og 1200x630). Yoksa Google küçük önizleme gösterir ve Discover'a pek girmez.
+  const robotsTag = `<meta name="robots" content="${esc(robots || 'max-image-preview:large')}"/>\n`
   const imgTags = i ? `<meta property="og:image" content="${i}"/>
 <meta property="og:image:width" content="1200"/>
 <meta property="og:image:height" content="630"/>

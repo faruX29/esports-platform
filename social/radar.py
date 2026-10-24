@@ -276,7 +276,7 @@ def kare(oyun, renk, maclar, gun, ilerleme=1.0, glow=1.0, zoom=1.0, parca=None):
     # Türk takımlı maç satırı hafif bir panelle ayrışır, sırası DEĞİŞMEZ (saat
     # sırası korunur). Kurucu kararı (24 Eki): ayrı renk değil, zeminden bir ton
     # açık. Türk takımlı videolar belirgin şekilde daha çok izleniyor.
-    turk_satir = [_turk_mu(m['a']) or _turk_mu(m['b']) for m in maclar]
+    turk_satir = [_turk_mac(m) for m in maclar]
     for i, m in enumerate(maclar):
         gec = max(0.0, min(1.0, ilerleme*n - i*0.55))
         gec = 1 - (1-gec)**3
@@ -359,16 +359,31 @@ def kare(oyun, renk, maclar, gun, ilerleme=1.0, glow=1.0, zoom=1.0, parca=None):
 # ── Paylaşım metni ────────────────────────────────────────────────────────
 # Her gün aynı metni yazmak paylaşımı öldürür. Kanca GÜNÜN VERİSİNDEN
 # üretilir: önce Türk takımı, sonra en emin tahmin, sonra en dengeli maç.
-TURK_TAKIMLARI = (
-    'eternal fire', 'fut esports', 'futbolist', 'fire flux', 'dark passage',
-    'papara', 'supermassive', 'galatasaray', 'besiktas', 'beşiktaş',
-    'fenerbahce', 'fenerbahçe', 'misa', 'bushido', 'nasr', 'aurora',
-    'sangal', 'ultra prime', 'wolves', 'bbl', 'bbl esports',
-)
+# Türk takımları TEK KAYNAKTAN: turk_takimlar görünümü (backend/sql/turk_takimlar.sql;
+# country_code='TR' + kadroda ≥3 TR oyuncu + elle istisna). 24 Eki'ye kadar burada bir
+# ad listesi vardı ve parça eşleşme yapıyordu: Partizan Sangal, Danimarkalı BBL,
+# Copenhagen Wolves da "Türk" sayılıyordu.
+_TURK = None
 
-def _turk_mu(ad):
-    a = (ad or '').casefold()
-    return any(t in a for t in TURK_TAKIMLARI)
+def turk_takimlar():
+    """(id kümesi, ad kümesi) — süreç başına bir kez okunur."""
+    global _TURK
+    if _TURK is None:
+        with psycopg.connect(os.environ['DATABASE_URL']) as cn:
+            satir = cn.execute('SELECT t.id, t.name FROM turk_takimlar k '
+                               'JOIN teams t ON t.id = k.team_id').fetchall()
+        _TURK = ({r[0] for r in satir}, {(r[1] or '').casefold().strip() for r in satir})
+    return _TURK
+
+def _turk_mu(ad=None, tid=None):
+    """ID varsa ID'ye bakar; yoksa TAM ad eşleşmesi (parça eşleşme yanlış pozitif üretiyordu)."""
+    ids, adlar = turk_takimlar()
+    if tid is not None:
+        return tid in ids
+    return (ad or '').casefold().strip() in adlar
+
+def _turk_mac(m):
+    return _turk_mu(tid=m['a_id']) or _turk_mu(tid=m['b_id'])
 
 def paylasim_metni(oyun, maclar, gun):
     """Videonun yanına konacak hazır açıklama."""
@@ -384,9 +399,9 @@ def paylasim_metni(oyun, maclar, gun):
         return (m['a'], pa) if pa >= 100-pa else (m['b'], 100-pa)
 
     # Kanca sırası: Türk takımı > çok emin tahmin > dengeli maç
-    turk = next((m for m in maclar if _turk_mu(m['a']) or _turk_mu(m['b'])), None)
+    turk = next((m for m in maclar if _turk_mac(m)), None)
     if turk:
-        ad = turk['a'] if _turk_mu(turk['a']) else turk['b']
+        ad = turk['a'] if _turk_mu(tid=turk['a_id']) else turk['b']
         rakip = turk['b'] if ad == turk['a'] else turk['a']
         saat = (turk['saat'] + timedelta(hours=3)).strftime('%H:%M')
         pa = round(turk['pa']*100)

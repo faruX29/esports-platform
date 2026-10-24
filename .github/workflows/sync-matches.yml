@@ -71,7 +71,11 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python run.py --generate-news --news-hours 2
+        # 36 saat: pencere maçın BAŞLAMA saatine bakar ve bu iş fiilen 3-5 saatte
+        # bir koşuyor. 2 saatlik pencerede bitmiş maç neredeyse hiç kalmıyordu →
+        # Eylül sonundan 24 Eki'ye kadar sonuç haberi üretilmedi. Aynı maça ikinci
+        # haber NOT EXISTS ile engelli.
+        run: python run.py --generate-news --news-hours 36
 
       # ── Dead-man's switch (Gemini #54, 2026-08-28) ────────────────────────
       # Liquipedia hattı 8+ gün sessizce ölü kaldı. Sebep: koşular zaman

@@ -245,8 +245,8 @@ class PlayerStatsSyncer:
                             cur.execute("""
                                 INSERT INTO players
                                   (id, nickname, real_name, role, image_url,
-                                   pandascore_id, team_pandascore_id)
-                                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                   pandascore_id, team_pandascore_id, nationality)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                                 ON CONFLICT (pandascore_id)
                                   WHERE pandascore_id IS NOT NULL
                                 DO UPDATE SET
@@ -254,7 +254,8 @@ class PlayerStatsSyncer:
                                   real_name          = EXCLUDED.real_name,
                                   role               = EXCLUDED.role,
                                   image_url          = EXCLUDED.image_url,
-                                  team_pandascore_id = EXCLUDED.team_pandascore_id
+                                  team_pandascore_id = EXCLUDED.team_pandascore_id,
+                                  nationality        = COALESCE(EXCLUDED.nationality, players.nationality)
                             """, (
                                 _player_uuid(p['id']),
                                 p.get('name', 'Unknown'),
@@ -263,6 +264,7 @@ class PlayerStatsSyncer:
                                 p.get('image_url'),
                                 p['id'],
                                 team_id,
+                                p.get('nationality'),
                             ))
 
                         # Adım 3: Takımın updated_at'ini güncelle (sıra takibi için)
@@ -785,8 +787,8 @@ class PlayerStatsSyncer:
                 cur.execute("""
                     INSERT INTO players
                       (id, nickname, real_name, role, image_url,
-                       pandascore_id, team_pandascore_id)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                       pandascore_id, team_pandascore_id, nationality)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (pandascore_id)
                       WHERE pandascore_id IS NOT NULL
                     DO UPDATE SET
@@ -794,7 +796,8 @@ class PlayerStatsSyncer:
                       real_name          = EXCLUDED.real_name,
                       role               = EXCLUDED.role,
                       image_url          = EXCLUDED.image_url,
-                      team_pandascore_id = EXCLUDED.team_pandascore_id
+                      team_pandascore_id = EXCLUDED.team_pandascore_id,
+                      nationality        = COALESCE(EXCLUDED.nationality, players.nationality)
                 """, (
                     _player_uuid(p['id']),
                     p.get('name') or 'Unknown',
@@ -803,6 +806,9 @@ class PlayerStatsSyncer:
                     p.get('image_url'),   # ← mutlaka çekiliyor
                     p['id'],
                     team_id,
+                    # ISO-3166 alpha-2 ("TR"). 24 Eki'ye kadar yazılmıyordu → sütun boştu;
+                    # Türk kadrolu yabancı takımları (turk_takimlar görünümü) bu bulur.
+                    p.get('nationality'),
                 ))
 
                 if transfer is None or p['id'] in transfer['coklu']:

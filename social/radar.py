@@ -275,7 +275,7 @@ def kare(oyun, renk, maclar, gun, ilerleme=1.0, glow=1.0, zoom=1.0, parca=None):
     ust = ust + max(0, (alan - yuk*n)) // 2          # bloğu ortala
     # Türk takımlı maç satırı hafif bir panelle ayrışır, sırası DEĞİŞMEZ (saat
     # sırası korunur). Kurucu kararı (24 Eki): ayrı renk değil, zeminden bir ton
-    # açık. Türk takımlı videolar belirgin şekilde daha çok izleniyor.
+    # açık.
     turk_satir = [_turk_mac(m) for m in maclar]
     for i, m in enumerate(maclar):
         gec = max(0.0, min(1.0, ilerleme*n - i*0.55))

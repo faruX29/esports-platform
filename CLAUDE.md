@@ -80,6 +80,7 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - VLR.gg veya başka siteyi kazıma → izinsiz veri.
 - Türkçe karakterli `replace`'ten sonra `assert` atlama → eşleşmezse sessizce hiçbir şey yapmaz.
 - LLM'e anlamı/sırası yazılmamış dizi verme (ör. "LLWWW") → ters okur, yanlış haber üretir.
+- LLM'e turnuva durumu vermeden elenme/tur atlama yazmasına izin verme → tek maç sonucundan "elendi" uydurur; prompt'ta yasakla (`weekly_news.py`).
 - Özel adları çevirtme ("VCT Champions" → "Şampiyonlar Ligi") → prompt'larda `_AD_KURALI` var.
 - Doğrulanmamış tarih, saat veya sayı yazma → maç saatleri değişir, üretmeden önce DB'den tazele.
 - UI'da "Model" ya da "AI" deme → tahmin motorunun adı Fextopus.

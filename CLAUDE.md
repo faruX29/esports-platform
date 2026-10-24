@@ -84,6 +84,7 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - Özel adları çevirtme ("VCT Champions" → "Şampiyonlar Ligi") → prompt'larda `_AD_KURALI` var.
 - Doğrulanmamış tarih, saat veya sayı yazma → maç saatleri değişir, üretmeden önce DB'den tazele.
 - Turnuva adı olarak `tournaments.name`'i tek başına gösterme → çoğu yalnız aşama ("Group Stage"); `league_name,event_name` de çek, `tournamentDisplayName` (middleware'de `turnuvaAdi`) kullan. Türk takımını da ad listesiyle değil `isTurkishTeam` (`turk_takimlar`) ile bul.
+- Navbar'a öğe ekleyip genişliği ölçmeden bırakma → 7 öğe ~1140px ister, altında satır taşar (Giriş/Kayıt kesilir); `Navbar.jsx` `NAV_HAMBURGER_PX`'i güncelle.
 - UI'da "Model" ya da "AI" deme → tahmin motorunun adı Fextopus.
 - Middleware yanıtına `s-maxage` koyup CPU'yu koruduğunu sanma → middleware önbellekten önce her istekte koşar.
 - Türkçe yerelde İngilizce terimi büyük harfe çevirme → "WINNERS" "WİNNERS" olur.

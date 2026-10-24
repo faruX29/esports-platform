@@ -8,7 +8,7 @@
  * Takım listesi tek kaynaktan (turk_takimlar görünümü). Botlara aynı içerik
  * middleware'den basılır (STATIC_ROUTES['/turk-takimlari']).
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CalendarDays, History, Newspaper, Library, Users } from 'lucide-react'
 import { supabase } from '../supabaseClient'
@@ -59,17 +59,129 @@ function haberEtiketi(row) {
   return 'Maç'
 }
 
-function Bolum({ ikon, baslik, children, sag }) {
+// Sayfa bölümleri: sırası hem sayfanın hem soldaki asansörün sırası
+const BOLUMLER = [
+  { id: 'takimlar', baslik: 'Takımlar', kisa: 'Takımlar', ikon: s => <Users size={s} /> },
+  { id: 'yaklasan', baslik: 'Yaklaşan maçlar', kisa: 'Yaklaşan', ikon: s => <CalendarDays size={s} /> },
+  { id: 'sonuclar', baslik: 'Son sonuçlar', kisa: 'Sonuçlar', ikon: s => <History size={s} /> },
+  { id: 'haberler', baslik: 'Türk takımı haberleri', kisa: 'Haberler', ikon: s => <Newspaper size={s} /> },
+  { id: 'haftalik', baslik: 'Türk Espor Haftası arşivi', kisa: 'Arşiv', ikon: s => <Library size={s} /> },
+]
+const NAVBAR_YUKSEKLIK = 58
+const MOBIL_SERIT = 50          // mobilde navbar altındaki yapışkan bölüm şeridi
+const ASANSOR_TUS = 40, ASANSOR_ARA = 6
+// İki sütunlu kart ızgarası (dar ekranda tek sütun)
+const izgaraStil = min => ({ display: 'grid', gap: 8, gridTemplateColumns: `repeat(auto-fill,minmax(min(100%,${min}px),1fr))` })
+
+function Bolum({ id, baslik, ikon, children, sag, vurgulu, ustPay }) {
   return (
-    <section style={{ marginBottom: 22 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
+    <section id={id} style={{ marginBottom: 26, scrollMarginTop: ustPay }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+        margin: '0 -8px 10px', padding: '6px 8px', borderRadius: 10,
+        // Asansörle gelince başlık kısa bir an parlar, sonra söner
+        background: vurgulu ? FEXT.accentSoftBg : 'transparent',
+        transition: 'background .7s ease',
+      }}>
         <h2 style={{ margin: 0, fontSize: 13, color: 'var(--accent-fg)', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 7 }}>
-          {ikon} {baslik}
+          {ikon(15)} {baslik}
         </h2>
         {sag}
       </div>
       {children}
     </section>
+  )
+}
+
+/** Masaüstü: solda yapışkan ikon sütunu; vurgu kutusu aktif bölüme kayar (asansör). */
+function Asansor({ aktif, onGit }) {
+  const [uzerinde, setUzerinde] = useState(null)
+  const sira = Math.max(0, BOLUMLER.findIndex(b => b.id === aktif))
+  return (
+    <nav aria-label="Sayfa bölümleri" style={{ position: 'sticky', top: NAVBAR_YUKSEKLIK + 20, alignSelf: 'start' }}>
+      <div style={{ position: 'relative', display: 'grid', gap: ASANSOR_ARA, padding: ASANSOR_ARA, borderRadius: 14, border: '1px solid var(--line)', background: 'var(--surface)' }}>
+        <span aria-hidden="true" style={{
+          position: 'absolute', left: ASANSOR_ARA, top: ASANSOR_ARA, width: ASANSOR_TUS, height: ASANSOR_TUS,
+          borderRadius: 10, background: FEXT.accentSoftBg, border: `1px solid ${FEXT.accentBorder}`, boxSizing: 'border-box',
+          transform: `translateY(${sira * (ASANSOR_TUS + ASANSOR_ARA)}px)`,
+          transition: 'transform .38s cubic-bezier(.34,1.12,.5,1)', pointerEvents: 'none',
+        }} />
+        {BOLUMLER.map(b => {
+          const secili = b.id === aktif
+          const acik = uzerinde === b.id
+          return (
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => onGit(b.id)}
+              aria-label={b.baslik}
+              aria-current={secili ? 'true' : undefined}
+              onMouseEnter={() => setUzerinde(b.id)}
+              onMouseLeave={() => setUzerinde(null)}
+              onFocus={() => setUzerinde(b.id)}
+              onBlur={() => setUzerinde(null)}
+              style={{
+                position: 'relative', width: ASANSOR_TUS, height: ASANSOR_TUS, display: 'grid', placeItems: 'center',
+                border: 'none', background: 'transparent', borderRadius: 10, cursor: 'pointer', padding: 0,
+                color: secili ? 'var(--accent-fg)' : 'var(--text-3)', transition: 'color .2s',
+              }}
+            >
+              {b.ikon(18)}
+              <span style={{
+                position: 'absolute', left: ASANSOR_TUS + 12, top: '50%', zIndex: 5,
+                transform: `translate(${acik ? 0 : -4}px,-50%)`, opacity: acik ? 1 : 0,
+                transition: 'opacity .15s, transform .15s', pointerEvents: 'none', whiteSpace: 'nowrap',
+                fontSize: 12, fontWeight: 700, color: 'var(--text-1)', background: 'var(--surface-2)',
+                border: '1px solid var(--line)', borderRadius: 8, padding: '5px 9px',
+              }}>
+                {b.baslik}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </nav>
+  )
+}
+
+/** Mobil: navbar altında yapışkan, yatay kayan bölüm şeridi. */
+function MobilAsansor({ aktif, onGit }) {
+  const seritRef = useRef(null)
+  // Aktif çip şeridin dışında kalmasın (scrollIntoView sayfanın kaymasını bölebilir → elle)
+  useEffect(() => {
+    const serit = seritRef.current
+    const cip = serit?.querySelector('[aria-current="true"]')
+    if (!serit || !cip) return
+    const hedef = cip.offsetLeft - (serit.clientWidth - cip.offsetWidth) / 2
+    serit.scrollTo({ left: Math.max(0, hedef), behavior: 'smooth' })
+  }, [aktif])
+  return (
+    <nav ref={seritRef} aria-label="Sayfa bölümleri" style={{
+      position: 'sticky', top: NAVBAR_YUKSEKLIK, zIndex: 20, height: MOBIL_SERIT, boxSizing: 'border-box',
+      margin: '0 -16px 14px', padding: '8px 16px', background: 'var(--bg)', borderBottom: '1px solid var(--line)',
+      display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none',
+    }}>
+      {BOLUMLER.map(b => {
+        const secili = b.id === aktif
+        return (
+          <button
+            key={b.id}
+            type="button"
+            onClick={() => onGit(b.id)}
+            aria-current={secili ? 'true' : undefined}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, padding: '0 11px', borderRadius: 999,
+              border: `1px solid ${secili ? FEXT.accentBorder : 'var(--line)'}`,
+              background: secili ? FEXT.accentSoftBg : 'var(--surface)',
+              color: secili ? 'var(--accent-fg)' : 'var(--text-3)',
+              fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'background .2s, color .2s, border-color .2s',
+            }}
+          >
+            {b.ikon(14)} {b.kisa}
+          </button>
+        )
+      })}
+    </nav>
   )
 }
 
@@ -200,6 +312,51 @@ export default function TurkTakimlariPage() {
 
   const idler = useMemo(() => takimlar.map(t => t.id), [takimlar])
 
+  // ── Asansör: kaydırırken aktif bölümü izle; tıklayınca yumuşak kaydır ──
+  const ustPay = NAVBAR_YUKSEKLIK + (isMobile ? MOBIL_SERIT + 10 : 16)
+  const [aktif, setAktif] = useState(BOLUMLER[0].id)
+  const [vurgu, setVurgu] = useState(null)
+  const kayiyorRef = useRef(false)   // tıklamayla kayarken ara bölümler aktif olmasın
+  const zamanRef = useRef(null)
+
+  useEffect(() => {
+    let zaman = 0
+    const hesapla = () => {
+      zaman = 0
+      if (kayiyorRef.current) return
+      // Sayfa sonuna gelindiyse son bölüm (kısa bölüm hiçbir zaman tepeye çıkamaz)
+      const altta = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4
+      let secili = BOLUMLER[0].id
+      if (altta) secili = BOLUMLER[BOLUMLER.length - 1].id
+      else {
+        for (const b of BOLUMLER) {
+          const el = document.getElementById(b.id)
+          if (el && el.getBoundingClientRect().top <= ustPay + 40) secili = b.id
+        }
+      }
+      setAktif(secili)
+    }
+    // Kısa zamanlayıcıyla seyreltilir (rAF arka plan sekmesinde hiç çalışmıyor)
+    const onScroll = () => { if (!zaman) zaman = setTimeout(hesapla, 60) }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+    return () => { window.removeEventListener('scroll', onScroll); clearTimeout(zaman) }
+  }, [ustPay])
+
+  useEffect(() => () => clearTimeout(zamanRef.current), [])
+
+  const bolumeGit = useCallback(id => {
+    const el = document.getElementById(id)
+    if (!el) return
+    const azHareket = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    kayiyorRef.current = true
+    setAktif(id)
+    setVurgu(id)
+    el.scrollIntoView({ behavior: azHareket ? 'auto' : 'smooth', block: 'start' })
+    clearTimeout(zamanRef.current)
+    zamanRef.current = setTimeout(() => { kayiyorRef.current = false; setVurgu(null) }, 900)
+  }, [])
+
   useEffect(() => {
     if (!idler.length) return
     let cancelled = false
@@ -267,7 +424,8 @@ export default function TurkTakimlariPage() {
   }, [maclar, takimlar])
 
   const yukleniyor = <Bos>Yükleniyor...</Bos>
-  const ikiSutun = { display: 'grid', gap: 18, gridTemplateColumns: isMobile ? '1fr' : 'minmax(0,1fr) minmax(0,1fr)' }
+  const bolum = id => BOLUMLER.find(b => b.id === id)
+  const bolumProps = id => ({ ...bolum(id), vurgulu: vurgu === id, ustPay })
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text-1)' }}>
@@ -276,58 +434,65 @@ export default function TurkTakimlariPage() {
         description="Türk espor takımlarının yaklaşan maçları, son sonuçları ve haberleri tek sayfada: VALORANT, CS2 ve League of Legends."
         type="website"
       />
-      <div style={{ maxWidth: 1180, margin: '0 auto', padding: isMobile ? '14px 16px 34px' : '22px 16px 48px' }}>
-        <div style={{ borderRadius: 18, border: '1px solid var(--surface-2)', overflow: 'hidden', marginBottom: 20, background: 'var(--surface)' }}>
-          <div style={{ height: 4, background: FEXT.accentGrad }} />
-          <div style={{ padding: isMobile ? 16 : 20 }}>
-            <h1 style={{ margin: 0, fontSize: isMobile ? 26 : 34, lineHeight: 1.1 }}>Türk Takımları</h1>
-            <p style={{ margin: '8px 0 0', color: 'var(--text-3)', fontSize: isMobile ? 13 : 14, lineHeight: 1.6, maxWidth: 720 }}>
-              Türk espor takımlarının yaklaşan maçları, son sonuçları ve haberleri. Liste, Türkiye kayıtlı takımlar
-              ile kadrosunun çoğu Türk oyunculardan oluşan takımları kapsar.
-            </p>
-          </div>
-        </div>
+      <div style={{
+        maxWidth: 1180, margin: '0 auto', padding: isMobile ? '14px 16px 34px' : '22px 16px 48px',
+        // Masaüstü: solda asansör sütunu, sağda içerik
+        display: isMobile ? 'block' : 'grid', gridTemplateColumns: isMobile ? undefined : `${ASANSOR_TUS + ASANSOR_ARA * 2 + 2}px minmax(0,1fr)`, gap: 20,
+      }}>
+        {!isMobile && <Asansor aktif={aktif} onGit={bolumeGit} />}
 
-        <Bolum ikon={<Users size={15} />} baslik="Takımlar">
-          {!maclar ? yukleniyor : izgara.length === 0 ? <Bos>Son günlerde maçı olan Türk takımı yok.</Bos> : (
-            <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))' }}>
-              {izgara.map(({ t, sonraki, son }) => <TakimKarti key={t.id} t={t} sonraki={sonraki} son={son} />)}
+        <div style={{ minWidth: 0 }}>
+          <div style={{ borderRadius: 18, border: '1px solid var(--surface-2)', overflow: 'hidden', marginBottom: isMobile ? 12 : 20, background: 'var(--surface)' }}>
+            <div style={{ height: 4, background: FEXT.accentGrad }} />
+            <div style={{ padding: isMobile ? 16 : 20 }}>
+              <h1 style={{ margin: 0, fontSize: isMobile ? 26 : 34, lineHeight: 1.1 }}>Türk Takımları</h1>
+              <p style={{ margin: '8px 0 0', color: 'var(--text-3)', fontSize: isMobile ? 13 : 14, lineHeight: 1.6, maxWidth: 720 }}>
+                Türk espor takımlarının yaklaşan maçları, son sonuçları ve haberleri. Liste, Türkiye kayıtlı takımlar
+                ile kadrosunun çoğu Türk oyunculardan oluşan takımları kapsar.
+              </p>
             </div>
-          )}
-        </Bolum>
+          </div>
 
-        <div style={ikiSutun}>
-          <Bolum ikon={<CalendarDays size={15} />} baslik="Yaklaşan maçlar">
+          {isMobile && <MobilAsansor aktif={aktif} onGit={bolumeGit} />}
+
+          <Bolum {...bolumProps('takimlar')}>
+            {!maclar ? yukleniyor : izgara.length === 0 ? <Bos>Son günlerde maçı olan Türk takımı yok.</Bos> : (
+              <div style={{ ...izgaraStil(240), gap: 10 }}>
+                {izgara.map(({ t, sonraki, son }) => <TakimKarti key={t.id} t={t} sonraki={sonraki} son={son} />)}
+              </div>
+            )}
+          </Bolum>
+
+          <Bolum {...bolumProps('yaklasan')}>
             {!maclar ? yukleniyor : maclar.yaklasan.length === 0 ? <Bos>Planlanmış Türk maçı yok.</Bos> : (
-              <div style={{ display: 'grid', gap: 8 }}>
+              <div style={izgaraStil(400)}>
                 {maclar.yaklasan.slice(0, 12).map(m => <MacSatiri key={m.id} m={m} />)}
               </div>
             )}
           </Bolum>
-          <Bolum ikon={<History size={15} />} baslik="Son sonuçlar">
+
+          <Bolum {...bolumProps('sonuclar')}>
             {!maclar ? yukleniyor : maclar.son.length === 0 ? <Bos>Son {SON_MAC_GUN} günde sonuç yok.</Bos> : (
-              <div style={{ display: 'grid', gap: 8 }}>
+              <div style={izgaraStil(400)}>
                 {maclar.son.slice(0, 12).map(m => <MacSatiri key={m.id} m={m} />)}
               </div>
             )}
           </Bolum>
-        </div>
 
-        <div style={ikiSutun}>
           <Bolum
-            ikon={<Newspaper size={15} />}
-            baslik="Türk takımı haberleri"
+            {...bolumProps('haberler')}
             sag={<Link to="/news" style={{ fontSize: 12, color: 'var(--text-3)', textDecoration: 'none' }}>Tüm haberler ›</Link>}
           >
             {!haberler ? yukleniyor : haberler.length === 0 ? <Bos>Son günlerde Türk takımı haberi yok.</Bos> : (
-              <div style={{ display: 'grid', gap: 8 }}>
+              <div style={izgaraStil(340)}>
                 {haberler.map(row => <HaberSatiri key={row.id} row={row} />)}
               </div>
             )}
           </Bolum>
-          <Bolum ikon={<Library size={15} />} baslik="Türk Espor Haftası arşivi">
+
+          <Bolum {...bolumProps('haftalik')}>
             {!haftalik ? yukleniyor : haftalik.length === 0 ? <Bos>Haftalık özet her Pazartesi sabahı yayımlanır.</Bos> : (
-              <div style={{ display: 'grid', gap: 8 }}>
+              <div style={izgaraStil(340)}>
                 {haftalik.map(row => <HaberSatiri key={row.id} row={row} />)}
               </div>
             )}

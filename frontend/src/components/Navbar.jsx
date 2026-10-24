@@ -8,6 +8,8 @@ import ThemeToggle from './ThemeToggle'
 import { FEXT } from '../theme'
 
 /* Nav öğesi — lucide ikon + hover state (emoji "AI havası"nı kaldırır) */
+const NAV_HAMBURGER_PX = 1200
+
 function NavItem({ link, mobile = false }) {
   const [hover, setHover] = useState(false)
   const Icon = link.icon
@@ -137,13 +139,15 @@ function AuthWidget() {
 }
 
 export default function Navbar({ navLinks, SearchComponent }) {
+  // 7 menü öğesi + arama + giriş düğmeleri ~1140px ister; altında satır taşıp
+  // ikonlar eziliyordu (Türk Takımları öğesi eklenince belirginleşti) → hamburger
   const location = useLocation()
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 980)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= NAV_HAMBURGER_PX)
   const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     const onResize = () => {
-      const mobile = window.innerWidth <= 980
+      const mobile = window.innerWidth <= NAV_HAMBURGER_PX
       setIsMobile(mobile)
       if (!mobile) setMenuOpen(false)
     }

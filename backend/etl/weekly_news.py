@@ -139,6 +139,36 @@ def _sozluk(cur) -> list[dict]:
     return rows
 
 
+_SEVIYE_PUAN = {"S": 0, "A": 1, "B": 2, "C": 3, "D": 4}
+TAKIM_TAVAN = 3          # öne çıkanlarda bir Türk takımı en fazla bu kadar maçla
+
+
+def _one_cikanlar(rows: list[dict]) -> list[dict]:
+    """"Öne çıkan" sırası: seviye, ama sürpriz bir seviye öne alınır — Fextopus %65+ emin
+    olup yanıldıysa ya da Türk takımı favori değilken kazandıysa. Bir takım listeyi tek
+    başına doldurmasın diye takım başına tavan. Tavanı aşanlar silinmez, sona eklenir
+    (sayım tüm maçlardan yapılır)."""
+    def puan(m):
+        p = _SEVIYE_PUAN.get(m["sev"] or "", 5)
+        if m["dogru"] is False:
+            kazanan_tr = (m["tr_a"] and m["winner_id"] == m["team_a_id"]) or \
+                         (m["tr_b"] and m["winner_id"] == m["team_b_id"])
+            if kazanan_tr or (m["fav_p"] or 0) >= SURPRIZ_ESIK * 100:
+                p -= 1
+        return (p, m["scheduled_at"])
+    sayac: dict[int, int] = {}
+    secilen, artan = [], []
+    for m in sorted(rows, key=puan):
+        trler = [tid for tid, tr in ((m["team_a_id"], m["tr_a"]), (m["team_b_id"], m["tr_b"])) if tr]
+        if any(sayac.get(t, 0) >= TAKIM_TAVAN for t in trler):
+            artan.append(m)
+            continue
+        for t in trler:
+            sayac[t] = sayac.get(t, 0) + 1
+        secilen.append(m)
+    return secilen + artan
+
+
 class HaftalikUretici(NewsGenerator):
     """NewsGenerator'ın LLM yardımcılarını (_generate_with_backoff, _parse_llm_json) kullanır."""
 
@@ -152,7 +182,7 @@ class HaftalikUretici(NewsGenerator):
                   AND EXISTS (SELECT 1 FROM turk_takimlar k WHERE k.team_id IN (m.team_a_id, m.team_b_id))
                 ORDER BY {_SEVIYE_SIRA}, m.scheduled_at
             """, (bas, bit))
-            return _sozluk(cur)
+            return _one_cikanlar(_sozluk(cur))
 
     def turk_gelecek(self, pzt: date) -> list[dict]:
         """Yayın haftasının (pzt+7) maçları. PandaScore programı eksik olabilir: olan kadarı."""

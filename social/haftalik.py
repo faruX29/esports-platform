@@ -97,7 +97,7 @@ def _zemin_cache(ust, alt):
     gd.ellipse([-500, 1300, 500, 2300], fill=alt)             # sol alt
     return Image.blend(c, g.filter(ImageFilter.GaussianBlur(260)), 0.26).convert('RGBA')
 
-ZEMIN_TURK = ((150, 20, 40), (40, 60, 120))
+ZEMIN_TURK = ((110, 50, 200), (40, 60, 120))
 ZEMIN_SURPRIZ = ((90, 40, 150), (130, 30, 60))
 
 
@@ -150,7 +150,7 @@ def _satir(im, d, y, m, a, mod):
 
 def _liste(c, baslik, liste, t, mod):
     with Katman(c, _eas(t / 0.1)) as (im, d):
-        d.text((80, 120), baslik, font=inter(900, 72), fill=INK)
+        d.text((80, 124), baslik, font=inter(900, 64), fill=INK)
     adim = SATIR_H + SATIR_ARA
     # Başlık ile alt bilgi arasında dikey ortala
     y = 260 + max(0, (1660 - 260 - adim * len(liste)) // 2)
@@ -211,7 +211,7 @@ def turk_haftasi(ekler):
         a1, a2 = _eas(t / 0.3), _eas((t - 0.3) / 0.3)
         with Katman(c, a1) as (im, d):
             ortala(d, 520 + (1 - a1) * 26, 'TÜRK', inter(900, 170), INK)
-            ortala(d, 700 + (1 - a1) * 26, 'TAKIMLARI', inter(900, 150), KIRMIZI)
+            ortala(d, 700 + (1 - a1) * 26, 'TAKIMLARI', inter(900, 150), MOR)
         with Katman(c, a2) as (im, d):
             ortala(d, 920, etiket, inter(700, 48), MUTED)
             # sayaç: renk dili, az yazı
@@ -226,7 +226,7 @@ def turk_haftasi(ekler):
 
     def liste(t):
         c = _zemin(ZEMIN_TURK)
-        _liste(c, 'GEÇEN HAFTA', sonuc, t, 'turk')
+        _liste(c, 'HAFTANIN ÖNE ÇIKANLARI', sonuc, t, 'turk')
         _alt_bilgi(c)
         return c.convert('RGB')
 
@@ -298,7 +298,7 @@ def surprizler(ekler):
                 ikon = ikon.resize((int(ikon.width * 200 / ikon.height), 200), Image.LANCZOS)
                 yapistir(im, ikon, (W - ikon.width) / 2, 300 + (1 - a1) * 26)
             ortala(d, 560, "FEXTOPUS'U", inter(900, 130), INK)
-            ortala(d, 710, 'YANILTANLAR', inter(900, 130), ELENDI)
+            ortala(d, 710, 'YANILTANLAR', inter(900, 130), MOR)
         with Katman(c, a2) as (im, d):
             ortala(d, 930, etiket, inter(700, 48), MUTED)
         _alt_bilgi(c)

@@ -384,7 +384,7 @@ function WeeklyMatchList({ story }) {
   if (!sonucIds.length && !gelecekIds.length) return null
   const surpriz = story.variant === 'surprizler'
   const bolumler = [
-    { baslik: surpriz ? "Fextopus'u yanıltan maçlar" : 'Haftanın sonuçları', ids: sonucIds },
+    { baslik: surpriz ? "Fextopus'u yanıltan maçlar" : 'Haftanın öne çıkan maçları', ids: sonucIds },
     { baslik: 'Gelecek hafta', ids: gelecekIds },
   ].filter(b => b.ids.length)
 

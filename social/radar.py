@@ -273,12 +273,24 @@ def kare(oyun, renk, maclar, gun, ilerleme=1.0, glow=1.0, zoom=1.0, parca=None):
     alan = alt - ust
     yuk = min(216, max(158, alan // max(1, n)))
     ust = ust + max(0, (alan - yuk*n)) // 2          # bloğu ortala
+    # Türk takımlı maç satırı hafif bir panelle ayrışır, sırası DEĞİŞMEZ (saat
+    # sırası korunur). Kurucu kararı (24 Eki): ayrı renk değil, zeminden bir ton
+    # açık. Türk takımlı videolar belirgin şekilde daha çok izleniyor.
+    turk_satir = [_turk_mu(m['a']) or _turk_mu(m['b']) for m in maclar]
     for i, m in enumerate(maclar):
         gec = max(0.0, min(1.0, ilerleme*n - i*0.55))
         gec = 1 - (1-gec)**3
         if gec <= 0.01: continue
         y = ust + i*yuk
         kay = int((1-gec)*26)
+        if turk_satir[i]:
+            # Beyaz, düşük alfa: altındaki mor ışıması da açılır, düz yama gibi durmaz.
+            # n <= MAKS_SATIR olduğundan yuk >= 182; panel 170px'te kalır. Yanlar 24px:
+            # takım adı 214px'e kadar uzayabiliyor (x=31..245), 64px'te taşıyordu.
+            pn = Image.new('RGBA', (W, 172), (0,0,0,0))
+            ImageDraw.Draw(pn).rounded_rectangle([24, 0, W-24, 170], 28,
+                fill=(255,255,255,int(11*gec)), outline=(255,255,255,int(24*gec)), width=2)
+            c.paste(pn, (0, y+kay), pn)
         pa, pb = round(m['pa']*100), 100-round(m['pa']*100)
         fav_a = pa >= pb
         favp  = max(pa, pb)
@@ -327,7 +339,8 @@ def kare(oyun, renk, maclar, gun, ilerleme=1.0, glow=1.0, zoom=1.0, parca=None):
             d.text((sx+gw, by+30), st, font=f_foot, fill=sol(FAINT, gec*.8))
         else:
             ort(d, by+30, st, f_foot, sol(FAINT, gec*.8))
-        if i < n-1:
+        # Panelin altına/üstüne denk gelen ayırıcı çizgi paneli kesiyordu → çizilmez
+        if i < n-1 and not (turk_satir[i] or turk_satir[i+1]):
             d.line([(180, y+yuk-6), (W-180, y+yuk-6)], fill=(24,30,42), width=2)
 
     d.line([(110, 1710), (W-110, 1710)], fill=(30,37,52), width=2)
@@ -379,6 +392,14 @@ def paylasim_metni(oyun, maclar, gun):
         pa = round(turk['pa']*100)
         p_turk = pa if ad == turk['a'] else 100 - pa
         kanca = f"{ad} bugün {saat}'te {rakip} karşısında. Fextopus'un tahmini: {ad} %{p_turk}."
+    elif n == 1:
+        # Tek maçlı günde "en dengeli/en emin maç" karşılaştırması anlamsızdı;
+        # kurucu metni her seferinde elle düzeltiyordu (24 Eki).
+        m = maclar[0]
+        ad, p = taraflar(m)
+        saat = (m['saat'] + timedelta(hours=3)).strftime('%H:%M')
+        kanca = (f"Bugün tek maç var: {m['a']} - {m['b']}, saat {saat}. "
+                 f"Fextopus'un tahmini: {ad} %{p}.")
     elif favp(en_emin) >= 72:
         ad, p = taraflar(en_emin)
         kanca = f"Fextopus'un bugün en emin olduğu maç: {ad} %{p}."

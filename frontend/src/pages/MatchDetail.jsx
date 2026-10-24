@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useNavigate, Link }             from 'react-router-dom'
 import { supabase }                                 from '../supabaseClient'
-import { isTurkishTeam }                           from '../constants'
+import { isTurkishTeam, useTurkTakimlar }                           from '../constants'
 import { useUser }                                 from '../context/UserContext'
 import InitialsImage                               from '../components/InitialsImage'
 import TrBadge                                     from '../components/TrBadge'
@@ -1211,6 +1211,7 @@ function MVPVoting({ matchId, players, isFinished }) {
 
 /* ─── MatchDetail — default export ─────────────────────────────────────────── */
 export default function MatchDetail() {
+  useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
   const { id }   = useParams()
   const navigate = useNavigate()
   const { isTeamFollowed, toggleTeamFollow } = useUser()
@@ -1386,7 +1387,7 @@ export default function MatchDetail() {
   const gc    = gameColor(gName)
   const isLive= match.status === 'running'
   const isFin = match.status === 'finished'
-  const hasTR = isTurkishTeam(aName) || isTurkishTeam(bName)
+  const hasTR = isTurkishTeam(match.team_a) || isTurkishTeam(match.team_b)
   const pctA  = aiWin.teamA
   const pctB  = aiWin.teamB
   const predUncertain = isUncertainPrediction(pctA, pctB)
@@ -1474,7 +1475,7 @@ export default function MatchDetail() {
                   borderRadius={12}
                   imgStyle={{ objectFit: 'contain', filter: isFin && bWon ? 'grayscale(80%)' : 'none' }}
                 />
-                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (aWon ? '#4CAF50' : 'var(--text-3)') : 'var(--text-1)', minWidth: 0, overflowWrap: 'break-word', textAlign: 'right', lineHeight: 1.2 }}>{aName}{isTurkishTeam(aName) && <TrBadge />}</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (aWon ? '#4CAF50' : 'var(--text-3)') : 'var(--text-1)', minWidth: 0, overflowWrap: 'break-word', textAlign: 'right', lineHeight: 1.2 }}>{aName}{isTurkishTeam(match.team_a) && <TrBadge />}</div>
               </div>
               <FavButton teamId={aId} active={favA} onToggle={toggleTeamFollow} />
             </div>
@@ -1499,7 +1500,7 @@ export default function MatchDetail() {
                   borderRadius={12}
                   imgStyle={{ objectFit: 'contain', filter: isFin && aWon ? 'grayscale(80%)' : 'none' }}
                 />
-                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (bWon ? '#4CAF50' : 'var(--text-3)') : 'var(--text-1)', minWidth: 0, overflowWrap: 'break-word', textAlign: 'left', lineHeight: 1.2 }}>{isTurkishTeam(bName) && <TrBadge />}{bName}</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (bWon ? '#4CAF50' : 'var(--text-3)') : 'var(--text-1)', minWidth: 0, overflowWrap: 'break-word', textAlign: 'left', lineHeight: 1.2 }}>{isTurkishTeam(match.team_b) && <TrBadge />}{bName}</div>
               </div>
               <FavButton teamId={bId} active={favB} onToggle={toggleTeamFollow} />
             </div>

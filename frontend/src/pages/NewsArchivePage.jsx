@@ -9,7 +9,7 @@ import GameLogo from '../components/GameLogo'
 import LikeButton from '../components/LikeButton'
 import { getGameMeta, normalizeGameId, normalizeTier, weeklyCover } from '../utils/newsStories'
 import { buildNewsSlug } from '../utils/newsSlug'
-import { isTurkishTeam } from '../constants'
+import { isTurkishTeam, useTurkTakimlar } from '../constants'
 
 const PAGE_SIZE = 24
 
@@ -76,7 +76,7 @@ function rowToVisuals(row) {
     gameIcon: game?.icon || null,
     tournamentName: row.tournament_name || 'Ana Sahne',
     tier: normalizeTier(row.tier),
-    turkish: Boolean(isTurkishTeam?.(row.team_a_name) || isTurkishTeam?.(row.team_b_name)),
+    turkish: row.variant === 'turk_haftasi' || Boolean(isTurkishTeam(row.team_a_name) || isTurkishTeam(row.team_b_name)),
     teamA: { name: row.team_a_name, logo_url: row.team_a_logo },
     teamB: { name: row.team_b_name, logo_url: row.team_b_logo },
   }
@@ -84,6 +84,7 @@ function rowToVisuals(row) {
 
 /** Arşiv kartı — SEO için GERÇEK <a> (Link). Crawler'lar bu iç linkleri takip eder. */
 function ArchiveCard({ row, isMobile, liked, likeCount, onToggleLike }) {
+  useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
   const visuals = rowToVisuals(row)
   return (
     <Link

@@ -24,7 +24,7 @@ import NavbarComponent from './components/Navbar'
 import Footer from './components/Footer'
 import GameLogo, { GAME_ICON_PATHS } from './components/GameLogo'
 import { FEXT } from './theme'
-import { Home, CalendarDays, Trophy, BarChart3, Newspaper, Radar, Search, X as XIcon, Shield, User, ArrowRight, CornerDownLeft } from 'lucide-react'
+import { Home, CalendarDays, Trophy, BarChart3, Newspaper, Radar, Flag, Search, X as XIcon, Shield, User, ArrowRight, CornerDownLeft } from 'lucide-react'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Matches = lazy(() => import('./pages/Matches'))
@@ -47,6 +47,7 @@ const NewsDetailPage = lazy(() => import('./pages/NewsDetailPage'))
 const TournamentsListPage = lazy(() => import('./pages/TournamentsListPage'))
 const ScoutEnginePage = lazy(() => import('./pages/ScoutEnginePage'))
 const LegalPage       = lazy(() => import('./pages/LegalPage'))
+const TurkTakimlariPage = lazy(() => import('./pages/TurkTakimlariPage'))
 
 import './App.css'
 
@@ -60,6 +61,7 @@ const NAV_LINKS = [
   // için sıralama/compare boş duruyordu. Oyuncu DETAY sayfaları (/player/:id) arama +
   // takım kadrosu + maç üzerinden erişilir kalır. İstatistik kapsamı büyüyünce geri açılır.
   { to: '/news',     label: 'Haberler',  end: false, icon: Newspaper },
+  { to: '/turk-takimlari', label: 'Türk Takımları', end: false, icon: Flag },
   { to: '/scout',    label: 'Scout',     end: false, icon: Radar },
 ]
 
@@ -764,6 +766,7 @@ function AppShell() {
           <Route path="/news/archive"             element={<NewsArchivePage />} />
           <Route path="/news/:newsId"             element={<NewsDetailPage />} />
           <Route path="/scout"                    element={<ScoutEnginePage />} />
+          <Route path="/turk-takimlari"           element={<TurkTakimlariPage />} />
           <Route path="/login"                    element={<LoginPage />}      />
           <Route path="/register"                 element={<RegisterPage />}   />
           <Route path="/forgot-password"          element={<ForgotPasswordPage />} />

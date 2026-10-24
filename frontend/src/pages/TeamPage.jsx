@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link }     from 'react-router-dom'
 import { supabase }                         from '../supabaseClient'
 import { getRoleBadge }                     from '../utils/roleHelper'
-import { isTurkishTeam }                   from '../constants'
+import { isTurkishTeam, useTurkTakimlar }                   from '../constants'
 import { useUser }                          from '../context/UserContext'
 import InitialsImage                        from '../components/InitialsImage'
 import { getBOFormat }                       from '../utils/matchFormat'
@@ -475,6 +475,7 @@ function MatchCard({ match, teamId, navigate }) {
 
 // ── TeamPage (default export) ─────────────────────────────────────────────────
 export default function TeamPage() {
+  useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
   const { teamId } = useParams()
   const navigate   = useNavigate()
   const { toggleTeamFollow, isTeamFollowed } = useUser()
@@ -573,7 +574,7 @@ export default function TeamPage() {
   const losses          = pastMatches.filter(m => { const w = deriveWinnerTeamId(m); return w != null && w !== tidNum }).length
   const draws           = pastMatches.length - wins - losses
   const rating          = calcTeamRating(wins, wins + losses)
-  const isTR            = isTurkishTeam(team?.name ?? '')
+  const isTR            = isTurkishTeam(team)
 
   // Last 10 matches form
   const form = [...pastMatches]

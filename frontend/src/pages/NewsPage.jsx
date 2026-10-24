@@ -4,7 +4,7 @@ import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useUser } from '../context/UserContext'
 import { GAMES } from '../context/GameContext'
-import { isTurkishTeam } from '../constants'
+import { isTurkishTeam, turkTakimlariYukle, turkHaberleriniGetir } from '../constants'
 import {
   NEWS_LIMIT,
   HERO_TIERS,
@@ -20,6 +20,7 @@ import ShareButton from '../components/ShareButton'
 import SeoHead from '../components/SeoHead'
 import NewsCover, { scoreFromHero } from '../components/NewsCover'
 import { cleanDisplayName } from '../utils/nameCleaner'
+import { tournamentDisplayName } from '../utils/tournamentDisplay'
 import { buildNewsSlug } from '../utils/newsSlug'
 import { MessageSquare, Library } from 'lucide-react'
 import LikeButton from '../components/LikeButton'
@@ -31,6 +32,8 @@ const CATEGORY_TABS = [
   { id: 'valorant', label: 'Valorant' },
   { id: 'lol', label: 'LoL' },
   { id: 'cs2', label: 'CS2' },
+  // Oyun değil: Türk takımlı haberler (turk_takimlar görünümü) + "Türk Espor Haftası"
+  { id: 'turk', label: 'Türk Takımları', color: FEXT.danger },
 ]
 const NEWS_PAGE_SIZE = 6
 
@@ -57,7 +60,8 @@ function applyRealtimeTournamentToStory(story, tournamentById) {
     visuals: {
       ...story.visuals,
       tier: normalizeTier(tournament.tier ?? story?.visuals?.tier),
-      tournamentName: cleanDisplayName(tournament.name || story?.visuals?.tournamentName || 'Ana Sahne') || 'Ana Sahne',
+      // tournaments.name yalnız aşama ("Group Stage"); tam ad lig + etkinlikten
+      tournamentName: cleanDisplayName(tournamentDisplayName(tournament, { game: story?.visuals?.gameId }) || story?.visuals?.tournamentName || 'Ana Sahne') || 'Ana Sahne',
     },
   }
 }
@@ -276,9 +280,11 @@ function NewsCard({ item, likes, liked, comments, onLike, onOpenDetail, onReport
             <span style={{ fontSize: 10, color: 'var(--text-1)', padding: '4px 8px', borderRadius: 999, background: 'rgba(255,255,255,.04)', border: '1px solid var(--line)' }}>
               {visuals.gameLabel}
             </span>
-            <span style={{ fontSize: 10, color: HERO_TIERS.has(visuals.tier) ? 'var(--ai)' : 'var(--text-2)', padding: '4px 8px', borderRadius: 999, background: HERO_TIERS.has(visuals.tier) ? 'rgba(194,92,208,.18)' : 'var(--hover)', border: HERO_TIERS.has(visuals.tier) ? '1px solid rgba(194,92,208,.35)' : '1px solid var(--line)' }}>
-              Tier {visuals.tier}
-            </span>
+            {visuals.tier && (
+              <span style={{ fontSize: 10, color: HERO_TIERS.has(visuals.tier) ? 'var(--ai)' : 'var(--text-2)', padding: '4px 8px', borderRadius: 999, background: HERO_TIERS.has(visuals.tier) ? 'rgba(194,92,208,.18)' : 'var(--hover)', border: HERO_TIERS.has(visuals.tier) ? '1px solid rgba(194,92,208,.35)' : '1px solid var(--line)' }}>
+                Tier {visuals.tier}
+              </span>
+            )}
           </div>
           <span style={{ fontSize: 10, color: 'var(--text-4)' }}>{fmtDate(item.publishedAt)}</span>
         </div>
@@ -406,11 +412,12 @@ export default function NewsPage() {
         prediction_team_a, prediction_team_b,
         team_a:teams!matches_team_a_id_fkey(id,name,logo_url),
         team_b:teams!matches_team_b_id_fkey(id,name,logo_url),
-        tournament:tournaments(id,name,tier),
+        tournament:tournaments(id,name,tier,league_name,event_name,display_name,region),
         game:games(id,name,slug)
       `
 
       // Fetch LLM-generated articles + upcoming matches in parallel
+      // Türk takımı listesi de beklenir: hikâyenin `turkish` bayrağı burada hesaplanıyor
       const [articlesRes, upcomingRes] = await Promise.all([
         supabase
           .from('news_articles')
@@ -426,6 +433,7 @@ export default function NewsPage() {
           .lte('scheduled_at', upcomingUntil.toISOString())
           .order('scheduled_at', { ascending: true })
           .limit(10),
+        turkTakimlariYukle(),
       ])
 
       if (articlesRes.error) throw articlesRes.error
@@ -443,7 +451,7 @@ export default function NewsPage() {
       if (tournamentIds.length > 0) {
         const { data: tournamentRows, error: tournamentError } = await supabase
           .from('tournaments')
-          .select('id,name,tier')
+          .select('id,name,tier,league_name,event_name,display_name,region')
           .in('id', tournamentIds)
         if (tournamentError) {
           console.warn('NewsPage tournament tier fetch:', tournamentError.message || tournamentError)
@@ -457,7 +465,8 @@ export default function NewsPage() {
       // Map news_articles rows → story objects; generate upcoming stories locally
       const articleStories = (articlesRes.data || [])
         .map(articleRowToStory)
-        .filter(story => story.visuals.gameId)
+        // Haftalık özetin oyunu yok (game_slug NULL) → oyun şartından muaf
+        .filter(story => story.visuals.gameId || story.weekly)
 
       // Dedup: bir maçın LLM makalesi (recap/önizleme) varsa, yerel upcoming
       // şablon hikayesini kullanma — zengin LLM içeriği kazanır.
@@ -500,16 +509,40 @@ export default function NewsPage() {
     loadStories()
   }, [loadStories])
 
+  // Türk sekmesi: ana akış son 7 günün 50 haberi; Türk haberi orada birkaç tane kalıyor.
+  // Sekme açılınca daha geniş pencereden ayrıca çekilir (bir kez).
+  const [turkStories, setTurkStories] = useState(null)
+  useEffect(() => {
+    if (activeCategory !== 'turk' || turkStories) return
+    let cancelled = false
+    turkHaberleriniGetir({ limit: 30 })
+      .then(rows => {
+        if (!cancelled) setTurkStories(rows.map(articleRowToStory).filter(s => s.visuals.gameId || s.weekly))
+      })
+      .catch(err => {
+        console.error('NewsPage Türk haberleri:', err.message || err)
+        if (!cancelled) setTurkStories([])
+      })
+    return () => { cancelled = true }
+  }, [activeCategory, turkStories])
+
   const filteredStories = useMemo(() => {
-    const scoped = stories.filter(story => {
-      if (activeCategory === 'all') return true
-      return normalizeStoryGameId(story?.visuals?.gameId) === normalizeStoryGameId(activeCategory)
-    })
+    let scoped
+    if (activeCategory === 'turk') {
+      const seen = new Set()
+      scoped = [...stories.filter(story => story.visuals.turkish), ...(turkStories || [])]
+        .filter(story => (seen.has(story.id) ? false : seen.add(story.id)))
+    } else {
+      scoped = stories.filter(story => {
+        if (activeCategory === 'all') return true
+        return normalizeStoryGameId(story?.visuals?.gameId) === normalizeStoryGameId(activeCategory)
+      })
+    }
     return prioritizeStoriesForYou(scoped, followedTeamIds, followedGames).map(story => ({
       ...story,
       isForYou: isStoryFollowedTeam(story, followedTeamIds),
     }))
-  }, [activeCategory, followedTeamIds, followedGames, stories])
+  }, [activeCategory, followedTeamIds, followedGames, stories, turkStories])
 
   useEffect(() => {
     setPage(1)
@@ -606,7 +639,7 @@ export default function NewsPage() {
               {CATEGORY_TABS.map(tab => {
                 const active = tab.id === activeCategory
                 const game = GAME_FILTERS.find(item => item.id === tab.id)
-                const color = game?.color || 'var(--text-3)'
+                const color = tab.color || game?.color || 'var(--text-3)'
                 return (
                   <button
                     key={tab.id}
@@ -669,9 +702,11 @@ export default function NewsPage() {
                     <span style={{ fontSize: 10, color: 'var(--text-1)', padding: '5px 9px', borderRadius: 999, background: `${hero.visuals.gameColor}22`, border: `1px solid ${hero.visuals.gameColor}55` }}>
                       {hero.visuals.gameLabel}
                     </span>
-                    <span style={{ fontSize: 10, color: 'var(--ai)', padding: '5px 9px', borderRadius: 999, background: 'rgba(194,92,208,.18)', border: '1px solid rgba(194,92,208,.34)' }}>
-                      Tier {hero.visuals.tier}
-                    </span>
+                    {hero.visuals.tier && (
+                      <span style={{ fontSize: 10, color: 'var(--ai)', padding: '5px 9px', borderRadius: 999, background: 'rgba(194,92,208,.18)', border: '1px solid rgba(194,92,208,.34)' }}>
+                        Tier {hero.visuals.tier}
+                      </span>
+                    )}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{fmtDate(hero.publishedAt)}</div>
                 </div>
@@ -740,7 +775,7 @@ export default function NewsPage() {
         </section>
 
         {!loading && filteredStories.length === 0 && (
-          <div style={{ marginTop: 18, color: 'var(--text-4)', fontSize: 13 }}>Şu an seçili oyun için gösterilecek taze haber bulunamadı.</div>
+          <div style={{ marginTop: 18, color: 'var(--text-4)', fontSize: 13 }}>{activeCategory === 'turk' ? 'Son günlerde Türk takımı haberi yok.' : 'Şu an seçili oyun için gösterilecek taze haber bulunamadı.'}</div>
         )}
       </div>
     </div>

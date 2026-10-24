@@ -1,5 +1,6 @@
 import { cleanDisplayName } from './nameCleaner'
 import { normalizeGameId } from './gameUtils'
+import { tournamentDisplayName } from './tournamentDisplay'
 
 export { normalizeGameId }
 
@@ -53,9 +54,10 @@ export function buildStoryVisuals(match, isTurkishTeam) {
   const teamB = match.team_b || {}
   const gameId = normalizeGameId(match?.game?.slug ?? match?.game?.name ?? match?.game?.id)
   const game = getGameMeta(gameId)
-  const tournamentName = cleanDisplayName(match.tournament?.name || 'Ana Sahne') || 'Ana Sahne'
+  // tournaments.name çoğunlukla yalnız aşama ("Group Stage"); lig + etkinlik varsa tam ad
+  const tournamentName = cleanDisplayName(match.tournament ? tournamentDisplayName(match.tournament, { game: gameId }) : 'Ana Sahne') || 'Ana Sahne'
   const tier = normalizeTier(match?.tournament?.tier ?? match?.tier)
-  const turkish = Boolean(isTurkishTeam?.(teamA.name) || isTurkishTeam?.(teamB.name))
+  const turkish = Boolean(isTurkishTeam?.(teamA) || isTurkishTeam?.(teamB))
 
   return {
     gameId,
@@ -205,7 +207,9 @@ export function buildFinishedStory(match, statsByMatch, isTurkishTeam) {
 export function buildUpcomingStory(match, isTurkishTeam) {
   const aName = match.team_a?.name || 'Team A'
   const bName = match.team_b?.name || 'Team B'
-  const tournamentName = match.tournament?.name || 'Ana Sahne'
+  const tournamentName = match.tournament
+    ? tournamentDisplayName(match.tournament, { game: normalizeGameId(match?.game?.slug ?? match?.game?.name) })
+    : 'Ana Sahne'
   const startsAt = match.scheduled_at ? new Date(match.scheduled_at).getTime() : Date.now()
   const hoursAway = Math.max(1, Math.round((startsAt - Date.now()) / (60 * 60 * 1000)))
   const tier = normalizeTier(match.tournament?.tier)

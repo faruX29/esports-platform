@@ -119,6 +119,8 @@ async function buildChild(type, base) {
       ['/', 'daily', '1.0'], ['/matches', 'daily', '0.9'], ['/news', 'daily', '0.9'],
       ['/news/archive', 'daily', '0.8'], ['/tournaments', 'daily', '0.8'],
       ['/rankings', 'weekly', '0.8'], ['/scout', 'monthly', '0.6'],
+      // Türk takımları merkez sayfası (Faz 3): her Türk maçı/haberiyle değişir
+      ['/turk-takimlari', 'daily', '0.9'],
       // /stats — Fextopus isabet matrisi. Sitemap'te eksikti (sayfa 5 Eyl'de
       // eklendi); şeffaf sayı içerdiği için arama değeri yüksek.
       ['/stats', 'weekly', '0.7'],

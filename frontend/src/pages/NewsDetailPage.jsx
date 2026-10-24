@@ -3,7 +3,8 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import { supabase, subscribeToNewsComments } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useUser } from '../context/UserContext'
-import { isTurkishTeam } from '../constants'
+import { isTurkishTeam, turkTakimlariYukle } from '../constants'
+import { tournamentDisplayName } from '../utils/tournamentDisplay'
 import {
   buildFinishedStory,
   buildUpcomingStory,
@@ -26,7 +27,7 @@ import NewsCover, { scoreFromHero } from '../components/NewsCover'
 import { cleanDisplayName } from '../utils/nameCleaner'
 import { buildNewsSlug, parseNewsRef } from '../utils/newsSlug'
 import { getEsportsName } from '../utils/esportsName'
-import { X as XIcon, MessageSquare, Swords, Trophy, UserRound } from 'lucide-react'
+import { X as XIcon, MessageSquare, Swords, Trophy, UserRound, Flag } from 'lucide-react'
 import { FEXT } from '../theme'
 import { isUncertainPrediction } from '../utils/prediction'
 
@@ -128,7 +129,11 @@ function mapTransferRowToStory(row) {
       gameColor: FEXT.accent,
       tier: normalizeTier(row.tier),
       tournamentName: row.tournament_name || 'Transfer Haberi',
-      turkish: Boolean(isTurkishTeam(row.team_a_name || '') || isTurkishTeam(row.team_b_name || '')),
+      // Takım ID'si varsa ona, yoksa tam ada bakılır (turk_takimlar)
+      turkish: Boolean(
+        isTurkishTeam({ id: row.ekler?.eski_takim_id ?? null, name: row.team_a_name })
+        || isTurkishTeam({ id: row.ekler?.yeni_takim_id ?? null, name: row.team_b_name }),
+      ),
       // ID'ler ekler'den (backend/sql/news_ekler.sql); yoksa bağlantı çıkmaz, ad yine görünür
       teamA: { id: row.ekler?.eski_takim_id ?? null, name: row.team_a_name, logo_url: row.team_a_logo },
       teamB: { id: row.ekler?.yeni_takim_id ?? null, name: row.team_b_name, logo_url: row.team_b_logo },
@@ -472,6 +477,8 @@ function RelatedLinks({ story }) {
   if (story.player?.id) chips.push({ key: 'p', to: `/player/${story.player.id}`, label: story.player.name || 'Oyuncu', icon: 'player' })
   if (isMatch && story.matchId) chips.push({ key: 'm', to: `/match/${story.matchId}`, label: 'Maç Detayı', icon: 'match' })
   if (story.tournamentId) chips.push({ key: 'to', to: `/tournament/${story.tournamentId}`, label: v.tournamentName || 'Turnuva', icon: 'trophy' })
+  // Türk takımı haberi → merkez sayfa (haberin ömrü kısa, sayfa her haberden link alarak büyür)
+  if (v.turkish) chips.push({ key: 'tr', to: '/turk-takimlari', label: 'Türk Takımları', icon: 'turk' })
   if (!chips.length) return null
 
   return (
@@ -490,7 +497,7 @@ function RelatedLinks({ story }) {
           >
             {c.logo
               ? <InitialsImage src={c.logo} name={c.label} width={20} height={20} borderRadius={5} objectFit='contain' />
-              : c.icon === 'match' ? <Swords size={15} /> : c.icon === 'player' ? <UserRound size={15} /> : <Trophy size={15} />}
+              : c.icon === 'match' ? <Swords size={15} /> : c.icon === 'player' ? <UserRound size={15} /> : c.icon === 'turk' ? <Flag size={15} /> : <Trophy size={15} />}
             <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>{c.label}</span>
           </Link>
         ))}
@@ -783,6 +790,7 @@ export default function NewsDetailPage() {
             .maybeSingle()
           if (artErr) throw artErr
           if (!art) throw new Error('Haber bulunamadı.')
+          await turkTakimlariYukle()
           const transferStory = mapTransferRowToStory(art)
           if (!cancelled) {
             setStory(transferStory)
@@ -866,7 +874,7 @@ export default function NewsDetailPage() {
           prediction_team_a, prediction_team_b,
           team_a:teams!matches_team_a_id_fkey(id,name,logo_url),
           team_b:teams!matches_team_b_id_fkey(id,name,logo_url),
-          tournament:tournaments(id,name,tier),
+          tournament:tournaments(id,name,tier,league_name,event_name,display_name,region),
           game:games(id,name,slug)
         `
 
@@ -887,6 +895,7 @@ export default function NewsDetailPage() {
         if (statErr) throw statErr
 
         const byMatch = new Map([[matchId, statRows || []]])
+        await turkTakimlariYukle()
         const generated = match.status === 'finished'
           ? buildFinishedStory(match, byMatch, isTurkishTeam)
           : buildUpcomingStory(match, isTurkishTeam)
@@ -896,7 +905,7 @@ export default function NewsDetailPage() {
         if (Number.isFinite(tournamentId)) {
           const { data: tournamentRow, error: tournamentErr } = await supabase
             .from('tournaments')
-            .select('id,name,tier')
+            .select('id,name,tier,league_name,event_name,display_name,region')
             .eq('id', tournamentId)
             .maybeSingle()
 
@@ -912,7 +921,10 @@ export default function NewsDetailPage() {
           visuals: {
             ...generated.visuals,
             tier: normalizeTier(realtimeTournament?.tier ?? generated?.visuals?.tier),
-            tournamentName: cleanDisplayName(realtimeTournament?.name || generated?.visuals?.tournamentName || 'Ana Sahne') || 'Ana Sahne',
+            // Tam ad (lig + etkinlik + aşama): tournaments.name tek başına yalnız aşama ("Group Stage")
+            tournamentName: realtimeTournament
+              ? cleanDisplayName(tournamentDisplayName(realtimeTournament, { game: generated?.visuals?.gameId })) || 'Ana Sahne'
+              : cleanDisplayName(generated?.visuals?.tournamentName || 'Ana Sahne') || 'Ana Sahne',
           },
         }
 

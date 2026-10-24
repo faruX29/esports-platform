@@ -8,7 +8,7 @@ import { useNavigate, useSearchParams }     from 'react-router-dom'
 import { supabase, subscribeToMatchesUpdates } from '../supabaseClient'
 import { useGame, GAMES }                   from '../context/GameContext'
 import { useUser } from '../context/UserContext'
-import { isTurkishTeam }                   from '../constants'
+import { isTurkishTeam, useTurkTakimlar }                   from '../constants'
 import { normalizeGameId }                  from '../utils/gameUtils'
 import { FEXT, statusStyle }                from '../theme'
 import Mascot                               from '../components/Mascot'
@@ -122,6 +122,7 @@ function Countdown({ target }) {
 }
 
 function Matches() {
+  useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
   const navigate = useNavigate()
   const { activeGame } = useGame()
   // Favoriler = site geneli takip sistemi (DB). Böylece herhangi bir yerde takip
@@ -673,8 +674,8 @@ function Matches() {
             const isLive      = match.status === 'running'
             const teamAFav    = isTeamFollowed(match.team_a_id)
             const teamBFav    = isTeamFollowed(match.team_b_id)
-            const turkA       = isTurkishTeam(match.team_a?.name ?? '')
-            const turkB       = isTurkishTeam(match.team_b?.name ?? '')
+            const turkA       = isTurkishTeam(match.team_a)
+            const turkB       = isTurkishTeam(match.team_b)
             const hasTurkish  = turkA || turkB
             const isHotPick   = (match.prediction_confidence ?? 0) > 0.80
 

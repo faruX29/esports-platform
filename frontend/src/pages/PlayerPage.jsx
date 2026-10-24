@@ -15,7 +15,7 @@ import { normalizeGameId }                   from '../utils/gameUtils'
 import InitialsImage                         from '../components/InitialsImage'
 import LiquipediaCredit                       from '../components/LiquipediaCredit'
 import { DeepScoutBadge, StatsCoverageNotice } from '../components/ScoutSignals'
-import { isTurkishTeam } from '../constants'
+import { isTurkishTeam, useTurkTakimlar } from '../constants'
 import { useUser } from '../context/UserContext'
 import { summarizePlayerMatchStats, metricBars } from '../utils/playerMetrics'
 import { deriveWinnerTeamId, correctedScores } from '../utils/matchResult'
@@ -854,6 +854,7 @@ function PlayerSignatureElements({ items = [] }) {
 
 // ─── Ana Bileşen ─────────────────────────────────────────────────────────────
 export default function PlayerPage() {
+  useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
   const { id }   = useParams()        // players.id (UUID)
   const navigate = useNavigate()
   const { togglePlayerFollow, isPlayerFollowed } = useUser()
@@ -1005,7 +1006,7 @@ export default function PlayerPage() {
   const playerGameId = normalizeGameId(team?.game?.slug ?? team?.game?.name ?? '')
   const resolvedRole = resolvePlayerRole(player, playerGameId)
   const badge   = getRoleBadge(resolvedRole)
-  const isTR    = player.nationality === 'TR' || player.nationality === 'TUR' || isTurkishTeam(team?.name ?? '')
+  const isTR    = player.nationality === 'TR' || player.nationality === 'TUR' || isTurkishTeam(team)
   const flag    = NAT_FLAGS[player.nationality] ?? (isTR ? '🇹🇷' : null)
   const followed = isPlayerFollowed(player.id)
   const liquipediaMeta = player?.extra_metadata?.liquipedia || {}

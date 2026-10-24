@@ -42,6 +42,7 @@ export const config = {
     '/stats',
     '/players',
     '/scout',
+    '/turk-takimlari',
     '/gizlilik',
     '/kullanim-kosullari',
     '/kvkk',
@@ -390,8 +391,29 @@ async function buildForMatch(id, origin, url) {
   return htmlDoc({ title, desc, url, img, jsonLd, body, robots: macDizinDisi(row) ? 'noindex, follow' : '' })
 }
 
+// Haberde Türk takımı var mı: maçta takım ID'leri, transferde ekler'deki ID'ler,
+// haftalıkta varyant. ID'siz eski transferlerde link çıkmaz.
+async function turkHaberiMi(ref, row) {
+  if (ref.type === 'haftalik') return row.variant === 'turk_haftasi'
+  let ids = []
+  if (ref.type === 'match') {
+    const m = await sbFetch(`matches?id=eq.${ENC(ref.id)}&select=team_a_id,team_b_id&limit=1`)
+    ids = [m?.team_a_id, m?.team_b_id]
+  } else if (ref.type === 'transfer') {
+    ids = [row.ekler?.eski_takim_id, row.ekler?.yeni_takim_id]
+  } else {
+    return false
+  }
+  ids = ids.map(Number).filter(Number.isFinite)
+  if (ids.length) {
+    const tr = await sbFetchAll(`turk_takimlar?team_id=in.(${ids.join(',')})&select=team_id`)
+    return tr.length > 0
+  }
+  return false
+}
+
 async function buildForNews(ref, origin, url) {
-  const sel = 'title,summary,hero_score,game_slug,tier,tournament_name,team_a_name,team_b_name,team_a_logo,team_b_logo,created_at,ekler'
+  const sel = 'title,summary,hero_score,game_slug,tier,tournament_name,team_a_name,team_b_name,team_a_logo,team_b_logo,created_at,ekler,variant'
   let query
   if (ref.type === 'transfer' || ref.type === 'haftalik') {
     query = `news_articles?id=eq.${encodeURIComponent(ref.id)}&select=${encodeURIComponent(sel)}&limit=1`
@@ -467,6 +489,10 @@ async function buildForNews(ref, origin, url) {
         linkItems.push(`<a href="${origin}/match/${m.id}">${esc(m.team_a?.name || 'Takım A')}${skor} ${esc(m.team_b?.name || 'Takım B')}</a>`)
       }
     }
+  }
+  // Türk takımı haberi → /turk-takimlari (merkez sayfa her haberden link alarak büyür)
+  if (await turkHaberiMi(ref, row)) {
+    linkItems.push(`<a href="${origin}/turk-takimlari">Türk takımları: maçlar, sonuçlar ve haberler</a>`)
   }
   const body = `<h1>${esc(row.title || 'feXt')}</h1><p>${esc(row.summary || '')}</p>` +
     (linkItems.length ? `<h2>İlgili Sayfalar</h2><ul>${linkItems.map(l => `<li>${l}</li>`).join('')}</ul>` : '')
@@ -717,6 +743,12 @@ const STATIC_ROUTES = {
     heading: 'Haber arşivi',
     feed: 'news',
   },
+  '/turk-takimlari': {
+    title: 'Türk Takımları — Maçlar, Sonuçlar ve Haberler',
+    desc: 'Türk espor takımlarının yaklaşan maçları, son sonuçları ve haberleri tek sayfada: VALORANT, CS2 ve League of Legends.',
+    heading: 'Türk takımları',
+    feed: 'turk',
+  },
   '/scout': {
     title: 'Scout — VALORANT Oyuncu Karşılaştırma',
     desc: 'Profesyonel VALORANT oyuncularını yan yana karşılaştır: K/D, harita başına kill, galibiyet oranı, son 5 maç formu, ajan ve harita havuzu.',
@@ -754,6 +786,7 @@ function siteNavHtml(origin) {
     ['/tournaments', 'Turnuvalar'],
     ['/rankings', 'Takım sıralaması'],
     ['/news', 'Haberler'],
+    ['/turk-takimlari', 'Türk takımları'],
     ['/stats', 'Fextopus isabet oranları'],
   ]
   return `<nav><h2>feXt bölümleri</h2><ul>${
@@ -830,6 +863,49 @@ async function staticFeedHtml(feed, origin) {
         `<p>${rows.length} oyuncu en az 10 maç verisine sahip. Kill, ölüm, asist ve galibiyet ` +
         `maç toplamlarından hesaplanır; rol, ajan ve harita havuzu harita bazındadır. ` +
         `<a href="${origin}/players">Tüm oyuncu profilleri</a>.</p>`
+    }
+
+    // /turk-takimlari — takım listesi turk_takimlar görünümünden (TEK KAYNAK, SPA ile aynı)
+    if (feed === 'turk') {
+      const ids = (await sbFetchAll('turk_takimlar?select=team_id')).map(r => r.team_id).filter(Number.isFinite)
+      if (!ids.length) return ''
+      const liste = ids.join(',')
+      const TURK_MAC_SEL = MATCH_SEL + ',team_a_id,team_b_id,status'
+      const takimFiltresi = ENC(`(team_a_id.in.(${liste}),team_b_id.in.(${liste}))`)
+      const simdi = Date.now()
+      const [takimlar, yaklasan, son, haftalik] = await Promise.all([
+        sbFetchAll(`teams?id=in.(${liste})&select=id,name`),
+        sbFetchAll(`matches?or=${takimFiltresi}&status=in.(not_started,running)` +
+          `&scheduled_at=gte.${ENC(new Date(simdi - 6 * 3600000).toISOString())}` +
+          `&select=${ENC(TURK_MAC_SEL)}&order=scheduled_at.asc&limit=15`),
+        sbFetchAll(`matches?or=${takimFiltresi}&status=eq.finished` +
+          `&scheduled_at=gte.${ENC(new Date(simdi - 60 * 86400000).toISOString())}` +
+          `&select=${ENC(TURK_MAC_SEL)}&order=scheduled_at.desc&limit=80`),
+        sbFetchAll(`news_articles?content_type=eq.haftalik&variant=eq.turk_haftasi&select=${NEWS_LINK_SEL}&order=created_at.desc&limit=10`),
+      ])
+      // Haberde takım ID'si yok, ad var (haber üretimi adı teams.name'den aynen yazar)
+      const adlar = [...new Set(takimlar.map(t => t.name).filter(Boolean))]
+        .map(a => `"${a.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(',')
+      const haberler = adlar
+        ? await sbFetchAll(`news_articles?or=${ENC(`(team_a_name.in.(${adlar}),team_b_name.in.(${adlar}))`)}` +
+            `&content_type=neq.haftalik&select=${NEWS_LINK_SEL}&order=created_at.desc&limit=15`)
+        : []
+      // Izgara SPA'daki gibi: yalnız son 60 günde oynamış ya da maçı olan takımlar
+      const aktif = new Set([...yaklasan, ...son].flatMap(m => [m.team_a_id, m.team_b_id]))
+      const aktifTakimlar = takimlar.filter(t => aktif.has(t.id))
+      const haberHtml = (rows, baslik) => {
+        const li = rows.map(n => ({ n, yol: newsPath(n) })).filter(x => x.yol)
+          .map(({ n, yol }) => `<li><a href="${origin}${yol}">${esc(n.title)}</a></li>`).join('')
+        return li ? `<h2>${esc(baslik)}</h2><ul>${li}</ul>` : ''
+      }
+      return (aktifTakimlar.length ? `<h2>Takımlar</h2><ul>${
+        aktifTakimlar.map(t => `<li><a href="${origin}/team/${t.id}">${esc(String(t.name).trim())}</a></li>`).join('')
+      }</ul>` : '') +
+        // Başlamamış maçta skor 0-0 gelir; "vs" yazılsın
+        matchListHtml(origin, yaklasan.map(m => (m.status === 'not_started' ? { ...m, team_a_score: null, team_b_score: null } : m)), 'Yaklaşan Türk maçları') +
+        matchListHtml(origin, son.slice(0, 20), 'Son sonuçlar') +
+        haberHtml(haberler, 'Türk takımı haberleri') +
+        haberHtml(haftalik, 'Türk Espor Haftası arşivi')
     }
 
     if (feed === 'matches') {

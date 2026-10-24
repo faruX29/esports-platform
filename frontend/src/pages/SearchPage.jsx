@@ -12,7 +12,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useSearchParams }              from 'react-router-dom'
 import { supabase }                                  from '../supabaseClient'
 import { getRoleBadge }                              from '../utils/roleHelper'
-import { isTurkishTeam }                             from '../constants'
+import { isTurkishTeam, useTurkTakimlar }                             from '../constants'
 import { GAMES }                                     from '../context/GameContext'
 import { normalizeGameId }                           from '../utils/gameUtils'
 import { clickableProps }                            from '../utils/a11y'
@@ -187,7 +187,8 @@ function Av({ src, name, size = 40, round = true }) {
 // ─── Team Result Card ─────────────────────────────────────────────────────────
 
 function TeamCard({ team, navigate }) {
-  const isTR = isTurkishTeam(team.name)
+  useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
+  const isTR = isTurkishTeam(team)
   return (
     <div
       {...clickableProps(() => navigate(`/team/${team.id}`), { label: `${team.name ?? 'Takım'} sayfası` })}
@@ -280,7 +281,7 @@ function PlayerCard({ player, navigate }) {
 function TournamentCard({ t, navigate, highlighted }) {
   const gm   = slugToGame(t.game?.name ?? t.name ?? '')
   const tier = getTierMeta(t.tier)
-  const isTR = isTurkishTeam(t.name ?? '') || t.region === 'TR'
+  const isTR = t.region === 'TR'
   const [hov, setHov] = useState(false)
 
   return (

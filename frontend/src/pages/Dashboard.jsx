@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, Link }                from 'react-router-dom'
 import { supabase, subscribeToMatchesUpdates } from '../supabaseClient'
 import { useGame, gameMatchesFilter, GAMES } from '../context/GameContext'
-import { isTurkishTeam }                   from '../constants'
+import { isTurkishTeam, useTurkTakimlar, turkTakimlariYukle }                   from '../constants'
 import { useUser }                          from '../context/UserContext'
 import { useAuth }                          from '../context/AuthContext'
 import BRANDING                             from '../branding.config'
@@ -907,6 +907,7 @@ function MatchImpactPill() {
 
 /* ── LiveMatchCard ────────────────────────────────────────────────────────── */
 const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs, onToggleFav, teamForms }) {
+  useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
   const isLive     = m.status === 'running'
   const isFin      = m.status === 'finished'
   const aggressiveLiveMode = isLive && !isFin
@@ -918,8 +919,8 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
   const bWon       = isFin && m.winner_id === bId
   const favA       = favs.includes(aId)
   const favB       = favs.includes(bId)
-  const turkA      = isTurkishTeam(m.team_a?.name ?? '')
-  const turkB      = isTurkishTeam(m.team_b?.name ?? '')
+  const turkA      = isTurkishTeam(m.team_a)
+  const turkB      = isTurkishTeam(m.team_b)
   const hasTurkish = turkA || turkB
 
   return (
@@ -1142,10 +1143,11 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
 
 /* ── UpcomingRow ──────────────────────────────────────────────────────────── */
 const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForms, showDate }) {
+  useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
   const badge = getStatusBadge(m.status)
   const isLive = m.status === 'running'
-  const turkA = isTurkishTeam(m.team_a?.name ?? '')
-  const turkB = isTurkishTeam(m.team_b?.name ?? '')
+  const turkA = isTurkishTeam(m.team_a)
+  const turkB = isTurkishTeam(m.team_b)
   const aId   = m.team_a_id || m.team_a?.id
   const bId   = m.team_b_id || m.team_b?.id
   const formA = teamForms?.get(aId) || []
@@ -1249,13 +1251,14 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
 
 /* ── ResultRow — biten maç, skor odaklı (Son Sonuçlar) ────────────────────── */
 const ResultRow = memo(function ResultRow({ match: m, onMatchClick }) {
+  useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
   const cs   = correctedScores(m)
   const aId  = Number(m.team_a_id || m.team_a?.id)
   const bId  = Number(m.team_b_id || m.team_b?.id)
   const aWon = m.winner_id != null && Number(m.winner_id) === aId
   const bWon = m.winner_id != null && Number(m.winner_id) === bId
-  const turkA = isTurkishTeam(m.team_a?.name ?? '')
-  const turkB = isTurkishTeam(m.team_b?.name ?? '')
+  const turkA = isTurkishTeam(m.team_a)
+  const turkB = isTurkishTeam(m.team_b)
   const tierLetter = String(m.tournament?.tier || '').toUpperCase().replace(/[^SABCDE]/g, '').charAt(0)
   const isHero = tierLetter === 'S' || tierLetter === 'A'
   return (
@@ -1795,7 +1798,7 @@ export default function Dashboard() {
             prediction_team_a, prediction_team_b, prediction_confidence,
             team_a:teams!matches_team_a_id_fkey(id,name,logo_url),
             team_b:teams!matches_team_b_id_fkey(id,name,logo_url),
-            tournament:tournaments(id,name,tier),
+            tournament:tournaments(id,name,tier,league_name,event_name,display_name,region),
             game:games(id,name,slug)
           `)
           .or(orFilter)
@@ -1962,7 +1965,7 @@ export default function Dashboard() {
           prediction_team_a, prediction_team_b,
           team_a:teams!matches_team_a_id_fkey(id,name,logo_url),
           team_b:teams!matches_team_b_id_fkey(id,name,logo_url),
-          tournament:tournaments(id,name,tier),
+          tournament:tournaments(id,name,tier,league_name,event_name,display_name,region),
           game:games(id,name,slug)
         `
 
@@ -2023,6 +2026,7 @@ export default function Dashboard() {
           }
         }
 
+        await turkTakimlariYukle()
         const finishedStories = prioritizeStoriesForYou(
           finished.slice(0, 6).map(match => buildFinishedStory(match, statsByMatch, isTurkishTeam)),
           followedTeamIds,

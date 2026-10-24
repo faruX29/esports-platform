@@ -11,7 +11,7 @@
 import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import { useParams, useNavigate }                     from 'react-router-dom'
 import { supabase }                                   from '../supabaseClient'
-import { isTurkishTeam }                              from '../constants'
+import { isTurkishTeam, useTurkTakimlar }                              from '../constants'
 import { cleanDisplayName }                           from '../utils/nameCleaner'
 import { getBOFormat }                                from '../utils/matchFormat'
 import { DeepScoutBadge }                             from '../components/ScoutSignals'
@@ -788,6 +788,7 @@ function TopPerformers({ rows }) {
 // cikanSayisi: kaç takım bir sonraki aşamaya çıkıyor (GSL grubunda 2). 0 = bilinmiyor,
 // o zaman hiçbir sıra vurgulanmaz — "kim ödül aldı" izlenimi vermemek için.
 function StandingsTable({ matches, navigate, cikanSayisi = 0 }) {
+  useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
   // Katılımcı takımları maçlardan türet
   const table = useMemo(() => {
     const map = {}
@@ -863,7 +864,7 @@ function StandingsTable({ matches, navigate, cikanSayisi = 0 }) {
           {table.map((t, i) => {
             const total  = t.w + t.l
             const pct    = total > 0 ? Math.round((t.w / total) * 100) : 0
-            const isTR   = isTurkishTeam(t.name)
+            const isTR   = isTurkishTeam(t)
             // Madalya YOK (28 Eylül): 4 takımlı GSL grubunda yalnız ilk 2 takım
             // playoff'a çıkar; 3. sıraya bronz madalya koymak "ödül kazandı" gibi
             // okunuyordu. Çıkanlar ayrıca işaretlenir (cikanSayisi).
@@ -1021,6 +1022,7 @@ function clampBracketZoom(value) {
 }
 
 const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, gc, highlightPath = false }) {
+  useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
   const isVirtual = m?.is_virtual === true
   const aId   = m.team_a?.id || m.team_a_id
   const bId   = m.team_b?.id || m.team_b_id
@@ -1030,8 +1032,8 @@ const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, gc, highl
   const bName = m.team_b?.name || 'TBD'
   const aLogo = m.team_a?.logo_url
   const bLogo = m.team_b?.logo_url
-  const isTRA = !isVirtual && isTurkishTeam(aName)
-  const isTRB = !isVirtual && isTurkishTeam(bName)
+  const isTRA = !isVirtual && isTurkishTeam(m.team_a)
+  const isTRB = !isVirtual && isTurkishTeam(m.team_b)
   const [hov, setHov] = useState(false)
   const canNavigate = !isVirtual && m?.__clickable !== false && Boolean(m?.team_a && m?.id)
   const structuredBits = [
@@ -1614,13 +1616,14 @@ function BracketView({ matches, resolvedMatches, navigate, gc, bracketSide = 'up
 // ─── Match List Card ──────────────────────────────────────────────────────────
 
 const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
+  useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
   const aId   = m.team_a?.id || m.team_a_id
   const bId   = m.team_b?.id || m.team_b_id
   const aWon  = m.status === 'finished' && m.winner_id === aId
   const bWon  = m.status === 'finished' && m.winner_id === bId
   const isLive= m.status === 'running'
-  const isTRA = isTurkishTeam(m.team_a?.name ?? '')
-  const isTRB = isTurkishTeam(m.team_b?.name ?? '')
+  const isTRA = isTurkishTeam(m.team_a)
+  const isTRB = isTurkishTeam(m.team_b)
   const hasTR = isTRA || isTRB
 
   return (
@@ -2025,7 +2028,7 @@ export default function TournamentPage() {
   const tier  = getTierMeta(tournament?.tier)
   const regionLabel = displayRegion(tournament?.region, gameId)
   const tournamentTitle = tournamentDisplayName(tournament, { game: gameId })
-  const isTR  = isTurkishTeam(tournament?.name ?? '') || tournament?.region === 'TR'
+  const isTR  = tournament?.region === 'TR'
   const liquipediaMeta = tournament?.extra_metadata?.liquipedia || null
   const liquipediaLocation = liquipediaMeta?.location || null
   const liquipediaPrizePool = liquipediaMeta?.prize_pool || null

@@ -13,6 +13,7 @@ import {
   normalizeTier,
   getGameMeta,
   tierWeight,
+  weeklyCover,
 } from '../utils/newsStories'
 import { isStoryFollowedTeam, prioritizeStoriesForYou, freshnessBucket } from '../utils/newsPersonalization'
 import ShareButton from '../components/ShareButton'
@@ -78,6 +79,8 @@ function fmtDate(iso) {
 
 function getArticleStoryTag(variant) {
   if (variant === 'transfer') return 'Transfer'
+  if (variant === 'turk_haftasi') return 'Türk Takımları Haftası'
+  if (variant === 'surprizler') return 'Fextopus Karnesi'
   if (variant === 'tournament') return 'Turnuva Özeti'
   if (variant === 'preview') return 'Önizleme'
   if (variant === 'upset') return 'Sürpriz Sonuç'
@@ -92,23 +95,26 @@ function articleRowToStory(row) {
   const tier = normalizeTier(row.tier)
   const isTransfer = row.content_type === 'transfer'
   const isTournament = row.content_type === 'tournament'
+  const isWeekly = row.content_type === 'haftalik'
   const isPreview = row.variant === 'preview'
-  // Transfer → transfer_<uuid>; turnuva → tournament_<id>; maç → match_<id>
+  // Transfer → transfer_<uuid>; turnuva → tournament_<id>; haftalık → haftalik_<uuid>; maç → match_<id>
   const storyId = isTransfer ? `transfer_${row.id}`
     : isTournament ? `tournament_${row.tournament_id}`
+    : isWeekly ? `haftalik_${row.id}`
     : `match_${row.match_id}`
   return {
     id: storyId,
-    matchId: (isTransfer || isTournament) ? null : row.match_id,
+    matchId: (isTransfer || isTournament || isWeekly) ? null : row.match_id,
     tournamentId: row.tournament_id,
-    status: isTransfer ? 'transfer' : isTournament ? 'tournament' : (isPreview ? 'not_started' : 'finished'),
+    status: isTransfer ? 'transfer' : isTournament ? 'tournament' : isWeekly ? 'haftalik' : (isPreview ? 'not_started' : 'finished'),
     variant: row.variant || 'close',
     publishedAt: row.created_at,
-    priority: (tierWeight(tier) * 100) + (isTournament ? 40 : isTransfer ? 30 : row.variant === 'upset' ? 35 : row.variant === 'stomp' ? 24 : 12),
+    priority: (tierWeight(tier) * 100) + (isWeekly ? 45 : isTournament ? 40 : isTransfer ? 30 : row.variant === 'upset' ? 35 : row.variant === 'stomp' ? 24 : 12),
     title: row.title || '',
     summary: row.summary || '',
     content: row.content || '',
     tag: getArticleStoryTag(isTransfer ? 'transfer' : isTournament ? 'tournament' : row.variant),
+    weekly: isWeekly,
     heroScore: row.hero_score || '',
     visuals: {
       gameId,
@@ -116,8 +122,9 @@ function articleRowToStory(row) {
       gameColor: game?.color || FEXT.accent,
       gameIcon: game?.icon || null,
       tournamentName: row.tournament_name || 'Ana Sahne',
-      tier,
-      turkish: Boolean(isTurkishTeam?.(row.team_a_name) || isTurkishTeam?.(row.team_b_name)),
+      tier: isWeekly ? null : tier,
+      turkish: row.variant === 'turk_haftasi' || Boolean(isTurkishTeam?.(row.team_a_name) || isTurkishTeam?.(row.team_b_name)),
+      weekly: isWeekly ? weeklyCover(row) : null,
       teamA: { name: row.team_a_name, logo_url: row.team_a_logo },
       teamB: { name: row.team_b_name, logo_url: row.team_b_logo },
     },

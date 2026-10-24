@@ -5,6 +5,7 @@ Usage: python run.py [options]
 import argparse
 import logging
 import os
+import sys
 import time
 from datetime import datetime, timezone
 from utils.logger import setup_logging
@@ -286,6 +287,23 @@ def main():
         help='Yakında biten tier S/A turnuvalar için LLM sonuç-özeti (recap) üret',
     )
     parser.add_argument(
+        '--generate-weekly',
+        action='store_true',
+        help='Haftalık haberler: Türk takımlarının haftası + Fextopus\'u yanıltan maçlar '
+             '(Pazartesi sabahı, önceki Pzt-Paz)',
+    )
+    parser.add_argument(
+        '--hafta',
+        type=str,
+        default=None,
+        help='--generate-weekly için haftanın Pazartesi\'si (YYYY-AA-GG). Boşsa önceki hafta',
+    )
+    parser.add_argument(
+        '--weekly-dry-run',
+        action='store_true',
+        help='--generate-weekly ile: raporları logla, LLM\'e gitme, kaydetme',
+    )
+    parser.add_argument(
         '--preview-hours',
         type=int,
         default=48,
@@ -373,6 +391,7 @@ def main():
         args.generate_transfers,
         args.generate_previews,
         args.generate_tournament_recaps,
+        args.generate_weekly,
         args.liquipedia_enrich,
         args.roster_transfers,
     ])
@@ -673,6 +692,24 @@ def main():
             )
         except Exception as tr_err:
             logger.error(f"❌ Turnuva recap üretimi başlatılamadı: {tr_err}")
+        logger.info("=" * 60)
+
+    if args.generate_weekly:
+        logger.info("\n" + "=" * 60)
+        logger.info("🗓️  HAFTALIK HABERLER (Türk takımları + Fextopus'u yanıltan maçlar)")
+        logger.info("=" * 60)
+        from datetime import date as _date
+        from etl.weekly_news import HaftalikUretici
+        pzt = _date.fromisoformat(args.hafta) if args.hafta else None
+        if args.weekly_dry_run:
+            uretici = HaftalikUretici.__new__(HaftalikUretici)   # LLM kurulmaz
+        else:
+            uretici = HaftalikUretici(GeminiAdapter())
+        result = uretici.generate_weekly(pzt, yaz=not args.weekly_dry_run)
+        logger.info(f"✅ Haftalık: yazıldı {result['generated']} | atlandı {result['skipped']} | hata {result['failed']}")
+        if result["failed"]:
+            # İş akışı kırmızıya dönsün: haftada bir koşuyor, sessiz kalırsa hafta kaçar
+            sys.exit(1)
         logger.info("=" * 60)
 
     if args.generate_previews:

@@ -42,6 +42,11 @@ function newsSlug(row) {
     const s = slugify(row.title)
     return s ? `${s}-${id}` : id
   }
+  if (row.content_type === 'haftalik') {
+    const id = `haftalik_${row.id}`
+    const s = slugify(row.title)
+    return s ? `${s}-${id}` : id
+  }
   if (row.content_type === 'tournament') {
     const id = `tournament_${row.tournament_id}`
     const s = slugify(row.title)

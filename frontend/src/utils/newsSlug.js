@@ -36,8 +36,8 @@ export function buildNewsSlug(story) {
     const titleSlug = slugify(story?.title)
     return titleSlug ? `${titleSlug}-${id}` : id
   }
-  // Turnuva recap: maç yok, id = "tournament_<id>" — slug sonuna eklenir
-  if (id.startsWith('tournament_')) {
+  // Turnuva recap: maç yok, id = "tournament_<id>"; haftalık özet: "haftalik_<uuid>"
+  if (id.startsWith('tournament_') || id.startsWith('haftalik_')) {
     const titleSlug = slugify(story?.title)
     return titleSlug ? `${titleSlug}-${id}` : id
   }
@@ -55,6 +55,8 @@ export function parseNewsRef(param) {
   const str = String(param || '')
   const tr = str.match(/transfer_([0-9a-fA-F-]{36})/)
   if (tr) return { type: 'transfer', id: tr[1] }
+  const hf = str.match(/haftalik_([0-9a-fA-F-]{36})/)
+  if (hf) return { type: 'haftalik', id: hf[1] }
   // tournament_<id> — numeric fallback'ten ÖNCE yakala (yoksa maç sanılır)
   const tour = str.match(/tournament_(\d+)/)
   if (tour) return { type: 'tournament', id: Number(tour[1]) }

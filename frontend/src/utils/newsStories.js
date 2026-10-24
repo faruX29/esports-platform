@@ -270,3 +270,9 @@ export function storyExplainability(story) {
   const classification = story?.source?.upset ? 'Sürpriz' : (HERO_TIERS.has(tier) ? 'Manşet' : 'Gündem')
   return { classification, explanations }
 }
+
+/** Haftalık özetin kapak metni (NewsCover visuals.weekly). Detay sayfası da kullanır. */
+export function weeklyCover(row) {
+  const baslik = row.variant === 'surprizler' ? "Fextopus'u yanıltanlar" : 'Türk takımları'
+  return { baslik, alt: row.ekler?.etiket || '' }
+}

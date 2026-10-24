@@ -11,6 +11,9 @@ ANAHTAR = os.environ.get('RESEND_API_KEY')
 ALICI   = os.environ.get('RADAR_ALICI', 'iletisim@fextesports.com')
 KLASOR  = sys.argv[1] if len(sys.argv) > 1 else 'cikti'
 GUN     = sys.argv[2] if len(sys.argv) > 2 else ''
+# Haftalik is akisi ayni gondericiyi kullanir; konu ve "video yok" metni ondan gelir.
+KONU    = os.environ.get('MAIL_KONU', 'mac radari')
+BOS_NOT = os.environ.get('MAIL_BOS_NOT')
 
 MB = 1024 * 1024
 EK_SINIRI = 20 * MB          # Resend toplam ek sınırı ~40MB; yarısında duruyoruz
@@ -26,17 +29,20 @@ def bos_gun_maili():
     if os.path.exists(not_yolu):
         with open(not_yolu, encoding='utf-8') as f:
             ek_not = f.read().strip()
-    satirlar = [
-        f'{GUN} icin S/A seviyesinde mac yok, video uretilmedi.',
-        'Bu bir hata degil: radar calisti, sadece o gun buyuk turnuva maci yok.',
-        '',
-    ]
+    if BOS_NOT:
+        satirlar = [f'{GUN}: {BOS_NOT}', '']
+    else:
+        satirlar = [
+            f'{GUN} icin S/A seviyesinde mac yok, video uretilmedi.',
+            'Bu bir hata degil: radar calisti, sadece o gun buyuk turnuva maci yok.',
+            '',
+        ]
     if ek_not:
         satirlar += [ek_not, '']
     return {
         'from': 'feXt Radar <noreply@fextesports.com>',
         'to': [ALICI],
-        'subject': f'[feXt] {GUN} mac radari - video yok (S/A mac yok)',
+        'subject': f'[feXt] {GUN} {KONU} - video yok',
         'text': '\n'.join(satirlar),
     }
 
@@ -83,7 +89,7 @@ def main():
     return gonder({
         'from': 'feXt Radar <noreply@fextesports.com>',
         'to': [ALICI],
-        'subject': f'[feXt] {GUN} mac radari - {len(dosyalar)} video',
+        'subject': f'[feXt] {GUN} {KONU} - {len(dosyalar)} video',
         'text': '\n'.join(satirlar),
         'attachments': ekler,
     })

@@ -1,5 +1,5 @@
 import InitialsImage from './InitialsImage'
-import { ArrowRight, Trophy } from 'lucide-react'
+import { ArrowRight, CalendarDays, Trophy } from 'lucide-react'
 
 /** heroScore string'inden ("Team A 13 - 8 Team B") salt skoru ("13 - 8") çıkarır. */
 export function scoreFromHero(heroScore) {
@@ -21,6 +21,8 @@ export function scoreFromHero(heroScore) {
  *   score    — opsiyonel skor metni (örn. "13 - 8"); yoksa "VS"
  *   height   — kapak yüksekliği (px); compact kartlarda küçük
  *   compact  — küçük varyant
+ *   visuals.weekly — { baslik, alt }: haftalık özetin kapağı. Takım yok → iki boş
+ *                logo kutusu yerine ortada başlık + hafta aralığı.
  */
 export default function NewsCover({ visuals, score = '', height = 180, compact = false }) {
   const v = visuals || {}
@@ -87,7 +89,18 @@ export default function NewsCover({ visuals, score = '', height = 180, compact =
         )}
       </div>
 
-      {/* Takımlar + skor/VS */}
+      {v.weekly ? (
+        <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: compact ? 4 : 8, padding: '0 16px', textAlign: 'center' }}>
+          <CalendarDays size={compact ? 22 : 30} color="#fff" style={{ filter: `drop-shadow(0 0 10px ${accent})` }} />
+          <div style={{ fontSize: compact ? 15 : 24, fontWeight: 900, color: '#fff', letterSpacing: '.5px', textTransform: 'uppercase', textShadow: `0 0 18px ${accent}aa` }}>
+            {v.weekly.baslik}
+          </div>
+          {v.weekly.alt && (
+            <div style={{ fontSize: compact ? 11 : 14, fontWeight: 700, color: '#cbd5e1' }}>{v.weekly.alt}</div>
+          )}
+        </div>
+      ) : (
+      /* Takımlar + skor/VS */
       <div style={{
         position: 'relative', zIndex: 2,
         display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center',
@@ -129,6 +142,7 @@ export default function NewsCover({ visuals, score = '', height = 180, compact =
           )}
         </div>
       </div>
+      )}
 
       {/* Alt şerit: turnuva adı */}
       {v.tournamentName && (

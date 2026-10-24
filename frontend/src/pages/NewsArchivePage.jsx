@@ -7,7 +7,7 @@ import SeoHead from '../components/SeoHead'
 import NewsCover, { scoreFromHero } from '../components/NewsCover'
 import GameLogo from '../components/GameLogo'
 import LikeButton from '../components/LikeButton'
-import { getGameMeta, normalizeGameId, normalizeTier } from '../utils/newsStories'
+import { getGameMeta, normalizeGameId, normalizeTier, weeklyCover } from '../utils/newsStories'
 import { buildNewsSlug } from '../utils/newsSlug'
 import { isTurkishTeam } from '../constants'
 
@@ -31,10 +31,12 @@ const TYPE_TABS = [
   { id: 'tournament', label: 'Turnuva Özetleri' },
   { id: 'preview', label: 'Önizlemeler' },
   { id: 'transfer', label: 'Transferler' },
+  { id: 'haftalik', label: 'Haftalık Özetler' },
 ]
 
 function storyIdFor(row) {
   if (row.content_type === 'transfer') return `transfer_${row.id}`
+  if (row.content_type === 'haftalik') return `haftalik_${row.id}`
   if (row.content_type === 'tournament') return `tournament_${row.tournament_id}`
   return `match_${row.match_id}`
 }
@@ -45,6 +47,7 @@ function slugFor(row) {
 
 function typeTag(row) {
   if (row.content_type === 'transfer') return 'Transfer'
+  if (row.content_type === 'haftalik') return 'Haftalık'
   if (row.content_type === 'tournament') return 'Turnuva'
   if (row.variant === 'preview') return 'Önizleme'
   if (row.variant === 'upset') return 'Sürpriz'
@@ -57,6 +60,13 @@ function fmtDate(iso) {
 }
 
 function rowToVisuals(row) {
+  if (row.content_type === 'haftalik') {
+    return {
+      gameId: null, gameLabel: 'ESPOR', gameColor: '#C25CD0', gameIcon: null,
+      tournamentName: row.tournament_name || 'Haftalık Özet', tier: null,
+      turkish: row.variant === 'turk_haftasi', weekly: weeklyCover(row), teamA: {}, teamB: {},
+    }
+  }
   const gameId = normalizeGameId(row.game_slug) || 'valorant'
   const game = getGameMeta(gameId)
   return {
@@ -102,7 +112,7 @@ function ArchiveCard({ row, isMobile, liked, likeCount, onToggleLike }) {
     >
       <NewsCover
         visuals={visuals}
-        score={row.content_type === 'transfer' ? '➜' : row.content_type === 'tournament' ? '🏆' : scoreFromHero(row.hero_score)}
+        score={row.content_type === 'transfer' ? '➜' : row.content_type === 'tournament' ? '🏆' : row.content_type === 'haftalik' ? '' : scoreFromHero(row.hero_score)}
         height={isMobile ? 128 : 138}
         compact
       />
@@ -110,13 +120,18 @@ function ArchiveCard({ row, isMobile, liked, likeCount, onToggleLike }) {
         <span style={{ fontSize: 10, color: 'var(--text-1)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, padding: '3px 7px', borderRadius: 999, background: `${visuals.gameColor}22`, border: `1px solid ${visuals.gameColor}55` }}>
           {typeTag(row)}
         </span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'var(--text-1)', padding: '3px 8px', borderRadius: 999, background: 'var(--hover)', border: '1px solid var(--line)' }}>
-          <GameLogo game={visuals.gameId} size={11} color={visuals.gameColor} />
-          {visuals.gameLabel}
-        </span>
-        <span style={{ fontSize: 10, color: 'var(--text-2)', padding: '3px 7px', borderRadius: 999, background: 'var(--hover)', border: '1px solid var(--line)' }}>
-          Tier {visuals.tier}
-        </span>
+        {/* Haftalık özet çok oyunlu ve tier'sız: oyun/tier çipi yanıltır */}
+        {row.content_type !== 'haftalik' && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'var(--text-1)', padding: '3px 8px', borderRadius: 999, background: 'var(--hover)', border: '1px solid var(--line)' }}>
+            <GameLogo game={visuals.gameId} size={11} color={visuals.gameColor} />
+            {visuals.gameLabel}
+          </span>
+        )}
+        {visuals.tier && (
+          <span style={{ fontSize: 10, color: 'var(--text-2)', padding: '3px 7px', borderRadius: 999, background: 'var(--hover)', border: '1px solid var(--line)' }}>
+            Tier {visuals.tier}
+          </span>
+        )}
       </div>
       <h3 style={{ margin: '0 0 6px', fontSize: 16, lineHeight: 1.3 }}>{row.title}</h3>
       {row.summary && (
@@ -175,6 +190,7 @@ export default function NewsArchivePage() {
       if (type === 'preview') q = q.eq('variant', 'preview')
       else if (type === 'transfer') q = q.eq('content_type', 'transfer')
       else if (type === 'tournament') q = q.eq('content_type', 'tournament')
+      else if (type === 'haftalik') q = q.eq('content_type', 'haftalik')
       else if (type === 'match') q = q.eq('content_type', 'match').neq('variant', 'preview')
 
       const from = (page - 1) * PAGE_SIZE

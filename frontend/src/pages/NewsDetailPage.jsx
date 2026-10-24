@@ -9,6 +9,7 @@ import {
   buildUpcomingStory,
   normalizeTier,
   storyExplainability,
+  weeklyCover,
 } from '../utils/newsStories'
 import {
   getScoutEmblem,
@@ -134,6 +135,34 @@ function mapTransferRowToStory(row) {
     },
     player: row.ekler?.oyuncu_id ? { id: row.ekler.oyuncu_id, name: row.hero_score } : null,
     source: { kaynak: row.ekler?.kaynak || null },
+  }
+}
+
+/** news_articles haftalık satırını (turk_haftasi / surprizler) story şekline çevirir. */
+function mapWeeklyRowToStory(row) {
+  return {
+    id: `haftalik_${row.id}`,
+    matchId: null,
+    status: 'haftalik',
+    variant: row.variant,
+    publishedAt: row.created_at,
+    title: row.title || '',
+    summary: row.summary || '',
+    content: row.content || '',
+    heroScore: row.hero_score || '',
+    visuals: {
+      gameId: null,
+      gameLabel: 'ESPOR',
+      gameColor: FEXT.accent,
+      tier: null,
+      tournamentName: row.tournament_name || 'Haftalık Özet',
+      turkish: row.variant === 'turk_haftasi',
+      weekly: weeklyCover(row),
+      teamA: {},
+      teamB: {},
+    },
+    ekler: row.ekler || {},
+    source: {},
   }
 }
 
@@ -312,6 +341,124 @@ function TrustLayer({ story, onReport, liked, likeCount, onToggleLike }) {
         </button>
       </div>
     </div>
+  )
+}
+
+/**
+ * Haftalık özetin maç listesi: ekler.maclar (+ gelecek) sırasıyla, her satır maç
+ * sayfasına link. Liste veriden gelir; haber metni bunu tekrar etmez.
+ * Türk takımı tek kaynaktan (turk_takimlar görünümü), ad listesinden değil.
+ */
+function WeeklyMatchList({ story }) {
+  const ekler = story.ekler || {}
+  const sonucIds = useMemo(() => (Array.isArray(ekler.maclar) ? ekler.maclar : []), [ekler.maclar])
+  const gelecekIds = useMemo(() => (Array.isArray(ekler.gelecek) ? ekler.gelecek : []), [ekler.gelecek])
+  const [maclar, setMaclar] = useState(null)
+  const [turk, setTurk] = useState(new Set())
+
+  useEffect(() => {
+    const ids = [...sonucIds, ...gelecekIds]
+    if (!ids.length) return
+    let cancelled = false
+    ;(async () => {
+      const { data, error } = await supabase
+        .from('matches')
+        .select(`id, scheduled_at, status, winner_id, team_a_id, team_b_id, team_a_score, team_b_score,
+          prediction_team_a, prediction_team_b,
+          team_a:teams!matches_team_a_id_fkey(id,name,acronym,logo_url),
+          team_b:teams!matches_team_b_id_fkey(id,name,acronym,logo_url),
+          tournament:tournaments(name,league_name,event_name), game:games(slug)`)
+        .in('id', ids)
+      if (error) { console.warn('Haftalık maç listesi okunamadı:', error.message); return }
+      const takimIds = [...new Set((data || []).flatMap(m => [m.team_a_id, m.team_b_id]).filter(Boolean))]
+      const { data: tr, error: trErr } = await supabase.from('turk_takimlar').select('team_id').in('team_id', takimIds)
+      if (trErr) console.warn('turk_takimlar okunamadı:', trErr.message)
+      if (!cancelled) {
+        setMaclar(new Map((data || []).map(m => [m.id, m])))
+        setTurk(new Set((tr || []).map(r => r.team_id)))
+      }
+    })()
+    return () => { cancelled = true }
+  }, [sonucIds, gelecekIds])
+
+  if (!sonucIds.length && !gelecekIds.length) return null
+  const surpriz = story.variant === 'surprizler'
+  const bolumler = [
+    { baslik: surpriz ? "Fextopus'u yanıltan maçlar" : 'Haftanın sonuçları', ids: sonucIds },
+    { baslik: 'Gelecek hafta', ids: gelecekIds },
+  ].filter(b => b.ids.length)
+
+  return (
+    <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid var(--surface-2)', background: 'var(--surface)', padding: 16 }}>
+      {bolumler.map(b => (
+        <div key={b.baslik} style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 11, color: 'var(--accent-fg)', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800, marginBottom: 10 }}>
+            {b.baslik}
+          </div>
+          {maclar === null
+            ? <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Maçlar yükleniyor...</div>
+            : (
+              <div style={{ display: 'grid', gap: 8 }}>
+                {b.ids.map(id => maclar.get(id)).filter(Boolean).map(m => (
+                  <WeeklyMatchRow key={m.id} m={m} turk={turk} surpriz={surpriz} />
+                ))}
+              </div>
+            )}
+        </div>
+      ))}
+    </section>
+  )
+}
+
+function WeeklyMatchRow({ m, turk, surpriz }) {
+  const bitti = m.status === 'finished' && m.winner_id
+  const pa = Number(m.prediction_team_a), pb = Number(m.prediction_team_b)
+  const tahmin = Number.isFinite(pa) && Number.isFinite(pb) && pa + pb > 0
+  const favA = tahmin && pa >= pb
+  const favP = tahmin ? Math.round((Math.max(pa, pb) / (pa + pb)) * 100) : null
+  const fav = tahmin ? (favA ? m.team_a : m.team_b) : null
+  const dogru = bitti && tahmin ? m.winner_id === (favA ? m.team_a_id : m.team_b_id) : null
+  // Türk takımının sonucu satır kenarının rengini belirler (derbide nötr)
+  const trA = turk.has(m.team_a_id), trB = turk.has(m.team_b_id)
+  let kenar = 'var(--line)'
+  if (!surpriz && bitti && trA !== trB) {
+    const trKazandi = m.winner_id === (trA ? m.team_a_id : m.team_b_id)
+    kenar = trKazandi ? 'rgba(64,196,110,.55)' : 'rgba(255,70,85,.5)'
+  }
+  const t = m.tournament || {}
+  const turnuva = [t.event_name && t.league_name && !t.event_name.toLowerCase().startsWith(t.league_name.toLowerCase()) ? `${t.league_name} ${t.event_name}` : (t.event_name || t.league_name), t.name]
+    .filter(Boolean).join(' · ')
+  const saat = new Date(m.scheduled_at).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+  const takim = (tm, tr, kazandi) => (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0, fontWeight: kazandi ? 800 : 600, color: kazandi || !bitti ? 'var(--text-1)' : 'var(--text-3)' }}>
+      <InitialsImage src={tm?.logo_url} name={tm?.name} width={20} height={20} borderRadius={5} objectFit='contain' />
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tm?.name}</span>
+      {tr && <span style={{ fontSize: 9, fontWeight: 800, color: '#ff8c9a' }}>TR</span>}
+    </span>
+  )
+  return (
+    <Link
+      to={`/match/${m.id}`}
+      style={{ display: 'grid', gap: 4, padding: '10px 12px', borderRadius: 10, border: `1px solid ${kenar}`, background: 'var(--surface)', color: 'var(--text-1)', textDecoration: 'none' }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>{takim(m.team_a, trA, bitti && m.winner_id === m.team_a_id)}</div>
+        <div style={{ fontWeight: 900, fontVariantNumeric: 'tabular-nums', minWidth: 54, textAlign: 'center' }}>
+          {bitti ? `${m.team_a_score ?? '-'} - ${m.team_b_score ?? '-'}` : saat}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>{takim(m.team_b, trB, bitti && m.winner_id === m.team_b_id)}</div>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 11, color: 'var(--text-3)', flexWrap: 'wrap' }}>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{turnuva}</span>
+        {fav && (
+          <span style={{ color: dogru === false ? '#ff8c9a' : dogru ? 'var(--accent-fg)' : 'var(--text-3)', whiteSpace: 'nowrap' }}>
+            {favP === 50 && !bitti
+              ? 'Fextopus: başa baş'
+              : `Fextopus: ${fav.acronym || fav.name} %${favP}${dogru === true ? ' · bildi' : dogru === false ? ' · yanıldı' : ''}`}
+          </span>
+        )}
+      </div>
+    </Link>
   )
 }
 
@@ -643,6 +790,31 @@ export default function NewsDetailPage() {
           }
         } catch (err) {
           if (!cancelled) setError(err.message || 'Transfer haberi yuklenemedi.')
+        } finally {
+          if (!cancelled) setLoading(false)
+        }
+        return
+      }
+
+      // ── Haftalık özet: maç yok, news_articles'tan uuid ile yükle ──
+      if (ref.type === 'haftalik') {
+        setLoading(true)
+        setError('')
+        try {
+          const { data: art, error: artErr } = await supabase
+            .from('news_articles')
+            .select('*')
+            .eq('id', ref.id)
+            .maybeSingle()
+          if (artErr) throw artErr
+          if (!art) throw new Error('Haftalık özet bulunamadı.')
+          const weeklyStory = mapWeeklyRowToStory(art)
+          if (!cancelled) {
+            setStory(weeklyStory)
+            await loadForum(weeklyStory.id)
+          }
+        } catch (err) {
+          if (!cancelled) setError(err.message || 'Haftalık özet yuklenemedi.')
         } finally {
           if (!cancelled) setLoading(false)
         }
@@ -1153,14 +1325,16 @@ export default function NewsDetailPage() {
         <section style={{ marginTop: 14, borderRadius: 20, border: '1px solid var(--line)', background: 'linear-gradient(145deg,var(--surface),var(--surface))', padding: 22 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
             <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-1)', padding: '4px 8px', borderRadius: 999, background: 'rgba(200,16,46,.18)', border: '1px solid rgba(200,16,46,.34)', textTransform: 'uppercase', letterSpacing: 1 }}>
-              {explain.classification}
+              {story.status === 'haftalik' ? 'Haftalık Özet' : explain.classification}
             </span>
             <span style={{ fontSize: 10, color: 'var(--text-1)', padding: '4px 8px', borderRadius: 999, background: `${story.visuals.gameColor}22`, border: `1px solid ${story.visuals.gameColor}55` }}>
               {story.visuals.gameLabel}
             </span>
-            <span style={{ fontSize: 10, color: 'var(--text-3)', padding: '4px 8px', borderRadius: 999, border: '1px solid var(--line)' }}>
-              Tier {story.visuals.tier}
-            </span>
+            {story.visuals.tier && (
+              <span style={{ fontSize: 10, color: 'var(--text-3)', padding: '4px 8px', borderRadius: 999, border: '1px solid var(--line)' }}>
+                Tier {story.visuals.tier}
+              </span>
+            )}
             <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-3)' }}>{fmtDate(story.publishedAt)}</span>
           </div>
 
@@ -1187,11 +1361,13 @@ export default function NewsDetailPage() {
           <TrustLayer story={story} onReport={reportStoryIssue} liked={liked} likeCount={likeCount} onToggleLike={toggleLike} />
         </section>
 
+        {story.status === 'haftalik' && <WeeklyMatchList story={story} />}
+
         <AIProbabilityBar story={story} />
 
         <RelatedLinks story={story} />
 
-        <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid var(--surface-2)', background: 'var(--surface)', padding: 16 }}>
+        {story.status !== 'haftalik' && <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid var(--surface-2)', background: 'var(--surface)', padding: 16 }}>
           <div style={{ fontSize: 11, color: 'var(--accent-fg)', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800, marginBottom: 10 }}>
             Maç Analizi
           </div>
@@ -1202,7 +1378,7 @@ export default function NewsDetailPage() {
               </div>
             ))}
           </div>
-        </section>
+        </section>}
 
         <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid var(--surface-2)', background: 'var(--surface)', padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>

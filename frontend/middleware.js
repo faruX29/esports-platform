@@ -103,11 +103,37 @@ function parseNewsRef(slug) {
   const s = String(slug || '')
   const tr = s.match(/transfer_([0-9a-fA-F-]{36})/)
   if (tr) return { type: 'transfer', id: tr[1] }
+  const hf = s.match(/haftalik_([0-9a-fA-F-]{36})/)
+  if (hf) return { type: 'haftalik', id: hf[1] }
   const tour = s.match(/tournament_(\d+)/) // maç sayısal fallback'ten ÖNCE
   if (tour) return { type: 'tournament', id: tour[1] }
   const m = s.match(/(\d{3,})(?!.*\d)/) // slug sonundaki sayı = match_id
   if (m) return { type: 'match', id: m[1] }
   return null
+}
+
+// Haber URL'i — src/utils/newsSlug.js buildNewsSlug ve api/sitemap.js newsSlug ile AYNI.
+// 24 Eki'ye kadar bot HTML'indeki haber linkleri `/news/<haber uuid>` idi: SPA bunu
+// maç numarası sanıp yanlış/boş sayfa açıyordu (Google'ın izlediği linkler kırıktı).
+const SLUG_TR = { ç: 'c', ğ: 'g', ı: 'i', İ: 'i', ö: 'o', ş: 's', ü: 'u' }
+function slugify(t) {
+  return String(t || '')
+    .replace(/[çğıİöşüÇĞÖŞÜ]/g, c => SLUG_TR[c] ?? SLUG_TR[c.toLowerCase()] ?? c)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 70)
+}
+const NEWS_LINK_SEL = 'id,match_id,tournament_id,title,content_type'
+function newsPath(row) {
+  const s = slugify(row.title)
+  let id
+  if (row.content_type === 'transfer') id = `transfer_${row.id}`
+  else if (row.content_type === 'haftalik') id = `haftalik_${row.id}`
+  else if (row.content_type === 'tournament') id = `tournament_${row.tournament_id}`
+  else id = String(row.match_id || '')
+  if (!id) return null
+  return `/news/${s ? `${s}-${id}` : id}`
 }
 
 async function sbFetchAll(path) {
@@ -350,9 +376,10 @@ async function buildForMatch(id, origin, url) {
   if (row.team_b_id) satirlar.push(`<li><a href="${origin}/team/${row.team_b_id}">${esc(b)} kadro ve istatistikler</a></li>`)
   if (row.tournament_id) satirlar.push(`<li><a href="${origin}/tournament/${row.tournament_id}">${esc(turAd || 'Turnuva')} fikstürü</a></li>`)
   const haber = await sbFetch(
-    `news_articles?match_id=eq.${ENC(id)}&select=id,title&order=created_at.desc&limit=1`,
+    `news_articles?match_id=eq.${ENC(id)}&select=${NEWS_LINK_SEL}&order=created_at.desc&limit=1`,
   )
-  if (haber?.id) satirlar.push(`<li><a href="${origin}/news/${haber.id}">${esc(haber.title || 'Maç haberi')}</a></li>`)
+  const haberYol = haber ? newsPath(haber) : null
+  if (haberYol) satirlar.push(`<li><a href="${origin}${haberYol}">${esc(haber.title || 'Maç haberi')}</a></li>`)
 
   const tahminP = p ? `<p>Fextopus tahmin motoru bu maçta ${esc(p.replace('AI: ', ''))} veriyordu.</p>` : ''
   const kunye = `<p>${esc(oyunAd)}${turSahne ? ` · ${esc(turSahne)}` : ''}${row.tournament?.tier ? ` · ${esc(String(row.tournament.tier).toUpperCase())}-Tier` : ''}${tarih ? ` · ${esc(tarih)}` : ''}</p>`
@@ -364,9 +391,9 @@ async function buildForMatch(id, origin, url) {
 }
 
 async function buildForNews(ref, origin, url) {
-  const sel = 'title,summary,hero_score,game_slug,tier,tournament_name,team_a_name,team_b_name,team_a_logo,team_b_logo,created_at'
+  const sel = 'title,summary,hero_score,game_slug,tier,tournament_name,team_a_name,team_b_name,team_a_logo,team_b_logo,created_at,ekler'
   let query
-  if (ref.type === 'transfer') {
+  if (ref.type === 'transfer' || ref.type === 'haftalik') {
     query = `news_articles?id=eq.${encodeURIComponent(ref.id)}&select=${encodeURIComponent(sel)}&limit=1`
   } else if (ref.type === 'tournament') {
     query = `news_articles?content_type=eq.tournament&tournament_id=eq.${encodeURIComponent(ref.id)}&select=${encodeURIComponent(sel)}&order=created_at.desc&limit=1`
@@ -396,7 +423,8 @@ async function buildForNews(ref, origin, url) {
   // YOKTU: 1.300+ haberin her biri bot geldiğinde ~1,7 sn CPU'luk kart üretiyordu
   // ve Vercel Fluid Active CPU ücretsiz kotası (4 sa/ay) 22 Eylül'de %75'e dayandı.
   // Eski haber paylaşılmıyor → statik marka kartı, CDN'den, 0 CPU.
-  const img = isShareableMatch(row.created_at)
+  // Haftalık özette takım yok → takım kartı boş çıkardı; statik marka kartı.
+  const img = ref.type !== 'haftalik' && isShareableMatch(row.created_at)
     ? ogImageUrl(origin, {
         a: row.team_a_name, b: row.team_b_name, la: row.team_a_logo, lb: row.team_b_logo,
         s: scoreFromHero(row.hero_score), g: gm.label, t: row.tier, tn: row.tournament_name, c: gm.accent,
@@ -421,6 +449,24 @@ async function buildForNews(ref, origin, url) {
     }
   } else if (ref.type === 'tournament') {
     linkItems.push(`<a href="${origin}/tournament/${ENC(ref.id)}">${esc(row.tournament_name || 'Turnuva')} turnuva sayfası</a>`)
+  } else if (ref.type === 'transfer') {
+    const e = row.ekler || {}
+    if (e.eski_takim_id) linkItems.push(`<a href="${origin}/team/${ENC(e.eski_takim_id)}">${esc(row.team_a_name || 'Eski takım')}</a>`)
+    if (e.yeni_takim_id) linkItems.push(`<a href="${origin}/team/${ENC(e.yeni_takim_id)}">${esc(row.team_b_name || 'Yeni takım')}</a>`)
+    if (e.oyuncu_id) linkItems.push(`<a href="${origin}/player/${ENC(e.oyuncu_id)}">${esc(row.hero_score || 'Oyuncu')} profili</a>`)
+  } else if (ref.type === 'haftalik') {
+    // Haftanın maçları: Googlebot her maç sayfasına buradan da ulaşır
+    const ids = [...(row.ekler?.maclar || []), ...(row.ekler?.gelecek || [])].map(Number).filter(Number.isFinite)
+    if (ids.length) {
+      const maclar = await sbFetchAll(`matches?id=in.(${ids.join(',')})&select=${ENC(MATCH_SEL)}`)
+      const sira = new Map(maclar.map(m => [m.id, m]))
+      for (const mid of ids) {
+        const m = sira.get(mid)
+        if (!m) continue
+        const skor = m.team_a_score != null && m.team_b_score != null ? ` ${m.team_a_score}-${m.team_b_score}` : ''
+        linkItems.push(`<a href="${origin}/match/${m.id}">${esc(m.team_a?.name || 'Takım A')}${skor} ${esc(m.team_b?.name || 'Takım B')}</a>`)
+      }
+    }
   }
   const body = `<h1>${esc(row.title || 'feXt')}</h1><p>${esc(row.summary || '')}</p>` +
     (linkItems.length ? `<h2>İlgili Sayfalar</h2><ul>${linkItems.map(l => `<li>${l}</li>`).join('')}</ul>` : '')
@@ -810,11 +856,12 @@ async function staticFeedHtml(feed, origin) {
     }
     if (feed === 'news') {
       const rows = await sbFetchAll(
-        'news_articles?select=id,title&order=created_at.desc&limit=25',
+        `news_articles?select=${NEWS_LINK_SEL}&order=created_at.desc&limit=25`,
       )
       if (!rows.length) return ''
       return `<h2>Son haberler</h2><ul>${
-        rows.map(n => `<li><a href="${origin}/news/${n.id}">${esc(n.title)}</a></li>`).join('')
+        rows.map(n => ({ n, yol: newsPath(n) })).filter(x => x.yol)
+          .map(({ n, yol }) => `<li><a href="${origin}${yol}">${esc(n.title)}</a></li>`).join('')
       }</ul>`
     }
   } catch {

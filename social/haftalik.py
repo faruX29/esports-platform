@@ -29,7 +29,9 @@ S_BASLIK, S_LISTE, S_KAPANIS = 3.0, 8.0, 5.0
 # sonuç rengi anlatır. Az satır, büyük öğe — telefonda bir bakışta okunmalı.
 LISTE_TURK, LISTE_SURPRIZ = 6, 5
 SATIR_H, SATIR_ARA = 190, 22
-OYUN = {'valorant': 'VALORANT', 'csgo': 'CS2', 'cs2': 'CS2', 'lol': 'LoL', 'league-of-legends': 'LoL'}
+OYUN = {'valorant': 'VALORANT', 'csgo': 'CS2', 'cs-go': 'CS2', 'cs2': 'CS2', 'lol': 'LoL',
+        'league-of-legends': 'LoL'}
+OYUN_IKON = {'VALORANT': 'valorant', 'CS2': 'cs2', 'LoL': 'lol'}      # assets/oyun/<ad>.png
 TSI = timezone(timedelta(hours=3))
 
 
@@ -73,6 +75,7 @@ def maclar(ids):
             'a': {'id': aid, 'ad': (aad or '').strip(), 'ac': aac, 'logo': alogo, 'tr': _turk_mu(tid=aid)},
             'b': {'id': bid, 'ad': (bad or '').strip(), 'ac': bac, 'logo': blogo, 'tr': _turk_mu(tid=bid)},
             'sa': sa, 'sb': sb, 'pa': float(pa) if pa is not None else None,
+            'ikon': OYUN_IKON.get(OYUN.get(oyun or '', '')),
             'etiket': ' · '.join(x for x in (OYUN.get(oyun or '', (oyun or '').upper()),
                                              radar.etkinlik_adi(lig, etk) or lig) if x),
         }
@@ -106,6 +109,14 @@ def _zemin(renkler):
 
 
 # ── Ortak parçalar ────────────────────────────────────────────────────────
+@lru_cache(maxsize=8)
+def _ikon(yol, boy):
+    if not os.path.exists(yol):
+        return None
+    im = Image.open(yol).convert('RGBA')
+    return im.resize((int(im.width * boy / im.height), boy), Image.LANCZOS)
+
+
 def _satir(im, d, y, m, a, mod):
     """Maç satırı: logo + kısa ad + skor. Bilgi renkle verilir, yazıyla değil.
     mod='turk': zemin ve sol şerit Türk takımının sonucu (yeşil/kırmızı; derbide nötr).
@@ -143,14 +154,23 @@ def _satir(im, d, y, m, a, mod):
             d.text((yx, ty + 54), yz, font=fy, fill=ELENDI)
     orta = f"{m['sa']}-{m['sb']}" if m['bitti'] else f"{m['saat']:%H:%M}"
     f_s = inter(900, 64)
-    d.text(((96 + ic_son - d.textlength(orta, font=f_s)) / 2, y + (h - 78) / 2), orta, font=f_s, fill=INK)
+    cx = (96 + ic_son) / 2
+    oi = _ikon(YOL('assets', 'oyun', f"{m['ikon']}.png"), 40) if m.get('ikon') else None
+    sy = y + (h - 78) / 2 + (18 if oi else 0)
+    if oi:
+        yapistir(im, oi, cx - oi.width / 2, y + 20)
+    d.text((cx - d.textlength(orta, font=f_s) / 2, sy), orta, font=f_s, fill=INK)
     if mod == 'surpriz':
         _carpi(d, W - 120, y + h / 2, ELENDI, boy=48)
 
 
 def _liste(c, baslik, liste, t, mod):
     with Katman(c, _eas(t / 0.1)) as (im, d):
-        d.text((80, 124), baslik, font=inter(900, 64), fill=INK)
+        f = inter(900, 64)
+        d.text((80, 124), baslik, font=f, fill=INK)
+        fx = _ikon(YOL('assets', 'fextopus-icon.png'), 96) if mod == 'surpriz' else None
+        if fx:
+            yapistir(im, fx, 80 + d.textlength(baslik, font=f) + 24, 106)
     adim = SATIR_H + SATIR_ARA
     # Başlık ile alt bilgi arasında dikey ortala
     y = 260 + max(0, (1660 - 260 - adim * len(liste)) // 2)

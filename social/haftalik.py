@@ -24,8 +24,11 @@ from champions import inter, Katman, ortala, yapistir, kisa, _alt_bilgi, _eas, K
 from karne import _carpi
 import psycopg
 
-S_BASLIK, S_LISTE, S_KAPANIS = 3.0, 9.0, 5.0
-LISTE_MAKS = 8          # ekrana sığan satır (156px + 12px aralık)
+S_BASLIK, S_LISTE, S_KAPANIS = 3.0, 8.0, 5.0
+# Sade tasarım (kurucu, 25 Ekim: "çok yazı var"): satırda yalnız logo + kısa ad + skor,
+# sonuç rengi anlatır. Az satır, büyük öğe — telefonda bir bakışta okunmalı.
+LISTE_TURK, LISTE_SURPRIZ = 6, 5
+SATIR_H, SATIR_ARA = 190, 22
 OYUN = {'valorant': 'VALORANT', 'csgo': 'CS2', 'cs2': 'CS2', 'lol': 'LoL', 'league-of-legends': 'LoL'}
 TSI = timezone(timedelta(hours=3))
 
@@ -104,63 +107,59 @@ def _zemin(renkler):
 
 # ── Ortak parçalar ────────────────────────────────────────────────────────
 def _satir(im, d, y, m, a, mod):
-    """Maç satırı. mod='turk': kenar rengi Türk takımının sonucu (derbide nötr).
-    mod='surpriz': sağda çarpı, Fextopus barı kırmızı."""
-    h = 156
-    ic_son = W - (210 if mod == 'surpriz' else 76)
-    kenar, dolgu, kalin = CIZGI, KUTU, 2
+    """Maç satırı: logo + kısa ad + skor. Bilgi renkle verilir, yazıyla değil.
+    mod='turk': zemin ve sol şerit Türk takımının sonucu (yeşil/kırmızı; derbide nötr).
+    mod='surpriz': Fextopus'un favorisi kırmızı ve altında yüzdesi, sağda çarpı."""
+    h = SATIR_H
+    dolgu, serit = KUTU, None
     if mod == 'turk' and m['bitti'] and m['a']['tr'] != m['b']['tr']:
         tr = m['a'] if m['a']['tr'] else m['b']
         kazandi = m['kazanan'] and m['kazanan']['id'] == tr['id']
-        kenar, dolgu, kalin = (YESIL, (18, 40, 30), 3) if kazandi else (KIRMIZI, (46, 20, 28), 3)
-    d.rounded_rectangle([50, y, W - 50, y + h], 24, fill=dolgu, outline=kenar, width=kalin)
-    d.text((76, y + 12), m['etiket'].upper()[:58], font=inter(800, 20), fill=FAINT)
+        dolgu, serit = ((18, 44, 32), YESIL) if kazandi else ((50, 20, 30), KIRMIZI)
+    d.rounded_rectangle([50, y, W - 50, y + h], 30, fill=dolgu)
+    if serit:
+        d.rounded_rectangle([50, y, 64, y + h], 7, fill=serit)
 
-    f_ad = inter(800, 30)
-    for tm, x, sag in ((m['a'], 76, False), (m['b'], ic_son, True)):
-        lg = logo(tm['id'], tm['logo'], tm['ad'], tm['ac'], 46)
-        s = tm['ac'] if tm.get('ac') and len(tm['ac']) <= 6 else kisa(tm, d, f_ad, 170)
-        renk = INK if (m['kazanan'] is None or m['kazanan']['id'] == tm['id']) else MUTED
+    ic_son = W - (190 if mod == 'surpriz' else 90)
+    f_ad = inter(900, 40)
+    for tm, sag in ((m['a'], False), (m['b'], True)):
+        lg = logo(tm['id'], tm['logo'], tm['ad'], tm['ac'], 92)
+        s = tm['ac'] if tm.get('ac') and len(tm['ac']) <= 5 else kisa(tm, d, f_ad, 150)
+        fav = mod == 'surpriz' and m['fav'] and m['fav']['id'] == tm['id']
+        kaybetti = m['kazanan'] is not None and m['kazanan']['id'] != tm['id']
+        renk = ELENDI if fav else (MUTED if kaybetti else INK)
+        ly = y + (h - lg.height) / 2
         if not sag:
-            yapistir(im, lg, x, y + 46)
-            d.text((x + 58, y + 50), s, font=f_ad, fill=renk)
+            yapistir(im, lg, 96, ly)
+            tx = 96 + 112
         else:
-            yapistir(im, lg, x - lg.width, y + 46)
-            d.text((x - 58 - d.textlength(s, font=f_ad), y + 50), s, font=f_ad, fill=renk)
-    orta = f"{m['sa']} - {m['sb']}" if m['bitti'] else f"{m['saat']:%H:%M}"
-    f_s = inter(900, 42)
-    d.text(((76 + ic_son - d.textlength(orta, font=f_s)) / 2, y + 42), orta, font=f_s, fill=INK)
-
-    if m['fav']:
-        fav_sol = m['fav']['id'] == m['a']['id']
-        etiket = f"Fextopus: {m['fav']['ac'] or m['fav']['ad']} %{m['fav_yuzde']}"
-        if m['bitti']:
-            etiket += ' · bildi' if m['dogru'] else ' · yanıldı'
-        d.text((76, y + 92), etiket, font=inter(600, 22), fill=FAINT)
-        bx0, bx1, by = 76, ic_son, y + 126
-        d.rounded_rectangle([bx0, by, bx1, by + 14], 7, fill=GRI)
-        dolu = int((bx1 - bx0) * (m['fav_yuzde'] / 100) * a)
-        if dolu > 4:
-            kutu = [bx0, by, bx0 + dolu, by + 14] if fav_sol else [bx1 - dolu, by, bx1, by + 14]
-            d.rounded_rectangle(kutu, 7, fill=MOR if m['dogru'] or not m['bitti'] else ELENDI)
+            yapistir(im, lg, ic_son - lg.width, ly)
+            tx = ic_son - 112 - d.textlength(s, font=f_ad)
+        ty = y + (h - 48) / 2 - (18 if fav else 0)
+        d.text((tx, ty), s, font=f_ad, fill=renk)
+        if fav:
+            yz, fy = f"%{m['fav_yuzde']}", inter(800, 30)
+            yx = tx if not sag else tx + d.textlength(s, font=f_ad) - d.textlength(yz, font=fy)
+            d.text((yx, ty + 54), yz, font=fy, fill=ELENDI)
+    orta = f"{m['sa']}-{m['sb']}" if m['bitti'] else f"{m['saat']:%H:%M}"
+    f_s = inter(900, 64)
+    d.text(((96 + ic_son - d.textlength(orta, font=f_s)) / 2, y + (h - 78) / 2), orta, font=f_s, fill=INK)
     if mod == 'surpriz':
-        d.line([(ic_son + 34, y + 20), (ic_son + 34, y + h - 20)], fill=CIZGI, width=2)
-        _carpi(d, W - 130, y + h / 2, ELENDI)
+        _carpi(d, W - 120, y + h / 2, ELENDI, boy=48)
 
 
-def _liste(c, baslik_ust, baslik, renk_ust, liste, t, mod):
-    a0 = _eas(t / 0.1)
-    with Katman(c, a0) as (im, d):
-        d.text((80, 96), baslik_ust, font=inter(800, 28), fill=renk_ust)
-        d.text((80, 140), baslik, font=inter(900, 66), fill=INK)
-    # Kısa liste boş alanı üstte bırakmasın: başlık ile alt bilgi arasında dikey ortala
-    y = 250 + max(0, (1680 - 250 - 168 * len(liste)) // 2 - 40)
-    adim = 0.6 / max(1, len(liste))      # satırlar sahnenin ilk %70'inde belirsin
+def _liste(c, baslik, liste, t, mod):
+    with Katman(c, _eas(t / 0.1)) as (im, d):
+        d.text((80, 120), baslik, font=inter(900, 72), fill=INK)
+    adim = SATIR_H + SATIR_ARA
+    # Başlık ile alt bilgi arasında dikey ortala
+    y = 260 + max(0, (1660 - 260 - adim * len(liste)) // 2)
+    gecis = 0.55 / max(1, len(liste))      # satırlar sahnenin ilk ~%70'inde belirsin
     for i, m in enumerate(liste):
-        ai = _eas((t - 0.08 - i * adim) / 0.16)
+        ai = _eas((t - 0.06 - i * gecis) / 0.14)
         with Katman(c, ai) as (im, d):
-            _satir(im, d, y, m, ai, mod)
-        y += 168
+            _satir(im, d, y + (1 - ai) * 30, m, ai, mod)
+        y += adim
 
 
 def _etiketler(liste):
@@ -203,7 +202,7 @@ def _yaz(dosya, kareler, aciklama):
 
 # ── Video 1: Türk takımlarının haftası ────────────────────────────────────
 def turk_haftasi(ekler):
-    sonuc = maclar(ekler.get('maclar', []))[:LISTE_MAKS]
+    sonuc = maclar(ekler.get('maclar', []))[:LISTE_TURK]
     gelecek = maclar(ekler.get('gelecek', []))
     etiket, g, mg = ekler.get('etiket', ''), ekler.get('galibiyet', 0), ekler.get('maglubiyet', 0)
 
@@ -214,21 +213,20 @@ def turk_haftasi(ekler):
             ortala(d, 520 + (1 - a1) * 26, 'TÜRK', inter(900, 170), INK)
             ortala(d, 700 + (1 - a1) * 26, 'TAKIMLARI', inter(900, 150), KIRMIZI)
         with Katman(c, a2) as (im, d):
-            ortala(d, 920, f'Geçen hafta · {etiket}', inter(700, 44), MUTED)
+            ortala(d, 920, etiket, inter(700, 48), MUTED)
             # sayaç: renk dili, az yazı
-            gs, ms = f'{int(g * a2)} G', f'{int(mg * a2)} M'
-            f = inter(900, 96)
+            gs, ms = f'{int(g * a2)}G', f'{int(mg * a2)}M'
+            f = inter(900, 120)
             gw, mw = d.textlength(gs, font=f), d.textlength(ms, font=f)
-            x0 = (W - (gw + 90 + mw)) / 2
-            d.text((x0, 1030), gs, font=f, fill=YESIL)
-            d.text((x0 + gw + 90, 1030), ms, font=f, fill=KIRMIZI)
-            ortala(d, 1170, f"{ekler.get('mac_sayisi', len(sonuc))} maçın en önemlileri", inter(600, 34), FAINT)
+            x0 = (W - (gw + 100 + mw)) / 2
+            d.text((x0, 1040), gs, font=f, fill=YESIL)
+            d.text((x0 + gw + 100, 1040), ms, font=f, fill=KIRMIZI)
         _alt_bilgi(c)
         return c.convert('RGB')
 
     def liste(t):
         c = _zemin(ZEMIN_TURK)
-        _liste(c, f'TÜRK TAKIMLARI · {etiket.upper()}', 'GEÇEN HAFTA', KIRMIZI, sonuc, t, 'turk')
+        _liste(c, 'GEÇEN HAFTA', sonuc, t, 'turk')
         _alt_bilgi(c)
         return c.convert('RGB')
 
@@ -243,27 +241,24 @@ def turk_haftasi(ekler):
             p_turk = round((ilk['pa'] if tk is ilk['a'] else 1 - ilk['pa']) * 100)
             s = ilk['saat']
             with Katman(c, a1) as (im, d):
-                ortala(d, 330, 'BU HAFTA', inter(800, 34), MUTED)
-                for tm, cx in ((tk, 300), (rakip, W - 300)):
-                    lg = logo(tm['id'], tm['logo'], tm['ad'], tm['ac'], 170)
-                    yapistir(im, lg, cx - lg.width / 2, 420 + (170 - lg.height) / 2)
-                    f = inter(800, 40); n = kisa(tm, d, f, 380)
-                    d.text((cx - d.textlength(n, font=f) / 2, 620), n, font=f, fill=INK)
-                ortala(d, 480, 'vs', inter(800, 50), FAINT)
-                ortala(d, 700, f'{s.day} {AY[s.month]} · {s:%H:%M}', inter(600, 36), MUTED)
-                bx0, bx1, by = 140, W - 140, 800
-                d.rounded_rectangle([bx0, by, bx1, by + 26], 13, fill=GRI)
-                d.rounded_rectangle([bx0, by, bx0 + int((bx1 - bx0) * p_turk / 100 * a1), by + 26], 13, fill=MOR)
-                d.text((bx0, by + 44), f"{tk['ac'] or tk['ad']} %{p_turk}", font=inter(900, 40), fill=MOR)
-                r = f"%{100 - p_turk} {rakip['ac'] or rakip['ad']}"
-                d.text((bx1 - d.textlength(r, font=inter(900, 40)), by + 44), r, font=inter(900, 40), fill=MUTED)
+                ortala(d, 500, 'BU HAFTA', inter(900, 44), MUTED)
+                for tm, cx in ((tk, 290), (rakip, W - 290)):
+                    lg = logo(tm['id'], tm['logo'], tm['ad'], tm['ac'], 210)
+                    yapistir(im, lg, cx - lg.width / 2, 600 + (210 - lg.height) / 2)
+                    f = inter(900, 44); n = kisa(tm, d, f, 400)
+                    d.text((cx - d.textlength(n, font=f) / 2, 840), n, font=f, fill=INK)
+                ortala(d, 670, 'vs', inter(800, 56), FAINT)
+                ortala(d, 920, f'{s.day} {AY[s.month]} · {s:%H:%M}', inter(700, 40), MUTED)
+                # Fextopus: yalnız iki yüzde ve bar; taraf logolardan okunur
+                bx0, bx1, by = 140, W - 140, 1050
+                d.rounded_rectangle([bx0, by, bx1, by + 30], 15, fill=GRI)
+                d.rounded_rectangle([bx0, by, bx0 + int((bx1 - bx0) * p_turk / 100 * a1), by + 30], 15, fill=MOR)
+                f = inter(900, 64)
+                d.text((bx0, by + 50), f'%{p_turk}', font=f, fill=MOR)
+                r = f'%{100 - p_turk}'
+                d.text((bx1 - d.textlength(r, font=f), by + 50), r, font=f, fill=MUTED)
             with Katman(c, a2) as (im, d):
-                # Ek yok (Esports'ı/'u): Türkçe ünlü uyumunu ada göre tahmin etmiyoruz
-                soru = ('Fextopus bu maçı başa baş görüyor.' if p_turk == 50
-                        else f"Fextopus'un favorisi: {tk['ad'] if p_turk > 50 else rakip['ad']}")
-                ortala(d, 1040, soru, inter(800, 40), INK)
-                ortala(d, 1110, 'Sen ne diyorsun?', inter(900, 60), MOR)
-                ortala(d, 1240, "Haftanın tamamı fextesports.com'da", inter(500, 32), MUTED)
+                ortala(d, 1320, 'Sen ne diyorsun?', inter(900, 72), INK)
         else:
             with Katman(c, a1) as (im, d):
                 ortala(d, 760, 'Haftanın tüm maçları', inter(800, 54), INK)
@@ -287,7 +282,7 @@ def turk_haftasi(ekler):
 
 # ── Video 2: Fextopus'u yanıltan maçlar ───────────────────────────────────
 def surprizler(ekler):
-    liste_m = maclar(ekler.get('maclar', []))[:LISTE_MAKS]
+    liste_m = maclar(ekler.get('maclar', []))[:LISTE_SURPRIZ]
     etiket = ekler.get('etiket', '')
     isabet = ekler.get('isabet') or {}
     mac, dogru = isabet.get('mac', 0), isabet.get('dogru', 0)
@@ -305,15 +300,13 @@ def surprizler(ekler):
             ortala(d, 560, "FEXTOPUS'U", inter(900, 130), INK)
             ortala(d, 710, 'YANILTANLAR', inter(900, 130), ELENDI)
         with Katman(c, a2) as (im, d):
-            ortala(d, 930, f'Geçen hafta · {etiket}', inter(700, 44), MUTED)
-            ortala(d, 1040, 'En emin olduğu maçlarda', inter(600, 38), MUTED)
-            ortala(d, 1092, 'yanıldıklarını saklamıyoruz', inter(800, 42), INK)
+            ortala(d, 930, etiket, inter(700, 48), MUTED)
         _alt_bilgi(c)
         return c.convert('RGB')
 
     def liste(t):
         c = _zemin(ZEMIN_SURPRIZ)
-        _liste(c, f'FEXTOPUS · {etiket.upper()}', 'YANILDIĞI MAÇLAR', ELENDI, liste_m, t, 'surpriz')
+        _liste(c, 'YANILDIĞI MAÇLAR', liste_m, t, 'surpriz')
         _alt_bilgi(c)
         return c.convert('RGB')
 
@@ -321,13 +314,11 @@ def surprizler(ekler):
         c = _zemin(ZEMIN_SURPRIZ)
         a1, a2 = _eas(t / 0.3), _eas((t - 0.4) / 0.3)
         with Katman(c, a1) as (im, d):
-            ortala(d, 420, 'HAFTANIN KARNESİ', inter(800, 44), MUTED)
-            ortala(d, 500, f'%{int(oran * a1)}', inter(900, 300), MOR)
-            ortala(d, 840, f'{mac} maçta {dogru} doğru', inter(700, 44), INK)
+            ortala(d, 520, f'%{int(oran * a1)}', inter(900, 320), MOR)
+            ortala(d, 880, f'{mac} maçta {dogru} doğru', inter(800, 52), INK)
         with Katman(c, a2) as (im, d):
-            ortala(d, 1010, 'Doğrusu da yanlışı da açık:', inter(600, 36), MUTED)
-            ortala(d, 1066, 'fextesports.com/stats', inter(900, 52), INK)
-            ortala(d, 1200, 'Sence bu hafta kimi yanıltacak?', inter(800, 40), MOR)
+            ortala(d, 1120, 'Bu hafta kimi', inter(900, 64), MUTED)
+            ortala(d, 1200, 'yanıltacak?', inter(900, 64), INK)
         _alt_bilgi(c)
         return c.convert('RGB')
 

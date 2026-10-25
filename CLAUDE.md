@@ -67,6 +67,7 @@ python radar.py [YYYY-AA-GG] | python karne.py | python champions.py [grup] | py
 ## Doğrulama (test YOK)
 Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - **Veri:** psycopg ile doğrudan sorgu (ör. kazanan–skor çelişkisi sayımı); düzeltmeden önce ve sonra say.
+- **RLS/yetki:** anon anahtarla REST'e dışarıdan iste; yazma testi veri değiştirmesin diye `{"id":null}` gönder (42501 = RLS reddetti, 23502 = RLS geçti).
 - **SEO/bot HTML:** Googlebot UA ile iste, `?__og=1&cb=<rastgele>` ekleyip önbelleği atla. `<title>` middleware'deki varsayılan kabuk başlığıysa sayfa bozuktur.
 - **Frontend:** `npm run build` + `npm run lint`, sonra canlıda ekran görüntüsü.
 - **Video:** ffmpeg ile kare çıkarıp bak.

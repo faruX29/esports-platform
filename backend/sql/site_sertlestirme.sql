@@ -144,6 +144,33 @@ alter function public.get_scout_players(integer)              set search_path = 
 alter function public.get_teams_recent_form(bigint[])         set search_path = public;
 alter function public.set_updated_at()                        set search_path = public;
 
+-- ── 6) Tetikleyici fonksiyonlarını RPC'den kapat ────────────────────────────
+-- Tetikleyici çalışırken EXECUTE yetkisi aranmaz; yalnız dışarıdan çağrı kapanır.
+-- email_for_login / username_available anon'a BİLEREK açık (giriş ve kayıt).
+
+revoke execute on function public.apply_scout_score_from_vote()  from public, anon, authenticated;
+revoke execute on function public.sync_player_team_on_transfer() from public, anon, authenticated;
+
+-- ── 7) avatars kovası listelenemesin ────────────────────────────────────────
+-- Kova public: görsel URL'si SELECT politikası olmadan da açılır. Geniş SELECT
+-- yalnız listelemeye yarıyordu (klasör adları kullanıcı id'si). Sahibi kendi
+-- klasörünü okuyabilir (upload upsert bunu ister).
+
+drop policy if exists avatars_public_read on storage.objects;
+drop policy if exists avatars_owner_select on storage.objects;
+create policy avatars_owner_select on storage.objects
+  for select to authenticated
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = (auth.uid())::text);
+
+-- ── 8) scout_waitlist ekleme politikası ─────────────────────────────────────
+-- Herkes ekleyebilir (form anon); sınırı CHECK + hız tetikleyicisi koyar.
+-- `true` yerine açık koşul: Advisor'ın "always true" uyarısı niyeti yansıtmıyordu.
+
+drop policy if exists scout_waitlist_insert_anon on public.scout_waitlist;
+create policy scout_waitlist_insert_anon on public.scout_waitlist
+  for insert to anon, authenticated
+  with check (email is not null);
+
 -- ── DOĞRULAMA (anon anahtarla REST) ─────────────────────────────────────────
 --   GET  /rest/v1/news_comment_votes?select=user_id        → []
 --   GET  /rest/v1/news_comment_vote_counts?select=*        → sayılar

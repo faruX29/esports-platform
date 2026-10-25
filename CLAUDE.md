@@ -92,3 +92,4 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - Windows'ta Türkçe/Unicode içerikli heredoc ile dosya yazma → cp1254 karakterleri bozar.
 - Sosyal videoda Inter dışında font kullanma → Baloo yalnız logoda.
 - Sır, metrik veya kişisel bilgi commit'leme → repo PUBLIC.
+- Kullanıcı tablosunu (`profiles`, `news_likes`) anon'a açma → herkese açık okuma dar görünümden (`profiles_public`, `news_like_counts`); yeni `security_invoker = false` görünümde `revoke all` + yalnız `grant select` şart, yoksa Supabase varsayılan yetkisi anon'a görünüm üzerinden RLS'siz yazma verir.

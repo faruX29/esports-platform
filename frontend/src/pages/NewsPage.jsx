@@ -358,8 +358,12 @@ export default function NewsPage() {
   const hydrateInteractions = useCallback(async newsIds => {
     if (!newsIds.length) return
 
-    const [{ data: likesRows }, commentsRes] = await Promise.all([
-      supabase.from('news_likes').select('id,news_id,user_id').in('news_id', newsIds),
+    // Sayılar görünümden; news_likes yalnız kendi satırlarımızı döner (RLS)
+    const [{ data: countRows }, { data: myLikeRows }, commentsRes] = await Promise.all([
+      supabase.from('news_like_counts').select('news_id,cnt').in('news_id', newsIds),
+      user?.id
+        ? supabase.from('news_likes').select('news_id').eq('user_id', user.id).in('news_id', newsIds)
+        : Promise.resolve({ data: [] }),
       supabase.from('news_comments').select('id,news_id,user_id,content,created_at').in('news_id', newsIds).order('created_at', { ascending: false }),
     ])
 
@@ -375,10 +379,8 @@ export default function NewsPage() {
 
     const likeMap = {}
     const liked = new Set()
-    for (const row of (likesRows || [])) {
-      likeMap[row.news_id] = (likeMap[row.news_id] || 0) + 1
-      if (user?.id && row.user_id === user.id) liked.add(row.news_id)
-    }
+    for (const row of (countRows || [])) likeMap[row.news_id] = row.cnt || 0
+    for (const row of (myLikeRows || [])) liked.add(row.news_id)
 
     const commentMap = {}
     for (const row of (commentsRows || [])) {

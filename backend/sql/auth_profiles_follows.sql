@@ -85,11 +85,8 @@ begin
     create policy follows_manage_own on public.follows for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
   end if;
 
-  if not exists (
-    select 1 from pg_policies where schemaname = 'public' and tablename = 'news_likes' and policyname = 'news_likes_read_all'
-  ) then
-    create policy news_likes_read_all on public.news_likes for select using (true);
-  end if;
+  -- news_likes herkese açık okuma kaldırıldı; sayılar news_like_counts görünümünden
+  -- (kapat_profil_sizintisi.sql).
 
   if not exists (
     select 1 from pg_policies where schemaname = 'public' and tablename = 'news_likes' and policyname = 'news_likes_manage_own'

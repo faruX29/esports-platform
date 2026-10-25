@@ -21,7 +21,7 @@ export function authErrorMessage(err, fallback = 'İşlem başarısız. Lütfen 
     return 'Bu e-posta ile zaten bir hesap var. Giriş yapmayı dene.'
 
   if (low.includes('invalid login') || low.includes('invalid credentials') || (low.includes('invalid') && low.includes('password')))
-    return 'E-posta veya şifre hatalı.'
+    return 'Kullanıcı adı/e-posta veya şifre hatalı.'
 
   if (low.includes('email not confirmed') || low.includes('not confirmed'))
     return 'E-postan henüz doğrulanmamış. Gelen kutundaki doğrulama bağlantısına tıkla.'

@@ -3,13 +3,12 @@ import { supabase } from '../supabaseClient'
 
 const AuthContext = createContext(null)
 
+// Kullanıcı adı herkese açık: Google'dan gelen tam ad ya da e-postanın bir parçası
+// varsayılan yapılmaz. Kullanıcı ayarlardan değiştirebilir.
 function buildUsername(user) {
 	const meta = user?.user_metadata || {}
 	if (meta.username) return String(meta.username)
-	if (meta.full_name) return String(meta.full_name)
-	const email = user?.email || ''
-	if (email.includes('@')) return email.split('@')[0]
-	return `user_${String(user?.id || '').slice(0, 8)}`
+	return `oyuncu_${String(user?.id || '').replace(/-/g, '').slice(0, 8)}`
 }
 
 export function AuthProvider({ children }) {
@@ -193,15 +192,12 @@ export function AuthProvider({ children }) {
 		const favTeam = favorite_team_id ?? null
 
 		// Kullanıcı adı benzersizliği (büyük/küçük harf duyarsız). DB'de de unique index
-		// var (nihai garanti); bu ön-kontrol kullanıcıya net hata verir. [[auth-onboarding]]
+		// var (nihai garanti); bu ön-kontrol kullanıcıya net hata verir. profiles anon'a
+		// kapalı, müsaitlik yalnız boolean dönen RPC'den. [[auth-onboarding]]
 		if (cleanUsername) {
-			const { data: taken } = await supabase
-				.from('profiles')
-				.select('id')
-				.ilike('username', cleanUsername)
-				.limit(1)
-				.maybeSingle()
-			if (taken?.id) {
+			const { data: available, error: availError } = await supabase.rpc('username_available', { name: cleanUsername })
+			if (availError) console.warn('username_available:', availError.message)
+			else if (available === false) {
 				throw new Error('Bu kullanıcı adı zaten alınmış. Başka bir tane dene.')
 			}
 		}
@@ -274,15 +270,15 @@ export function AuthProvider({ children }) {
 
 	async function signIn({ identifier, email, password, captchaToken }) {
 		// identifier: e-posta VEYA kullanıcı adı olabilir. E-posta değilse (@ yoksa)
-		// email_for_login RPC'siyle kullanıcı adını e-postaya çeviririz. [[auth-onboarding]]
+		// email_for_login RPC'si şifreyi doğrular ve yalnız doğruysa e-postayı döner;
+		// asıl giriş yine signInWithPassword (Turnstile + Supabase sınırı). [[auth-onboarding]]
 		let loginEmail = String(identifier ?? email ?? '').trim()
-		if (loginEmail && !loginEmail.includes('@')) {
-			try {
-				const { data: resolved } = await supabase.rpc('email_for_login', { identifier: loginEmail })
-				if (resolved) loginEmail = resolved
-				// resolved boşsa loginEmail kullanıcı adı olarak kalır → signIn geçersiz kimlik
-				// hatası verir (kullanıcıya "e-posta/şifre hatalı" olarak gösterilir).
-			} catch { /* RPC yoksa/başarısızsa e-posta olarak devam et */ }
+		if (loginEmail && !loginEmail.includes('@') && password) {
+			const { data: resolved, error: rpcError } = await supabase.rpc('email_for_login', { identifier: loginEmail, password })
+			if (rpcError) console.warn('email_for_login:', rpcError.message)
+			// Kullanıcı adı yok, şifre yanlış ya da deneme sınırı: hepsi aynı genel hata.
+			if (!resolved) throw new Error('Invalid login credentials')
+			loginEmail = resolved
 		}
 		const { data, error } = await supabase.auth.signInWithPassword({
 			email: loginEmail,

@@ -670,8 +670,8 @@ export default function NewsDetailPage() {
       let profilesById = new Map()
       if (authorIds.length) {
         const { data: profileRows, error: profileError } = await supabase
-          .from('profiles')
-          .select('id,username,first_name,last_name,scout_score,avatar_url,favorite_team_id,show_team_badge')
+          .from('profiles_public')
+          .select('id,username,scout_score,avatar_url,favorite_team_id,show_team_badge')
           .in('id', authorIds)
 
         if (!profileError) {
@@ -969,8 +969,8 @@ export default function NewsDetailPage() {
       let authorTeamName = null
       if (row.user_id) {
         const { data: prof } = await supabase
-          .from('profiles')
-          .select('username,first_name,last_name,scout_score,avatar_url,favorite_team_id,show_team_badge')
+          .from('profiles_public')
+          .select('username,scout_score,avatar_url,favorite_team_id,show_team_badge')
           .eq('id', row.user_id)
           .maybeSingle()
         if (prof) {
@@ -1008,11 +1008,13 @@ export default function NewsDetailPage() {
     if (!sid) { setLiked(false); setLikeCount(0); return }
     let cancelled = false
     ;(async () => {
-      const { count } = await supabase
-        .from('news_likes')
-        .select('id', { count: 'exact', head: true })
+      // Sayı görünümden (news_likes yalnız sahibine açık)
+      const { data: countRow } = await supabase
+        .from('news_like_counts')
+        .select('cnt')
         .eq('news_id', sid)
-      if (!cancelled) setLikeCount(count || 0)
+        .maybeSingle()
+      if (!cancelled) setLikeCount(countRow?.cnt || 0)
       if (user?.id) {
         const { data } = await supabase
           .from('news_likes')

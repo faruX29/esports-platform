@@ -2,18 +2,9 @@
 -- Supabase SQL Editor'da çalıştır.
 -- Güvenli: tüm komutlar IF NOT EXISTS / idempotent.
 
--- ─── BUG-1: profiles herkese okunabilir (username, avatar_url, scout_score public veri) ────────
-do $$
-begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'profiles'
-    and policyname = 'profiles_select_public'
-  ) then
-    create policy profiles_select_public on public.profiles
-      for select using (true);
-  end if;
-end $$;
+-- ─── BUG-1: profiles herkese okunabilir → kaldırıldı ──────────────────────────────────────────
+-- Tablo politikası tüm sütunları açıyordu; herkese açık alanlar artık profiles_public
+-- görünümünden okunur (kapat_profil_sizintisi.sql).
 
 -- ─── BUG-2: news_comment_votes tablosu eksik ─────────────────────────────────────────────────
 create table if not exists public.news_comment_votes (

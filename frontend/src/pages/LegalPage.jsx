@@ -25,7 +25,7 @@ const OPERATOR = 'feXt Platform Yönetimi (fextesports.com)'
 const OAUTH_NAMES = [GOOGLE_ENABLED && 'Google', DISCORD_ENABLED && 'Discord'].filter(Boolean)
 const OAUTH_LABEL = OAUTH_NAMES.join(' veya ')
 const CONTACT_EMAIL = 'iletisim@fextesports.com'
-const UPDATED = '20 Ağustos 2026'
+const UPDATED = '26 Ekim 2026'
 
 const DOCS = {
   privacy: {
@@ -94,6 +94,7 @@ function PrivacyBody() {
       <P><B>Teknik olarak:</B></P>
       <UL>
         <LI>IP adresin ve tarayıcı bilgin — güvenlik, bot koruması ve sunucu kayıtları amacıyla hizmet sağlayıcılarımız tarafından işlenir</LI>
+        <LI>Kullanıcı adınla giriş yaparken: şifre tahmin denemelerini sınırlamak için girilen kullanıcı adı, IP adresi, zaman ve denemenin başarılı olup olmadığı — <B>1 gün</B> sonra silinir</LI>
         <LI>Anonim ziyaret istatistikleri (hangi sayfa kaç kez görüntülendi) — <B>kişi bazında değil ve çerez kullanılmadan</B> toplanır</LI>
       </UL>
 
@@ -124,6 +125,11 @@ function PrivacyBody() {
       <P><B>Kişisel verilerini satmıyoruz</B> ve reklam amacıyla üçüncü taraflara pazarlamıyoruz.</P>
 
       <H2>4. Kimlerle paylaşılıyor?</H2>
+      <P>
+        <B>Diğer kullanıcılara görünenler:</B> yalnızca kullanıcı adın, profil görselin, açık
+        tuttuysan favori takım rozetin ve yazdığın yorumlar. E-postan, ad-soyadın ve hangi
+        haberleri beğendiğin başka kimseye gösterilmez; haberlerde yalnızca toplam beğeni sayısı görünür.
+      </P>
       <P>Verilerin yalnızca hizmeti çalıştırmak için gerekli sağlayıcılarla paylaşılır:</P>
       <UL>
         <LI><B>Supabase</B> — kimlik doğrulama ve veritabanı</LI>

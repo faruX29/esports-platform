@@ -221,17 +221,18 @@ export default function NewsArchivePage() {
     if (!ids.length) { setLikesByStory({}); setLikedSet(new Set()); return }
     let cancelled = false
     ;(async () => {
-      const { data, error } = await supabase
-        .from('news_likes')
-        .select('news_id,user_id')
-        .in('news_id', ids)
-      if (cancelled || error) return
+      // Sayılar görünümden; news_likes yalnız kendi satırlarımızı döner (RLS)
+      const [countRes, mineRes] = await Promise.all([
+        supabase.from('news_like_counts').select('news_id,cnt').in('news_id', ids),
+        user?.id
+          ? supabase.from('news_likes').select('news_id').eq('user_id', user.id).in('news_id', ids)
+          : Promise.resolve({ data: [] }),
+      ])
+      if (cancelled || countRes.error) return
       const counts = {}
       const mine = new Set()
-      for (const r of (data || [])) {
-        counts[r.news_id] = (counts[r.news_id] || 0) + 1
-        if (user?.id && r.user_id === user.id) mine.add(r.news_id)
-      }
+      for (const r of (countRes.data || [])) counts[r.news_id] = r.cnt || 0
+      for (const r of (mineRes.data || [])) mine.add(r.news_id)
       setLikesByStory(counts)
       setLikedSet(mine)
     })()

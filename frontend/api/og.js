@@ -7,13 +7,15 @@
  *
  * Kullanım (og:image):
  *   /api/og?a=Karmine%20Corp&b=Team%20Liquid&la=<logoUrl>&lb=<logoUrl>
- *           &s=2%20-%201&g=VALORANT&t=S&tn=VCT%20Masters&p=AI:%20%2572%20Karmine&c=C8102E
+ *           &s=2%20-%201&g=VALORANT&t=S&tn=VCT%20Masters&p=AI:%20%2572%20Karmine&c=C8102E&sig=<imza>
+ *   URL'yi yalnız middleware üretir; `sig` olmadan istek og-default.jpg'e döner.
  *
  * NOT: JSX yerine React.createElement — Vercel'in Vite (non-Next) zero-config
  * fonksiyon algılaması .jsx transpilasyonuna güvenmesin diye.
  */
 import { ImageResponse } from '@vercel/og'
 import { createElement as h } from 'react'
+import { ogImzaGecerli } from '../lib/ogImza.js'
 
 export const config = { runtime: 'edge' }
 
@@ -93,8 +95,14 @@ function teamBlock(name, logo, accent) {
   )
 }
 
-export default function handler(req) {
-  const params = new URL(req.url).searchParams
+export default async function handler(req) {
+  const reqUrl = new URL(req.url)
+  const params = reqUrl.searchParams
+  // Yalnız middleware'in imzaladığı URL çizilir (lib/ogImza.js); gerisi statik
+  // marka kartına → sahte skor/takım kartı üretilemez, CPU da harcanmaz.
+  if (!(await ogImzaGecerli(params, process.env.OG_SECRET))) {
+    return Response.redirect(new URL('/og-default.jpg', reqUrl.origin), 302)
+  }
   const a = q(params, 'a', 'Takım A')
   const b = q(params, 'b', 'Takım B')
   const la = safeLogo(q(params, 'la'))

@@ -10,6 +10,7 @@ CREATE OR REPLACE FUNCTION public.get_prediction_accuracy(days_back int DEFAULT 
 RETURNS json
 LANGUAGE sql
 STABLE
+SET search_path = public
 AS $$
   SELECT json_build_object(
     'total',             COUNT(*),

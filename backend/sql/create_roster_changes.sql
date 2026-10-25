@@ -41,6 +41,7 @@ CREATE OR REPLACE FUNCTION public.sync_player_team_on_transfer()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
     IF NEW.transfer_type IN ('permanent', 'trial')

@@ -13,6 +13,7 @@ create or replace function public.apply_scout_score_from_vote()
 returns trigger
 language plpgsql
 security definer
+set search_path = public
 as $$
 declare
   author_id uuid;

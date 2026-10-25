@@ -28,6 +28,7 @@
  * 2026-09-08'de bu yüzden bir dağıtım sessizce düştü. Açıklamalar buraya.
  */
 import { next } from '@vercel/edge'
+import { ogImzala } from './lib/ogImza.js'
 
 export const config = {
   // Detay rotaları + liste rotaları. Liste rotaları 2026-09-08'de eklendi:
@@ -169,11 +170,16 @@ function isShareableMatch(scheduledAt) {
   return t >= Date.now() - OG_FRESH_DAYS * 86400000  // son 7 gün + tüm gelecek
 }
 
-function ogImageUrl(origin, p) {
+// URL imzalı (lib/ogImza.js): api/og imzasız isteği statik karta yollar.
+// OG_SECRET yoksa imzalı URL üretilemez → doğrudan statik kart.
+async function ogImageUrl(origin, p) {
+  const secret = process.env.OG_SECRET
+  if (!secret) return `${origin}${STATIC_OG}`
   const qs = new URLSearchParams()
   for (const [k, v] of Object.entries(p)) {
     if (v != null && v !== '') qs.set(k, String(v))
   }
+  qs.set('sig', await ogImzala(qs, secret))
   return `${origin}/api/og?${qs.toString()}`
 }
 
@@ -315,7 +321,7 @@ async function buildForMatch(id, origin, url) {
   const score = (row.team_a_score != null && row.team_b_score != null) ? `${row.team_a_score} - ${row.team_b_score}` : ''
   const p = predHook(row.prediction_team_a, row.prediction_team_b, a, b)
   const img = isShareableMatch(row.scheduled_at)
-    ? ogImageUrl(origin, {
+    ? await ogImageUrl(origin, {
         a, b, la: row.team_a?.logo_url, lb: row.team_b?.logo_url,
         s: score, g: gm.label, t: row.tournament?.tier, tn: row.tournament?.name, p, c: gm.accent,
       })
@@ -447,7 +453,7 @@ async function buildForNews(ref, origin, url) {
   // Eski haber paylaşılmıyor → statik marka kartı, CDN'den, 0 CPU.
   // Haftalık özette takım yok → takım kartı boş çıkardı; statik marka kartı.
   const img = ref.type !== 'haftalik' && isShareableMatch(row.created_at)
-    ? ogImageUrl(origin, {
+    ? await ogImageUrl(origin, {
         a: row.team_a_name, b: row.team_b_name, la: row.team_a_logo, lb: row.team_b_logo,
         s: scoreFromHero(row.hero_score), g: gm.label, t: row.tier, tn: row.tournament_name, c: gm.accent,
       })

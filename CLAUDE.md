@@ -87,6 +87,7 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - Turnuva adı olarak `tournaments.name`'i tek başına gösterme → çoğu yalnız aşama ("Group Stage"); `league_name,event_name` de çek, `tournamentDisplayName` (middleware'de `turnuvaAdi`) kullan. Türk takımını da ad listesiyle değil `isTurkishTeam` (`turk_takimlar`) ile bul.
 - Navbar'a öğe ekleyip genişliği ölçmeden bırakma → 7 öğe ~1140px ister, altında satır taşar (Giriş/Kayıt kesilir); `Navbar.jsx` `NAV_HAMBURGER_PX`'i güncelle.
 - UI'da "Model" ya da "AI" deme → tahmin motorunun adı Fextopus.
+- `index.html`'deki satır içi betiği/`onload`'u değiştirip `vercel.json` CSP'sindeki sha256'yı güncellemeden bırakma → CSP zorunluyken betik çalışmaz (hash `dist/index.html`'den hesaplanır). `/api/og` URL'sini middleware dışında üretme → imzasız istek statik karta düşer (`lib/ogImza.js`).
 - Middleware yanıtına `s-maxage` koyup CPU'yu koruduğunu sanma → middleware önbellekten önce her istekte koşar.
 - Türkçe yerelde İngilizce terimi büyük harfe çevirme → "WINNERS" "WİNNERS" olur.
 - Windows'ta Türkçe/Unicode içerikli heredoc ile dosya yazma → cp1254 karakterleri bozar.

@@ -729,10 +729,21 @@ export default function NewsDetailPage() {
         return
       }
 
-      const { data: voteRows, error: votesErr } = await supabase
-        .from('news_comment_votes')
-        .select('comment_id,user_id,vote_type')
-        .in('comment_id', commentIds)
+      // Sayılar herkese açık görünümden; tablo yalnız kendi oyunu döner (site_sertlestirme.sql).
+      const [{ data: countRows, error: countsErr }, { data: voteRows, error: votesErr }] = await Promise.all([
+        supabase
+          .from('news_comment_vote_counts')
+          .select('comment_id,up,down')
+          .in('comment_id', commentIds),
+        user?.id
+          ? supabase
+            .from('news_comment_votes')
+            .select('comment_id,vote_type')
+            .eq('user_id', user.id)
+            .in('comment_id', commentIds)
+          : Promise.resolve({ data: [], error: null }),
+      ])
+      if (countsErr) throw countsErr
 
       if (votesErr) {
         if (isMissingTableError(votesErr, 'news_comment_votes')) {
@@ -752,12 +763,10 @@ export default function NewsDetailPage() {
       const mine = {}
       for (const commentId of commentIds) byComment[commentId] = { up: 0, down: 0 }
 
-      for (const voteRow of (voteRows || [])) {
-        if (!byComment[voteRow.comment_id]) byComment[voteRow.comment_id] = { up: 0, down: 0 }
-        if (voteRow.vote_type === 1) byComment[voteRow.comment_id].up += 1
-        if (voteRow.vote_type === -1) byComment[voteRow.comment_id].down += 1
-        if (voteRow.user_id === user?.id) mine[voteRow.comment_id] = voteRow.vote_type
+      for (const countRow of (countRows || [])) {
+        byComment[countRow.comment_id] = { up: countRow.up || 0, down: countRow.down || 0 }
       }
+      for (const voteRow of (voteRows || [])) mine[voteRow.comment_id] = voteRow.vote_type
 
       setVotesByComment(byComment)
       setMyVotes(mine)

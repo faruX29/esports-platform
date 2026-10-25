@@ -21,6 +21,7 @@ create or replace function public.get_scout_players(p_min_matches int default 3)
 returns json
 language sql
 stable
+set search_path = public
 as $$
   with base as (
     select pms.player_id, pms.match_id, pms.kills, pms.deaths, pms.assists,

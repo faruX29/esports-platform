@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { CountUp } from '../components/AnimatedNumber'
 import { supabase } from '../supabaseClient'
 import SeoHead from '../components/SeoHead'
+import Turnstile from '../components/Turnstile'
+import { TURNSTILE_ENABLED } from '../features'
 import InitialsImage from '../components/InitialsImage'
 import { LIQUIPEDIA_SON_TARIH } from '../components/LiquipediaCredit'
 import { Gamepad2, Trophy, Shield, User, CalendarDays, Target, CircleCheck, Plus, X, ArrowUp, ArrowDown, Search, ChevronDown } from 'lucide-react'
@@ -586,6 +588,10 @@ export default function ScoutEnginePage() {
   const [status, setStatus] = useState('idle')  // idle | sending | done | error
   const [errorMsg, setErrorMsg] = useState('')
   const [doneMsg, setDoneMsg] = useState('')
+  // Turnstile token'ı DB'de doğrulanmaz (pg_net gerekirdi); formu dolduran botu keser,
+  // doğrudan REST'e yazana karşı koruma tablodaki CHECK + saatlik sınır (site_sertlestirme.sql).
+  const [captchaToken, setCaptchaToken] = useState('')
+  const captchaRef = useRef(null)
 
   useEffect(() => {
     let cancelled = false
@@ -694,6 +700,11 @@ export default function ScoutEnginePage() {
       setStatus('error')
       return
     }
+    if (TURNSTILE_ENABLED && !captchaToken) {
+      setErrorMsg('Lütfen robot olmadığını doğrula.')
+      setStatus('error')
+      return
+    }
     setStatus('sending')
     setErrorMsg('')
     try {
@@ -712,6 +723,8 @@ export default function ScoutEnginePage() {
     } catch (err) {
       setErrorMsg('Kayıt alınamadı. Lütfen daha sonra tekrar dene.')
       setStatus('error')
+      setCaptchaToken('')
+      captchaRef.current?.reset()
       console.error('scout_waitlist insert:', err?.message || err)
     }
   }
@@ -840,6 +853,8 @@ export default function ScoutEnginePage() {
                 <option value="scout">Bağımsız Scout</option>
                 <option value="other">Diğer</option>
               </select>
+
+              <Turnstile ref={captchaRef} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken('')} />
 
               {status === 'error' && <div style={{ color: '#ff8c9a', fontSize: 12.5 }}>{errorMsg}</div>}
 

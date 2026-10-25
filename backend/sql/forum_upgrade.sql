@@ -19,17 +19,10 @@ create index if not exists ncv_comment_idx on public.news_comment_votes(comment_
 
 alter table public.news_comment_votes enable row level security;
 
+-- Oylar yalnız sahibine açık; sayılar news_comment_vote_counts görünümünden
+-- (site_sertlestirme.sql).
 do $$
 begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'news_comment_votes'
-    and policyname = 'ncv_read_all'
-  ) then
-    create policy ncv_read_all on public.news_comment_votes
-      for select using (true);
-  end if;
-
   if not exists (
     select 1 from pg_policies
     where schemaname = 'public' and tablename = 'news_comment_votes'

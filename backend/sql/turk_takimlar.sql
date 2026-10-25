@@ -20,7 +20,7 @@ ALTER TABLE public.turk_takim_istisna ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS turk_takim_istisna_oku ON public.turk_takim_istisna;
 CREATE POLICY turk_takim_istisna_oku ON public.turk_takim_istisna FOR SELECT USING (true);
 
-CREATE OR REPLACE VIEW public.turk_takimlar AS
+CREATE OR REPLACE VIEW public.turk_takimlar WITH (security_invoker = true) AS
 WITH tr_oyuncu AS (
     SELECT team_pandascore_id AS team_id, COUNT(*) AS adet
     FROM public.players

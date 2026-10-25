@@ -12,6 +12,7 @@ create or replace function get_teams_recent_form(p_team_ids bigint[])
 returns table(team_id bigint, form text)
 language sql
 stable
+set search_path = public
 as $$
   with tm as (
     select t.tid as team_id, m.scheduled_at, m.winner_id

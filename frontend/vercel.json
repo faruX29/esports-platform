@@ -6,6 +6,16 @@
   "headers": [
     {
       "source": "/(.*)",
+      "headers": [
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
+        { "key": "Content-Security-Policy-Report-Only", "value": "default-src 'self'; script-src 'self' 'sha256-tN5pO53t7LOaa/5H4PLf1EMpVyRt8oZE5Zi4DIbqKpE=' 'sha256-UnnFutmKLoOJ1no8lJ0DGA51HvEojidVquV+/jfQG0w=' 'unsafe-hashes' 'sha256-1jAmyYXcRq6zFldLe/GCgIDJBiOONdXjTLgEFMDnDSM=' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://owepdnaivhrpadapbtxb.supabase.co wss://owepdnaivhrpadapbtxb.supabase.co https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com https://player.twitch.tv; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" }
+      ]
+    },
+    {
+      "source": "/(.*)",
       "has": [{ "type": "host", "value": "esports-platform-brown.vercel.app" }],
       "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
     },

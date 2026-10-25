@@ -9,7 +9,7 @@
 --   zirve  >= %70    yuksek >= %65    orta %55-64    dusuk < %55
 -- Dönemler: tum / 90g / 30g  (model bozuluyor mu, karşılaştırılabilsin)
 
-CREATE OR REPLACE VIEW public.fextopus_isabet AS
+CREATE OR REPLACE VIEW public.fextopus_isabet WITH (security_invoker = true) AS
 WITH temel AS (
   SELECT
     CASE

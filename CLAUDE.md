@@ -23,6 +23,7 @@ Veri PandaScore'dan gelir; Python ETL Supabase Postgres'e yazar, React SPA okur.
 - `backend/etl/`: senkron (`sync_matches.py`, `sync_players.py`), tahmin (`predict.py`), haber (`news_generator.py`)
 - `backend/etl/adapters/`: harici API adaptörleri
 - `backend/sql/`: şema/RPC/göç dosyaları; Supabase'e **elle** uygulanır
+- `backend/isletim/`: günlük sağlık raporu (`saglik.py`) ve haftalık yedeğin Python tarafı (`yedek.py`)
 - `frontend/src/pages/`: sayfalar · `components/` · `hooks/` · `utils/`
 - `frontend/src/theme.js`: renk token'ları (tek kaynak) · `features.js`: özellik bayrakları
 - `frontend/middleware.js`: Edge middleware; botlara prerender HTML basar (SEO)
@@ -39,6 +40,7 @@ python run.py --all-games --limit 100 --predict --stats   # maç senkronu + tahm
 python run.py --live --all-games --limit 20 --fix-orphans # canlı maçlar + takılı kalanlar
 python run.py --generate-news --news-hours 2              # haber üretimi
 python run.py --help                                      # diğer tüm bayraklar
+python isletim/saglik.py --kuru                           # sağlık raporunu göndermeden ekrana bas
 # sosyal (cd social)
 python radar.py [YYYY-AA-GG] | python karne.py | python champions.py [grup] | python asama.py kazananlar
 ```
@@ -54,6 +56,9 @@ python radar.py [YYYY-AA-GG] | python karne.py | python champions.py [grup] | py
 - **PandaScore:** saatte 1000 istek (`X-Rate-Limit-Remaining` başlığı).
 - **Vercel ücretsiz CPU kotası** dar; middleware her istekte koşar, `api/og` pahalıdır.
 - **Vercel CDN Requests** (Hobby: ayda 1M) bot dahil her isteği sayar; kotayı yiyen botu Firewall → Top User Agents'ta bul, custom rule'u UA **Contains** ile kur ("Matches expression" eşleşmedi) ve bot UA'lı curl'de 403 gör. Değersiz bot listesi `middleware.js` `DEGERSIZ_BOT_RE` ile `public/robots.txt`'te eş tutulur.
+- **Gözler:** `saglik.yml` her sabah kontrol eder (eşik aşılırsa "SORUN" e-postası, yoksa yalnız Pazartesi). Tarayıcı hataları ve CSP ihlalleri `client_errors`'a yazılır (`utils/hataBildir.js`, yalnız üretim build'i, oturum başına 5). Eşikler `isletim/saglik.py` başında.
+- **Yedek:** `yedek.yml` Pazar gecesi `pg_dump` + hesap kimlikleri (şifre hash'i yok) → `age` ile şifreli → ayrı private repoya Release; aynı koşuda boş Postgres 17'ye geri yükleyip satır sayısını doğrular.
+- `sync-live.yml` (adı "5-min", fiilen 2-6 saatte bir) pg_cron'un yapmadığı işleri yapar: takılı "canlı" maçı bitirme (orphan), hayalet yaklaşan maç, canlı maç istatistiği. pg_cron var diye silme.
 - `sync-liquipedia.yml` adı yanıltıcı: Liquipedia senkronu kapalı, iş akışı artık içerik (önizleme, turnuva özeti, transfer haberi) üretiyor.
 
 ## Kod kuralları
@@ -92,5 +97,5 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - Türkçe yerelde İngilizce terimi büyük harfe çevirme → "WINNERS" "WİNNERS" olur.
 - Windows'ta Türkçe/Unicode içerikli heredoc ile dosya yazma → cp1254 karakterleri bozar.
 - Sosyal videoda Inter dışında font kullanma → Baloo yalnız logoda.
-- Sır, metrik veya kişisel bilgi commit'leme → repo PUBLIC.
+- Sır, metrik veya kişisel bilgi commit'leme → repo PUBLIC. Actions logları da herkese açık: iş akışında satır sayısı, boyut, e-posta ya da hata metni basma (`saglik.py`/`yedek.py` gövdeyi yalnız e-postaya ya da şifreli arşive yazar).
 - Kullanıcı tablosunu (`profiles`, `news_likes`) anon'a açma → herkese açık okuma dar görünümden (`profiles_public`, `news_like_counts`); yeni `security_invoker = false` görünümde `revoke all` + yalnız `grant select` şart, yoksa Supabase varsayılan yetkisi anon'a görünüm üzerinden RLS'siz yazma verir.

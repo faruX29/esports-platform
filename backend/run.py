@@ -4,18 +4,13 @@ Usage: python run.py [options]
 """
 import argparse
 import logging
-import os
 import sys
-import time
 from datetime import datetime, timezone
 from utils.logger import setup_logging
 from etl.sync_matches import MatchSyncer
 from etl.predict import MatchPredictor
 from etl.sync_players import PlayerStatsSyncer
-from etl.adapters import (
-    LiquipediaAdapter, GeminiAdapter, HybridStatsBackfiller,
-    LiquipediaV3TransferAdapter,
-)
+from etl.adapters import GeminiAdapter
 from etl.news_generator import NewsGenerator
 
 logger = logging.getLogger(__name__)
@@ -172,38 +167,6 @@ def main():
     )
 
     parser.add_argument(
-        '--hybrid-stats',
-        action='store_true',
-        help='PandaScore NULL bıraktığı harita/KDA verisini Hibrit Adapter (Liquipedia) ile doldur',
-    )
-    parser.add_argument(
-        '--hybrid-limit',
-        type=int,
-        default=50,
-        help='--hybrid-stats için bir seferde işlenecek max maç (varsayılan: 50)',
-    )
-    parser.add_argument(
-        '--hybrid-max-minutes',
-        type=float,
-        default=18.0,
-        help=(
-            '--hybrid-stats için duvar-saati bütçesi (varsayılan: 18 dk). Dolunca '
-            'döngü TEMİZ çıkar. CI işinin timeout-minutes sınırından KÜÇÜK olmalı: '
-            'yoksa GitHub işi "cancelled" ile keser, ardındaki adımlar atlanır ve '
-            'ne kadar ilerlendiği loglanamaz.'
-        ),
-    )
-    parser.add_argument(
-        '--hybrid-priority-teams',
-        type=str,
-        default='',
-        help=('Virgulle ayrilmis takim adlari: bu takimlarin maclari kuyrugun EN '
-              'BASINA alinir (tier sirasi onlarin icinde gecerli kalir). Belirli '
-              'bir etkinlige hazirlanirken kullanilir, or. Valorant Champions '
-              'kadrolari. Bos birakilirsa oncelik uygulanmaz.'),
-    )
-
-    parser.add_argument(
         '--roster-flush',
         action='store_true',
         help='Roster Integrity Flush: kadroda olmayan oyuncuların team_id\'sini NULL yap',
@@ -252,31 +215,6 @@ def main():
     )
 
     parser.add_argument(
-        '--sync-transfers',
-        action='store_true',
-        help='Liquipedia wikitext transfer sayfalarından roster_changes doldur (API key gerektirmez)',
-    )
-    parser.add_argument(
-        '--transfer-days',
-        type=int,
-        default=14,
-        help='--sync-transfers için kaç günlük geriye bakılsın (varsayılan: 14)',
-    )
-    parser.add_argument(
-        '--transfer-max-minutes',
-        type=float,
-        default=18.0,
-        help=(
-            '--sync-transfers icin duvar-saati butcesi (varsayilan: 18 dk). OLCULDU '
-            '(10 kosu, Eyl 1-11): tum dongu 8.7-14.7 dk, ortalama 11.3 -> oyun basi '
-            '~4 dk. Butce oyunlar ARASINDA bakilir, oyun ortasinda kesmez; bu yuzden '
-            'CI adiminin timeout-minutes sinirindan bir oyunluk pay kadar KUCUK '
-            'olmali (18 + ~10 en kotu oyun < 30). Yoksa GitHub adimi oldurur ve '
-            'ardindaki adimlar (roster uygulama, transfer haberi) atlanir.'
-        ),
-    )
-
-    parser.add_argument(
         '--generate-transfers',
         action='store_true',
         help='roster_changes (news_generated=false) için LLM ile Türkçe transfer haberi üret',
@@ -308,25 +246,6 @@ def main():
         type=int,
         default=48,
         help='--generate-previews için kaç saat ileriye bakılsın (varsayılan: 48)',
-    )
-
-    parser.add_argument(
-        '--liquipedia-enrich',
-        action='store_true',
-        help='Liquipedia MediaWiki API ile Data Enrichment çalıştır',
-    )
-    parser.add_argument(
-        '--liquipedia-limit',
-        type=int,
-        default=50,
-        help='Liquipedia enrichment için her bölümde işlenecek max kayıt (varsayılan: 50)',
-    )
-    parser.add_argument(
-        '--liquipedia-sections',
-        nargs='+',
-        choices=['all', 'tournaments', 'teams', 'players'],
-        default=['all'],
-        help='Liquipedia enrichment bölümleri (varsayılan: all)',
     )
 
     args = parser.parse_args()
@@ -383,16 +302,13 @@ def main():
         args.generate_news,
     ])
     # Saf zenginleştirme/LLM-üretim işleri mevcut DB verisini okur; PandaScore maç
-    # sync'ine ihtiyaç duymaz. Tek başına çalıştıklarında (cron'daki liquipedia
+    # sync'ine ihtiyaç duymaz. Tek başına çalıştıklarında (cron'daki içerik
     # job'ları) gereksiz bir valorant sync tetiklemesinler.
     enrichment_only = any([
-        args.hybrid_stats,
-        args.sync_transfers,
         args.generate_transfers,
         args.generate_previews,
         args.generate_tournament_recaps,
         args.generate_weekly,
-        args.liquipedia_enrich,
         args.roster_transfers,
     ])
     should_sync_matches = has_non_enrichment_work or not enrichment_only
@@ -425,7 +341,7 @@ def main():
         logger.info(f"   Synced:  {total_stats['synced']} matches")
         logger.info("=" * 60)
     else:
-        logger.info("\nℹ️ Skipping PandaScore match sync (Liquipedia-only run).")
+        logger.info("\nℹ️ Skipping PandaScore match sync (yalnız içerik/kadro işi).")
 
     # AI Predictions
     if args.predict:
@@ -528,27 +444,6 @@ def main():
         logger.info("\n🕒 Stale match cleanup...")
         syncer.mark_stale_matches_finished(hours_ago=args.stale_hours)
 
-    if args.hybrid_stats:
-        logger.info("\n" + "=" * 60)
-        logger.info("🧩 HYBRID STATS BACKFILL (PandaScore NULL → Liquipedia)")
-        logger.info("=" * 60)
-        backfiller = HybridStatsBackfiller()
-        oncelikli = [t.strip() for t in (args.hybrid_priority_teams or '').split(',') if t.strip()]
-        if oncelikli:
-            logger.info(f"⭐ Oncelikli takim: {len(oncelikli)} adet -> {', '.join(oncelikli[:4])}...")
-        result = backfiller.backfill(
-            limit=args.hybrid_limit,
-            max_seconds=args.hybrid_max_minutes * 60 if args.hybrid_max_minutes else None,
-            priority_teams=oncelikli,
-        )
-        logger.info(
-            f"📊 Hybrid stats: aday={result['candidates']} | "
-            f"işlenen={result.get('processed', '?')} | "
-            f"zenginleştirildi={result['enriched']} | veri yok={result['skipped']}"
-            + (" | ⏱️ SÜRE BÜTÇESİ DOLDU" if result.get('budget_hit') else "")
-        )
-        logger.info("=" * 60)
-
     if args.fix_orphans:
         logger.info("\n🔍 Manual orphan resolution (tüm running maçlar PandaScore'a karşı doğrulanıyor)...")
         # live_ids=set() → tüm running maçlar doğrulanır. Yüksek cap ile tek
@@ -596,70 +491,6 @@ def main():
             )
         except Exception as news_err:
             logger.error(f"❌ Haber üretimi başlatılamadı: {news_err}")
-        logger.info("=" * 60)
-
-    if args.sync_transfers:
-        logger.info("\n" + "=" * 60)
-        logger.info("🔁 TRANSFER SYNC (Liquipedia wikitext → roster_changes)")
-        logger.info("=" * 60)
-        grand = {'found': 0, 'inserted': 0, 'skipped': 0, 'failed': 0}
-        has_key = bool(os.getenv('LIQUIPEDIA_API_KEY'))
-        # Duvar-saati butcesi (2026-09-12). 12 Eylul kosusunda bu adim 15 dk'lik
-        # CI sinirini asti, GitHub adimi oldurdu ve ARDINDAKI IKI ADIM atlandi
-        # (roster uygulama + transfer haberi). Sinir olcumsuz secilmisti: gercek
-        # dagilim 8.7-14.7 dk. Artik butce oyunlar ARASINDA kontrol edilir;
-        # dolarsa kalan oyun atlanir ama adim 0 ile cikar, sonraki adimlar calisir.
-        basladi = time.monotonic()
-        butce_sn = args.transfer_max_minutes * 60
-        atlanan_oyunlar = []
-        for tgame in ['valorant', 'cs2', 'lol']:
-            gecen = time.monotonic() - basladi
-            if gecen >= butce_sn:
-                atlanan_oyunlar.append(tgame)
-                continue
-            try:
-                # YALNIZ v3. api.php'ye giden wikitext yedegi 2026-09-12'de
-                # ZINCIRDEN CIKARILDI.
-                #
-                # Liquipedia'ya 9 Eylul'de yazili olarak "The v3 API is our
-                # primary and ONLY active path" dedik. O gun bu pratikte
-                # dogruydu (wikitext en son 30 Haziran'da yazmis). Ama kod
-                # hala bagliydi ve tetikleyicisi tam olarak su: v3 SIFIR
-                # donerse devreye gir.
-                #
-                # 12 Eylul'de Liquipedia okul-projesi anahtarinin birkac hafta
-                # icinde gecersizlesecegini bildirdi. Anahtar oldugu an v3 her
-                # oyun icin sifir doner -> bu yedek HER GUN, gozetimsiz,
-                # api.php'ye gitmeye baslardi. Yani soylediğimizin tersi,
-                # tam da yenileme talep ettigimiz sirada.
-                #
-                # Artik v3 bos donerse uyari yazilir ve gecilir.
-                r = {'found': 0, 'inserted': 0, 'skipped': 0, 'failed': 0}
-                if has_key:
-                    r = LiquipediaV3TransferAdapter(tgame).ingest(days_back=args.transfer_days)
-                    if r.get('found', 0) == 0:
-                        logger.warning(
-                            f"  {tgame}: v3 sifir dondu. api.php yedegi BILEREK yok "
-                            "(Liquipedia'ya verilen soz). Anahtar gecerli mi kontrol et."
-                        )
-                else:
-                    logger.warning(
-                        f"  {tgame}: LIQUIPEDIA_API_KEY yok -> transfer senkronu atlandi."
-                    )
-                logger.info(f"  {tgame}: {r}")
-                for k in grand:
-                    grand[k] += r.get(k, 0)
-            except Exception as terr:
-                logger.error(f"❌ Transfer sync hatası ({tgame}): {terr}")
-        logger.info(
-            f"✅ Transfer sync — bulundu:{grand['found']} | yazıldı:{grand['inserted']} | "
-            f"atlandı:{grand['skipped']} | hata:{grand['failed']}"
-        )
-        if atlanan_oyunlar:
-            logger.warning(
-                f"TRANSFER SURE BUTCESI DOLDU ({args.transfer_max_minutes:.0f} dk) - "
-                f"atlanan oyunlar: {', '.join(atlanan_oyunlar)}"
-            )
         logger.info("=" * 60)
 
     if args.generate_transfers:
@@ -728,23 +559,6 @@ def main():
             )
         except Exception as prev_err:
             logger.error(f"❌ Önizleme üretimi başlatılamadı: {prev_err}")
-        logger.info("=" * 60)
-
-    if args.liquipedia_enrich:
-        logger.info("\n" + "=" * 60)
-        logger.info("🌐 LIQUIPEDIA DATA ENRICHMENT")
-        logger.info("=" * 60)
-        adapter = LiquipediaAdapter()
-        result = adapter.run(
-            limit=args.liquipedia_limit,
-            sections=tuple(args.liquipedia_sections),
-        )
-        for section, stats in result.items():
-            logger.info(
-                f"  - {section}: processed={stats.get('processed', 0)} | "
-                f"updated={stats.get('updated', 0)} | skipped={stats.get('skipped', 0)} | "
-                f"diagnostics={stats.get('diagnostic_count', 0)}"
-            )
         logger.info("=" * 60)
 
 if __name__ == "__main__":

@@ -96,6 +96,7 @@ function PrivacyBody() {
         <LI>IP adresin ve tarayıcı bilgin — güvenlik, bot koruması ve sunucu kayıtları amacıyla hizmet sağlayıcılarımız tarafından işlenir</LI>
         <LI>Kullanıcı adınla giriş yaparken: şifre tahmin denemelerini sınırlamak için girilen kullanıcı adı, IP adresi, zaman ve denemenin başarılı olup olmadığı — <B>1 gün</B> sonra silinir</LI>
         <LI>Anonim ziyaret istatistikleri (hangi sayfa kaç kez görüntülendi) — <B>kişi bazında değil ve çerez kullanılmadan</B> toplanır</LI>
+        <LI>Sitede bir hata oluşursa: hata metni, hatanın oluştuğu sayfanın yolu ve tarayıcı bilgisi — hesabınla ya da IP adresinle <B>ilişkilendirilmez</B>, <B>30 gün</B> sonra silinir</LI>
       </UL>
 
       <H2>2. Tarayıcında sakladıklarımız</H2>

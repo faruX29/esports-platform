@@ -13,10 +13,6 @@ class Config:
     PANDASCORE_TOKEN = os.getenv('PANDASCORE_TOKEN')
     PANDASCORE_BASE_URL = os.getenv('PANDASCORE_BASE_URL', 'https://api.pandascore.co')
 
-    # Liquipedia MediaWiki API
-    LIQUIPEDIA_USER_AGENT = os.getenv('LIQUIPEDIA_USER_AGENT')
-    LIQUIPEDIA_API_KEY = os.getenv('LIQUIPEDIA_API_KEY')
-
     # Google Gemini — LLM News Generation
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
     

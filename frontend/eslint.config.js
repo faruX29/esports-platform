@@ -45,8 +45,8 @@ export default defineConfig([
     },
   },
   {
-    // Vercel Edge/serverless fonksiyonları Node/Edge ortamında çalışır → process, vb.
-    files: ['api/**/*.js', 'middleware.js'],
+    // Vercel Edge/serverless fonksiyonları ve Vite yapılandırması Node/Edge ortamında çalışır → process, vb.
+    files: ['api/**/*.js', 'middleware.js', 'vite.config.js'],
     languageOptions: {
       globals: { ...globals.node },
     },

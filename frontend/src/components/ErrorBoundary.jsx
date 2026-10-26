@@ -1,5 +1,6 @@
 import { Component } from 'react'
 import Mascot from './Mascot'
+import { renderHatasiBildir } from '../utils/hataBildir'
 
 /**
  * Bir sayfa bileşeni render sırasında hata fırlatırsa tüm SPA'nın beyaz ekrana
@@ -29,8 +30,9 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
-    // Geliştirici için konsola; kullanıcıya ham hata sızmaz
+    // Geliştirici için konsola; kullanıcıya ham hata sızmaz. Üretimde client_errors'a da yazılır.
     console.error('ErrorBoundary yakaladı:', error, info?.componentStack)
+    renderHatasiBildir(error, info?.componentStack)
   }
 
   render() {

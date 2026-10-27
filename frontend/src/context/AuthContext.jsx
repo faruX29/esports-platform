@@ -1,7 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { gorunmezCaptchaTokeni } from '../utils/gorunmezCaptcha'
 
 const AuthContext = createContext(null)
+
+// Anonim oturum (yalnız takip için, Faz 6) bu bağlamın DIŞINA `user` olarak
+// verilmez: yorum, beğeni, navbar, ProtectedRoute vb. `user`'ı "kayıtlı hesap"
+// sayıyor. Anonim kimlik yalnız `anonUserId` ile UserContext'e gider.
+function isAnonymousUser(u) {
+	return !!u?.is_anonymous
+}
 
 // Kullanıcı adı herkese açık: Google'dan gelen tam ad ya da e-postanın bir parçası
 // varsayılan yapılmaz. Kullanıcı ayarlardan değiştirebilir.
@@ -14,6 +22,8 @@ function buildUsername(user) {
 export function AuthProvider({ children }) {
 	const [session, setSession] = useState(null)
 	const [user, setUser] = useState(null)
+	const [anonUserId, setAnonUserId] = useState(null)
+	const anonPromiseRef = useRef(null)
 	const [profile, setProfile] = useState(null)
 	const [loading, setLoading] = useState(true)
 	const [profileLoading, setProfileLoading] = useState(false)
@@ -131,15 +141,18 @@ export function AuthProvider({ children }) {
 		function applySession(nextSession) {
 			if (!mounted) return
 
-			const nextUserId = nextSession?.user?.id ?? null
+			const anonymous = isAnonymousUser(nextSession?.user)
+			const realUser = anonymous ? null : (nextSession?.user ?? null)
+			const nextUserId = realUser?.id ?? null
 			const prevUserId = lastAuthUserIdRef.current
 			lastAuthUserIdRef.current = nextUserId
 
 			setSession(nextSession)
-			setUser(nextSession?.user ?? null)
+			setUser(realUser)
+			setAnonUserId(anonymous ? nextSession.user.id : null)
 			setLoading(false)
 
-			if (!nextSession?.user) {
+			if (!realUser) {
 				setProfileLoading(false)
 				inFlightProfileUserIdRef.current = null
 				setProfile(null)
@@ -147,9 +160,9 @@ export function AuthProvider({ children }) {
 			}
 
 			if (prevUserId !== nextUserId || !profileRef.current?.id) {
-				refreshProfile(nextSession.user, { force: true })
+				refreshProfile(realUser, { force: true })
 			} else if (!profileRef.current?.username) {
-				refreshProfile(nextSession.user)
+				refreshProfile(realUser)
 			}
 		}
 
@@ -299,6 +312,51 @@ export function AuthProvider({ children }) {
 		clearRecoveryMode()
 	}
 
+	// ── Anonim oturum (takip için) ─────────────────────────────────────────────
+	// Kayıtsız ziyaretçi ilk takipte çağrılır; sayfa yükünde DEĞİL (botlar ve
+	// yalnız gezen ziyaretçi kullanıcı üretmesin). Auth captcha'sı sunucuda
+	// zorunlu → görünmez Turnstile token'ı alınır. Eşzamanlı çağrılar tek isteğe
+	// bağlanır. Oturum zaten varsa (kayıtlı ya da anonim) hiçbir şey yapmaz.
+	async function startAnonymousSession() {
+		if (anonPromiseRef.current) return anonPromiseRef.current
+		const p = (async () => {
+			const { data: current } = await supabase.auth.getSession()
+			if (current.session?.user) return current.session.user.id
+			const captchaToken = await gorunmezCaptchaTokeni({ etiket: 'Takiplerini kaydetmek için doğrula' })
+			const { data, error } = await supabase.auth.signInAnonymously(
+				captchaToken ? { options: { captchaToken } } : undefined,
+			)
+			if (error) throw error
+			return data.user?.id ?? null
+		})()
+		anonPromiseRef.current = p
+		try {
+			return await p
+		} finally {
+			anonPromiseRef.current = null
+		}
+	}
+
+	// ── Hesap silme (Apple 5.1.1(v), Play, KVKK) ──────────────────────────────
+	// Edge Function `delete-account` sunucuda siler; burada yalnız yerel oturum
+	// kapatılır (sunucudaki oturum hesapla birlikte gitti, global signOut 403 verir).
+	async function deleteAccount() {
+		if (!user?.id) throw new Error('Giriş yapmadan hesap silinemez.')
+		const { data, error } = await supabase.functions.invoke('delete-account', {
+			body: { onay: 'HESABIMI SIL' },
+		})
+		if (error || !data?.ok) {
+			let kod = ''
+			try { kod = (await error?.context?.json?.())?.hata || '' } catch { /* gövde yok */ }
+			throw new Error(kod ? `Hesap silinemedi (${kod}).` : 'Hesap silinemedi. Lütfen tekrar dene.')
+		}
+		await supabase.auth.signOut({ scope: 'local' }).catch(() => { /* oturum zaten geçersiz */ })
+		setProfileLoading(false)
+		inFlightProfileUserIdRef.current = null
+		setProfile(null)
+		clearRecoveryMode()
+	}
+
 	async function updateProfile(partial) {
 		if (!user?.id) throw new Error('Giriş yapmadan profil güncellenemez.')
 		const payload = {
@@ -350,7 +408,10 @@ export function AuthProvider({ children }) {
 		recoveryMode,
 		clearRecoveryMode,
 		isAuthenticated: !!user,
-	}), [session, user, profile, loading, profileLoading, refreshProfile, recoveryMode, clearRecoveryMode])
+		anonUserId,
+		startAnonymousSession,
+		deleteAccount,
+	}), [session, user, anonUserId, profile, loading, profileLoading, refreshProfile, recoveryMode, clearRecoveryMode])
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

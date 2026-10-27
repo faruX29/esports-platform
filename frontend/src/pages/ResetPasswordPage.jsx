@@ -25,9 +25,11 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     // Recovery oturumu kuruldu mu? (URL token'ı işlendikten sonra session olur)
     let alive = true
-    supabase.auth.getSession().then(({ data }) => { if (alive && data.session) setReady(true) })
+    // Anonim oturum (takip için açılan) kurtarma oturumu sayılmaz.
+    const isRecoverable = s => !!s && !s.user?.is_anonymous
+    supabase.auth.getSession().then(({ data }) => { if (alive && isRecoverable(data.session)) setReady(true) })
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' || session) setReady(true)
+      if (event === 'PASSWORD_RECOVERY' || isRecoverable(session)) setReady(true)
     })
     return () => { alive = false; sub.subscription.unsubscribe() }
   }, [])

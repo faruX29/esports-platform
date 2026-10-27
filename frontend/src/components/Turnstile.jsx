@@ -11,25 +11,7 @@
  */
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import { TURNSTILE_SITE_KEY } from '../features'
-
-const SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
-let scriptPromise = null
-
-function loadScript() {
-  if (typeof window === 'undefined') return Promise.reject(new Error('no window'))
-  if (window.turnstile) return Promise.resolve()
-  if (scriptPromise) return scriptPromise
-  scriptPromise = new Promise((resolve, reject) => {
-    const s = document.createElement('script')
-    s.src = SCRIPT_SRC
-    s.async = true
-    s.defer = true
-    s.onload = () => resolve()
-    s.onerror = () => { scriptPromise = null; reject(new Error('Turnstile yüklenemedi')) }
-    document.head.appendChild(s)
-  })
-  return scriptPromise
-}
+import { turnstileYukle as loadScript } from '../utils/gorunmezCaptcha'
 
 const Turnstile = forwardRef(function Turnstile({ onVerify, onExpire, theme = 'dark' }, ref) {
   const containerRef = useRef(null)

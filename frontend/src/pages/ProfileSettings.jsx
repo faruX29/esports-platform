@@ -69,6 +69,66 @@ function FollowedTeamsManager() {
   )
 }
 
+// Hesap silme — Apple 5.1.1(v) ve Play şartı, KVKK silme hakkı. Sunucuda
+// Edge Function `delete-account` siler (AuthContext.deleteAccount). Yorumlar
+// silinmez, "Silinmiş hesap" adıyla kalır; bunu kullanıcıya önceden söylüyoruz.
+function DeleteAccountSection() {
+  const navigate = useNavigate()
+  const { deleteAccount } = useAuth()
+  const [open, setOpen] = useState(false)
+  const [understood, setUnderstood] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  async function onDelete() {
+    if (!understood || busy) return
+    setBusy(true)
+    setError('')
+    try {
+      await deleteAccount()
+      // Oturum kapandı; ProtectedRoute zaten ana sayfaya yönlendirir.
+      navigate('/', { replace: true })
+    } catch (err) {
+      setError(err.message || 'Hesap silinemedi. Lütfen tekrar dene.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--line)' }}>
+      <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 4 }}>Hesabı Sil</div>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 12, lineHeight: 1.6 }}>
+        Profilin, takiplerin, beğenilerin, oyların ve profil fotoğrafın kalıcı olarak silinir.
+        Forum yorumların silinmez; yazar adı yerine “Silinmiş hesap” görünür.
+      </div>
+
+      {!open ? (
+        <button type="button" onClick={() => setOpen(true)} style={{ background: 'transparent', color: '#FF4655', border: '1px solid rgba(255,70,85,.45)', borderRadius: 10, padding: '9px 14px', fontWeight: 700, cursor: 'pointer' }}>
+          Hesabımı sil
+        </button>
+      ) : (
+        <div style={{ display: 'grid', gap: 10, background: 'var(--surface)', border: '1px solid rgba(255,70,85,.45)', borderRadius: 11, padding: 12 }}>
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
+            <input type="checkbox" checked={understood} onChange={e => setUnderstood(e.target.checked)} style={{ width: 16, height: 16, marginTop: 2, accentColor: '#FF4655' }} />
+            <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
+              Hesabımın ve verilerimin kalıcı olarak silineceğini, bunun geri alınamayacağını anlıyorum.
+            </span>
+          </label>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <button type="button" onClick={onDelete} disabled={!understood || busy} style={{ background: understood ? '#FF4655' : 'var(--surface-2)', color: understood ? '#fff' : 'var(--text-3)', border: 'none', borderRadius: 10, padding: '9px 14px', fontWeight: 800, cursor: understood && !busy ? 'pointer' : 'not-allowed', opacity: busy ? 0.6 : 1 }}>
+              {busy ? 'Siliniyor...' : 'Hesabımı kalıcı olarak sil'}
+            </button>
+            <button type="button" onClick={() => { setOpen(false); setUnderstood(false); setError('') }} disabled={busy} style={{ background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--line-2)', borderRadius: 10, padding: '9px 14px', fontWeight: 700, cursor: 'pointer' }}>
+              Vazgeç
+            </button>
+          </div>
+          {error && <span style={{ fontSize: 12, color: '#FF4655' }}>{error}</span>}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function ProfileSettings() {
   const navigate = useNavigate()
   const { user, profile, updateProfile, updatePassword } = useAuth()
@@ -281,6 +341,7 @@ export default function ProfileSettings() {
         </div>
 
         <FollowedTeamsManager />
+        <DeleteAccountSection />
       </div>
     </div>
   )

@@ -25,6 +25,10 @@
       "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
     },
     {
+      "source": "/.well-known/apple-app-site-association",
+      "headers": [{ "key": "Content-Type", "value": "application/json" }]
+    },
+    {
       "source": "/(login|register|forgot-password|reset-password|settings|search)",
       "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }]
     }

@@ -25,7 +25,7 @@ const OPERATOR = 'feXt Platform Yönetimi (fextesports.com)'
 const OAUTH_NAMES = [GOOGLE_ENABLED && 'Google', DISCORD_ENABLED && 'Discord'].filter(Boolean)
 const OAUTH_LABEL = OAUTH_NAMES.join(' veya ')
 const CONTACT_EMAIL = 'iletisim@fextesports.com'
-const UPDATED = '26 Ekim 2026'
+const UPDATED = '27 Ekim 2026'
 
 const DOCS = {
   privacy: {
@@ -87,6 +87,7 @@ function PrivacyBody() {
       <P><B>Platformu kullandığında:</B></P>
       <UL>
         <LI>Takip ettiğin takımlar, oyuncular ve oyunlar</LI>
+        <LI>Hesap açmadan takip edersen: takiplerin, adına değil tarayıcına atanan rastgele bir tanımlayıcıyla saklanır — <B>30 gün</B> siteye girmezsen silinir</LI>
         <LI>Beğendiğin haberler, yazdığın yorumlar ve yorum oyların</LI>
         <LI>Maç MVP oyların ve haberlere verdiğin geri bildirimler</LI>
         <LI>Scout bekleme listesine kaydolursan: e-posta, kurum adı ve rolün</LI>
@@ -108,7 +109,7 @@ function PrivacyBody() {
         <LI>Açık/koyu tema tercihin</LI>
         <LI>Favorilerin, takip ettiğin oyuncular ve ana sayfa tercihlerin</LI>
         <LI>Verdiğin oyların tekrarlanmaması için yerel kayıtlar</LI>
-        <LI>Giriş yaptıysan oturum bilgin — çıkış yaptığında silinir</LI>
+        <LI>Giriş yaptıysan ya da hesapsız takip ettiysen oturum bilgin — çıkış yaptığında ya da site verisini temizlediğinde silinir</LI>
       </UL>
       <P>
         Bunları tarayıcı ayarlarından dilediğin zaman temizleyebilirsin; site çalışmaya devam
@@ -148,16 +149,18 @@ function PrivacyBody() {
 
       <H2>5. Ne kadar süre saklıyoruz?</H2>
       <P>
-        Hesap verilerin, hesabın açık kaldığı sürece saklanır. Hesabını sildirdiğinde kişisel
-        verilerin makul bir süre içinde silinir. Yorumların, kimliğinden arındırılmış biçimde
-        tartışma bütünlüğü için kalabilir. Yasal saklama yükümlülüğü bulunan kayıtlar ilgili süre
+        Hesap verilerin, hesabın açık kaldığı sürece saklanır. Hesabını sildiğinde profilin,
+        takiplerin, beğenilerin, oyların ve profil görselin <B>hemen</B> silinir. Yorumların,
+        tartışma bütünlüğü için “Silinmiş hesap” adıyla, kimliğinden arındırılmış biçimde kalır.
+        Hesapsız yapılan takipler 30 gün kullanılmazsa silinir. Yasal saklama yükümlülüğü bulunan kayıtlar ilgili süre
         boyunca tutulur.
       </P>
 
       <H2>6. Haklarını nasıl kullanırsın?</H2>
       <P>
-        Verilerine erişmek, düzeltmek, silmek veya hesabını kapatmak için <Mail /> adresine
-        yazman yeterlidir. Yasal haklarının ayrıntılı listesi için{' '}
+        Hesabını, giriş yaptıktan sonra <B>Ayarlar → Hesabı Sil</B> bölümünden kendin kalıcı
+        olarak silebilirsin. Verilerine erişmek, düzeltmek veya silmek için <Mail /> adresine
+        de yazabilirsin. Yasal haklarının ayrıntılı listesi için{' '}
         <Link to="/kvkk" style={{ color: '#c98bd6' }}>KVKK Aydınlatma Metni</Link> sayfamıza bakabilirsin.
       </P>
 
@@ -342,7 +345,9 @@ function KvkkBody() {
       <P>
         Kişisel verilerin, üyeliğin devam ettiği sürece; üyelik sona erdiğinde ise mevzuatın
         öngördüğü zamanaşımı süreleri boyunca saklanır ve sürenin sonunda silinir, yok edilir veya
-        anonim hâle getirilir.
+        anonim hâle getirilir. Hesabını Ayarlar sayfasından sildiğinde hesap ve kullanım
+        verilerin derhâl silinir; yorumların kimliğinden arındırılarak kalır. Hesapsız yapılan
+        takipler 30 gün kullanılmazsa silinir.
       </P>
 
       <H2>8. KVKK m.11 kapsamındaki haklarınız</H2>

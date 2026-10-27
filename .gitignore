@@ -20,3 +20,6 @@ social/onbellek/
 
 # Claude Code geçici çalışma dizini dosyaları
 tmpclaude-*-cwd
+
+# Supabase CLI geçici dosyaları (proje bağlantısı, sürüm önbelleği)
+**/supabase/.temp/

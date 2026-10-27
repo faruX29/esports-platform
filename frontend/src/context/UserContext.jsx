@@ -5,14 +5,23 @@ import { useAuth } from './AuthContext'
 import BRANDING from '../branding.config'
 import { normalizeGameId } from '../utils/gameUtils'
 
+// Takiplerin SAHİBİ (Faz 6, kurucu kararı 27 Ekim):
+//   • kayıtlı kullanıcı → follows (user.id)
+//   • kayıtsız ziyaretçi → ilk takipte Supabase ANONİM oturumu açılır, takipler
+//     follows'a anonim id ile yazılır (tarayıcı kapanınca da kalır). 30 gün
+//     işlemsiz anonimleri pg_cron siler (backend/sql/anonim_takip.sql).
+//   • oturum yok (anonim giriş kapalı, captcha geçilemedi ya da henüz ilk takip
+//     yazılıyor) → Karar #70 davranışı: sessionStorage, sekme kapanınca silinir.
+// STORAGE_KEY localStorage'da yalnız ÖNBELLEK: sahibi ({sahip, anonim}) ile yazılır.
 const STORAGE_KEY = BRANDING.followStateStorageKey
-// Anonim oturum takipleri (Karar #70). sessionStorage BİLEREK seçildi:
-// tarayıcı/sekme kapanınca silinir → ortak bilgisayarda önceki kişinin takip
-// listesi bir sonrakine sızmaz. 15 Temmuz'da anonim takip tam da bu yüzden
-// kaldırılmıştı (ba9ecd3); localStorage'a dönmek o hatayı geri getirir.
 const SESSION_KEY = `${STORAGE_KEY}_session`
-// "Kalıcı kaydet" teklifi bu oturumda gösterildi mi — reddedilince tekrarlamaz.
-const OFFER_KEY = `${STORAGE_KEY}_offer_seen`
+// "Kalıcı kaydet" teklifinin son gösterildiği an — reddedilince 7 gün tekrarlamaz.
+const OFFER_KEY = `${STORAGE_KEY}_offer_ts`
+const OFFER_REPEAT_MS = 7 * 24 * 60 * 60 * 1000
+// Teklif kaçıncı takipte açılır (kurucu kararı: 3. takipte teklif, duvar yok).
+const OFFER_AT_FOLLOWS = 3
+// Anonim oturum bu sekmede açılamadıysa tekrar denenmez (her takipte captcha olmasın).
+const ANON_FAILED_KEY = `${STORAGE_KEY}_anon_failed`
 // Kayıt/giriş DEVİR kutusu. sessionStorage sekmeye özeldir: kullanıcı "Kalıcı
 // kaydet"e basıp kaydolunca doğrulama maili çoğu zaman YENİ SEKMEDE açılır ve
 // oturum takipleri oraya gelmez — yani tam da söz verdiğimiz şey kaybolur.
@@ -99,18 +108,46 @@ function readHandoff() {
   }
 }
 
-// Mount anında auth henüz çözülmedi: girişli kullanıcının önbelleği
-// localStorage'da, anonim oturumunki sessionStorage'da. Hangisi doluysa onu
-// göster (yanıp sönmeyi önler); hydrate efekti hemen ardından doğrusunu yazar.
+// Mount anında auth henüz çözülmedi: oturumlu sahibin önbelleği
+// localStorage'da, oturumsuz ziyaretçininki sessionStorage'da. Hangisi doluysa
+// onu göster (yanıp sönmeyi önler); hydrate efekti hemen ardından doğrusunu yazar.
 function readStoredState() {
   const local = parseStoredState(safeGet(localStorage, STORAGE_KEY))
   if (local.teamIds.length || local.playerIds.length || local.gameIds.length) return local
   return parseStoredState(safeGet(sessionStorage, SESSION_KEY))
 }
 
+// Önbellek ANONİM bir oturuma aitse (ve şimdiki sahip o değilse) takiplerini
+// döndür: ziyaretçi kayıt olunca / giriş yapınca anonim takipleri yeni hesaba
+// devredilir. Anonim oturum Google yönlendirmesinde ya da yeni sekmede biter;
+// devri taşıyan tek yer bu önbellek. Kayıtlı kullanıcının önbelleği ASLA
+// başka hesaba devredilmez.
+function readAnonymousCache(currentOwnerId) {
+  const raw = safeGet(localStorage, STORAGE_KEY)
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw)
+    if (parsed?.anonim !== true || !parsed?.sahip || parsed.sahip === currentOwnerId) return null
+    return parseStoredState(raw)
+  } catch {
+    return null
+  }
+}
+
+function unionState(a, b) {
+  return {
+    teamIds: [...new Set([...parseTeamIds(a.teamIds), ...parseTeamIds(b.teamIds)])],
+    playerIds: [...new Set([...(a.playerIds || []), ...(b.playerIds || [])].filter(Boolean))],
+    gameIds: [...new Set([...uniqueCanonicalGames(a.gameIds), ...uniqueCanonicalGames(b.gameIds)])],
+    teamGameMap: { ...sanitizeTeamGameMap(b.teamGameMap), ...sanitizeTeamGameMap(a.teamGameMap) },
+  }
+}
+
 export function UserProvider({ children }) {
   const storedState = readStoredState()
-  const { user, profile, updateProfile, loading: authLoading } = useAuth()
+  const { user, profile, updateProfile, loading: authLoading, anonUserId, startAnonymousSession } = useAuth()
+  // Takiplerin sahibi: kayıtlı kullanıcı ya da anonim oturum; ikisi de yoksa null.
+  const ownerId = user?.id || anonUserId || null
   const [teamIds, setTeamIds] = useState(() => parseTeamIds(storedState.teamIds))
   const [playerIds, setPlayerIds] = useState(() => Array.isArray(storedState.playerIds) ? storedState.playerIds : [])
   const [gameIds, setGameIds] = useState(() => uniqueCanonicalGames(storedState.gameIds))
@@ -120,7 +157,12 @@ export function UserProvider({ children }) {
   // BITMEDEN calisan efektler anonim durumu girisli kullanicinin durumu
   // saniyordu (asagidaki iki yaris durumu).
   const [hydratedFor, setHydratedFor] = useState(null)
-  const authKey = authLoading ? null : (user?.id || 'anon')
+  const authKey = authLoading ? null : (ownerId || 'anon')
+  // Bellekteki durum oturumsuz ya da anonim bir sahibe mi ait — öyleyse yeni
+  // sahibe geçerken (anonim oturum açıldı, kayıt/giriş yapıldı) BİRLEŞTİRİLİR.
+  // Kayıtlı kullanıcının durumu asla birleştirilmez (çıkışta başkasına sızmasın,
+  // başka cihazda bırakılan takip önbellekten geri gelmesin).
+  const memoryIsAnonymousRef = useRef(false)
   // Duvar: beğeni/yorum gibi gerçekten hesap gerektiren işlemlerde açılır.
   const [authPromptOpen, setAuthPromptOpen] = useState(false)
   // Teklif: anonim ilk takipte bir kez açılır, takibi ENGELLEMEZ (Karar #70).
@@ -139,16 +181,16 @@ export function UserProvider({ children }) {
     // da eski kullanıcının takiplerini anonim kutusuna yazardı.
     // Çözüm: durum HANGİ kimlik için çözüldüyse yalnızca ona yaz.
     if (!authKey || hydratedFor !== authKey) return
-    const payload = JSON.stringify({ teamIds, playerIds, gameIds, teamGameMap })
-    if (user?.id) {
-      safeSet(localStorage, STORAGE_KEY, payload)
+    const state = { teamIds, playerIds, gameIds, teamGameMap }
+    if (ownerId) {
+      safeSet(localStorage, STORAGE_KEY, JSON.stringify({ ...state, sahip: ownerId, anonim: !user?.id }))
     } else {
-      safeSet(sessionStorage, SESSION_KEY, payload)
+      safeSet(sessionStorage, SESSION_KEY, JSON.stringify(state))
       safeRemove(localStorage, STORAGE_KEY)
     }
-  }, [teamIds, playerIds, gameIds, teamGameMap, user?.id, authKey, hydratedFor])
+  }, [teamIds, playerIds, gameIds, teamGameMap, user?.id, ownerId, authKey, hydratedFor])
 
-  // Girisli kullanicida follow datayi veritabanindan hydrate et.
+  // Oturumlu sahipte (kayıtlı ya da anonim) follow datayı veritabanından hydrate et.
   useEffect(() => {
     let cancelled = false
 
@@ -157,10 +199,10 @@ export function UserProvider({ children }) {
       // silmemek icin bekle (bu asamada user gecici olarak null olabilir).
       if (authLoading) return
 
-      if (!user?.id) {
-        // Anonim / cikis yapilmis: OTURUM takibi serbest (Karar #70). Durum
+      if (!ownerId) {
+        // Oturum yok / cikis yapilmis: OTURUM takibi serbest (Karar #70). Durum
         // sessionStorage'dan gelir; sekme kapaninca kendiliginden silinir.
-        // localStorage MUTLAKA temizlenir — orada duran veri bir onceki GIRISLI
+        // localStorage MUTLAKA temizlenir — orada duran veri bir onceki
         // kullanicinin onbellegidir ve ortak bilgisayarda sizmamalidir.
         const anon = parseStoredState(safeGet(sessionStorage, SESSION_KEY))
         readHandoff()   // suresi dolmus devir kaydi varsa burada silinir
@@ -169,14 +211,19 @@ export function UserProvider({ children }) {
         setGameIds(uniqueCanonicalGames(anon.gameIds))
         setTeamGameMap(sanitizeTeamGameMap(anon.teamGameMap))
         safeRemove(localStorage, STORAGE_KEY)
+        memoryIsAnonymousRef.current = true
         setHydratedFor('anon')
         return
       }
 
+      const isRegistered = !!user?.id
+      // Bu sahibe geçmeden önce bellekteki durum anonim miydi (oturumsuz ya da
+      // anonim oturum)? Okuma beklenirken yapılan takipler de böylece kaybolmaz.
+      const mergeMemory = memoryIsAnonymousRef.current
       const { data, error } = await supabase
         .from('follows')
         .select('target_type,target_id')
-        .eq('user_id', user.id)
+        .eq('user_id', ownerId)
 
       if (cancelled) return
 
@@ -204,35 +251,34 @@ export function UserProvider({ children }) {
         .map(x => x.target_id)
         .filter(Boolean)
 
-      // Anonim oturumda yapilan takipleri DEVRAL (Karar #70). Kullaniciya
+      // Anonim donemde yapilan takipleri DEVRAL (Karar #70). Kullaniciya
       // "kalici kaydet" dedik; giris sonrasi takipleri kaybolursa soz yalan
-      // olur. Birlesim alinir (silme yok), sonra oturum kutusu bosaltilir.
+      // olur. Birlesim alinir (silme yok), sonra devir kutulari bosaltilir.
+      // Kaynaklar: oturumsuz donemin sessionStorage'i, kayit akisinin devir
+      // kutusu (yeni sekme) ve — kayitli hesaba geciste — anonim oturumun
+      // localStorage onbellegi (Google yonlendirmesi bellegi siler).
       const sessionPending = parseStoredState(safeGet(sessionStorage, SESSION_KEY))
-      // Ayni sekmede giris yapildiysa sessionStorage yeter; kayit akisi yeni
-      // sekmede bittiyse devir kutusu devreye girer.
       const handoff = readHandoff() || EMPTY_STATE
+      const anonCache = (isRegistered && readAnonymousCache(ownerId)) || EMPTY_STATE
       safeRemove(sessionStorage, SESSION_KEY)
       safeRemove(localStorage, HANDOFF_KEY)
 
+      const pending = unionState(unionState(sessionPending, handoff), anonCache)
+
       const teamIdsMerged = [...new Set([
         ...teamFromDb,
-        ...parseTeamIds(sessionPending.teamIds),
-        ...parseTeamIds(handoff.teamIds),
+        ...parseTeamIds(pending.teamIds),
       ])]
       const playerIdsMerged = [...new Set([
         ...playerFromDb,
-        ...[...(sessionPending.playerIds || []), ...(handoff.playerIds || [])].filter(Boolean),
+        ...(pending.playerIds || []),
       ])]
       const gameIdsMerged = [...new Set([
         ...uniqueCanonicalGames(gameFromDb),
-        ...uniqueCanonicalGames(sessionPending.gameIds),
-        ...uniqueCanonicalGames(handoff.gameIds),
+        ...uniqueCanonicalGames(pending.gameIds),
       ])]
 
-      let mappedTeamGames = sanitizeTeamGameMap({
-        ...sanitizeTeamGameMap(handoff.teamGameMap),
-        ...sanitizeTeamGameMap(sessionPending.teamGameMap),
-      })
+      let mappedTeamGames = sanitizeTeamGameMap(pending.teamGameMap)
       if (teamIdsMerged.length) {
         const { data: teamRows, error: teamRowsError } = await supabase
           .from('teams')
@@ -256,18 +302,31 @@ export function UserProvider({ children }) {
         ...collectMappedGames(teamIdsMerged, mappedTeamGames),
       ])]
 
-      // DB + anonim oturum birlesimi. Persist efekti bunu hemen ardindan
-      // veritabanina yazar (yalnizca FARKI ekler, silme yapmaz).
-      setTeamIds(teamIdsMerged)
-      setPlayerIds(playerIdsMerged)
-      setGameIds(mergedGames)
-      setTeamGameMap(mappedTeamGames)
-      setHydratedFor(user.id)
+      if (cancelled) return
+
+      // DB + anonim donem birlesimi. Persist efekti bunu hemen ardindan
+      // veritabanina yazar (yalnizca FARKI ekler). Bellek anonimse okuma
+      // beklenirken yapilan takipler de birlesime girer.
+      if (mergeMemory) {
+        setTeamIds(prev => [...new Set([...teamIdsMerged, ...parseTeamIds(prev)])])
+        setPlayerIds(prev => [...new Set([...playerIdsMerged, ...(prev || []).filter(Boolean)])])
+        setGameIds(prev => [...new Set([...mergedGames, ...uniqueCanonicalGames(prev)])])
+        setTeamGameMap(prev => sanitizeTeamGameMap({ ...prev, ...mappedTeamGames }))
+      } else {
+        setTeamIds(teamIdsMerged)
+        setPlayerIds(playerIdsMerged)
+        setGameIds(mergedGames)
+        setTeamGameMap(mappedTeamGames)
+      }
+      memoryIsAnonymousRef.current = !isRegistered
+      setHydratedFor(ownerId)
     }
 
     loadFromDb()
     return () => { cancelled = true }
-  }, [user?.id, authLoading])
+    // user?.id ownerId'nin parcasi; isRegistered icin ayrica okunur.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ownerId, authLoading])
 
   // Follow degisikliklerini veritabanina yaz — debounce + seri kilit.
   // Onceki surum: in-flight persist iptal olunca setSyncing(false) atlanip syncing
@@ -282,10 +341,11 @@ export function UserProvider({ children }) {
     // duruma göre kurup FAZLALIKLARI SİLDİĞİ için kullanıcının DB'deki
     // takiplerini uçurabiliyordu. Artık yalnızca durum BU kullanıcı için
     // çözülmüşse yazıyoruz.
-    if (!user?.id || hydratedFor !== user.id) return
+    if (!ownerId || hydratedFor !== ownerId) return
 
     const snapshot = {
-      userId: user.id,
+      userId: ownerId,
+      isRegistered: !!user?.id && user.id === ownerId,
       teamIds: [...teamIds],
       playerIds: [...playerIds],
       persistedGameIds: [...new Set([
@@ -302,9 +362,9 @@ export function UserProvider({ children }) {
 
     return () => clearTimeout(handle)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, hydratedFor, teamIds, playerIds, gameIds, teamGameMap])
+  }, [ownerId, hydratedFor, teamIds, playerIds, gameIds, teamGameMap])
 
-  async function persistSnapshot({ userId, teamIds: tIds, playerIds: pIds, persistedGameIds }) {
+  async function persistSnapshot({ userId, isRegistered, teamIds: tIds, playerIds: pIds, persistedGameIds }) {
     // Hedef durumu anahtar->satir haritasi olarak kur.
     const desired = new Map()
     for (const id of tIds) desired.set(`team:${String(id)}`, { user_id: userId, target_type: 'team', target_id: String(id) })
@@ -336,7 +396,8 @@ export function UserProvider({ children }) {
       if (delError) console.warn('UserContext follows delete:', delError.message)
     }
 
-    if (typeof updateProfile === 'function') {
+    // Anonim oturumun profili yok (profiles yazımı anonime kapalı).
+    if (isRegistered && typeof updateProfile === 'function') {
       const preferredTeam = tIds[0] || null
       if ((profileRef.current?.favorite_team_id || null) !== preferredTeam) {
         try {
@@ -356,30 +417,47 @@ export function UserProvider({ children }) {
     return false
   }
 
-  // TEKLIF — anonim takibi engellemez. Oturumda bir kez gosterilir; "simdi
-  // degil" denirse bir daha cikmaz (her takipte modal = yeni bir duvar).
+  // TEKLIF — anonim takibi engellemez. OFFER_AT_FOLLOWS. takipte acilir;
+  // "simdi degil" denirse 7 gun tekrar cikmaz (her takipte modal = duvar).
   function offerAccountSave() {
     if (user?.id || authLoading) return
-    if (safeGet(sessionStorage, OFFER_KEY)) return
-    safeSet(sessionStorage, OFFER_KEY, '1')
+    const last = Number(safeGet(localStorage, OFFER_KEY) || 0)
+    if (last && Date.now() - last < OFFER_REPEAT_MS) return
+    safeSet(localStorage, OFFER_KEY, String(Date.now()))
     setSavePromptOpen(true)
   }
 
-  // Takip eklendikten SONRA calisir: girisliye bildirim izni, anonime teklif.
-  function afterFollowAdded() {
+  // Kayitsiz ziyaretcinin ilk takibinde anonim oturum ac. Basarisizsa (anonim
+  // giris kapali, captcha gecilemedi) bu sekmede tekrar denenmez; takipler
+  // sessionStorage'da kalir (Karar #70 davranisi) — kullanici hicbir sey kaybetmez.
+  function ensureAnonymousSession() {
+    if (authLoading || ownerId) return
+    if (safeGet(sessionStorage, ANON_FAILED_KEY)) return
+    startAnonymousSession().catch(err => {
+      console.warn('UserContext anonim oturum:', err?.message)
+      safeSet(sessionStorage, ANON_FAILED_KEY, '1')
+    })
+  }
+
+  // Takip eklendikten SONRA calisir: girisliye bildirim izni, kayitsiza anonim
+  // oturum ve (yeterince takip edince) hesap teklifi. followCount: ekleme
+  // SONRASI takim + oyuncu sayisi.
+  function afterFollowAdded(followCount) {
     if (user?.id) {
       // Bildirim izni: sayfa yükünde DEĞİL, kullanıcı takım takip edince iste
       // (doğal opt-in anı; favori maça bildirim özelliği için).
       requestBrowserNotificationPermission({ allowPrompt: true })
       return
     }
-    offerAccountSave()
+    ensureAnonymousSession()
+    if (followCount >= OFFER_AT_FOLLOWS) offerAccountSave()
   }
 
   function followTeam(teamId) {
     if (!teamId) return
+    const isAdding = !teamIds.includes(teamId)
     setTeamIds(prev => (prev.includes(teamId) ? prev : [...prev, teamId]))
-    afterFollowAdded()
+    if (isAdding) afterFollowAdded(teamIds.length + playerIds.length + 1)
   }
 
   function unfollowTeam(teamId) {
@@ -393,7 +471,7 @@ export function UserProvider({ children }) {
     setTeamIds(prev => (prev.includes(teamId)
       ? prev.filter(id => id !== teamId)
       : [...prev, teamId]))
-    if (isAdding) afterFollowAdded()
+    if (isAdding) afterFollowAdded(teamIds.length + playerIds.length + 1)
   }
 
   function isTeamFollowed(teamId) {
@@ -402,8 +480,9 @@ export function UserProvider({ children }) {
 
   function followPlayer(playerId) {
     if (!playerId) return
+    const isAdding = !playerIds.includes(playerId)
     setPlayerIds(prev => (prev.includes(playerId) ? prev : [...prev, playerId]))
-    afterFollowAdded()
+    if (isAdding) afterFollowAdded(teamIds.length + playerIds.length + 1)
   }
 
   function unfollowPlayer(playerId) {
@@ -417,7 +496,7 @@ export function UserProvider({ children }) {
     setPlayerIds(prev => (prev.includes(playerId)
       ? prev.filter(id => id !== playerId)
       : [...prev, playerId]))
-    if (isAdding) afterFollowAdded()
+    if (isAdding) afterFollowAdded(teamIds.length + playerIds.length + 1)
   }
 
   function isPlayerFollowed(playerId) {
@@ -427,8 +506,10 @@ export function UserProvider({ children }) {
   function followGame(gameId) {
     const normalized = normalizeGameId(gameId)
     if (!normalized) return
+    const isAdding = !gameIds.includes(normalized)
     setGameIds(prev => (prev.includes(normalized) ? prev : [...prev, normalized]))
-    afterFollowAdded()
+    // Oyun takibi teklif sayacina girmez (takimdan otomatik de turuyor).
+    if (isAdding) afterFollowAdded(teamIds.length + playerIds.length)
   }
 
   function unfollowGame(gameId) {
@@ -444,7 +525,7 @@ export function UserProvider({ children }) {
     setGameIds(prev => (prev.includes(normalized)
       ? prev.filter(id => id !== normalized)
       : [...prev, normalized]))
-    if (isAdding) afterFollowAdded()
+    if (isAdding) afterFollowAdded(teamIds.length + playerIds.length)
   }
 
   function isGameFollowed(gameId) {
@@ -463,6 +544,8 @@ export function UserProvider({ children }) {
     if (Object.keys(providedMap).length > 0) {
       setTeamGameMap(mergedMap)
     }
+    // Tercih sihirbazı kayıtsız ziyaretçiye de açık: seçim kalıcı olsun.
+    if (!user?.id && normalizedTeamIds.length) ensureAnonymousSession()
 
     if (inferredGames.length > 0) {
       setGameIds(prev => [...new Set([
@@ -511,9 +594,9 @@ export function UserProvider({ children }) {
     closeAuthPrompt: () => setAuthPromptOpen(false),
     // Anonim kullanicinin takipleri bu oturumla sinirli mi — arayuz bunu
     // kullaniciya soyleyebilsin diye disari veriliyor.
-    followsAreSessionOnly: !authLoading && !user?.id,
+    followsAreSessionOnly: !authLoading && !ownerId,
     openAccountSavePrompt: () => setSavePromptOpen(true),
-  }), [teamIds, playerIds, gameIds, authPromptOpen, user?.id, authLoading])
+  }), [teamIds, playerIds, gameIds, authPromptOpen, user?.id, ownerId, authLoading])
 
   return (
     <UserContext.Provider value={value}>
@@ -521,6 +604,7 @@ export function UserProvider({ children }) {
       {authPromptOpen && <FollowAuthPrompt onClose={() => setAuthPromptOpen(false)} />}
       {savePromptOpen && (
         <SaveFollowsPrompt
+          storedOnServer={!!ownerId}
           onClose={() => setSavePromptOpen(false)}
           onBeforeLeave={() => {
             // Kullanici hesap akisina giriyor: takipleri kisa omurlu devir
@@ -536,9 +620,10 @@ export function UserProvider({ children }) {
   )
 }
 
-// Anonim ilk takipten SONRA cikan teklif. Duvar DEGIL: takip zaten yapildi,
-// burada yalnizca kalicilik satiliyor. "Simdi degil" oturum boyunca hatirlanir.
-function SaveFollowsPrompt({ onClose, onBeforeLeave }) {
+// Kayitsiz ziyaretcinin OFFER_AT_FOLLOWS. takibinden SONRA cikan teklif. Duvar
+// DEGIL: takip zaten yapildi, burada yalnizca kalicilik satiliyor. "Simdi degil"
+// 7 gun hatirlanir.
+function SaveFollowsPrompt({ storedOnServer, onClose, onBeforeLeave }) {
   const navigate = useNavigate()
   function go(path) { onBeforeLeave?.(); onClose(); navigate(path) }
   useEffect(() => {
@@ -568,13 +653,22 @@ function SaveFollowsPrompt({ onClose, onBeforeLeave }) {
         <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--text)', marginBottom: 8 }}>
           Takip edildi ✓
         </div>
-        <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.65, marginBottom: 20 }}>
-          Ana sayfan artık bu takibe göre şekillenecek. Ama takiplerin şu an
-          <b style={{ color: 'var(--text-2)' }}> yalnızca bu tarayıcı oturumunda</b> tutuluyor —
-          sekmeyi kapatınca silinir. Ücretsiz hesapla
-          <b style={{ color: 'var(--text)' }}> kalıcı kaydet</b>, maç hatırlatmalarını ve
-          transfer haberlerini kaçırma.
-        </div>
+        {storedOnServer ? (
+          <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.65, marginBottom: 20 }}>
+            Ana sayfan artık takiplerine göre şekilleniyor. Takiplerin şu an
+            <b style={{ color: 'var(--text-2)' }}> yalnızca bu tarayıcıda</b> duruyor — site verisini
+            silersen ya da başka cihaza geçersen görmezsin. Ücretsiz hesapla
+            <b style={{ color: 'var(--text)' }}> her cihazda</b> aynı listeyle devam et.
+          </div>
+        ) : (
+          <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.65, marginBottom: 20 }}>
+            Ana sayfan artık bu takibe göre şekillenecek. Ama takiplerin şu an
+            <b style={{ color: 'var(--text-2)' }}> yalnızca bu tarayıcı oturumunda</b> tutuluyor —
+            sekmeyi kapatınca silinir. Ücretsiz hesapla
+            <b style={{ color: 'var(--text)' }}> kalıcı kaydet</b>, maç hatırlatmalarını ve
+            transfer haberlerini kaçırma.
+          </div>
+        )}
         <div style={{ display: 'grid', gap: 9 }}>
           <button
             type="button"

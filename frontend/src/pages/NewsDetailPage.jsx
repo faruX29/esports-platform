@@ -694,7 +694,8 @@ export default function NewsDetailPage() {
       const enrichedComments = mappedComments.map(row => {
         const authorProfile = row.user_id ? profilesById.get(row.user_id) : null
         const isMe = row.user_id === user?.id
-        const fallbackName = isMe ? (getEsportsName(profile) || 'Sen') : 'Topluluk'
+        // Yazarı hesabını silmişse user_id NULL'dır (backend/sql/hesap_silme.sql).
+        const fallbackName = !row.user_id ? 'Silinmiş hesap' : (isMe ? (getEsportsName(profile) || 'Sen') : 'Topluluk')
         const fallbackScore = isMe ? normalizeScoutScore(profile?.scout_score) : 0
         const badgeTeam = authorProfile && authorProfile.show_team_badge !== false && authorProfile.favorite_team_id
           ? teamsById.get(authorProfile.favorite_team_id)

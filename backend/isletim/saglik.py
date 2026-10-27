@@ -44,6 +44,8 @@ HABER_SAAT = 48                 # en uzun olağan boşluk ~47 saat
 ISTEMCI_HATA_24S = 25           # CSP hariç
 DB_BOYUT_MB = 425               # ücretsiz plan sınırı 500 MB
 YEDEK_GUN = 8                   # haftalık yedek
+ANONIM_YENI_24S = 500           # 24 saatte açılan anonim oturum (Faz 6, ölçüm yok; bot şüphesi)
+BILDIRIM_BASARISIZ_24S = 10     # 3 denemede gidemeyen bildirim
 
 
 class Rapor:
@@ -192,6 +194,53 @@ def istemci_hatalari(rapor, db):
         rapor.bilgi(f'{adet}x [{tur}] {mesaj}  (ör. {yol}, sürüm {surum})')
 
 
+def hesaplar_bildirimler(rapor, db):
+    """Faz 6: hesap silme kalıntısı, anonim oturumlar, push kuyruğu, ilgili pg_cron işleri."""
+    cur = db.cursor()
+    cur.execute("select public.hesap_kalinti_sayisi()")
+    kalinti = cur.fetchone()[0]
+    rapor.bilgi(f'silinmiş hesaptan kalan satır/dosya: {kalinti}')
+    if kalinti:
+        rapor.sorun(f'silinmiş hesaplardan {kalinti} satır/dosya kalmış (hesap silme eksik çalışıyor)')
+
+    cur.execute("""
+        select count(*) filter (where is_anonymous),
+               count(*) filter (where is_anonymous and created_at > now() - interval '24 hours')
+        from auth.users
+    """)
+    anonim, anonim_yeni = cur.fetchone()
+    rapor.bilgi(f'anonim oturum: {anonim} (son 24 saatte {anonim_yeni} yeni)')
+    if anonim_yeni > ANONIM_YENI_24S:
+        rapor.sorun(f'24 saatte {anonim_yeni} anonim oturum açıldı (bot olabilir; Turnstile ayarına bak)')
+
+    cur.execute("select bekleyen, basarisiz, gonderilen from bildirim.saglik()")
+    bekleyen, basarisiz, gonderilen = cur.fetchone()
+    rapor.bilgi(f'push (24 saat): {gonderilen} gönderildi, {basarisiz} başarısız, {bekleyen} bekliyor')
+    if bekleyen:
+        rapor.sorun(f'{bekleyen} bildirim 10 dakikadan uzun süredir bekliyor (send-push ya da FCM ayarı)')
+    if basarisiz > BILDIRIM_BASARISIZ_24S:
+        rapor.sorun(f'24 saatte {basarisiz} bildirim 3 denemede gönderilemedi')
+
+    cur.execute("""
+        select j.jobname, j.active, count(d.*) filter (where d.status = 'failed'),
+               max(d.end_time) filter (where d.status = 'succeeded')
+        from cron.job j
+        left join cron.job_run_details d on d.jobid = j.jobid and d.start_time > now() - interval '25 hours'
+        where j.jobname in ('anonim-temizle', 'bildirim-yakinda', 'bildirim-gonder', 'bildirim-temizle')
+        group by j.jobname, j.active order by j.jobname
+    """)
+    satirlar = cur.fetchall()
+    eksik = {'anonim-temizle', 'bildirim-yakinda', 'bildirim-gonder', 'bildirim-temizle'} - {r[0] for r in satirlar}
+    for ad in sorted(eksik):
+        rapor.sorun(f'pg_cron işi {ad} yok')
+    for ad, aktif, hatali, son in satirlar:
+        rapor.bilgi(f'{ad}: {"açık" if aktif else "KAPALI"}, 24 saatte {hatali} hata, son başarı {son or "yok"}')
+        if not aktif:
+            rapor.sorun(f'pg_cron işi {ad} kapalı')
+        if hatali:
+            rapor.sorun(f'pg_cron işi {ad} 24 saatte {hatali} kez hata verdi')
+
+
 def veritabani(rapor, db):
     cur = db.cursor()
     cur.execute("select pg_database_size(current_database()) / 1048576")
@@ -291,6 +340,7 @@ def main():
         kontrol(rapor, 'Maç verisi ve tahminler', mac_verisi, db)
         kontrol(rapor, 'Haberler', haberler, db)
         kontrol(rapor, 'Tarayıcı hataları', istemci_hatalari, db)
+        kontrol(rapor, 'Hesaplar ve bildirimler', hesaplar_bildirimler, db)
         kontrol(rapor, 'Veritabanı', veritabani, db)
     kontrol(rapor, 'GitHub Actions', is_akislari)
 

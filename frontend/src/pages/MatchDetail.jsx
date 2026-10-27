@@ -5,7 +5,8 @@
  */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useNavigate, Link }             from 'react-router-dom'
-import { supabase }                                 from '../supabaseClient'
+import { supabase, subscribeToMatchesUpdates }      from '../supabaseClient'
+import { useYenileme, useCanliBaglanti }            from '../hooks/useYenileme'
 import { isTurkishTeam, useTurkTakimlar }                           from '../constants'
 import { useUser }                                 from '../context/UserContext'
 import InitialsImage                               from '../components/InitialsImage'
@@ -1052,6 +1053,22 @@ function H2HRow({ match, refTeamAId }) {
 }
 
 /* ─── MVPVoting ─────────────────────────────────────────────────────────────── */
+// Harita listesi raw_data'dan (istek yok): canlı maçta her maç yenilemesinde tazelenir.
+function haritalariKur(m, aId, bId) {
+  return (m?.raw_data?.games || []).map(g => ({
+    map_name:     g.map?.name||g.map||null,
+    winner_id:    g.winner?.id||null,
+    team_a_score: g.results?.find(r=>r.team_id===aId)?.score??null,
+    team_b_score: g.results?.find(r=>r.team_id===bId)?.score??null,
+    length_seconds: g.length||null,
+  }))
+}
+
+// Canlı maçta yedek yoklama: yayın kanalı bağlıyken skor/durum anında gelir, yoklama
+// yalnız yayının taşımadığı raw_data (harita başladı vb.) için. Kanal kopuksa eski hız.
+const CANLI_YOKLAMA_KANALLI_MS = 60 * 1000
+const CANLI_YOKLAMA_KANALSIZ_MS = 15 * 1000
+
 function MVPVoting({ matchId, players, isFinished }) {
   const voterId = useRef(getVoterId())
   const [votes,      setVotes]      = useState({})
@@ -1231,8 +1248,10 @@ export default function MatchDetail() {
   const [error,          setError]          = useState(null)
 
   /* ── Maç yükle ── */
-  const fetchMatch = useCallback(async () => {
-    setLoadingMatch(true); setError(null)
+  // sessiz: arka plan yenilemesi → iskelet YOK. Eskiden canlı maçta 15 sn'de bir tüm
+  // sayfa iskelete dönüp yayın iframe'i dahil her şey yeniden kuruluyordu.
+  const fetchMatch = useCallback(async ({ sessiz = false } = {}) => {
+    if (!sessiz) { setLoadingMatch(true); setError(null) }
     try {
       const { data, error: e } = await supabase.from('matches').select(`
         *, raw_data,
@@ -1244,8 +1263,12 @@ export default function MatchDetail() {
       if (e) throw e
       setMatch(data)
       setStreams((data?.raw_data?.streams_list||[]).filter(s=>s?.embed_url||s?.raw_url))
-    } catch (e) { console.error('MatchDetail fetch:', e?.message || e); setError('Maç bulunamadı.') }
-    finally { setLoadingMatch(false) }
+    } catch (e) {
+      console.error('MatchDetail fetch:', e?.message || e)
+      // Arka plan yenilemesi düşerse ekrandaki maç kalır; yalnız ilk yüklemede hata.
+      if (!sessiz) setError('Maç bulunamadı.')
+    }
+    finally { if (!sessiz) setLoadingMatch(false) }
   }, [id])
 
   /* ── Detaylar ── */
@@ -1297,14 +1320,7 @@ export default function MatchDetail() {
       setPlayers(rosters)
       const h = (h2hRes.data||[]).filter(x=>x.id!==parseInt(id, 10)).slice(0, 5)
       setH2h({ matches:h, teamAWins:h.filter(x=>idEq(x.winner_id, aId)).length, teamBWins:h.filter(x=>idEq(x.winner_id, bId)).length, draws:h.filter(x=>!x.winner_id).length, total:h.length, teamAId:aId, teamBId:bId })
-      const games = m.raw_data?.games||[]
-      setMaps(games.map(g=>({
-        map_name:     g.map?.name||g.map||null,
-        winner_id:    g.winner?.id||null,
-        team_a_score: g.results?.find(r=>r.team_id===aId)?.score??null,
-        team_b_score: g.results?.find(r=>r.team_id===bId)?.score??null,
-        length_seconds: g.length||null,
-      })))
+      setMaps(haritalariKur(m, aId, bId))
       setMapStats(buildMapWinStats(h, aId, bId))
       setAiWin(buildAIWinModel(statsRes.data || [], aId, bId, m.prediction_team_a))
       setLiveBoard(buildLivePlayerBoard(m.raw_data, rosters, aId, bId))
@@ -1313,12 +1329,48 @@ export default function MatchDetail() {
   }, [id])
 
   useEffect(() => { fetchMatch() }, [fetchMatch])
-  useEffect(() => { if (match) fetchDetails(match) }, [match, fetchDetails])
+
+  // Kadro, h2h, istatistik yalnız maç/takım/durum/tahmin değişince çekilir (~7 istek).
+  // Canlı maçta her skor yenilemesinde yalnız raw_data'dan türeyenler (haritalar,
+  // canlı oyuncu tablosu) istek atmadan tazelenir.
+  const sonDetayAnahtariRef = useRef(null)
   useEffect(() => {
-    if (match?.status !== 'running') return undefined
-    const timer = setInterval(() => { fetchMatch() }, 15000)
-    return () => clearInterval(timer)
-  }, [match?.status, fetchMatch])
+    if (!match) return
+    const mA = match.team_a_id || match.team_a?.id
+    const mB = match.team_b_id || match.team_b?.id
+    const anahtar = [match.id, mA, mB, match.status, match.prediction_team_a].join('|')
+    if (anahtar !== sonDetayAnahtariRef.current) {
+      sonDetayAnahtariRef.current = anahtar
+      fetchDetails(match)
+      return
+    }
+    setMaps(haritalariKur(match, mA, mB))
+    setLiveBoard(buildLivePlayerBoard(match.raw_data, players, mA, mB))
+  }, [match, players, fetchDetails])
+
+  // Canlı maç: bu maç için yayın gelince hemen sessizce yenile; yedek yoklama seyrek
+  // ve sekme gizliyken durur.
+  const canliMi = match?.status === 'running'
+  const canliBagli = useCanliBaglanti()
+  useEffect(() => {
+    if (!canliMi) return undefined
+    let zamanlayici = null
+    const unsub = subscribeToMatchesUpdates(payload => {
+      const hedef = payload?.eventType === 'RESYNC' || String(payload?.new?.id) === String(id)
+      if (!hedef) return
+      clearTimeout(zamanlayici)
+      zamanlayici = setTimeout(() => { fetchMatch({ sessiz: true }) }, 1000)
+    })
+    return () => {
+      clearTimeout(zamanlayici)
+      unsub()
+    }
+  }, [canliMi, id, fetchMatch])
+  useYenileme(
+    () => fetchMatch({ sessiz: true }),
+    canliBagli ? CANLI_YOKLAMA_KANALLI_MS : CANLI_YOKLAMA_KANALSIZ_MS,
+    canliMi,
+  )
 
   /* ── Hook-safe derivations — must stay before any early return ── */
   const aId   = match?.team_a_id || match?.team_a?.id

@@ -52,6 +52,8 @@ python radar.py [YYYY-AA-GG] | python karne.py | python champions.py [grup] | py
 
 ## Altyapı gerçekleri
 - **Canlı skor** Postgres'te koşar: pg_cron `canli-senkron` dakikada bir (`backend/sql/canli_senkron.sql`). Sorun olursa: `cron.job_run_details`.
+- **Canlı skor istemciye** Realtime Broadcast ile gider: `matches` tetikleyicisi durum/skor/kazanan/saat değişince ifade başına tek mesajı herkese açık `maclar` konusuna atar (`backend/sql/canli_yayin.sql`). İstemcide tek ortak kanal: `subscribeToMatchesUpdates` (`supabaseClient.js`); olay `{eventType, new, old}`, yeniden bağlanınca `RESYNC`. Son mesajlar: `realtime.messages where topic='maclar'`.
+- **Ana sayfa verisi** tek RPC'den: `get_home_feed()` (`backend/sql/ana_sayfa_akisi.sql`, `utils/anaSayfaAkisi.js`); RPC yoksa eski sorgulara düşer. Periyodik yenileme `hooks/useYenileme.js` ile (gizli sekmede durur).
 - **GitHub Actions kısa cron'ları eliyor:** `*/5` fiilen saatlerce gecikir. Sık iş için pg_cron kullan.
 - **PandaScore:** saatte 1000 istek (`X-Rate-Limit-Remaining` başlığı).
 - **Vercel ücretsiz CPU kotası** dar; middleware her istekte koşar, `api/og` pahalıdır.
@@ -93,6 +95,7 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - Navbar'a öğe ekleyip genişliği ölçmeden bırakma → 7 öğe ~1140px ister, altında satır taşar (Giriş/Kayıt kesilir); `Navbar.jsx` `NAV_HAMBURGER_PX`'i güncelle.
 - UI'da "Model" ya da "AI" deme → tahmin motorunun adı Fextopus.
 - `index.html`'deki satır içi betiği/`onload`'u değiştirip `vercel.json` CSP'sindeki sha256'yı güncellemeden bırakma → CSP zorunluyken betik çalışmaz (hash `dist/index.html`'den hesaplanır). `/api/og` URL'sini middleware dışında üretme → imzasız istek statik karta düşer (`lib/ogImza.js`).
+- `matches`'a `postgres_changes` aboneliği açma ya da tabloyu `supabase_realtime` yayınına ekleme → her satır yazımı (ETL'in değişmeyen yazımları dahil) tam satırıyla her açık sekmeye gider. Canlı veri `maclar` Broadcast'inden; yeni abone `subscribeToMatchesUpdates`'i kullanır. Yoklama için düz `setInterval` değil `useYenileme`.
 - Middleware yanıtına `s-maxage` koyup CPU'yu koruduğunu sanma → middleware önbellekten önce her istekte koşar.
 - Türkçe yerelde İngilizce terimi büyük harfe çevirme → "WINNERS" "WİNNERS" olur.
 - Windows'ta Türkçe/Unicode içerikli heredoc ile dosya yazma → cp1254 karakterleri bozar.

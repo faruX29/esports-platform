@@ -5,6 +5,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, Link }                from 'react-router-dom'
 import { supabase, subscribeToMatchesUpdates } from '../supabaseClient'
+import { useYenileme, useCanliBaglanti }     from '../hooks/useYenileme'
+import { anaSayfaAkisiniGetir }             from '../utils/anaSayfaAkisi'
 import { useGame, gameMatchesFilter, GAMES } from '../context/GameContext'
 import { isTurkishTeam, useTurkTakimlar, turkTakimlariYukle }                   from '../constants'
 import { useUser }                          from '../context/UserContext'
@@ -35,7 +37,11 @@ const DASHBOARD_TICKER_CACHE_KEY = 'dashboard_live_ticker_cache_v1'
 const DASHBOARD_NEWS_CACHE_KEY = 'dashboard_news_cache_v1'
 const DASHBOARD_CACHE_TTL_MS = 5 * 60 * 1000
 const DASHBOARD_PREF_WIZARD_SEEN_KEY = 'dashboard_pref_wizard_seen_v1'
-const DASHBOARD_ACCURACY_REFRESH_MIN_INTERVAL_MS = 45 * 1000
+// Tam akış yenileme: canlı kanal bağlıyken seyrek (skor yayınla gelir), değilse dakikada bir.
+const DASHBOARD_YENILEME_CANLI_MS = 5 * 60 * 1000
+const DASHBOARD_YENILEME_YEDEK_MS = 60 * 1000
+// Yayındaki ardışık yapısal olayları (maç bitti/başladı) tek yenilemede topla.
+const DASHBOARD_YAYIN_TOPLAMA_MS = 4 * 1000
 const DASHBOARD_GLOBAL_ERROR_TEXT = 'Sunucuyla bağlantı kesildi, tekrar deneniyor...'
 const POPULAR_TEAM_SEARCH_TERMS = ['galatasaray', 'eternal fire', 'fut', 'bbl', 'fenerbahce', 'sangal', 'g2', 'fnatic', 'navi']
 const PREFERENCE_GAMES = GAMES.filter(game => ['valorant', 'cs2', 'lol'].includes(game.id))
@@ -266,6 +272,25 @@ function patchMatchCollection(rows = [], incoming = {}) {
       prediction_confidence: incoming.prediction_confidence ?? match.prediction_confidence,
     }
   })
+}
+
+// Yayın satırını listedeki maça uygula; maç listede yoksa AYNI diziyi döndür
+// (gereksiz render ve bağımlı effect tetiklenmesin).
+function maclariYamala(rows, incoming) {
+  if (!incoming?.id || !(rows || []).some(m => m.id === incoming.id)) return rows
+  return patchMatchCollection(rows, incoming)
+}
+
+function zamanDamgasi(iso) {
+  const t = Date.parse(iso || '')
+  return Number.isFinite(t) ? t : 0
+}
+
+// Ana sayfanın yaklaşan penceresi (get_home_feed ile aynı): şimdi-6 sa … şimdi+7 gün.
+function yaklasanPencerede(iso) {
+  const t = zamanDamgasi(iso)
+  const now = Date.now()
+  return t >= now - (6 * 60 * 60 * 1000) && t <= now + (UPCOMING_WINDOW_DAYS * 24 * 60 * 60 * 1000)
 }
 
 function buildTickerLines(running, finishedStories, upcomingStories, followedTeamIds = [], followedGameIds = []) {
@@ -906,7 +931,7 @@ function MatchImpactPill() {
 }
 
 /* ── LiveMatchCard ────────────────────────────────────────────────────────── */
-const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs, onToggleFav, teamForms }) {
+const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs, onToggleFav, teamForms, oncelikli = false }) {
   useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
   const isLive     = m.status === 'running'
   const isFin      = m.status === 'finished'
@@ -1016,6 +1041,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
             src={m.team_a?.logo_url}
             alt={m.team_a?.name || ''}
             name={m.team_a?.name}
+            priority={oncelikli}
             width={36}
             height={36}
             borderRadius={8}
@@ -1079,6 +1105,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
             src={m.team_b?.logo_url}
             alt={m.team_b?.name || ''}
             name={m.team_b?.name}
+            priority={oncelikli}
             width={36}
             height={36}
             borderRadius={8}
@@ -1333,24 +1360,25 @@ export default function Dashboard() {
   } = useUser()
   const { isAuthenticated } = useAuth()
 
-  const [liveMatches,     setLiveMatches]     = useState([])
-  const [upcomingMatches, setUpcomingMatches] = useState([])
+  // Ham akış (get_home_feed): oyun/seviye filtresi aşağıda useMemo ile uygulanır.
+  // Canlı yayın bu listeleri yerinde yamar; liveMatches vb. bunlardan türetilir.
+  const [canliHam,    setCanliHam]    = useState([])
+  const [yaklasanHam, setYaklasanHam] = useState([])
+  const [bitenHam,    setBitenHam]    = useState([])
+  const [turnuvaHam,  setTurnuvaHam]  = useState([])
+  const [akisHazir,   setAkisHazir]   = useState(false)
   const [teamFormMap,          setTeamFormMap]          = useState(new Map())
   const [expandedScheduleGroups, setExpandedScheduleGroups] = useState(new Set())
-  const [myFeedMatches,   setMyFeedMatches]   = useState([])
-  const [liveFavCount,    setLiveFavCount]    = useState(0)
+  const [takipHam,        setTakipHam]        = useState([])
   const [showAllTournamentTiers, setShowAllTournamentTiers] = useState(true)
   const [quickAccess, setQuickAccess] = useState([])
   const [quickLoading, setQuickLoading] = useState(false)
   const [tickerItems, setTickerItems] = useState([])
   const [tickerLoading, setTickerLoading] = useState(false)
-  const [recentResults, setRecentResults] = useState([])  // Son Sonuçlar (biten maçlar, skorlu)
   const [showAllResults, setShowAllResults] = useState(false)  // Son Sonuçlar: 6 göster / hepsini aç
-  const [activeTournaments, setActiveTournaments] = useState([])  // Aktif üst-tier turnuvalar (canlı maçların altında)
   const [dreamTeam, setDreamTeam] = useState([])
   const [dreamLoading, setDreamLoading] = useState(false)
   const [stats,           setStats]           = useState({ total: 0, live: 0, today: 0, teams: 0 })
-  const [accuracyRows, setAccuracyRows] = useState([])
   const [loading,         setLoading]         = useState(true)
   const [globalError, setGlobalError] = useState('')
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 920)
@@ -1458,56 +1486,66 @@ export default function Dashboard() {
     setShowPreferenceWizard(false)
   }, [setFollowedGames, setFollowedTeams, markPreferenceWizardSeen])
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
+  // Canlı kanal bağlıyken skor/durum yayınla anında geliyor → tam yenileme seyrek.
+  // Kanal kopuksa eski davranış (dakikada bir). Sekme gizliyken hiç yenilenmez.
+  const canliBagli = useCanliBaglanti()
+  const yenilemeAraligi = canliBagli ? DASHBOARD_YENILEME_CANLI_MS : DASHBOARD_YENILEME_YEDEK_MS
+
+  // Tek istek: canlı, yaklaşan, biten (100), aktif turnuvalar, takım formu.
+  // Eskiden 3 kademeli şelaleyle ~11 istek + dakikada ~9 yoklama isteğiydi.
+  const akisIstegiRef = useRef(0)
+  const akisiYukle = useCallback(async () => {
+    const istek = ++akisIstegiRef.current
     try {
-      const upcomingFloorIso = new Date(Date.now() - (6 * 60 * 60 * 1000)).toISOString()
-      const upcomingCeilIso = new Date(Date.now() + (UPCOMING_WINDOW_DAYS * 24 * 60 * 60 * 1000)).toISOString()
+      const akis = await anaSayfaAkisiniGetir()
+      if (istek !== akisIstegiRef.current) return  // arada daha yeni istek başladı
 
-      const selectStr = `
-        id, status, scheduled_at,
-        team_a_id, team_b_id, winner_id, team_a_score, team_b_score,
-        number_of_games, stream_url,
-        prediction_team_a, prediction_team_b, prediction_confidence,
-        team_a:teams!matches_team_a_id_fkey(id,name,logo_url),
-        team_b:teams!matches_team_b_id_fkey(id,name,logo_url),
-        tournament:tournaments(id,name,tier),
-        game:games(id,name,slug)
-      `
-      const [liveRes, upcomingRes] = await Promise.all([
-        supabase.from('matches').select(selectStr)
-          .eq('status', 'running')
-          .order('scheduled_at', { ascending: true })
-          .limit(18),
-        supabase.from('matches').select(selectStr)
-          .in('status', ['not_started', 'upcoming'])
-          .gte('scheduled_at', upcomingFloorIso)
-          .lte('scheduled_at', upcomingCeilIso)
-          .order('scheduled_at', { ascending: true })
-          .limit(30),
-      ])
+      setCanliHam(Array.isArray(akis?.canli) ? akis.canli : [])
+      setYaklasanHam(Array.isArray(akis?.yaklasan) ? akis.yaklasan : [])
+      setBitenHam(Array.isArray(akis?.biten) ? akis.biten : [])
+      setTurnuvaHam(Array.isArray(akis?.turnuvalar) ? akis.turnuvalar : [])
 
-      if (liveRes.error) throw liveRes.error
-      if (upcomingRes.error) throw upcomingRes.error
-
-      const baseLive = (liveRes.data || []).filter(m => matchesDashboardGame(m, activeGame))
-      const baseUpcoming = (upcomingRes.data || []).filter(m => matchesDashboardGame(m, activeGame))
-      const live = filterMatchesByTournamentTier(baseLive, showAllTournamentTiers)
-      const upcoming = filterMatchesByTournamentTier(baseUpcoming, showAllTournamentTiers)
-
-      setLiveMatches(live)
-      setUpcomingMatches(upcoming)
+      const formMap = new Map()
+      for (const row of akis?.form || []) {
+        const arr = String(row.form || '').split('').filter(c => c === 'W' || c === 'L')
+        if (arr.length) formMap.set(Number(row.team_id), arr)
+      }
+      setTeamFormMap(formMap)
+      setAkisHazir(true)
       setGlobalError('')
-    } catch (e) { showGlobalConnectionWarning('Dashboard fetch', e) }
-    finally     { setLoading(false) }
-  }, [activeGame, showAllTournamentTiers, showGlobalConnectionWarning])
+    } catch (e) {
+      showGlobalConnectionWarning('Dashboard fetch', e)
+    } finally {
+      // Yalnız ilk yükleme iskelet gösterir; periyodik yenilemede kartlar yerinde kalır.
+      if (istek === akisIstegiRef.current) setLoading(false)
+    }
+  }, [showGlobalConnectionWarning])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => { akisiYukle() }, [akisiYukle])
+  useYenileme(akisiYukle, yenilemeAraligi)
 
-  useEffect(() => {
-    const timer = window.setInterval(() => { fetchData() }, 60 * 1000)
-    return () => window.clearInterval(timer)
-  }, [fetchData])
+  // Oyun ve seviye filtresi istemcide: seçim değişince yeniden istek atılmaz.
+  const oyunVeSeviye = useCallback(rows => filterMatchesByTournamentTier(
+    (rows || []).filter(m => matchesDashboardGame(m, activeGame)),
+    showAllTournamentTiers,
+  ), [activeGame, showAllTournamentTiers])
+
+  // Canlı + yaklaşan tek havuz: yayınla durumu değişen maç (başladı/bitti), tam
+  // yenilemeyi beklemeden doğru listeye geçer ya da listeden düşer.
+  const acikMaclar = useMemo(() => {
+    const byId = new Map()
+    for (const m of [...canliHam, ...yaklasanHam]) if (m?.id && !byId.has(m.id)) byId.set(m.id, m)
+    return [...byId.values()].sort((a, b) => zamanDamgasi(a.scheduled_at) - zamanDamgasi(b.scheduled_at))
+  }, [canliHam, yaklasanHam])
+
+  const liveMatches = useMemo(
+    () => oyunVeSeviye(acikMaclar.filter(m => normalizeMatchStatus(m.status) === 'running')),
+    [acikMaclar, oyunVeSeviye],
+  )
+  const upcomingMatches = useMemo(
+    () => oyunVeSeviye(acikMaclar.filter(m => isUpcomingStatus(m.status))),
+    [acikMaclar, oyunVeSeviye],
+  )
 
   useEffect(() => {
     setStats({
@@ -1518,153 +1556,41 @@ export default function Dashboard() {
     })
   }, [liveMatches, upcomingMatches])
 
-  useEffect(() => {
-    const allMatches = [...liveMatches, ...upcomingMatches]
-    if (allMatches.length === 0) { setTeamFormMap(new Map()); return }
-
-    const teamIds = [...new Set(allMatches.flatMap(m => [m.team_a_id, m.team_b_id].filter(Boolean)))]
-    if (teamIds.length === 0) return
-
-    let cancelled = false
-
-    ;(async () => {
-      // DOĞRU YOL: takım BAŞINA son-5 (Postgres RPC, window function). Eski global
-      // limit(300) sorgusu ~60 takım için yetmiyor, az-oynayan takımların maçlarını
-      // kaçırıp eksik/yanlış form gösteriyordu (TeamPage ile çelişki). RPC yoksa
-      // (migration henüz çalışmadıysa) aşağıdaki eski yönteme düşer → kırılmaz.
-      try {
-        const { data, error } = await supabase.rpc('get_teams_recent_form', { p_team_ids: teamIds })
-        if (!error && Array.isArray(data)) {
-          if (cancelled) return
-          const map = new Map()
-          for (const row of data) {
-            const arr = String(row.form || '').split('').filter(c => c === 'W' || c === 'L')
-            if (arr.length) map.set(Number(row.team_id), arr)
-          }
-          setTeamFormMap(map)
-          return
-        }
-      } catch { /* RPC yok → fallback */ }
-
-      // Fallback (RPC yayınlanana kadar): eski global sorgu, limit 500.
-      try {
-        const idsStr = teamIds.join(',')
-        const { data, error } = await supabase
-          .from('matches')
-          .select('winner_id,team_a_id,team_b_id')
-          .eq('status', 'finished')
-          .or(`team_a_id.in.(${idsStr}),team_b_id.in.(${idsStr})`)
-          .order('scheduled_at', { ascending: false })
-          .limit(500)
-
-        if (error || cancelled) return
-
-        const map = new Map()
-        for (const row of data || []) {
-          const { winner_id, team_a_id, team_b_id } = row
-          if (!winner_id) continue
-          for (const tid of [team_a_id, team_b_id]) {
-            if (!tid) continue
-            const form = map.get(tid) || []
-            if (form.length < 5) {
-              form.push(Number(winner_id) === Number(tid) ? 'W' : 'L')
-              map.set(tid, form)
-            }
-          }
-        }
-        if (!cancelled) setTeamFormMap(map)
-      } catch { /* non-critical */ }
-    })()
-
-    return () => { cancelled = true }
-  }, [liveMatches, upcomingMatches])
-
-  // Aktif üst-tier turnuvalar: bugünün tarihi begin_at–end_at arasında olan S/A
-  // turnuvalar + katılan takım logoları. Canlı maçların altında bölüm olarak gösterilir.
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const nowIso = new Date().toISOString()
-        const { data: tRows, error } = await supabase
-          .from('tournaments')
-          .select('id,name,tier,begin_at,end_at,region,league_name,event_name,display_name,game:games(id,name,slug)')
-          .lte('begin_at', nowIso)
-          .gte('end_at', nowIso)
-          .order('begin_at', { ascending: false })
-          .limit(50)
-        if (error || cancelled) return
-
-        let list = (tRows || []).filter(t => {
-          const k = normalizeTierKey(t.tier)
-          return k === 'S' || k === 'A'
-        })
-        if (activeGame && activeGame !== 'all') {
-          list = list.filter(t => normalizeGameId(t.game?.slug ?? t.game?.name) === activeGame)
-        }
-        list = list.slice(0, 12)
-
-        // Katılan takım logolarını turnuvaların maçlarından türet.
-        const ids = list.map(t => t.id)
-        const teamsByTourn = new Map()
-        if (ids.length) {
-          const { data: mRows } = await supabase
-            .from('matches')
-            .select('tournament_id,team_a:teams!matches_team_a_id_fkey(id,name,logo_url),team_b:teams!matches_team_b_id_fkey(id,name,logo_url)')
-            .in('tournament_id', ids)
-            .limit(800)
-          for (const m of (mRows || [])) {
-            if (!teamsByTourn.has(m.tournament_id)) teamsByTourn.set(m.tournament_id, new Map())
-            const tm = teamsByTourn.get(m.tournament_id)
-            for (const t of [m.team_a, m.team_b]) {
-              if (t?.id && !tm.has(t.id)) tm.set(t.id, t)
-            }
-          }
-        }
-        const enriched = list.map(t => ({
-          ...t,
-          teams: Array.from(teamsByTourn.get(t.id)?.values() || []).slice(0, 7),
-        }))
-        if (!cancelled) setActiveTournaments(enriched)
-      } catch { /* non-critical */ }
-    })()
-    return () => { cancelled = true }
-  }, [activeGame])
-
-  useEffect(() => {
-    let cancelled = false
-
-    async function fetchFinishedAccuracyRows() {
-      try {
-        const selectColumns = 'id,status,winner_id,team_a_id,team_b_id,prediction_team_a,prediction_team_b,prediction_confidence'
-
-        const { data, error } = await supabase
-          .from('matches')
-          .select(selectColumns)
-          .eq('status', 'finished')
-          .not('winner_id', 'is', null)
-          .order('scheduled_at', { ascending: false })
-          .order('id', { ascending: false })
-          .limit(30)
-
-        if (error) throw error
-        if (!cancelled) {
-          setAccuracyRows(data || [])
-          setGlobalError('')
-        }
-      } catch (e) {
-        showGlobalConnectionWarning('Dashboard accuracy fetch', e)
-        if (!cancelled) setAccuracyRows([])
-      }
+  // Aktif üst-tier turnuvalar: bugün begin_at–end_at arasında olan S/A turnuvalar
+  // + katılan takım logoları (akışta hazır gelir). Canlı maçların altında gösterilir.
+  const activeTournaments = useMemo(() => {
+    let list = turnuvaHam.filter(t => {
+      const k = normalizeTierKey(t.tier)
+      return k === 'S' || k === 'A'
+    })
+    if (activeGame && activeGame !== 'all') {
+      list = list.filter(t => normalizeGameId(t.game?.slug ?? t.game?.name) === activeGame)
     }
+    return list.slice(0, 12).map(t => ({ ...t, teams: Array.isArray(t.teams) ? t.teams : [] }))
+  }, [turnuvaHam, activeGame])
 
-    fetchFinishedAccuracyRows()
-    const timer = window.setInterval(fetchFinishedAccuracyRows, DASHBOARD_ACCURACY_REFRESH_MIN_INTERVAL_MS)
-    return () => {
-      cancelled = true
-      window.clearInterval(timer)
+  // Fextopus isabet paneli: son 30 sonuçlanmış maç (eskiden 45 sn'de bir ayrı istek).
+  const accuracyRows = useMemo(
+    () => bitenHam.filter(m => m.winner_id != null).slice(0, 30),
+    [bitenHam],
+  )
+
+  // Son Sonuçlar: yalnız üst-tier (kesin S / A); FAVORİ takım maçları en üstte,
+  // sonra tarih (biten zaten tarih-desc, stable sort korunur).
+  const recentResults = useMemo(() => {
+    const favSet = new Set((followedTeamIds || []).map(String))
+    const involvesFav = (m) =>
+      favSet.has(String(m?.team_a_id)) || favSet.has(String(m?.team_b_id)) ||
+      favSet.has(String(m?.team_a?.id)) || favSet.has(String(m?.team_b?.id))
+    const topTierOnly = (m) => {
+      const k = normalizeTierKey(m?.tournament?.tier)
+      return k === 'S' || k === 'A'
     }
-  }, [showGlobalConnectionWarning])
+    return oyunVeSeviye(bitenHam)
+      .filter(topTierOnly)
+      .sort((a, b) => (involvesFav(b) ? 1 : 0) - (involvesFav(a) ? 1 : 0))
+      .slice(0, 15)
+  }, [bitenHam, oyunVeSeviye, followedTeamIds])
 
   const handleToggleFav = useCallback((teamId) => {
     if (!teamId) return
@@ -1694,140 +1620,132 @@ export default function Dashboard() {
     navigate(item.href)
   }, [navigate])
 
-  useEffect(() => {
-    let active = true
+  // Yayın yapısal değişim bildirince (maç başladı/bitti, yeni maç, yeniden bağlanma)
+  // tam akışı tazele; ardışık olayları tek isteğe topla.
+  const yenidenYukleRef = useRef(null)
+  const yenidenYuklePlanla = useCallback(() => {
+    clearTimeout(yenidenYukleRef.current)
+    yenidenYukleRef.current = setTimeout(() => { akisiYukle() }, DASHBOARD_YAYIN_TOPLAMA_MS)
+  }, [akisiYukle])
+  useEffect(() => () => clearTimeout(yenidenYukleRef.current), [])
 
+  // Takip akışı yenileyicisi aşağıda tanımlı; yayın dinleyicisi en güncele ref ile erişir.
+  const takipYukleRef = useRef(null)
+
+  useEffect(() => {
     const unsubscribe = subscribeToMatchesUpdates(payload => {
-      if (!active) return
+      if (payload?.eventType === 'RESYNC') {
+        // Bağlantı koptu ve geri geldi: aradaki değişimler kaçmış olabilir.
+        yenidenYuklePlanla()
+        takipYukleRef.current?.()
+        return
+      }
 
       const nextRow = payload?.new
-      const oldRow  = payload?.old || {}
       if (!nextRow?.id) return
-
-      const isInsert = payload.eventType === 'INSERT'
       const nextStatus = normalizeMatchStatus(nextRow.status)
-      const prevStatus = normalizeMatchStatus(oldRow.status)
 
-      // INSERT: yeni live maç — sadece running ise listeye ekle
-      if (isInsert) {
-        if (nextStatus === 'running') {
-          setLiveMatches(prev => prev.some(m => m.id === nextRow.id) ? prev : [...prev, nextRow])
-        } else if (isUpcomingStatus(nextStatus)) {
-          setUpcomingMatches(prev => prev.some(m => m.id === nextRow.id) ? prev : [...prev, nextRow])
+      if (payload.eventType === 'INSERT') {
+        // Yayın satırı takım/turnuva adı taşımaz → yarım kart eklemek yerine,
+        // listelere girecek yeni maç varsa akışı tazele.
+        if (nextStatus === 'running' || (isUpcomingStatus(nextStatus) && yaklasanPencerede(nextRow.scheduled_at))) {
+          yenidenYuklePlanla()
         }
         return
       }
 
-      // UPDATE: sadece anlamlı değişiklikler
-      const changed =
-        prevStatus !== nextStatus ||
-        oldRow.team_a_score !== nextRow.team_a_score ||
-        oldRow.team_b_score !== nextRow.team_b_score ||
-        oldRow.winner_id    !== nextRow.winner_id
+      // Skor/durum/saat yerinde yamanır (takım ve turnuva nesneleri korunur).
+      // Maç bir listede yoksa o liste aynı kalır → gereksiz render yok.
+      setCanliHam(prev => maclariYamala(prev, nextRow))
+      setYaklasanHam(prev => maclariYamala(prev, nextRow))
+      setBitenHam(prev => maclariYamala(prev, nextRow))
+      setTakipHam(prev => maclariYamala(prev, nextRow))
 
-      if (!changed) return
-
-      setLiveMatches(prev =>
-        patchMatchCollection(prev, nextRow)
-          .filter(m => normalizeMatchStatus(m.status) === 'running')
-      )
-      setUpcomingMatches(prev =>
-        patchMatchCollection(prev, nextRow)
-          .filter(m => isUpcomingStatus(normalizeMatchStatus(m.status)))
-      )
-      setMyFeedMatches(prev => {
-        const patched = patchMatchCollection(prev, nextRow).filter(m => {
-          const s = normalizeMatchStatus(m.status)
-          return s === 'running' || isUpcomingStatus(s)
-        })
-        setLiveFavCount(patched.filter(m => normalizeMatchStatus(m.status) === 'running').length)
-        return patched
-      })
+      // Başlayan/biten maç: biten listesi, form ve sayılar için tam yenileme.
+      if (normalizeMatchStatus(payload?.old?.status) !== nextStatus) yenidenYuklePlanla()
     })
 
     return () => {
-      active = false
       unsubscribe?.()
     }
-  }, [])
+  }, [yenidenYuklePlanla])
 
-  useEffect(() => {
-    let cancelled = false
+  // Takip Ettiklerim: takip edilen takım/oyuncuların yakın maçları (kullanıcıya özel,
+  // bu yüzden ana akıştan ayrı). Oyun/seviye filtresi istemcide uygulanır.
+  const takipIstegiRef = useRef(0)
+  const takipYukle = useCallback(async () => {
+    const istek = ++takipIstegiRef.current
+    try {
+      // Takip edilen oyunculardan takım ID'lerini topla.
+      let teamIds = [...followedTeamIds]
 
-    async function fetchMyFeed() {
-      try {
-        // Takip edilen oyunculardan takım ID'lerini topla.
-        let teamIds = [...followedTeamIds]
+      if (followedPlayerIds.length > 0) {
+        const { data: playerRows } = await supabase
+          .from('players')
+          .select('id, team_pandascore_id')
+          .in('id', followedPlayerIds)
 
-        if (followedPlayerIds.length > 0) {
-          const { data: playerRows } = await supabase
-            .from('players')
-            .select('id, team_pandascore_id')
-            .in('id', followedPlayerIds)
+        const playerTeamIds = (playerRows || [])
+          .map(p => p.team_pandascore_id)
+          .filter(Boolean)
 
-          const playerTeamIds = (playerRows || [])
-            .map(p => p.team_pandascore_id)
-            .filter(Boolean)
-
-          teamIds = [...new Set([...teamIds, ...playerTeamIds])]
-        }
-
-        if (teamIds.length === 0) {
-          if (!cancelled) {
-            setMyFeedMatches([])
-            setLiveFavCount(0)
-          }
-          return
-        }
-
-        const orFilter = teamIds
-          .flatMap(id => [`team_a_id.eq.${id}`, `team_b_id.eq.${id}`])
-          .join(',')
-
-        const now = new Date()
-        const recentUpcomingFloor = new Date(now.getTime() - (6 * 60 * 60 * 1000))
-        const soon = new Date(now)
-        soon.setDate(now.getDate() + UPCOMING_WINDOW_DAYS)
-
-        const { data } = await supabase
-          .from('matches')
-          .select(`
-            id, status, scheduled_at,
-            team_a_id, team_b_id, winner_id,
-            team_a_score, team_b_score,
-            prediction_team_a, prediction_team_b, prediction_confidence,
-            team_a:teams!matches_team_a_id_fkey(id,name,logo_url),
-            team_b:teams!matches_team_b_id_fkey(id,name,logo_url),
-            tournament:tournaments(id,name,tier,league_name,event_name,display_name,region),
-            game:games(id,name,slug)
-          `)
-          .or(orFilter)
-          .in('status', ['not_started', 'upcoming', 'running'])
-          .gte('scheduled_at', recentUpcomingFloor.toISOString())
-          .lte('scheduled_at', soon.toISOString())
-          .order('scheduled_at', { ascending: true })
-          .limit(40)
-
-        const baseFiltered = (data || []).filter(m => matchesDashboardGame(m, activeGame))
-        const filtered = filterMatchesByTournamentTier(baseFiltered, showAllTournamentTiers)
-
-        if (!cancelled) {
-          setMyFeedMatches(filtered)
-          setLiveFavCount(filtered.filter(m => m.status === 'running').length)
-          setGlobalError('')
-        }
-      } catch (e) {
-        showGlobalConnectionWarning('Dashboard my-feed fetch', e)
+        teamIds = [...new Set([...teamIds, ...playerTeamIds])]
       }
-    }
 
-    fetchMyFeed()
-    const timer = window.setInterval(fetchMyFeed, 60 * 1000)
-    return () => {
-      cancelled = true
-      window.clearInterval(timer)
+      if (teamIds.length === 0) {
+        if (istek === takipIstegiRef.current) setTakipHam([])
+        return
+      }
+
+      const orFilter = teamIds
+        .flatMap(id => [`team_a_id.eq.${id}`, `team_b_id.eq.${id}`])
+        .join(',')
+
+      const now = new Date()
+      const recentUpcomingFloor = new Date(now.getTime() - (6 * 60 * 60 * 1000))
+      const soon = new Date(now)
+      soon.setDate(now.getDate() + UPCOMING_WINDOW_DAYS)
+
+      const { data, error } = await supabase
+        .from('matches')
+        .select(`
+          id, status, scheduled_at,
+          team_a_id, team_b_id, winner_id,
+          team_a_score, team_b_score,
+          prediction_team_a, prediction_team_b, prediction_confidence,
+          team_a:teams!matches_team_a_id_fkey(id,name,logo_url),
+          team_b:teams!matches_team_b_id_fkey(id,name,logo_url),
+          tournament:tournaments(id,name,tier,league_name,event_name,display_name,region),
+          game:games(id,name,slug)
+        `)
+        .or(orFilter)
+        .in('status', ['not_started', 'upcoming', 'running'])
+        .gte('scheduled_at', recentUpcomingFloor.toISOString())
+        .lte('scheduled_at', soon.toISOString())
+        .order('scheduled_at', { ascending: true })
+        .limit(40)
+
+      if (error) throw error
+      if (istek !== takipIstegiRef.current) return
+      setTakipHam(data || [])
+      setGlobalError('')
+    } catch (e) {
+      showGlobalConnectionWarning('Dashboard my-feed fetch', e)
     }
-  }, [followedTeamIds, followedPlayerIds, activeGame, showAllTournamentTiers, showGlobalConnectionWarning])
+  }, [followedTeamIds, followedPlayerIds, showGlobalConnectionWarning])
+
+  useEffect(() => { takipYukleRef.current = takipYukle }, [takipYukle])
+  useEffect(() => { takipYukle() }, [takipYukle])
+  useYenileme(takipYukle, yenilemeAraligi, followedTeamIds.length > 0 || followedPlayerIds.length > 0)
+
+  const myFeedMatches = useMemo(() => oyunVeSeviye(takipHam).filter(m => {
+    const s = normalizeMatchStatus(m.status)
+    return s === 'running' || isUpcomingStatus(s)
+  }), [takipHam, oyunVeSeviye])
+  const liveFavCount = useMemo(
+    () => myFeedMatches.filter(m => normalizeMatchStatus(m.status) === 'running').length,
+    [myFeedMatches],
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -1932,163 +1850,97 @@ export default function Dashboard() {
     return () => { cancelled = true }
   }, [followedTeamIds, followedPlayerIds, myFeedMatches])
 
+  // Haber/canlı akış şeridi: akıştaki listelerden türetilir (eskiden dakikada bir
+  // 4 istek, biten 100 maçın tüm istatistiği dahil). Yalnız öyküye dönüşen ilk 6
+  // biten maçın istatistiği çekilir ve oturum boyunca önbellekte tutulur.
+  const istatistikOnbellegiRef = useRef(new Map())
   useEffect(() => {
     let cancelled = false
     const followScope = [...(followedTeamIds || [])].map(id => String(id)).sort().join('-') || 'none'
     const gameScope = [...(followedGames || [])].map(id => String(id)).sort().join('-') || 'none'
     const cacheScope = `${activeGame || 'all'}_${showAllTournamentTiers ? 'all' : 'hero'}_${followScope}_${gameScope}`
 
-    // Stale-while-revalidate: show cached ticker/news immediately, then refresh in background.
-    const cachedTicker = safeReadCache(DASHBOARD_TICKER_CACHE_KEY)
-    if (isFreshCache(cachedTicker, cacheScope) && Array.isArray(cachedTicker?.items) && cachedTicker.items.length > 0) {
-      setTickerItems(cachedTicker.items)
-      setTickerLoading(false)
-    } else {
+    if (!akisHazir) {
+      // Stale-while-revalidate: akış gelene kadar önbellekteki şeridi göster.
+      const cachedTicker = safeReadCache(DASHBOARD_TICKER_CACHE_KEY)
+      if (isFreshCache(cachedTicker, cacheScope) && Array.isArray(cachedTicker?.items) && cachedTicker.items.length > 0) {
+        setTickerItems(cachedTicker.items)
+        setTickerLoading(false)
+        return undefined
+      }
       const cachedNews = safeReadCache(DASHBOARD_NEWS_CACHE_KEY)
       if (isFreshCache(cachedNews, cacheScope)) {
         const cachedLines = buildTickerLines([], cachedNews.finishedStories || [], cachedNews.upcomingStories || [], followedTeamIds, followedGames)
         if (cachedLines.length > 0) {
           setTickerItems(cachedLines.slice(0, 36))
           setTickerLoading(false)
+          return undefined
         }
       }
-    }
-
-    async function fetchTickerFeed() {
       setTickerLoading(true)
-      try {
-        const upcomingFloorIso = new Date(Date.now() - (6 * 60 * 60 * 1000)).toISOString()
-        const upcomingCeilIso = new Date(Date.now() + (UPCOMING_WINDOW_DAYS * 24 * 60 * 60 * 1000)).toISOString()
-        const selectStr = `
-          id, status, scheduled_at, winner_id,
-          team_a_id, team_b_id, team_a_score, team_b_score,
-          prediction_team_a, prediction_team_b,
-          team_a:teams!matches_team_a_id_fkey(id,name,logo_url),
-          team_b:teams!matches_team_b_id_fkey(id,name,logo_url),
-          tournament:tournaments(id,name,tier,league_name,event_name,display_name,region),
-          game:games(id,name,slug)
-        `
-
-        const [runningRes, finishedRes, upcomingRes] = await Promise.all([
-          supabase
-            .from('matches')
-            .select(selectStr)
-            .eq('status', 'running')
-            .order('scheduled_at', { ascending: true })
-            .limit(7),
-          supabase
-            .from('matches')
-            .select(selectStr)
-            .eq('status', 'finished')
-            .order('scheduled_at', { ascending: false })
-            .limit(100),
-          supabase
-            .from('matches')
-            .select(selectStr)
-            .in('status', ['not_started', 'upcoming'])
-            .gte('scheduled_at', upcomingFloorIso)
-            .lte('scheduled_at', upcomingCeilIso)
-            .order('scheduled_at', { ascending: true })
-            .limit(8),
-        ])
-
-        if (runningRes.error) throw runningRes.error
-        if (finishedRes.error) throw finishedRes.error
-        if (upcomingRes.error) throw upcomingRes.error
-
-        const running = filterMatchesByTournamentTier(
-          (runningRes.data || []).filter(m => matchesDashboardGame(m, activeGame)),
-          showAllTournamentTiers
-        )
-        const finished = filterMatchesByTournamentTier(
-          (finishedRes.data || []).filter(m => matchesDashboardGame(m, activeGame)),
-          showAllTournamentTiers
-        )
-        const upcoming = filterMatchesByTournamentTier(
-          (upcomingRes.data || []).filter(m => matchesDashboardGame(m, activeGame)),
-          showAllTournamentTiers
-        )
-
-        let statsByMatch = new Map()
-        const finishedIds = finished.map(match => match.id).filter(Boolean)
-        if (finishedIds.length > 0) {
-          const { data: statRows, error: statErr } = await supabase
-            .from('match_stats')
-            .select('match_id,team_id,stats')
-            .in('match_id', finishedIds)
-
-          if (statErr) throw statErr
-
-          statsByMatch = new Map()
-          for (const row of (statRows || [])) {
-            if (!statsByMatch.has(row.match_id)) statsByMatch.set(row.match_id, [])
-            statsByMatch.get(row.match_id).push(row)
-          }
-        }
-
-        await turkTakimlariYukle()
-        const finishedStories = prioritizeStoriesForYou(
-          finished.slice(0, 6).map(match => buildFinishedStory(match, statsByMatch, isTurkishTeam)),
-          followedTeamIds,
-          followedGames,
-        )
-        const upcomingStories = prioritizeStoriesForYou(
-          upcoming.slice(0, 5).map(match => buildUpcomingStory(match, isTurkishTeam)),
-          followedTeamIds,
-          followedGames,
-        )
-        const lines = buildTickerLines(running, finishedStories, upcomingStories, followedTeamIds, followedGames)
-
-        if (!cancelled) {
-          const prepared = lines.slice(0, 36)
-          setTickerItems(prepared)
-          // Son Sonuçlar sıralaması: FAVORİ takım maçları en üstte → sonra hero-tier (S/A)
-          // → sonra tarih (finished zaten tarih-desc, stable sort korunur).
-          const favSet = new Set((followedTeamIds || []).map(String))
-          const involvesFav = (m) =>
-            favSet.has(String(m?.team_a_id)) || favSet.has(String(m?.team_b_id)) ||
-            favSet.has(String(m?.team_a?.id)) || favSet.has(String(m?.team_b?.id))
-          // Son Sonuçlar sadece üst-tier (kesin S / A) maçları göstersin — alt-tier gürültüsü olmasın.
-          const topTierOnly = (m) => {
-            const k = normalizeTierKey(m?.tournament?.tier)
-            return k === 'S' || k === 'A'
-          }
-          const orderedResults = [...finished]
-            .filter(topTierOnly)
-            .sort((a, b) => {
-              // Favori takım maçları en üstte; sonrası tarih-desc (finished zaten öyle sıralı, stable).
-              return (involvesFav(b) ? 1 : 0) - (involvesFav(a) ? 1 : 0)
-            })
-            .slice(0, 15)   // üst-tier çok maç olduğunda daha fazla göster (yoksa doğal olarak az)
-          setRecentResults(orderedResults)
-
-          safeWriteCache(DASHBOARD_TICKER_CACHE_KEY, {
-            scope: cacheScope,
-            updatedAt: Date.now(),
-            items: prepared,
-          })
-          safeWriteCache(DASHBOARD_NEWS_CACHE_KEY, {
-            scope: cacheScope,
-            updatedAt: Date.now(),
-            finishedStories,
-            upcomingStories,
-          })
-        }
-      } catch (e) {
-        showGlobalConnectionWarning('Dashboard ticker feed', e)
-        if (!cancelled) setTickerItems([])
-      } finally {
-        if (!cancelled) setTickerLoading(false)
-      }
+      return undefined
     }
 
-    fetchTickerFeed()
-    const timer = setInterval(fetchTickerFeed, 60 * 1000)
+    const running = oyunVeSeviye(acikMaclar.filter(m => normalizeMatchStatus(m.status) === 'running').slice(0, 7))
+    const finished = oyunVeSeviye(bitenHam)
+    const upcoming = oyunVeSeviye(acikMaclar.filter(m => isUpcomingStatus(m.status)).slice(0, 8))
+    const storyMatches = finished.slice(0, 6)
+
+    ;(async () => {
+      const cache = istatistikOnbellegiRef.current
+      const missingIds = storyMatches.map(m => m.id).filter(id => id && !cache.has(id))
+      if (missingIds.length > 0) {
+        // İstatistik yalnız öyküyü zenginleştirir → hatası şeridi düşürmez.
+        const { data: statRows, error: statErr } = await supabase
+          .from('match_stats')
+          .select('match_id,team_id,stats')
+          .in('match_id', missingIds)
+        if (statErr) {
+          console.error('Dashboard ticker stats:', statErr.message || statErr)
+        } else {
+          for (const id of missingIds) cache.set(id, [])
+          for (const row of (statRows || [])) cache.get(row.match_id)?.push(row)
+        }
+      }
+
+      await turkTakimlariYukle()
+      if (cancelled) return
+
+      const finishedStories = prioritizeStoriesForYou(
+        storyMatches.map(match => buildFinishedStory(match, cache, isTurkishTeam)),
+        followedTeamIds,
+        followedGames,
+      )
+      const upcomingStories = prioritizeStoriesForYou(
+        upcoming.slice(0, 5).map(match => buildUpcomingStory(match, isTurkishTeam)),
+        followedTeamIds,
+        followedGames,
+      )
+      const prepared = buildTickerLines(running, finishedStories, upcomingStories, followedTeamIds, followedGames).slice(0, 36)
+
+      setTickerItems(prepared)
+      setTickerLoading(false)
+      safeWriteCache(DASHBOARD_TICKER_CACHE_KEY, {
+        scope: cacheScope,
+        updatedAt: Date.now(),
+        items: prepared,
+      })
+      safeWriteCache(DASHBOARD_NEWS_CACHE_KEY, {
+        scope: cacheScope,
+        updatedAt: Date.now(),
+        finishedStories,
+        upcomingStories,
+      })
+    })().catch(e => {
+      if (cancelled) return
+      showGlobalConnectionWarning('Dashboard ticker feed', e)
+      setTickerLoading(false)
+    })
+
     return () => {
       cancelled = true
-      clearInterval(timer)
     }
-  }, [activeGame, followedTeamIds, followedGames, showAllTournamentTiers, showGlobalConnectionWarning])
+  }, [akisHazir, acikMaclar, bitenHam, oyunVeSeviye, activeGame, followedTeamIds, followedGames, showAllTournamentTiers, showGlobalConnectionWarning])
 
   useEffect(() => {
     if (MVP_HIDE_DREAM_TEAM) {
@@ -2585,10 +2437,11 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="content-in" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill,minmax(230px,1fr))', gap: 12 }}>
-            {liveMatches.map(m => (
+            {liveMatches.map((m, i) => (
               <LiveMatchCard
                 key={m.id}
                 match={m}
+                oncelikli={i < 2}
                 onMatchClick={handleMatchOpen}
                 favs={followedTeamIds}
                 onToggleFav={handleToggleFav}
@@ -2623,7 +2476,7 @@ export default function Dashboard() {
               <Link to="/tournaments" style={{ fontSize: 10, color: 'var(--text-5)', textDecoration: 'none' }}>Tümü →</Link>
             </div>
             <DragScroll className="scroll-fade-x" style={{ gap: 10, paddingBottom: 4 }} ariaLabel="Aktif turnuvalar">
-              {orderedTournaments.map(t => {
+              {orderedTournaments.map((t, ti) => {
                 const isLiveT = liveTournIds.has(t.id)
                 const tierK = normalizeTierKey(t.tier)
                 return (
@@ -2658,6 +2511,7 @@ export default function Dashboard() {
                         {t.teams.slice(0, 6).map((tm, i) => (
                           <InitialsImage
                             key={tm.id} src={tm.logo_url} name={tm.name} alt={tm.name}
+                            priority={liveMatches.length === 0 && ti === 0}
                             width={20} height={20} borderRadius={5} objectFit='contain'
                             style={{ marginLeft: i === 0 ? 0 : -4, border: '1px solid var(--surface)', background: 'var(--surface-2)' }}
                           />

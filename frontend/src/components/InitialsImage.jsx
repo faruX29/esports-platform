@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { kucukGorsel, THUMB_AZAMI_PX } from '../utils/gorsel'
 
 function buildInitials(name, max = 2) {
   const cleaned = String(name || '')
@@ -40,6 +41,11 @@ function makeTone(seed) {
 // için logolar boş kalıyordu → geri alındı (logo güvenilirliği > bayt tasarrufu).
 // İleride görsel optimizasyonu güvenilir bir çözümle (Vercel Image Opt / self-host
 // imgproxy) yapılabilir; wsrv KULLANMA.
+// Bugünkü küçültme proxy'siz: PandaScore'un kendi thumb_ sürümü (utils/gorsel.js);
+// thumb açılmazsa önce orijinal denenir, o da açılmazsa baş harfler.
+//
+// priority: ilk ekranda görünen (LCP adayı) görseller için → tembel yükleme yok,
+// tarayıcı yüksek öncelikle çeker. Yalnız ilk birkaç görsele ver.
 export default function InitialsImage({
   src,
   name,
@@ -54,11 +60,13 @@ export default function InitialsImage({
   fallbackBackground,
   fallbackBorder,
   fallbackColor,
+  priority = false,
 }) {
-  const [failed, setFailed] = useState(false)
+  // 0: thumb (ya da küçültülemeyen orijinal), 1: orijinal, 2: baş harfler
+  const [deneme, setDeneme] = useState(0)
 
   useEffect(() => {
-    setFailed(false)
+    setDeneme(0)
   }, [src])
 
   const label = name || alt || ''
@@ -72,14 +80,26 @@ export default function InitialsImage({
     : 28
   const textSize = Math.max(10, Math.round(baseSize * textScale))
 
-  if (src && !failed) {
+  // Yüzde gibi sayı olmayan boyutta ya da büyük basımda thumb kullanılmaz.
+  const sayisalEn = Math.max(numericWidth, numericHeight)
+  const thumbUygun = Number.isFinite(sayisalEn) && sayisalEn <= THUMB_AZAMI_PX
+  const thumb = thumbUygun ? kucukGorsel(src) : src
+  const gosterilen = deneme === 0 ? thumb : src
+  // thumb zaten orijinalse ikinci deneme anlamsız → doğrudan baş harfler
+  const sonraki = () => setDeneme(d => (d === 0 && thumb !== src ? 1 : 2))
+
+  if (src && deneme < 2) {
     return (
       <img
-        src={src}
+        // key: thumb → orijinal geçişinde YENİ <img> öğesi. Aynı öğe kalırsa global
+        // imageGuard'ın 2 sn sonraki yedek-logo değişimi sağlam orijinali de ezer.
+        key={gosterilen}
+        src={gosterilen}
         alt={alt || name || ''}
-        loading='lazy'
+        loading={priority ? 'eager' : 'lazy'}
+        fetchPriority={priority ? 'high' : undefined}
         decoding='async'
-        onError={() => setFailed(true)}
+        onError={sonraki}
         style={{
           width,
           height,

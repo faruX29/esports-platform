@@ -553,6 +553,9 @@ function RealtimeToastBridge() {
   const shownRef = useRef(new Map())
   const followedRef = useRef([])
   useEffect(() => { followedRef.current = (followedTeamIds || []).map(Number) }, [followedTeamIds])
+  // Kanal yalnız takip edilen takım varken açık: bildirim yalnız onlar için.
+  // Takipsiz ziyaretçi ana sayfa dışında hiç websocket açmaz (Realtime bağlantı kotası).
+  const takipVar = (followedTeamIds || []).length > 0
 
   const canManualTest = !!(
     import.meta.env.DEV
@@ -580,8 +583,10 @@ function RealtimeToastBridge() {
     // İzin, kullanıcı bir takım takip edince istenir (UserContext.followTeam).
     // Burada yalnızca zaten verilmiş izni kontrol et, prompt açma.
     requestBrowserNotificationPermission({ allowPrompt: false })
+    if (!takipVar) return undefined
 
     const unsubscribe = subscribeToMatchesUpdates(async payload => {
+      if (payload?.eventType === 'RESYNC') return
       const row = payload?.new || {}
       const aId = Number(row.team_a_id), bId = Number(row.team_b_id)
 
@@ -635,7 +640,7 @@ function RealtimeToastBridge() {
     return () => {
       unsubscribe?.()
     }
-  }, [])
+  }, [takipVar])
 
   return (
     <>

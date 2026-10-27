@@ -142,26 +142,113 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 	},
 })
 
+// ── Canlı maç yayını: uygulama başına TEK kanal ─────────────────────────────
+// Veritabanı tetikleyicisi (backend/sql/canli_yayin.sql) durum/skor/kazanan/saat
+// değişen maçları ifade başına tek Broadcast mesajında 'maclar' konusuna atar.
+// Eskiden her abone (App + Dashboard + Matches) kendi postgres_changes kanalını
+// açıyor, her satır yazımında tüm satırı (raw_data dahil) alıyordu.
+// Olay biçimi eskisiyle aynı: { eventType: 'INSERT'|'UPDATE', new, old }.
+// old artık gerçekten önceki durum/skor/kazananı taşır (RLS'li postgres_changes'te
+// yalnız id geliyordu). Yeniden bağlanınca { eventType: 'RESYNC' } yayılır: kopukken
+// kaçan değişimler için dinleyici listesini tazelemeli.
+const MACLAR_KONUSU = 'maclar'
+const KANAL_KAPATMA_GECIKMESI_MS = 5_000
+const macDinleyicileri = new Set()
+const baglantiDinleyicileri = new Set()
+let macKanali = null
+let kanalBagli = false
+let kanalHicBaglandi = false
+let kapatmaZamanlayicisi = null
+let kapanisSozu = null  // removeChannel sürerken yeni kanal açılmaz (aşağıya bak)
+
+function macDinleyicilerineYay(olay) {
+	for (const dinleyici of macDinleyicileri) {
+		try {
+			dinleyici(olay)
+		} catch (err) {
+			console.error('Canlı maç dinleyicisi:', err?.message || err)
+		}
+	}
+}
+
+function kanalDurumunuAyarla(bagli) {
+	if (kanalBagli === bagli) return
+	kanalBagli = bagli
+	for (const dinleyici of baglantiDinleyicileri) dinleyici(bagli)
+}
+
+function macKanaliniAc() {
+	if (macKanali) return
+	if (kapanisSozu) {
+		// supabase.channel() aynı konudaki kanalı yeniden kullanır; kapanmakta olan
+		// kanala abone olmak sessizce boşa düşer → kapanış bitince yeniden dene.
+		kapanisSozu.then(() => { if (!macKanali && macDinleyicileri.size > 0) macKanaliniAc() })
+		return
+	}
+	macKanali = supabase
+		.channel(MACLAR_KONUSU)
+		.on('broadcast', { event: 'degisim' }, ({ payload }) => {
+			const eventType = payload?.tur === 'insert' ? 'INSERT' : 'UPDATE'
+			for (const satir of payload?.maclar || []) {
+				if (!satir?.id) continue
+				const { eski, ...yeni } = satir
+				macDinleyicilerineYay({ eventType, new: yeni, old: eski ? { id: yeni.id, ...eski } : {} })
+			}
+		})
+		.subscribe(durum => {
+			if (durum === 'SUBSCRIBED') {
+				const yenidenBaglandi = kanalHicBaglandi
+				kanalHicBaglandi = true
+				kanalDurumunuAyarla(true)
+				if (yenidenBaglandi) macDinleyicilerineYay({ eventType: 'RESYNC', new: {}, old: {} })
+			} else {
+				// CHANNEL_ERROR / TIMED_OUT / CLOSED: realtime-js kendisi yeniden dener.
+				kanalDurumunuAyarla(false)
+			}
+		})
+}
+
+function macKanaliniKapatmayiPlanla() {
+	clearTimeout(kapatmaZamanlayicisi)
+	// Sayfa geçişinde (bir abone çıkıp diğeri girerken) kanalı kapatıp açmamak için gecikme.
+	kapatmaZamanlayicisi = setTimeout(() => {
+		if (macDinleyicileri.size > 0 || !macKanali) return
+		const kanal = macKanali
+		macKanali = null
+		kanalHicBaglandi = false
+		kanalDurumunuAyarla(false)
+		kapanisSozu = supabase.removeChannel(kanal)
+			.catch(() => {})
+			.finally(() => {
+				// Sunucu ayrılmayı onaylamadıysa (zaman aşımı) kanal listede kalır → zorla sök.
+				if (supabase.getChannels().includes(kanal)) kanal.teardown()
+				kapanisSozu = null
+			})
+	}, KANAL_KAPATMA_GECIKMESI_MS)
+}
+
 export function subscribeToMatchesUpdates(onUpdate) {
 	if (typeof onUpdate !== 'function') return () => {}
 
-	const channel = supabase
-		.channel(`matches_live_${Math.random().toString(36).slice(2, 9)}`)
-		.on(
-			'postgres_changes',
-			{ event: 'UPDATE', schema: 'public', table: 'matches' },
-			payload => onUpdate({ ...payload, eventType: 'UPDATE' })
-		)
-		.on(
-			'postgres_changes',
-			{ event: 'INSERT', schema: 'public', table: 'matches' },
-			payload => onUpdate({ ...payload, eventType: 'INSERT', old: {} })
-		)
-		.subscribe()
+	macDinleyicileri.add(onUpdate)
+	clearTimeout(kapatmaZamanlayicisi)
+	macKanaliniAc()
 
 	return () => {
-		supabase.removeChannel(channel)
+		macDinleyicileri.delete(onUpdate)
+		if (macDinleyicileri.size === 0) macKanaliniKapatmayiPlanla()
 	}
+}
+
+// Canlı kanal bağlı mı? Bağlıyken sayfalar yoklamayı seyrekleştirir.
+export function isMatchesChannelConnected() {
+	return kanalBagli
+}
+
+export function subscribeToMatchesChannelStatus(onChange) {
+	if (typeof onChange !== 'function') return () => {}
+	baglantiDinleyicileri.add(onChange)
+	return () => baglantiDinleyicileri.delete(onChange)
 }
 
 export function subscribeToNewsComments(newsId, { onInsert, onDelete } = {}) {

@@ -202,33 +202,41 @@ function Matches() {
   useEffect(() => {
     // Live tab: Realtime subscription — polling'e gerek yok
     if (activeTab === 'live') {
+      // Yeni başlayan maç: yayın satırı takım/turnuva adı taşımaz → yarım kart
+      // eklemek yerine listeyi tazele (oyun filtresi de böylece uygulanır).
+      let tazeleZamanlayici = null
+      const tazelePlanla = () => {
+        clearTimeout(tazeleZamanlayici)
+        tazeleZamanlayici = setTimeout(() => { fetchMatches() }, 4000)
+      }
       const unsub = subscribeToMatchesUpdates(payload => {
+        if (payload?.eventType === 'RESYNC') { tazelePlanla(); return }
         const nextRow = payload?.new
         if (!nextRow?.id) return
-        const isInsert = payload.eventType === 'INSERT'
         const nextStatus = String(nextRow.status || '').toLowerCase()
 
-        if (isInsert && nextStatus === 'running') {
-          setMatches(prev => prev.some(m => m.id === nextRow.id) ? prev : [nextRow, ...prev])
-          return
-        }
         if (nextStatus === 'running') {
+          // Listedekinin skorunu yerinde güncelle (takım nesneleri korunur)
           setMatches(prev =>
             prev.some(m => m.id === nextRow.id)
               ? prev.map(m => m.id === nextRow.id ? { ...m, ...nextRow } : m)
-              : [nextRow, ...prev]
+              : prev
           )
+          if (String(payload?.old?.status || '').toLowerCase() !== 'running') tazelePlanla()
         } else {
           // Artık live değil (finished/cancelled) — listeden çıkar
           setMatches(prev => prev.filter(m => m.id !== nextRow.id))
         }
       })
-      return unsub
+      return () => {
+        clearTimeout(tazeleZamanlayici)
+        unsub()
+      }
     }
 
-    // Diğer tablarda opsiyonel polling
+    // Diğer tablarda opsiyonel polling (sekme gizliyken atlanır)
     if (!autoRefresh) return
-    const interval = setInterval(fetchMatches, 30000)
+    const interval = setInterval(() => { if (!document.hidden) fetchMatches() }, 30000)
     return () => clearInterval(interval)
   }, [autoRefresh, activeTab, activeGame, sortBy, currentPage, gamesLoading])
 

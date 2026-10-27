@@ -364,6 +364,32 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
     })
   }, [open, popularTeams])
 
+  // Zaten takip edilen ama popüler listede olmayan takımlar (ör. kayıttan önce
+  // anonim takip edilip hesaba devredilen) görülenlerde yoksa listede hiç
+  // çıkmıyordu: seçili olduğu halde kullanıcı göremiyordu. Eksikleri çek.
+  useEffect(() => {
+    if (!open) return
+    const eksik = (teamIds || []).filter(id => !seenTeams[id])
+    if (!eksik.length) return
+    let iptal = false
+    supabase
+      .from('teams')
+      .select('id,name,acronym,logo_url,game_id,game:games(id,name,slug)')
+      .in('id', eksik)
+      .then(({ data, error }) => {
+        if (iptal) return
+        if (error) { console.warn('PreferencePickerModal secili takimlar:', error.message); return }
+        setSeenTeams(prev => {
+          const next = { ...prev }
+          for (const team of (data || [])) if (team?.id != null) next[team.id] = team
+          return next
+        })
+      })
+    return () => { iptal = true }
+    // seenTeams bilerek bağımlılık değil: yalnız prop'tan gelen takip listesi değişince çek
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, teamIds])
+
   // Canlı Supabase araması — tüm takımlar (yalnızca popülerler değil) takip edilebilsin.
   useEffect(() => {
     if (!open) return

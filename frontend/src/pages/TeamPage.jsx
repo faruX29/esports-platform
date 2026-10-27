@@ -239,7 +239,8 @@ function PlayerCard({ player }) {
         cursor: player.id ? 'pointer' : 'default',   // ← cursor
       }}
       onMouseEnter={e => {
-        e.currentTarget.style.borderColor = player.id ? badge.border : 'var(--surface-2)'
+        // Rolü bilinmeyen oyuncuda rozet yok (getRoleBadge null döner)
+        e.currentTarget.style.borderColor = player.id ? (badge?.border || 'var(--line-2)') : 'var(--surface-2)'
         e.currentTarget.style.transform   = player.id ? 'translateY(-4px)' : 'none'
       }}
       onMouseLeave={e => {

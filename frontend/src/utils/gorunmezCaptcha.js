@@ -53,6 +53,7 @@ export async function gorunmezCaptchaTokeni({ etiket = 'Devam etmek için doğru
 
     let bitti = false
     let widgetId = null
+    let hataSayisi = 0
     let sayac = setTimeout(() => son(new Error('captcha_zaman_asimi')), SESSIZ_SURE_MS)
 
     function son(hata, token) {
@@ -70,9 +71,16 @@ export async function gorunmezCaptchaTokeni({ etiket = 'Devam etmek için doğru
         sitekey: TURNSTILE_SITE_KEY,
         appearance: 'interaction-only',
         theme: document.documentElement.dataset.theme === 'light' ? 'light' : 'dark',
-        retry: 'never',
+        // Geçici hata (ağ, 600010 gibi istemci hatası) ilk seferde vazgeçme
+        // sebebi değil: Turnstile kendisi yeniden dener, 3. hatada bırakırız.
+        retry: 'auto',
+        'retry-interval': 2000,
         callback: token => son(null, token),
-        'error-callback': () => son(new Error('captcha_hata')),
+        'error-callback': kod => {
+          hataSayisi += 1
+          if (hataSayisi >= 3) son(new Error(`captcha_hata_${kod || ''}`))
+          return true // hata ele alındı; Turnstile konsola tekrar yazmasın
+        },
         'expired-callback': () => son(new Error('captcha_sure')),
         'unsupported-callback': () => son(new Error('captcha_desteklenmiyor')),
         'before-interactive-callback': () => {

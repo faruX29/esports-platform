@@ -8,6 +8,7 @@ import toast, { Toaster } from 'react-hot-toast'
 import { UserProvider, useUser } from './context/UserContext'
 import { AuthProvider } from './context/AuthContext'
 import { Analytics } from '@vercel/analytics/react'
+import { UYGULAMA } from './utils/platform'
 import { useAuth } from './context/AuthContext'
 import {
   supabase,
@@ -734,6 +735,9 @@ function ScrollToTop() {
 }
 
 /* ─── AppShell ──────────────────────────────────────────────────────────────── */
+// Yalnız uygulamada yüklenir (push); web paketine girmez.
+const UygulamaKopru = UYGULAMA ? lazy(() => import('./components/UygulamaKopru')) : null
+
 function AppShell() {
   const { pathname } = useLocation()
   return (
@@ -742,6 +746,7 @@ function AppShell() {
       <ScrollToTop />
       <RecoveryGate />
       <RealtimeToastBridge />
+      {UygulamaKopru && <Suspense fallback={null}><UygulamaKopru /></Suspense>}
       <NavbarComponent navLinks={NAV_LINKS} SearchComponent={NavSearch} />
       <GameSelectorBar />
       <main id="main-content">
@@ -802,7 +807,7 @@ export default function App() {
         <UserProvider>
           <GameProvider>
             <AppShell />
-            <Analytics />
+            {!UYGULAMA && <Analytics />}
           </GameProvider>
         </UserProvider>
       </AuthProvider>

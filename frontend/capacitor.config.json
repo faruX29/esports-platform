@@ -1,0 +1,29 @@
+{
+  "appId": "com.fextesports.app",
+  "appName": "feXt",
+  "webDir": "dist",
+  "server": {
+    "hostname": "app.fextesports.com",
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 3000,
+      "launchAutoHide": true,
+      "backgroundColor": "#0B0F19",
+      "showSpinner": false
+    },
+    "SystemBars": {
+      "insetsHandling": "native",
+      "initialViewportFitValueHint": "contain",
+      "style": "DARK"
+    },
+    "PushNotifications": {
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
+    }
+  }
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">feXt</string>
+    <string name="title_activity_main">feXt</string>
+    <string name="package_name">com.fextesports.app</string>
+    <string name="custom_url_scheme">com.fextesports.app</string>
+</resources>

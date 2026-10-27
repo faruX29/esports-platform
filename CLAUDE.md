@@ -15,6 +15,7 @@ Veri PandaScore'dan gelir; Python ETL Supabase Postgres'e yazar, React SPA okur.
 - **Backend:** Python 3.13 (CI), psycopg 3, requests, google-genai (haber metni)
 - **Veritabanı:** Supabase (Postgres 17, Auth, Storage, Vault, pg_cron, pg_net)
 - **Barındırma:** Vercel (`frontend/` kökü; `main`'e push → otomatik deploy)
+- **Mobil:** Capacitor 8 (Android; `frontend/android/`), aynı Vite build'ini sarar. Push FCM ile (Firebase `fext-502812`)
 - **Zamanlanmış işler:** GitHub Actions + Postgres içinde pg_cron
 - **Sosyal video:** Pillow + imageio-ffmpeg
 
@@ -30,6 +31,9 @@ Veri PandaScore'dan gelir; Python ETL Supabase Postgres'e yazar, React SPA okur.
 - `frontend/api/`: Vercel fonksiyonları (`og.js` paylaşım görseli, `sitemap.js`)
 - `social/`: sosyal medya video üreticileri; çıktı `social/cikti/` (gitignore)
 - `.github/workflows/`: zamanlanmış ETL, içerik üretimi, günlük radar videosu
+- `frontend/android/`: Capacitor Android projesi (`capacitor.config.json`). Uygulamaya özel kod:
+  `utils/platform.js` (`UYGULAMA`, `disariKok()`), `utils/uygulamaKurulum.js` (geri tuşu, splash),
+  `components/UygulamaKopru.jsx` + `utils/push.js` (push), `utils/uygulamaGiris.js` (Google, PKCE)
 
 ## Komutlar
 ```bash
@@ -41,6 +45,9 @@ python run.py --live --all-games --limit 20 --fix-orphans # canlı maçlar + tak
 python run.py --generate-news --news-hours 2              # haber üretimi
 python run.py --help                                      # diğer tüm bayraklar
 python isletim/saglik.py --kuru                           # sağlık raporunu göndermeden ekrana bas
+# mobil (cd frontend) — JDK 21 gerekir (Gradle 8.14 Android Studio'nun JDK 25'iyle koşmaz)
+npm run build:app                                         # vite --mode app + cap sync android
+cd android && ./gradlew assembleDebug                     # APK: app/build/outputs/apk/debug/
 # sosyal (cd social)
 python radar.py [YYYY-AA-GG] | python karne.py | python champions.py [grup] | python asama.py kazananlar
 ```
@@ -49,6 +56,8 @@ python radar.py [YYYY-AA-GG] | python karne.py | python champions.py [grup] | py
 - backend: `DATABASE_URL` `PANDASCORE_TOKEN` `GEMINI_API_KEY` `RESEND_API_KEY` `SUPABASE_URL` `SUPABASE_SERVICE_KEY`
 - frontend: `VITE_SUPABASE_URL` `VITE_SUPABASE_ANON_KEY` `VITE_TURNSTILE_SITE_KEY` `SITE_URL`
 - Postgres Vault: `pandascore_token` (canlı senkron okur)
+- uygulama: `frontend/.env.app` (`VITE_TURNSTILE_SITE_KEY`; gerisi `.env`'den, eksikse `build:app` durur) ve
+  `frontend/android/app/google-services.json` (Firebase; ikisi de gitignore, yoksa release derlemesi durur)
 
 ## Altyapı gerçekleri
 - **Canlı skor** Postgres'te koşar: pg_cron `canli-senkron` dakikada bir (`backend/sql/canli_senkron.sql`). Sorun olursa: `cron.job_run_details`.
@@ -71,6 +80,17 @@ python radar.py [YYYY-AA-GG] | python karne.py | python champions.py [grup] | py
 - Yeni SQL `backend/sql/` altına, tekrar çalıştırılabilir (`IF NOT EXISTS`, `CREATE OR REPLACE`).
 - Göreve ilgili klasörden başla, tüm projeyi tarama.
 
+## Mobil uygulama gerçekleri
+- Uygulama sayfayı `https://app.fextesports.com`'dan **yerel dosyalarla** açar (`server.hostname`; dışarıda böyle bir
+  site yok). Turnstile bu adı ana alan adı üzerinden kabul eder. Web'deki CSP/`vercel.json` uygulamada geçmez.
+- `--mode app` build'i `index.html`'den `viewport-fit=cover` ve SW kaydını çıkarır (`vite.config.js`); web'in
+  `index.html`'i ve CSP hash'leri bu yüzden değişmez. Android web görünümü sistem çubuklarının arasında durur.
+- Push yalnız kayıtlı hesaba: izin ilk kayıtlı oturumda bir kez sorulur, token `push_token_kaydet` ile yazılır,
+  **çıkışta silinir** (`utils/push.js birak`). Bildirime basınca `veri.url` (yalnız site içi yol) açılır.
+- Google girişi sistem tarayıcısında, dönüş `com.fextesports.app://giris` (Supabase Redirect URLs'te kayıtlı);
+  kod ayrı PKCE istemcisiyle takas edilir, ana istemci implicit kalır (şifre sıfırlama linki tarayıcıda açılsın diye).
+- Dış link ve `window.open` sistem tarayıcısında açılır; uygulama yerinde kalır.
+
 ## Doğrulama (test YOK)
 Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - **Veri:** psycopg ile doğrudan sorgu (ör. kazanan–skor çelişkisi sayımı); düzeltmeden önce ve sonra say.
@@ -78,6 +98,8 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - **SEO/bot HTML:** Googlebot UA ile iste, `?__og=1&cb=<rastgele>` ekleyip önbelleği atla. `<title>` middleware'deki varsayılan kabuk başlığıysa sayfa bozuktur.
 - **Frontend:** `npm run build` + `npm run lint`, sonra canlıda ekran görüntüsü.
 - **Video:** ffmpeg ile kare çıkarıp bak.
+- **Uygulama:** USB'li telefona `adb install -r`, ekran `adb exec-out screencap -p`; web görünümüne
+  `adb forward tcp:9222 localabstract:webview_devtools_remote_<pid>` ile bağlanıp CDP'den durum oku (debug build).
 
 ## Asla yapma
 - Skoru `results[]` sırasıyla yazma → `team_id` ile eşleştir; sıra `opponents[]` ile aynı değil, skorlar ters yazıldı.
@@ -98,6 +120,9 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - `matches`'a `postgres_changes` aboneliği açma ya da tabloyu `supabase_realtime` yayınına ekleme → her satır yazımı (ETL'in değişmeyen yazımları dahil) tam satırıyla her açık sekmeye gider. Canlı veri `maclar` Broadcast'inden; yeni abone `subscribeToMatchesUpdates`'i kullanır. Yoklama için düz `setInterval` değil `useYenileme`.
 - Middleware'de sayfanın ana varlığını `sbFetch` ile çekme → hatayı "yok"la karıştırır; `sbBul` kullan, boşsa `YOK` dön (404 + noindex), hata SPA'ya düşer (geçici arıza 404 olmasın).
 - Middleware yanıtına `s-maxage` koyup CPU'yu koruduğunu sanma → middleware önbellekten önce her istekte koşar.
+- Paylaşılan/e-postaya giden linki `window.location.origin` ile kurma → uygulamada `app.fextesports.com` olur; `disariKok()`.
+- Capacitor eklentisini web koduna statik import etme → web paketine girer; `UYGULAMA` koşulu + dinamik import.
+- Uygulamada `supabase.auth.signOut` öncesi push token'ını bırakmadan çıkış akışı yazma → çıkılan telefon bildirim almaya devam eder.
 - Türkçe yerelde İngilizce terimi büyük harfe çevirme → "WINNERS" "WİNNERS" olur.
 - Windows'ta Türkçe/Unicode içerikli heredoc ile dosya yazma → cp1254 karakterleri bozar.
 - Sosyal videoda Inter dışında font kullanma → Baloo yalnız logoda.

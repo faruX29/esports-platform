@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient'
+import { PLATFORM } from './platform'
 
 /**
  * Tarayıcı hatalarını client_errors tablosuna yazar (backend/sql/hata_izleme.sql).
@@ -9,7 +10,8 @@ import { supabase } from '../supabaseClient'
 
 const SINIR = { hata: 5, csp: 3 }
 const DEPO_ANAHTARI = 'fext_hata_sayac'
-const SURUM = import.meta.env.VITE_SURUM || 'yerel'
+// Uygulamadan gelen hata sürümün önünde platformla ayrışır (ör. android-1a2b3c4).
+const SURUM = (PLATFORM === 'web' ? '' : `${PLATFORM}-`) + (import.meta.env.VITE_SURUM || 'yerel')
 
 // Bizim kodumuzla ilgisi olmayan, düzeltilemeyen gürültü.
 const GURULTU_RE = /ResizeObserver loop|^Script error\.?$|Non-Error promise rejection captured/i

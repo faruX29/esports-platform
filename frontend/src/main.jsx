@@ -6,6 +6,7 @@ import { bootstrapGlobalImageGuard } from './utils/imageGuard'
 import { hataDinleyicileriniKur } from './utils/hataBildir'
 import { anaSayfaAkisiniOnYukle } from './utils/anaSayfaAkisi'
 import { bayatParcadaYenile } from './utils/bayatParca'
+import { UYGULAMA } from './utils/platform'
 
 hataDinleyicileriniKur()
 bootstrapGlobalImageGuard()
@@ -23,3 +24,9 @@ createRoot(document.getElementById('root')).render(
     <App />
   </StrictMode>,
 )
+
+if (UYGULAMA) {
+  import('./utils/uygulamaKurulum')
+    .then((m) => m.uygulamayiKur())
+    .catch((err) => console.error('Uygulama kurulumu başarısız:', err))
+}

@@ -23,3 +23,14 @@ tmpclaude-*-cwd
 
 # Supabase CLI geçici dosyaları (proje bağlantısı, sürüm önbelleği)
 **/supabase/.temp/
+
+# Ortam dosyalari (.env.app: uygulama build'i icin, npm run build:app)
+.env.*
+!.env.example
+
+# Android imza anahtari ve Firebase yapilandirmasi: repo PUBLIC, asla commit'lenmez.
+# Kopyalari kurucunun sifre yoneticisinde / private notlarda.
+*.jks
+*.keystore
+keystore.properties
+frontend/android/app/google-services.json

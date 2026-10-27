@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { gorunmezCaptchaTokeni } from '../utils/gorunmezCaptcha'
+import { UYGULAMA, disariKok } from '../utils/platform'
 
 const AuthContext = createContext(null)
 
@@ -248,7 +249,8 @@ export function AuthProvider({ children }) {
 
 	// ── Şifre sıfırlama (Gemini launch-blocker) ────────────────────────────────
 	async function requestPasswordReset(email, captchaToken) {
-		const redirectTo = `${window.location.origin}/reset-password`
+		// Uygulamada da e-postadaki link siteye gider (app.fextesports.com dışarıda yok).
+		const redirectTo = `${disariKok()}/reset-password`
 		const { error } = await supabase.auth.resetPasswordForEmail(String(email || '').trim(), {
 			redirectTo,
 			...(captchaToken ? { captchaToken } : {}),
@@ -274,6 +276,8 @@ export function AuthProvider({ children }) {
 	// ⚠️ Supabase → Auth → Providers → Google AÇIK olmalı + Google Cloud OAuth
 	// client kurulmalı, yoksa "provider not enabled" döner. [[auth-onboarding]]
 	async function signInWithGoogle() {
+		// Uygulamada sistem tarayıcısı + PKCE; dönüşü UygulamaKopru işler (utils/uygulamaGiris.js).
+		if (UYGULAMA) return (await import('../utils/uygulamaGiris')).googleIleGir()
 		const { error } = await supabase.auth.signInWithOAuth({
 			provider: 'google',
 			options: { redirectTo: `${window.location.origin}/` },
@@ -304,6 +308,10 @@ export function AuthProvider({ children }) {
 	}
 
 	async function signOut() {
+		// Uygulamada cihazın push token'ı oturum kapanmadan silinir (RLS sahibine izin verir).
+		if (UYGULAMA) {
+			try { await (await import('../utils/push')).birak() } catch (err) { console.error('Push bırakılamadı:', err) }
+		}
 		const { error } = await supabase.auth.signOut()
 		if (error) throw error
 		setProfileLoading(false)

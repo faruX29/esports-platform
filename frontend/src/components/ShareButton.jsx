@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Check, Link2 } from 'lucide-react'
+import { UYGULAMA, disariKok } from '../utils/platform'
 
 /**
  * Paylaşım butonu — X (Twitter) + kopyala-link.
@@ -13,15 +14,21 @@ import { Check, Link2 } from 'lucide-react'
 export default function ShareButton({ path, title = '', compact = false }) {
   const [copied, setCopied] = useState(false)
 
-  const buildUrl = () => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : ''
-    return `${origin}${path || ''}`
-  }
+  // Uygulamada window.location.origin dışarıda olmayan app.fextesports.com'dur (utils/platform.js).
+  const buildUrl = () => `${disariKok()}${path || ''}`
 
   const stop = e => { e.preventDefault(); e.stopPropagation() }
 
   async function copyLink(e) {
     stop(e)
+    // Uygulamada sistemin paylaşım sayfası (kopyala da orada); Android web görünümünde navigator.share yok.
+    if (UYGULAMA) {
+      try {
+        const { Share } = await import('@capacitor/share')
+        await Share.share({ title, url: buildUrl() })
+      } catch { /* iptal */ }
+      return
+    }
     try {
       await navigator.clipboard.writeText(buildUrl())
       setCopied(true)

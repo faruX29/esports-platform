@@ -39,8 +39,13 @@ function sayaciArtir(kova) {
  * @param {string} mesaj
  * @param {string} [yigin]
  */
+// Yerelde `vite preview` ile denenen üretim build'i canlı tabloyu kirletmesin.
+// Capacitor https://localhost / capacitor://localhost kullanır; o bildirir.
+const YEREL_ONIZLEME = typeof window !== 'undefined' && window.location.protocol === 'http:'
+  && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)
+
 export function hataBildir(tur, mesaj, yigin) {
-  if (!import.meta.env.PROD) return
+  if (!import.meta.env.PROD || YEREL_ONIZLEME) return
   const metin = String(mesaj || '').trim()
   if (!metin || GURULTU_RE.test(metin)) return
   if (EKLENTI_RE.test(metin) || EKLENTI_RE.test(yigin || '')) return

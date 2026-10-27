@@ -155,6 +155,37 @@ async function sbFetch(path) {
   return rows[0] || null
 }
 
+// Sayfanın ANA varlığı için (maç/takım/oyuncu/turnuva/haber satırı). sbFetch hatayı
+// boş sonuçla karıştırır; burada hata fırlatılır → middleware SPA'ya düşer (200),
+// null ise varlık gerçekten yok → 404. Geçici Supabase arızası Google'a 404 göstermesin.
+async function sbBul(path) {
+  const base = process.env.VITE_SUPABASE_URL
+  const key = process.env.VITE_SUPABASE_ANON_KEY
+  if (!base || !key) throw new Error('supabase env yok')
+  const res = await fetch(`${base}/rest/v1/${path}`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+  })
+  if (!res.ok) throw new Error(`supabase ${res.status}`)
+  const rows = await res.json()
+  return (Array.isArray(rows) ? rows[0] : rows) || null
+}
+
+// Soft 404 kapatma (Denetim Faz 5): olmayan maç/takım/oyuncu/turnuva/haber eskiden
+// bota 200 + SPA kabuğu dönüyordu → Google boş kabuğu "soft 404" ya da kopya sayar.
+// Artık gerçek 404 + noindex; gezinme linkleri kalır (tarama çıkmaz sokakta bitmesin).
+const YOK = Symbol('yok')
+const SAYI_RE = /^\d+$/
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function bulunamadiHtml(origin) {
+  return `<!DOCTYPE html><html lang="tr"><head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Sayfa bulunamadı — feXt</title>
+<meta name="robots" content="noindex, follow"/>
+</head><body><h1>Sayfa bulunamadı</h1><p>Aradığınız sayfa yok ya da kaldırıldı.</p>${siteNavHtml(origin)}</body></html>`
+}
+
 // Dinamik OG kartı üretimi (@vercel/og) kart başına ~1.7sn SAF CPU harcıyor ve
 // her maçın kendine ait bir kart URL'i var (~15.6k maç). Sosyal medyada gerçekte
 // paylaşılan şeyler haberler ve yakın tarihli/yaklaşan maçlar; aylar önceki bir
@@ -232,7 +263,7 @@ function predHook(pa, pb, aName, bName) {
   const favProb = Math.max(fa, fb)
   if (favProb < 0.6) return ''
   const fav = fa >= fb ? aName : bName
-  return `AI: %${Math.round(favProb * 100)} ${fav}`
+  return `Fextopus: %${Math.round(favProb * 100)} ${fav}`
 }
 
 // Event yapısal verisi ortak alanları. location + startDate KRİTİK (Google zengin
@@ -313,8 +344,8 @@ async function buildForMatch(id, origin, url) {
     'team_a:teams!matches_team_a_id_fkey(name,logo_url,country_code),' +
     'team_b:teams!matches_team_b_id_fkey(name,logo_url,country_code),' +
     'tournament:tournaments(name,tier,league_name,event_name,display_name),game:games(slug,name)'
-  const row = await sbFetch(`matches?id=eq.${encodeURIComponent(id)}&select=${encodeURIComponent(sel)}&limit=1`)
-  if (!row) return null
+  const row = await sbBul(`matches?id=eq.${encodeURIComponent(id)}&select=${encodeURIComponent(sel)}&limit=1`)
+  if (!row) return YOK
   const a = row.team_a?.name || 'Takım A'
   const b = row.team_b?.name || 'Takım B'
   const gm = gameMeta(row.game?.slug)
@@ -358,7 +389,7 @@ async function buildForMatch(id, origin, url) {
       `${oyunAd} maç sonucu, Fextopus tahmini ve istatistikler — feXt.`
   } else {
     desc = `${a} – ${b} maçı${tarih ? `, ${tarih}` : ''}.` +
-      `${p ? ` Fextopus tahmini: ${p.replace('AI: ', '')}.` : ''} ` +
+      `${p ? ` Fextopus tahmini: ${p.replace('Fextopus: ', '')}.` : ''} ` +
       `${oyunAd} canlı skor, kadro ve maç analizi — feXt.`
   }
   const teams = [{ '@type': 'SportsTeam', name: a }, { '@type': 'SportsTeam', name: b }]
@@ -388,7 +419,7 @@ async function buildForMatch(id, origin, url) {
   const haberYol = haber ? newsPath(haber) : null
   if (haberYol) satirlar.push(`<li><a href="${origin}${haberYol}">${esc(haber.title || 'Maç haberi')}</a></li>`)
 
-  const tahminP = p ? `<p>Fextopus tahmin motoru bu maçta ${esc(p.replace('AI: ', ''))} veriyordu.</p>` : ''
+  const tahminP = p ? `<p>Fextopus tahmin motoru bu maçta ${esc(p.replace('Fextopus: ', ''))} veriyordu.</p>` : ''
   const kunye = `<p>${esc(oyunAd)}${turSahne ? ` · ${esc(turSahne)}` : ''}${row.tournament?.tier ? ` · ${esc(String(row.tournament.tier).toUpperCase())}-Tier` : ''}${tarih ? ` · ${esc(tarih)}` : ''}</p>`
   const body = `<h1>${esc(title)}</h1><p>${esc(desc)}</p>${kunye}${tahminP}` +
     (satirlar.length ? `<h2>İlgili Sayfalar</h2><ul>${satirlar.join('')}</ul>` : '') +
@@ -428,7 +459,7 @@ async function buildForNews(ref, origin, url) {
   } else {
     query = `news_articles?match_id=eq.${encodeURIComponent(ref.id)}&variant=neq.preview&select=${encodeURIComponent(sel)}&order=created_at.desc&limit=1`
   }
-  let row = await sbFetch(query)
+  let row = await sbBul(query)
   // Maç haberlerinde önce maç SONRASI yazı aranır (variant≠preview) — aynı maçın
   // hem önizlemesi hem özeti olabilir, doğru olan özettir. Ama maç henüz
   // oynanmadıysa elde YALNIZCA preview vardır; eskiden burada null dönülüp bot
@@ -441,11 +472,17 @@ async function buildForNews(ref, origin, url) {
   // istekli taradığı içerik. Bu, GSC'deki "kopya, kullanıcı tarafından seçilmiş
   // canonical yok" uyarısının ayakta kalan son kaynağıydı.
   if (!row && ref.type === 'match') {
-    row = await sbFetch(
+    row = await sbBul(
       `news_articles?match_id=eq.${ENC(ref.id)}&select=${ENC(sel)}&order=created_at.desc&limit=1`,
     )
   }
-  if (!row) return null
+  if (!row) {
+    // Haberi olmayan maçta SPA maç verisinden sayfa kuruyor (NewsDetailPage) →
+    // maç varsa kabuğa düş (eski davranış), maç da yoksa gerçekten 404.
+    if (ref.type !== 'match') return YOK
+    const mac = await sbBul(`matches?id=eq.${ENC(ref.id)}&select=id&limit=1`)
+    return mac ? null : YOK
+  }
   const gm = gameMeta(row.game_slug)
   // Maçlardaki OG_FRESH_DAYS kuralı haberlere de (22 Eyl). Haberde tarih sınırı
   // YOKTU: 1.300+ haberin her biri bot geldiğinde ~1,7 sn CPU'luk kart üretiyordu
@@ -509,8 +546,8 @@ const ENC = encodeURIComponent
 const MATCH_SEL = 'id,team_a_score,team_b_score,scheduled_at,team_a:teams!matches_team_a_id_fkey(name),team_b:teams!matches_team_b_id_fkey(name)'
 
 async function buildForTeam(id, origin, url) {
-  const team = await sbFetch(`teams?id=eq.${ENC(id)}&select=${ENC('name,logo_url,game:games(name,slug)')}&limit=1`)
-  if (!team) return null
+  const team = await sbBul(`teams?id=eq.${ENC(id)}&select=${ENC('name,logo_url,game:games(name,slug)')}&limit=1`)
+  if (!team) return YOK
   const name = team.name || 'Takım'
   const gm = gameMeta(team.game?.slug)
   const matches = await sbFetchAll(`matches?or=(team_a_id.eq.${ENC(id)},team_b_id.eq.${ENC(id)})&status=eq.finished&select=${ENC(MATCH_SEL)}&order=scheduled_at.desc&limit=10`)
@@ -557,8 +594,8 @@ async function buildForTeam(id, origin, url) {
 
 async function buildForPlayer(id, origin, url) {
   // NOT: players↔teams FK yok; players.team_pandascore_id === teams.id (ayrı sorgu).
-  const p = await sbFetch(`players?id=eq.${ENC(id)}&select=${ENC('nickname,role,nationality,image_url,team_pandascore_id')}&limit=1`)
-  if (!p) return null
+  const p = await sbBul(`players?id=eq.${ENC(id)}&select=${ENC('nickname,role,nationality,image_url,team_pandascore_id')}&limit=1`)
+  if (!p) return YOK
   const nick = p.nickname || 'Oyuncu'
   let team = null
   if (p.team_pandascore_id != null) {
@@ -667,11 +704,11 @@ async function buildForPlayer(id, origin, url) {
 }
 
 async function buildForTournament(id, origin, url) {
-  const t = await sbFetch(
+  const t = await sbBul(
     `tournaments?id=eq.${ENC(id)}` +
     `&select=${ENC('name,tier,begin_at,end_at,league_name,event_name,display_name')}&limit=1`,
   )
-  if (!t) return null
+  if (!t) return YOK
   const name = turnuvaAdi(t, true) || t.name || 'Turnuva'
   const matches = await sbFetchAll(`matches?tournament_id=eq.${ENC(id)}&select=${ENC(MATCH_SEL)}&order=scheduled_at.desc&limit=15`)
   const title = `${name} — Fikstür, Puan Durumu ve Sonuçlar`
@@ -989,18 +1026,32 @@ export default async function middleware(req) {
     if (STATIC_ROUTES[path]) {
       html = await buildForStatic(path, SITE_ORIGIN, canon)
     } else if (path.startsWith('/match/')) {
-      if (seg) html = await buildForMatch(seg, SITE_ORIGIN, canon)
+      // Biçimi tutmayan kimlik (ör. /match/abc) PostgREST'te 400 → sbBul fırlatır →
+      // 200 kabuk olurdu; sorgusuz 404.
+      if (seg) html = SAYI_RE.test(seg) ? await buildForMatch(seg, SITE_ORIGIN, canon) : YOK
     } else if (path.startsWith('/news/') && path !== '/news/archive') {
-      const ref = parseNewsRef(seg)
-      if (ref) html = await buildForNews(ref, SITE_ORIGIN, canon)
+      if (seg) {
+        const ref = parseNewsRef(seg)
+        html = ref ? await buildForNews(ref, SITE_ORIGIN, canon) : YOK
+      }
     } else if (path.startsWith('/team/')) {
-      if (seg) html = await buildForTeam(seg, SITE_ORIGIN, canon)
+      if (seg) html = SAYI_RE.test(seg) ? await buildForTeam(seg, SITE_ORIGIN, canon) : YOK
     } else if (path.startsWith('/player/')) {
-      if (seg) html = await buildForPlayer(seg, SITE_ORIGIN, canon)
+      if (seg) html = UUID_RE.test(seg) ? await buildForPlayer(seg, SITE_ORIGIN, canon) : YOK
     } else if (path.startsWith('/tournament/')) {
-      if (seg) html = await buildForTournament(seg, SITE_ORIGIN, canon)
+      if (seg) html = SAYI_RE.test(seg) ? await buildForTournament(seg, SITE_ORIGIN, canon) : YOK
     }
 
+    if (html === YOK) {
+      return new Response(bulunamadiHtml(SITE_ORIGIN), {
+        status: 404,
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          // Kısa önbellek: yeni eklenen varlık (ör. sonradan senkronlanan maç) uzun süre 404 kalmasın.
+          'cache-control': 'public, max-age=300, s-maxage=3600',
+        },
+      })
+    }
     if (html) {
       return new Response(html, {
         headers: {

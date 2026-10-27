@@ -4,8 +4,8 @@ import { GAME_COLORS } from '../theme';
 export const GAMES = [
   {
     id:         'all',
-    label:      'All Games',
-    shortLabel: 'All',
+    label:      'Tüm oyunlar',
+    shortLabel: 'Tümü',
     icon:       '🎮',
     color:      GAME_COLORS.all,
     soon:       false,

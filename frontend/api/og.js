@@ -7,7 +7,7 @@
  *
  * Kullanım (og:image):
  *   /api/og?a=Karmine%20Corp&b=Team%20Liquid&la=<logoUrl>&lb=<logoUrl>
- *           &s=2%20-%201&g=VALORANT&t=S&tn=VCT%20Masters&p=AI:%20%2572%20Karmine&c=C8102E&sig=<imza>
+ *           &s=2%20-%201&g=VALORANT&t=S&tn=VCT%20Masters&p=Fextopus:%20%2572%20Karmine&c=C8102E&sig=<imza>
  *   URL'yi yalnız middleware üretir; `sig` olmadan istek og-default.jpg'e döner.
  *
  * NOT: JSX yerine React.createElement — Vercel'in Vite (non-Next) zero-config

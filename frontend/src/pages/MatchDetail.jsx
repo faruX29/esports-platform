@@ -805,7 +805,7 @@ function CommunityPredictionPool({ matchId, teamAName, teamBName, aiWin, isFinis
 
         <div>
           <div style={{ fontSize: 10, fontWeight: 800, color: '#c8b4ff', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
-            AI Fav.
+            Fextopus
           </div>
           <div style={{ height: 8, borderRadius: 999, overflow: 'hidden', background: 'var(--bg)', border: '1px solid var(--surface-2)', display: 'flex' }}>
             <div style={{ width: `${aiTeamAPct}%`, background: 'linear-gradient(90deg,#4ade80,#22c55e)' }} />
@@ -821,7 +821,7 @@ function CommunityPredictionPool({ matchId, teamAName, teamBName, aiWin, isFinis
       <div style={{ marginTop: 9, display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', fontSize: 10 }}>
         <span style={{ color: '#9ba7b4' }}>Toplam oy: {totalVotes}</span>
         <span style={{ color: sameDirection ? '#86efac' : '#ffd39a' }}>
-          {sameDirection ? `Topluluk ve AI ayni tarafta (${aiFavorite})` : `Topluluk: ${communityFavorite} · AI: ${aiFavorite}`}
+          {sameDirection ? `Topluluk ve Fextopus aynı tarafta (${aiFavorite})` : `Topluluk: ${communityFavorite} · Fextopus: ${aiFavorite}`}
         </span>
       </div>
 
@@ -1463,7 +1463,7 @@ export default function MatchDetail() {
     <div style={{ color: 'var(--text-1)', minHeight: '100vh', background: 'var(--bg)' }}>
       <SeoHead
         title={`${aName} vs ${bName}${gName ? ` — ${gName}` : ''} Canlı Skor`}
-        description={`${aName} vs ${bName}${match.tournament?.name ? ` · ${match.tournament.name}` : ''} — canlı skor, AI tahmini, kadro ve maç istatistikleri. feXt.`}
+        description={`${aName} vs ${bName}${match.tournament?.name ? ` · ${match.tournament.name}` : ''} — canlı skor, Fextopus tahmini, kadro ve maç istatistikleri. feXt.`}
         image={aLogo || bLogo || ''}
         type="article"
         schema={match.scheduled_at ? {
@@ -1475,7 +1475,7 @@ export default function MatchDetail() {
           eventStatus: 'https://schema.org/EventScheduled',
           eventAttendanceMode: 'https://schema.org/OnlineEventAttendanceMode',
           location: { '@type': 'VirtualLocation', url: typeof window !== 'undefined' ? window.location.href : undefined },
-          description: `${aName} vs ${bName}${match.tournament?.name ? ` · ${match.tournament.name}` : ''} — canlı skor, AI tahmini ve maç istatistikleri.`,
+          description: `${aName} vs ${bName}${match.tournament?.name ? ` · ${match.tournament.name}` : ''} — canlı skor, Fextopus tahmini ve maç istatistikleri.`,
           image: aLogo || bLogo || undefined,
           organizer: { '@type': 'Organization', name: 'feXt' },
           competitor: [

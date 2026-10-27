@@ -1,7 +1,7 @@
 {
   "name": "feXt — Espor Maçları, Skorlar ve Haberler",
   "short_name": "feXt",
-  "description": "Valorant, CS2 ve LoL espor maçları, canlı skorlar, transferler, oyuncu istatistikleri ve AI destekli haber bülteni.",
+  "description": "Valorant, CS2 ve LoL espor maçları, canlı skorlar, transferler, oyuncu istatistikleri, Fextopus tahmin motoru ve Türkçe haber bülteni.",
   "lang": "tr",
   "dir": "ltr",
   "start_url": "/",

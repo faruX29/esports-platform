@@ -48,6 +48,7 @@ const TournamentsListPage = lazy(() => import('./pages/TournamentsListPage'))
 const ScoutEnginePage = lazy(() => import('./pages/ScoutEnginePage'))
 const LegalPage       = lazy(() => import('./pages/LegalPage'))
 const TurkTakimlariPage = lazy(() => import('./pages/TurkTakimlariPage'))
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
 import './App.css'
 
@@ -782,6 +783,7 @@ function AppShell() {
           <Route path="/gizlilik"                 element={<LegalPage doc="privacy" />} />
           <Route path="/kullanim-kosullari"       element={<LegalPage doc="terms" />} />
           <Route path="/kvkk"                     element={<LegalPage doc="kvkk" />} />
+          <Route path="*"                         element={<NotFoundPage />} />
         </Routes>
         </RouteTransition>
       </Suspense>

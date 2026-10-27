@@ -96,6 +96,7 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - UI'da "Model" ya da "AI" deme → tahmin motorunun adı Fextopus.
 - `index.html`'deki satır içi betiği/`onload`'u değiştirip `vercel.json` CSP'sindeki sha256'yı güncellemeden bırakma → CSP zorunluyken betik çalışmaz (hash `dist/index.html`'den hesaplanır). `/api/og` URL'sini middleware dışında üretme → imzasız istek statik karta düşer (`lib/ogImza.js`).
 - `matches`'a `postgres_changes` aboneliği açma ya da tabloyu `supabase_realtime` yayınına ekleme → her satır yazımı (ETL'in değişmeyen yazımları dahil) tam satırıyla her açık sekmeye gider. Canlı veri `maclar` Broadcast'inden; yeni abone `subscribeToMatchesUpdates`'i kullanır. Yoklama için düz `setInterval` değil `useYenileme`.
+- Middleware'de sayfanın ana varlığını `sbFetch` ile çekme → hatayı "yok"la karıştırır; `sbBul` kullan, boşsa `YOK` dön (404 + noindex), hata SPA'ya düşer (geçici arıza 404 olmasın).
 - Middleware yanıtına `s-maxage` koyup CPU'yu koruduğunu sanma → middleware önbellekten önce her istekte koşar.
 - Türkçe yerelde İngilizce terimi büyük harfe çevirme → "WINNERS" "WİNNERS" olur.
 - Windows'ta Türkçe/Unicode içerikli heredoc ile dosya yazma → cp1254 karakterleri bozar.

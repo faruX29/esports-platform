@@ -1,6 +1,7 @@
 import { Component } from 'react'
 import Mascot from './Mascot'
 import { renderHatasiBildir } from '../utils/hataBildir'
+import { bayatParcadaYenile, parcaHatasiMi, yenilemeBekleniyor } from '../utils/bayatParca'
 
 /**
  * Bir sayfa bileşeni render sırasında hata fırlatırsa tüm SPA'nın beyaz ekrana
@@ -30,6 +31,8 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
+    // Eski sürümün silinmiş parçası: sayfa yenileniyor, hata ekranı ve kayıt gereksiz.
+    if (yenilemeBekleniyor() || (parcaHatasiMi(error) && bayatParcadaYenile())) return
     // Geliştirici için konsola; kullanıcıya ham hata sızmaz. Üretimde client_errors'a da yazılır.
     console.error('ErrorBoundary yakaladı:', error, info?.componentStack)
     renderHatasiBildir(error, info?.componentStack)
@@ -37,6 +40,7 @@ export default class ErrorBoundary extends Component {
 
   render() {
     if (!this.state.hasError) return this.props.children
+    if (yenilemeBekleniyor()) return null
 
     return (
       <div style={{ maxWidth: 560, margin: '80px auto', padding: '0 20px', textAlign: 'center', color: 'var(--text-1)' }}>

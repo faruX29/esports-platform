@@ -550,7 +550,7 @@ function Matches() {
       {/* Başlık */}
       <div style={{ textAlign: 'center', marginBottom: 20 }}>
         <h1 style={{ fontSize: 28, fontWeight: 800, margin: '0 0 6px', display: 'inline-flex', alignItems: 'center', gap: 10 }}><CalendarDays size={26} color={FEXT.accent} /> Maçlar</h1>
-        <p style={{ color: 'var(--text-4)', fontSize: 13, margin: 0 }}>
+        <p style={{ color: 'var(--text-3)', fontSize: 13, margin: 0 }}>
           Tüm esports maçları — canlı, yaklaşan &amp; geçmiş
         </p>
       </div>
@@ -602,13 +602,13 @@ function Matches() {
           )}
         </div>
 
-        <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-2)', fontSize: 13, outline: 'none', cursor: 'pointer' }}>
+        <select value={sortBy} onChange={e => setSortBy(e.target.value)} aria-label="Sıralama" style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-2)', fontSize: 13, outline: 'none', cursor: 'pointer' }}>
           <option value="date-asc">En Erken Önce</option>
           <option value="date-desc">En Yeni Önce</option>
         </select>
 
         {tournamentOptions.length > 1 && (
-          <select value={tournamentFilter} onChange={e => setTournamentFilter(e.target.value)} title="Turnuvaya göre filtrele" style={{ padding: '8px 12px', borderRadius: 8, border: tournamentFilter ? `1px solid ${FEXT.accentBorder}` : '1px solid var(--line)', background: tournamentFilter ? FEXT.accentSoftBg : 'var(--surface)', color: tournamentFilter ? FEXT.accentText : 'var(--text-2)', fontSize: 13, outline: 'none', cursor: 'pointer', maxWidth: 220 }}>
+          <select value={tournamentFilter} onChange={e => setTournamentFilter(e.target.value)} title="Turnuvaya göre filtrele" aria-label="Turnuvaya göre filtrele" style={{ padding: '8px 12px', borderRadius: 8, border: tournamentFilter ? `1px solid ${FEXT.accentBorder}` : '1px solid var(--line)', background: tournamentFilter ? FEXT.accentSoftBg : 'var(--surface)', color: tournamentFilter ? FEXT.accentText : 'var(--text-2)', fontSize: 13, outline: 'none', cursor: 'pointer', maxWidth: 220 }}>
             <option value="">Tüm turnuvalar</option>
             {tournamentOptions.map(t => (
               <option key={t.id} value={t.id}>{t.name}</option>
@@ -649,7 +649,7 @@ function Matches() {
         <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: 'var(--text-3)', background: 'rgba(148,163,184,.12)', border: '1px solid #94a3b855', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Clock size={13} /> <CountUp value={upcomingCount} /> Yaklaşan</div>
         <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: 'var(--text-3)', background: 'var(--hover)', border: '1px solid var(--line-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}><BarChart3 size={13} /> <CountUp value={totalCount} /> Toplam</div>
         {followedTeamIds.length > 0 && <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: '#FFD700', background: 'rgba(255,215,0,.12)', border: '1px solid #FFD70055', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Star size={13} fill="#FFD700" /> {followedTeamIds.length} Favori</div>}
-        <div style={{ color: 'var(--text-5)', fontSize: 11, display: 'flex', alignItems: 'center' }}>
+        <div style={{ color: 'var(--text-3)', fontSize: 11, display: 'flex', alignItems: 'center' }}>
           Güncellendi: {lastUpdate.toLocaleTimeString('tr-TR')}
           {autoRefresh && <span style={{ color: '#4CAF50', marginLeft: 8 }}>● auto</span>}
         </div>
@@ -778,7 +778,7 @@ function Matches() {
                         onClick={e => toggleFavorite(match.team_a_id, e)}
                         aria-label={`${match.team_a?.name || 'Takım'} ${teamAFav ? 'takipten çık' : 'takip et'}`}
                         aria-pressed={teamAFav}
-                        style={{ position: 'absolute', top: 0, left: 2, background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'inline-flex' }}>
+                        style={{ position: 'absolute', top: 0, left: 2, background: 'none', border: 'none', cursor: 'pointer', padding: 2, minWidth: 24, minHeight: 24, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Star size={15} fill={teamAFav ? '#FFD700' : 'none'} color={teamAFav ? '#FFD700' : 'var(--text-4)'} />
                       </button>
                       <InitialsImage
@@ -818,7 +818,7 @@ function Matches() {
                         onClick={e => toggleFavorite(match.team_b_id, e)}
                         aria-label={`${match.team_b?.name || 'Takım'} ${teamBFav ? 'takipten çık' : 'takip et'}`}
                         aria-pressed={teamBFav}
-                        style={{ position: 'absolute', top: 0, right: 2, background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'inline-flex' }}>
+                        style={{ position: 'absolute', top: 0, right: 2, background: 'none', border: 'none', cursor: 'pointer', padding: 2, minWidth: 24, minHeight: 24, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Star size={15} fill={teamBFav ? '#FFD700' : 'none'} color={teamBFav ? '#FFD700' : 'var(--text-4)'} />
                       </button>
                       <InitialsImage

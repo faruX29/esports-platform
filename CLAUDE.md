@@ -115,6 +115,7 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - Özel adları çevirtme ("VCT Champions" → "Şampiyonlar Ligi") → prompt'larda `_AD_KURALI` var.
 - Doğrulanmamış tarih, saat veya sayı yazma → maç saatleri değişir, üretmeden önce DB'den tazele.
 - Turnuva adı olarak `tournaments.name`'i tek başına gösterme → çoğu yalnız aşama ("Group Stage"); `league_name,event_name` de çek, `tournamentDisplayName` (middleware'de `turnuvaAdi`) kullan. Türk takımını da ad listesiyle değil `isTurkishTeam` (`turk_takimlar`) ile bul.
+- `App.jsx` `<main>`'in `minHeight`'ini kaldırma ya da sayfanın yükleme hâlini "Yükleniyor..." yazısıyla bırakma → footer ekrana çıkıp veri gelince itilir (CLS); yer tutan iskelet kullan.
 - Navbar'a öğe ekleyip genişliği ölçmeden bırakma → 7 öğe ~1140px ister, altında satır taşar (Giriş/Kayıt kesilir); `Navbar.jsx` `NAV_HAMBURGER_PX`'i güncelle.
 - UI'da "Model" ya da "AI" deme → tahmin motorunun adı Fextopus.
 - `index.html`'deki satır içi betiği/`onload`'u değiştirip `vercel.json` CSP'sindeki sha256'yı güncellemeden bırakma → CSP zorunluyken betik çalışmaz (hash `dist/index.html`'den hesaplanır). `/api/og` URL'sini middleware dışında üretme → imzasız istek statik karta düşer (`lib/ogImza.js`).

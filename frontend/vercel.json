@@ -29,6 +29,10 @@
       "headers": [{ "key": "Content-Type", "value": "application/json" }]
     },
     {
+      "source": "/api/(.*)",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }]
+    },
+    {
       "source": "/(login|register|forgot-password|reset-password|settings|search)",
       "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }]
     }

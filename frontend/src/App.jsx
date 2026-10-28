@@ -749,12 +749,13 @@ function AppShell() {
       {UygulamaKopru && <Suspense fallback={null}><UygulamaKopru /></Suspense>}
       <NavbarComponent navLinks={NAV_LINKS} SearchComponent={NavSearch} />
       <GameSelectorBar />
-      <main id="main-content">
+      {/* minHeight <main>'de: yalnız Suspense yedeğinde olunca rota chunk'ı inip sayfa
+          kendi kısa "yükleniyor" hâlini çizdiğinde footer ekranın üstüne çıkıyor, veri
+          gelince aşağı itiliyordu (PSI'de 4 sayfada CLS'nin çoğu, LCP öğesi footer). */}
+      <main id="main-content" style={{ minHeight: 'calc(100vh - 58px)' }}>
       <ErrorBoundary resetKey={pathname}>
       <Suspense fallback={(
-        // minHeight: sayfa yüklenirken de içerik alanı tam yükseklik → footer
-        // fold altında başlar, route yüklenince aşağı zıplamaz (CLS'i önler).
-        <div style={{ maxWidth: 1440, margin: '0 auto', padding: '18px 16px 26px', minHeight: 'calc(100vh - 58px)' }}>
+        <div style={{ maxWidth: 1440, margin: '0 auto', padding: '18px 16px 26px' }}>
           <div style={{ height: 12, width: 190, borderRadius: 999, background: 'var(--surface-2)', marginBottom: 14 }} />
           <div style={{ height: 170, borderRadius: 14, background: 'linear-gradient(90deg,var(--surface) 20%,var(--surface-2) 50%,var(--surface) 80%)', backgroundSize: '200% 100%', animation: 'appRouteLoad 1.3s ease-in-out infinite' }} />
           <style>{`@keyframes appRouteLoad { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`}</style>

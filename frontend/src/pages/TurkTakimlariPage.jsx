@@ -189,6 +189,17 @@ function Bos({ children }) {
   return <div style={{ fontSize: 13, color: 'var(--text-3)', padding: '10px 2px' }}>{children}</div>
 }
 
+/** Yüklenirken yer tutan kutular: yükseklik gerçek satırla (~62px) aynı → alttaki bölümler itilmez (CLS). */
+function Iskelet({ adet, min }) {
+  return (
+    <div style={izgaraStil(min)} aria-hidden="true">
+      {Array.from({ length: adet }, (_, i) => (
+        <div key={i} style={{ height: 62, borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', animation: 'pulse 1.4s ease-in-out infinite' }} />
+      ))}
+    </div>
+  )
+}
+
 /** Maç satırı: Türk tarafı TR rozetli; sonuçta Türk takımının kazanıp kaybettiği kenar renginden okunur. */
 function MacSatiri({ m }) {
   const bitti = m.status === 'finished'
@@ -423,7 +434,6 @@ export default function TurkTakimlariPage() {
       })
   }, [maclar, takimlar])
 
-  const yukleniyor = <Bos>Yükleniyor...</Bos>
   const bolum = id => BOLUMLER.find(b => b.id === id)
   const bolumProps = id => ({ ...bolum(id), vurgulu: vurgu === id, ustPay })
 
@@ -456,7 +466,7 @@ export default function TurkTakimlariPage() {
           {isMobile && <MobilAsansor aktif={aktif} onGit={bolumeGit} />}
 
           <Bolum {...bolumProps('takimlar')}>
-            {!maclar ? yukleniyor : izgara.length === 0 ? <Bos>Son günlerde maçı olan Türk takımı yok.</Bos> : (
+            {!maclar ? <Iskelet adet={6} min={240} /> : izgara.length === 0 ? <Bos>Son günlerde maçı olan Türk takımı yok.</Bos> : (
               <div style={{ ...izgaraStil(240), gap: 10 }}>
                 {izgara.map(({ t, sonraki, son }) => <TakimKarti key={t.id} t={t} sonraki={sonraki} son={son} />)}
               </div>
@@ -464,7 +474,7 @@ export default function TurkTakimlariPage() {
           </Bolum>
 
           <Bolum {...bolumProps('yaklasan')}>
-            {!maclar ? yukleniyor : maclar.yaklasan.length === 0 ? <Bos>Planlanmış Türk maçı yok.</Bos> : (
+            {!maclar ? <Iskelet adet={6} min={400} /> : maclar.yaklasan.length === 0 ? <Bos>Planlanmış Türk maçı yok.</Bos> : (
               <div style={izgaraStil(400)}>
                 {maclar.yaklasan.slice(0, 12).map(m => <MacSatiri key={m.id} m={m} />)}
               </div>
@@ -472,7 +482,7 @@ export default function TurkTakimlariPage() {
           </Bolum>
 
           <Bolum {...bolumProps('sonuclar')}>
-            {!maclar ? yukleniyor : maclar.son.length === 0 ? <Bos>Son {SON_MAC_GUN} günde sonuç yok.</Bos> : (
+            {!maclar ? <Iskelet adet={12} min={400} /> : maclar.son.length === 0 ? <Bos>Son {SON_MAC_GUN} günde sonuç yok.</Bos> : (
               <div style={izgaraStil(400)}>
                 {maclar.son.slice(0, 12).map(m => <MacSatiri key={m.id} m={m} />)}
               </div>
@@ -483,7 +493,7 @@ export default function TurkTakimlariPage() {
             {...bolumProps('haberler')}
             sag={<Link to="/news" style={{ fontSize: 12, color: 'var(--text-3)', textDecoration: 'none' }}>Tüm haberler ›</Link>}
           >
-            {!haberler ? yukleniyor : haberler.length === 0 ? <Bos>Son günlerde Türk takımı haberi yok.</Bos> : (
+            {!haberler ? <Iskelet adet={10} min={340} /> : haberler.length === 0 ? <Bos>Son günlerde Türk takımı haberi yok.</Bos> : (
               <div style={izgaraStil(340)}>
                 {haberler.map(row => <HaberSatiri key={row.id} row={row} />)}
               </div>
@@ -491,7 +501,7 @@ export default function TurkTakimlariPage() {
           </Bolum>
 
           <Bolum {...bolumProps('haftalik')}>
-            {!haftalik ? yukleniyor : haftalik.length === 0 ? <Bos>Haftalık özet her Pazartesi sabahı yayımlanır.</Bos> : (
+            {!haftalik ? <Iskelet adet={1} min={340} /> : haftalik.length === 0 ? <Bos>Haftalık özet her Pazartesi sabahı yayımlanır.</Bos> : (
               <div style={izgaraStil(340)}>
                 {haftalik.map(row => <HaberSatiri key={row.id} row={row} />)}
               </div>

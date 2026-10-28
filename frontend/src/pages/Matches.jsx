@@ -773,7 +773,12 @@ function Matches() {
                       onMouseEnter={e => e.currentTarget.style.opacity = '.75'}
                       onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                     >
-                      <button onClick={e => toggleFavorite(match.team_a_id, e)} style={{ position: 'absolute', top: 0, left: 2, background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'inline-flex' }}>
+                      <button
+                        type="button"
+                        onClick={e => toggleFavorite(match.team_a_id, e)}
+                        aria-label={`${match.team_a?.name || 'Takım'} ${teamAFav ? 'takipten çık' : 'takip et'}`}
+                        aria-pressed={teamAFav}
+                        style={{ position: 'absolute', top: 0, left: 2, background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'inline-flex' }}>
                         <Star size={15} fill={teamAFav ? '#FFD700' : 'none'} color={teamAFav ? '#FFD700' : 'var(--text-4)'} />
                       </button>
                       <InitialsImage
@@ -808,7 +813,12 @@ function Matches() {
                       onMouseEnter={e => e.currentTarget.style.opacity = '.75'}
                       onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                     >
-                      <button onClick={e => toggleFavorite(match.team_b_id, e)} style={{ position: 'absolute', top: 0, right: 2, background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'inline-flex' }}>
+                      <button
+                        type="button"
+                        onClick={e => toggleFavorite(match.team_b_id, e)}
+                        aria-label={`${match.team_b?.name || 'Takım'} ${teamBFav ? 'takipten çık' : 'takip et'}`}
+                        aria-pressed={teamBFav}
+                        style={{ position: 'absolute', top: 0, right: 2, background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'inline-flex' }}>
                         <Star size={15} fill={teamBFav ? '#FFD700' : 'none'} color={teamBFav ? '#FFD700' : 'var(--text-4)'} />
                       </button>
                       <InitialsImage

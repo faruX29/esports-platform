@@ -23,6 +23,10 @@
  * <proje>-<hash>.vercel.app adresi var, sabit takma adı silmek onları
  * kapsamaz. Joker host kuralı hepsini birden kapsıyor.
  *
+ * `/api/(.*)` → `X-Robots-Tag: noindex` (28 Eki): Google `/api/og?...` paylaşım
+ * görsellerini sayfa gibi tarayıp "dizine eklenmedi" listesini dolduruyordu.
+ * robots.txt Disallow DEĞİL: sosyal tarayıcılar OG görselini okuyabilmeli.
+ *
  * ⚠️ vercel.json KATI ŞEMA doğrular: şemada olmayan üst düzey anahtar
  * (ör. açıklama için eklenen `_comment_*`) dağıtımı komple başarısız yapar.
  * 2026-09-08'de bu yüzden bir dağıtım sessizce düştü. Açıklamalar buraya.
@@ -1010,6 +1014,32 @@ export default async function middleware(req) {
   const url = new URL(req.url)
   // ?__og=1 → tarayıcıda elle doğrulama için OG HTML'i zorla (bot olmasan da)
   const force = url.searchParams.get('__og') === '1'
+
+  // Eski haber linki `/news/<haber uuid>` (24 Eki öncesi bot HTML'i) → slug'lı adrese 301.
+  // Bot ve insan için: SPA uuid'i çözemiyor. Haber yoksa bota 404 (aşağıda), insana SPA.
+  const eskiHaber = url.pathname.match(/^\/news\/([^/]+)\/?$/)
+  if (eskiHaber && UUID_RE.test(eskiHaber[1])) {
+    try {
+      const row = await sbBul(`news_articles?id=eq.${ENC(eskiHaber[1])}&select=${ENC(NEWS_LINK_SEL)}&limit=1`)
+      const yol = row && newsPath(row)
+      if (yol) {
+        return new Response(null, {
+          status: 301,
+          headers: { location: SITE_ORIGIN + yol, 'cache-control': 'public, max-age=86400' },
+        })
+      }
+      if (!row && (force || BOT_RE.test(ua))) {
+        return new Response(bulunamadiHtml(SITE_ORIGIN), {
+          status: 404,
+          headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=300, s-maxage=3600' },
+        })
+      }
+    } catch {
+      // geçici arıza → 404 değil, SPA
+    }
+    return next()
+  }
+
   if (!force && !BOT_RE.test(ua)) return next() // gerçek kullanıcı → SPA
   if (!force && DEGERSIZ_BOT_RE.test(ua)) return next() // ziyaretçi getirmeyen bot → statik kabuk
 

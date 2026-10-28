@@ -75,16 +75,21 @@ const TOP_TIERS = ['S', 'A']     // yalnız üst-tier (tier değerleri büyük h
 const TEAM_MIN_MATCHES = 10      // takım sayfası için son 1 yıldaki asgari maç sayısı
 const PLAYER_MIN_MATCHES = 3     // oyuncu sayfası için asgari istatistikli maç (scout eşiğiyle aynı)
 
+// Hata sessizce yutulmaz: eskiden `!res.ok`'ta döngü kırılıp boş ya da yarım urlset
+// 200 ile dönüyor ve bir gün önbellekte kalıyordu (maç sitemap'i Google'a 0 URL gitti).
+// Şimdi fırlatır → handler 503 + no-store döner, önbellek ve Google eski iyi kopyayı tutar.
 async function fetchAll(table, select, filter) {
-  if (!SB || !KEY) return []
+  if (!SB || !KEY) throw new Error('Supabase ortam değişkenleri yok')
   const rows = []
   const size = 1000
   for (let i = 0; i < 40; i++) {
     const url = `${SB}/rest/v1/${table}?select=${encodeURIComponent(select)}` +
       (filter ? `&${filter}` : '') +
       `&order=id.asc&limit=${size}&offset=${i * size}`
-    const res = await fetch(url, { headers: { apikey: KEY, Authorization: `Bearer ${KEY}` } })
-    if (!res.ok) break
+    const istek = () => fetch(url, { headers: { apikey: KEY, Authorization: `Bearer ${KEY}` } })
+    let res = await istek().catch(() => null)
+    if (!res?.ok) res = await istek()   // geçici hataya bir şans daha
+    if (!res.ok) throw new Error(`${table} ${res.status}`)
     const batch = await res.json()
     if (!Array.isArray(batch) || batch.length === 0) break
     rows.push(...batch)
@@ -221,7 +226,17 @@ export default async function handler(req) {
   if (!type) {
     xml = buildIndex(base)
   } else if (CHILDREN.includes(type)) {
-    xml = await buildChild(type, base)
+    try {
+      xml = await buildChild(type, base)
+      // Bu türler hiçbir zaman gerçekten boş olmaz; boşsa sorgu bozulmuştur
+      if (type !== 'static' && !xml.includes('<loc>')) throw new Error(`${type} boş`)
+    } catch (e) {
+      console.error('sitemap', type, e?.message)
+      return new Response('Sitemap geçici olarak üretilemedi', {
+        status: 503,
+        headers: { 'cache-control': 'no-store', 'retry-after': '600' },
+      })
+    }
   }
 
   if (!xml) return new Response('Not found', { status: 404 })

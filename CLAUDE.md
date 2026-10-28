@@ -120,6 +120,7 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - `index.html`'deki satır içi betiği/`onload`'u değiştirip `vercel.json` CSP'sindeki sha256'yı güncellemeden bırakma → CSP zorunluyken betik çalışmaz (hash `dist/index.html`'den hesaplanır). `/api/og` URL'sini middleware dışında üretme → imzasız istek statik karta düşer (`lib/ogImza.js`).
 - `matches`'a `postgres_changes` aboneliği açma ya da tabloyu `supabase_realtime` yayınına ekleme → her satır yazımı (ETL'in değişmeyen yazımları dahil) tam satırıyla her açık sekmeye gider. Canlı veri `maclar` Broadcast'inden; yeni abone `subscribeToMatchesUpdates`'i kullanır. Yoklama için düz `setInterval` değil `useYenileme`.
 - Middleware'de sayfanın ana varlığını `sbFetch` ile çekme → hatayı "yok"la karıştırır; `sbBul` kullan, boşsa `YOK` dön (404 + noindex), hata SPA'ya düşer (geçici arıza 404 olmasın).
+- Önbelleğe giren yanıtta (`api/sitemap.js` gibi `s-maxage`/`stale-while-revalidate`) veri hatasını boş 200'e çevirme → boş sonuç günlerce sunulur (maç sitemap'i Google'a 0 URL gitti); fırlat, 503 + `no-store` dön.
 - Middleware yanıtına `s-maxage` koyup CPU'yu koruduğunu sanma → middleware önbellekten önce her istekte koşar.
 - Paylaşılan/e-postaya giden linki `window.location.origin` ile kurma → uygulamada `app.fextesports.com` olur; `disariKok()`.
 - Capacitor eklentisini web koduna statik import etme → web paketine girer; `UYGULAMA` koşulu + dinamik import.

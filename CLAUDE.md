@@ -57,7 +57,8 @@ python radar.py [YYYY-AA-GG] | python karne.py | python champions.py [grup] | py
 - frontend: `VITE_SUPABASE_URL` `VITE_SUPABASE_ANON_KEY` `VITE_TURNSTILE_SITE_KEY` `SITE_URL`
 - Postgres Vault: `pandascore_token` (canlı senkron okur)
 - uygulama: `frontend/.env.app` (`VITE_TURNSTILE_SITE_KEY`; gerisi `.env`'den, eksikse `build:app` durur) ve
-  `frontend/android/app/google-services.json` (Firebase; ikisi de gitignore, yoksa release derlemesi durur)
+  `frontend/android/app/google-services.json` (Firebase) ve `frontend/android/keystore.properties` (Play upload anahtarı; `.jks` repo dışında);
+  hepsi gitignore, yoksa release derlemesi durur. `gradlew` `ANDROID_HOME` ister (`%LOCALAPPDATA%\Android\Sdk`)
 
 ## Altyapı gerçekleri
 - **Canlı skor** Postgres'te koşar: pg_cron `canli-senkron` dakikada bir (`backend/sql/canli_senkron.sql`). Sorun olursa: `cron.job_run_details`.

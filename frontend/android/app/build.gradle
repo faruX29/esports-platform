@@ -1,5 +1,15 @@
 apply plugin: 'com.android.application'
 
+// Play upload anahtarı repoda yok (public repo): android/keystore.properties
+// (gitignore) storeFile, storePassword, keyAlias, keyPassword verir; .jks dosyası
+// repo dışında durur. Play App Signing açık: bu yalnız yükleme anahtarı, mağazadaki
+// imzayı Google atar (assetlinks.json'a o imzanın SHA-256'sı girer).
+def imzaDosyasi = rootProject.file('keystore.properties')
+def imza = new Properties()
+if (imzaDosyasi.exists()) {
+    imzaDosyasi.withInputStream { imza.load(it) }
+}
+
 android {
     namespace = "com.fextesports.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,8 +26,19 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (imzaDosyasi.exists()) {
+            release {
+                storeFile file(imza.getProperty('storeFile'))
+                storePassword imza.getProperty('storePassword')
+                keyAlias imza.getProperty('keyAlias')
+                keyPassword imza.getProperty('keyPassword')
+            }
+        }
+    }
     buildTypes {
         release {
+            if (imzaDosyasi.exists()) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
@@ -59,5 +80,8 @@ gradle.taskGraph.whenReady { graph ->
     def release = graph.allTasks.any { it.project == project && it.name.toLowerCase().contains('release') }
     if (release && !file('google-services.json').exists()) {
         throw new GradleException("google-services.json eksik: Firebase konsolundan indirip android/app/ altına koy")
+    }
+    if (release && !imzaDosyasi.exists()) {
+        throw new GradleException("keystore.properties eksik: imzasız sürüm Play'e yüklenemez (android/keystore.properties)")
     }
 }

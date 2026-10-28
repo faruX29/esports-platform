@@ -6,12 +6,17 @@
  * anonim oturumu 42501 ile reddeder). Çıkışta cihazın token'ı silinir; yoksa
  * çıkış yapılan telefon eski hesabın bildirimlerini almaya devam eder.
  */
+import { registerPlugin } from '@capacitor/core'
 import { PushNotifications } from '@capacitor/push-notifications'
 import { supabase } from '../supabaseClient'
 
+// android/.../BildirimAyarlariPlugin.java: sistemin bu uygulamaya ait bildirim ayarı.
+const BildirimAyarlari = registerPlugin('BildirimAyarlari')
+
 const TOKEN_ANAHTARI = 'fext_push_token'
 // Sistem izni kendiliğinden bir kez sorulur; reddedilirse tekrar sormak
-// ayarlardaki bildirim ekranının işi (Android de iki retten sonra hiç göstermez).
+// Ayarlar'daki bildirim bölümünün işi (izinIste; Android iki retten sonra
+// pencereyi hiç göstermez, o zaman sistem ayarı açılır).
 const IZIN_SORULDU_ANAHTARI = 'fext_push_izin_soruldu'
 
 let dinleyiciler = null
@@ -81,6 +86,30 @@ export async function kaydol() {
   }
   if (izin.receive !== 'granted') return
   await PushNotifications.register()
+}
+
+/** Ayarlar ekranı için: 'acik' | 'kapali' (sistem penceresi artık çıkmaz) | 'sorulabilir'. */
+export async function izinDurumu() {
+  const { receive } = await PushNotifications.checkPermissions()
+  if (receive === 'granted') return 'acik'
+  return receive === 'denied' ? 'kapali' : 'sorulabilir'
+}
+
+/**
+ * Ayarlar'daki "Bildirimleri aç": kendiliğinden sorma hakkı kullanılmış olsa da
+ * izni yeniden ister; Android pencereyi artık göstermiyorsa sistem ayarını açar
+ * (dönüşte ekran izni yeniden okur ve kaydol'u çağırır).
+ */
+export async function izinIste() {
+  const durum = await izinDurumu()
+  if (durum === 'kapali') {
+    await BildirimAyarlari.ac()
+    return durum
+  }
+  depoYaz(IZIN_SORULDU_ANAHTARI, '1')
+  if (durum === 'sorulabilir') await PushNotifications.requestPermissions()
+  await kaydol()
+  return izinDurumu()
 }
 
 /** Çıkıştan ÖNCE (oturum hâlâ açıkken): token satırını sil, FCM kaydını da düşür. */

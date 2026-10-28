@@ -6,6 +6,8 @@ import { supabase } from '../supabaseClient'
 import TeamPicker, { GameTag } from '../components/TeamPicker'
 import InitialsImage from '../components/InitialsImage'
 import PasswordInput from '../components/PasswordInput'
+import Anahtar from '../components/Anahtar'
+import { UYGULAMA } from '../utils/platform'
 
 // Takip ettiğim takımlar — listele, çıkar, ara & ekle. (Takipler follows tablosuna
 // UserContext üzerinden yazılır; oyun ataması bir sonraki yüklemede takımdan türetilir.)
@@ -65,6 +67,128 @@ function FollowedTeamsManager() {
 
       <span style={{ fontSize: 11, color: 'var(--text-3)', display: 'block', marginBottom: 6 }}>Takım ekle</span>
       <TeamPicker key={pickerKey} value={null} onChange={id => handleAdd(id)} placeholder="Takip etmek için takım ara..." />
+    </div>
+  )
+}
+
+// Bildirim tercihleri — yalnız uygulamada (push yalnız orada gider). Satır yoksa
+// sunucudaki varsayılanlar geçerli (backend/sql/push_altyapisi.sql); her değişiklik
+// anında yazılır. utils/push dinamik: Capacitor eklentisi web paketine girmesin.
+const BILDIRIM_VARSAYILAN = { yakinda: true, basladi: true, bitti: true, turk_takimlari: false }
+const BILDIRIM_SECENEKLERI = [
+  { alan: 'yakinda', baslik: 'Maç başlamadan 15 dakika önce' },
+  { alan: 'basladi', baslik: 'Maç başlayınca' },
+  { alan: 'bitti', baslik: 'Maç bitince', aciklama: 'Bildirimde skor yazar.' },
+  { alan: 'turk_takimlari', baslik: 'Türk takımlarının tüm maçları', aciklama: 'Takip etmesen de Türk takımlarının maçları için yukarıdaki bildirimler gelir.' },
+]
+
+function BildirimTercihleri() {
+  const { user } = useAuth()
+  const [tercih, setTercih] = useState(BILDIRIM_VARSAYILAN)
+  const [izin, setIzin] = useState(null) // 'acik' | 'kapali' | 'sorulabilir'
+  const [mesgul, setMesgul] = useState(false)
+  const [hata, setHata] = useState('')
+  const oncekiIzin = useRef(null)
+
+  useEffect(() => {
+    if (!user?.id) return
+    let alive = true
+    supabase
+      .from('bildirim_tercihleri')
+      .select('yakinda,basladi,bitti,turk_takimlari')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!alive) return
+        if (error) console.error('Bildirim tercihleri okunamadı:', error.message)
+        else if (data) setTercih(data)
+      })
+    return () => { alive = false }
+  }, [user?.id])
+
+  // İzin durumu; sistem ayarından dönünce (sekme yeniden görünür) tekrar okunur,
+  // izin orada yeni verildiyse FCM kaydı burada yapılır.
+  useEffect(() => {
+    let alive = true
+    async function oku() {
+      try {
+        const push = await import('../utils/push')
+        const durum = await push.izinDurumu()
+        if (!alive) return
+        if (durum === 'acik' && oncekiIzin.current && oncekiIzin.current !== 'acik') {
+          push.kaydol().catch(err => console.error('Push kaydı başarısız:', err))
+        }
+        oncekiIzin.current = durum
+        setIzin(durum)
+      } catch (err) {
+        console.error('Bildirim izni okunamadı:', err)
+      }
+    }
+    oku()
+    function gorununce() { if (document.visibilityState === 'visible') oku() }
+    document.addEventListener('visibilitychange', gorununce)
+    return () => { alive = false; document.removeEventListener('visibilitychange', gorununce) }
+  }, [])
+
+  async function izniAc() {
+    setMesgul(true)
+    setHata('')
+    try {
+      const push = await import('../utils/push')
+      const durum = await push.izinIste()
+      oncekiIzin.current = durum
+      setIzin(durum)
+    } catch (err) {
+      console.error('Bildirim izni istenemedi:', err)
+      setHata('Bildirim ayarı açılamadı. Telefonun Ayarlar > Uygulamalar > feXt bölümünden açabilirsin.')
+    } finally {
+      setMesgul(false)
+    }
+  }
+
+  async function degistir(alan, deger) {
+    if (!user?.id) return
+    const onceki = tercih
+    const yeni = { ...tercih, [alan]: deger }
+    setTercih(yeni)
+    setHata('')
+    const { error } = await supabase.from('bildirim_tercihleri').upsert({ user_id: user.id, ...yeni }, { onConflict: 'user_id' })
+    if (error) {
+      console.error('Bildirim tercihi kaydedilemedi:', error.message)
+      setTercih(onceki)
+      setHata('Tercih kaydedilemedi. Bağlantını kontrol edip tekrar dene.')
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--line)' }}>
+      <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 4 }}>Bildirimler</div>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 12 }}>Takip ettiğin takımların maçları için telefonuna bildirim gelir.</div>
+
+      {izin && izin !== 'acik' && (
+        <div style={{ display: 'grid', gap: 10, background: 'var(--surface)', border: '1px solid rgba(223,72,136,.45)', borderRadius: 11, padding: 12, marginBottom: 12 }}>
+          <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
+            Bildirim izni kapalı; aşağıdaki tercihler sen izin verene kadar işlemez.
+            {izin === 'kapali' && <span style={{ display: 'block', fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>Telefonun izin penceresini artık göstermiyor; düğme bildirim ayarını açar.</span>}
+          </span>
+          <button type="button" onClick={izniAc} disabled={mesgul} style={{ justifySelf: 'start', background: 'linear-gradient(135deg,#DF4888,#8B3AA0 55%,#6A297F)', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 14px', fontWeight: 800, cursor: 'pointer', opacity: mesgul ? 0.6 : 1 }}>
+            {izin === 'kapali' ? 'Bildirim ayarını aç' : 'Bildirimlere izin ver'}
+          </button>
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gap: 8 }}>
+        {BILDIRIM_SECENEKLERI.map(({ alan, baslik, aciklama }) => (
+          <label key={alan} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, cursor: 'pointer', background: 'var(--surface)', border: '1px solid var(--line-2)', borderRadius: 10, padding: '10px 12px' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
+              {baslik}
+              {aciklama && <span style={{ display: 'block', fontSize: 11, color: 'var(--text-3)' }}>{aciklama}</span>}
+            </span>
+            <Anahtar checked={!!tercih[alan]} onChange={deger => degistir(alan, deger)} />
+          </label>
+        ))}
+      </div>
+      {hata && <span style={{ display: 'block', fontSize: 12, color: '#FF4655', marginTop: 8 }}>{hata}</span>}
     </div>
   )
 }
@@ -341,6 +465,7 @@ export default function ProfileSettings() {
         </div>
 
         <FollowedTeamsManager />
+        {UYGULAMA && <BildirimTercihleri />}
         <DeleteAccountSection />
       </div>
     </div>

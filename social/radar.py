@@ -11,7 +11,7 @@ Logo kuralları:
      körlemesine siluete çevirmek renkli logoları bozuyordu.)
   4. Logo hiç yoksa takım baş harfleri daire içinde çizilir
 """
-import json, os, subprocess, sys, urllib.request
+import json, os, re, subprocess, sys, unicodedata, urllib.request
 from datetime import datetime, timedelta, timezone
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import psycopg
@@ -94,6 +94,7 @@ def gunun_maclari(gun):
             'b_id': r[5], 'b': r[6], 'b_ac': r[7], 'b_logo': r[8],
             'pa': float(r[9]), 'pb': float(r[10]), 'saat': r[11], 'tur': r[12],
             'etkinlik': etkinlik_adi(r[16], r[17]),
+            'lig': r[16], 'etk_ham': r[17],
             'oyun': etiket, 'ikon': IKON.get(etiket),
         })
     return gruplar
@@ -429,16 +430,70 @@ def paylasim_metni(oyun, maclar, gun):
     ozet = (f"{etk}: {n} maç. Tahminler Fextopus'tan — " if etk
             else f"{n} maç, hepsi S/A seviye. Tahminler Fextopus'tan — ")
 
-    etiket = {'VALORANT': '#valorant', 'COUNTER-STRIKE 2': '#cs2',
-              'LEAGUE OF LEGENDS': '#leagueoflegends', 'DOTA 2': '#dota2'}
-    tags = ['#espor'] + sorted({etiket.get(m['oyun'], '') for m in maclar} - {''})
-
     return '\n'.join([
         kanca, '',
         ozet + 'en güvendiği maçlarda %75 isabetli.', '',
         "Tümü fextesports.com'da, link profilde.", '',
-        ' '.join(tags[:4]),
+        ' '.join(hashtagler(maclar)),
     ])
+
+# ── Hashtag'ler ───────────────────────────────────────────────────────────
+# Eskiden yalnız #espor + oyun etiketiydi; günün takımları hiç geçmiyordu (29 Eki,
+# kurucu: "Aurora maçı varsa #aurora kesin olsun"). Sıra önem sırası, üst sınır var:
+#   #espor → oyun → Türk takımları (HEPSİ, kesilmez) → etkinlik → diğer takımlar.
+OYUN_ETIKETI = {'VALORANT': '#valorant', 'COUNTER-STRIKE 2': '#cs2',
+                'LEAGUE OF LEGENDS': '#leagueoflegends', 'DOTA 2': '#dota2'}
+MAKS_ETIKET = 12
+MAKS_UZUNLUK = 24
+# Takım adının sonundaki kurum eki etikete girmez: "Aurora Gaming" → #aurora.
+# Kalan kök 5 harften kısaysa ad bütün kalır: "FUT Esports" → #futesports (#fut
+# FIFA'yla karışır), "G2 Esports" → #g2esports. 24 karakteri aşan etiket atılır
+# (#thunderpickworldchampionship2026 kimse yazmaz).
+_EK_RE = re.compile(r'(\s+(esports?|e-sports?|gaming|club|team|gg))+$', re.I)
+_TR_ASCII = str.maketrans('çğıİöşüÇĞÖŞÜ', 'cgiiosuCGOSU')
+
+def _etiket(metin):
+    """'Eternal Fire' → '#eternalfire'. Türkçe harf ASCII'ye (aranan yazım), işaretler atılır."""
+    t = unicodedata.normalize('NFKD', (metin or '').translate(_TR_ASCII))
+    t = ''.join(c for c in t if not unicodedata.combining(c))
+    t = re.sub(r'[^0-9a-z]', '', t.lower())
+    return f'#{t}' if 2 <= len(t) <= MAKS_UZUNLUK else None
+
+def takim_etiketi(ad):
+    kok = _EK_RE.sub('', (ad or '').strip())
+    return _etiket(kok if len(re.sub(r'\W', '', kok)) >= 5 else ad)
+
+def etkinlik_etiketi(m):
+    """Etkinliğin aranan kısa adı: VCT/VCL alt ligiyle (#vctchampions, #vctemea), yalnız
+    yıldan oluşan etkinlik ligle birlikte (#worlds2026, #msi2026), gerisi lig adı (#pglmasters)."""
+    lig, etk = (m.get('lig') or '').strip(), (m.get('etk_ham') or '').strip()
+    if not lig:
+        return None
+    if re.fullmatch(r'\d{4}', etk):
+        return _etiket(lig + etk)
+    if lig.upper() in ('VCT', 'VCL') and etk:
+        return _etiket(lig + re.split(r'[\s:]+', etk)[0])
+    return _etiket(lig)
+
+def hashtagler(maclar):
+    sira = ['#espor']
+    sira += sorted({OYUN_ETIKETI.get(m['oyun'], '') for m in maclar} - {''})
+    turk, diger = [], []
+    for m in maclar:
+        for ad, tid in ((m['a'], m['a_id']), (m['b'], m['b_id'])):
+            (turk if _turk_mu(tid=tid) else diger).append(takim_etiketi(ad))
+    sira += turk
+    sira += [etkinlik_etiketi(m) for m in maclar]
+    sira += diger
+    sonuc = []
+    for t in sira:
+        if t and t not in sonuc:
+            sonuc.append(t)
+    # Türk takımı etiketi üst sınırda kesilmez
+    zorunlu = [t for t in sonuc if t in turk]
+    kalan = [t for t in sonuc if t not in zorunlu]
+    sonuc = [t for t in sonuc if t in zorunlu or t in kalan[:max(0, MAKS_ETIKET - len(zorunlu))]]
+    return sonuc
 
 def uret(oyun, renk, maclar, gun, dosya, parca=None):
     exe = ffmpeg_yolu()

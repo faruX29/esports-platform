@@ -29,7 +29,8 @@ jobs:
     runs-on: ubuntu-latest
     # 20 -> 30 (2026-09-12): adim sinirlari eklendi, toplamlari 24 -> is
     # butcesi ondan buyuk olmali ki is seviyesinde "cancelled" olmasin.
-    timeout-minutes: 30
+    # 30 -> 40 (2026-10-29): mac tazeleme adimi (10 dk) eklendi, toplam 34.
+    timeout-minutes: 40
     defaults:
       run:
         working-directory: social
@@ -41,7 +42,9 @@ jobs:
         with:
           python-version: '3.13'
           cache: 'pip'
-          cache-dependency-path: social/requirements.txt
+          cache-dependency-path: |
+            social/requirements.txt
+            backend/requirements.txt
 
       # ADIM SINIRLARI (2026-09-12). Bu is akisinda da hicbir adimin siniri
       # yoktu -- sync-liquipedia'da uc kez basimizi yakan tuzagin aynisi:
@@ -87,6 +90,26 @@ jobs:
           fi
           echo "gun=$GUN" >> "$GITHUB_OUTPUT"
           echo "Hedef gun: $GUN"
+
+      # MACLARI TAZELE (29 Eki). Saatlik mac senkronu fiilen 3-6 saatte bir kosuyor
+      # ve bu is de saatlerce gecikiyor; arada eklenen mac videoya girmiyordu.
+      # Olay: PGL Masters grup asamasi 28 Eki ~18:00 UTC'de bitti, Aurora-MOUZ
+      # playoff maci (rakip belli olana kadar PandaScore'da TBD, biz TBD maci
+      # almiyoruz) 23:00'teki senkronla girdi; radar 20:52'de kosmustu -> videoda
+      # yoktu. 27 Eki Aurora-Liquid da ayni sekilde kacti. Uretimden hemen once
+      # tek senkron (istatistik/haber yok, ~1-2 dk, PandaScore butcesinde ihmal edilir).
+      # Basarisiz olursa video eski veriyle yine uretilir.
+      - name: Maclari tazele (senkron + tahmin)
+        timeout-minutes: 10
+        continue-on-error: true
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          pip install -r requirements.txt
+          python run.py --all-games --limit 100 --predict
 
       - name: Videolari uret
         timeout-minutes: 8

@@ -57,6 +57,7 @@ export const config = {
     '/team/:path*',
     '/player/:path*',
     '/tournament/:path*',
+    '/lig/:path*',
   ],
 }
 
@@ -724,8 +725,130 @@ async function buildForTournament(id, origin, url) {
     ...eventCommon(url, t.begin_at, desc, ''),
     endDate: t.end_at || undefined, url,
   } : null
-  const body = `<h1>${esc(name)}</h1><p>${esc(desc)}</p>${matchListHtml(origin, matches, 'Maçlar')}`
+  // Kalıcı lig sayfasına bağlantı: eski etkinlikte "Güncel: …", güncelde "Tüm aşamalar: …"
+  // → Google "worlds fikstür" gibi sorguda eski aşamadan yeni lig sayfasına geçer.
+  // Yan veri: hata olursa bağlantısız döner (sbFetch).
+  const lig = await sbFetch(`rpc/turnuva_ligi?p_tid=${ENC(id)}`).catch(() => null)
+  const ligLink = lig?.slug
+    ? `<p><a href="${origin}/lig/${esc(lig.slug)}">${lig.guncel ? 'Tüm aşamalar' : 'Güncel'}: ` +
+      `${esc([lig.ad, lig.yil].filter(Boolean).join(' '))} fikstür, puan durumu ve sonuçlar</a></p>`
+    : ''
+  const body = `<h1>${esc(name)}</h1>${ligLink}<p>${esc(desc)}</p>${matchListHtml(origin, matches, 'Maçlar')}`
   return htmlDoc({ title, desc, url, img: '', type: 'article', jsonLd, body })
+}
+
+/* ── Kalıcı lig sayfası (/lig/<slug>) ──────────────────────────────────────
+ * Ligin EN GÜNCEL etkinliğinin tüm aşamaları tek sayfada (backend/sql/ligler.sql
+ * `lig_sayfasi`). Başlık "<Lig> <yıl> Fikstür, Puan Durumu ve Sonuçlar": aranan kalıp.
+ * Aşama başına puan durumu (grup/lig aşamalarında), fikstür (tarihli) ve sonuçlar.
+ */
+const LIG_SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
+const LIG_MAC_SEL = 'id,tournament_id,status,scheduled_at,team_a_score,team_b_score,winner_id,' +
+  'team_a:teams!matches_team_a_id_fkey(id,name),team_b:teams!matches_team_b_id_fkey(id,name)'
+// Eleme aşamasında G-M tablosu anlamsız (herkes 1-2 maç oynar)
+const ELEME_ASAMA_RE = /play-?offs?|knockout|bracket|final|elimination/i
+
+// PandaScore results[] sırası opponents[] ile aynı değil: kazananın skoru küçükse çevir
+function macSkoru(m) {
+  let a = m.team_a_score, b = m.team_b_score
+  if (a == null || b == null) return null
+  const w = m.winner_id
+  if (w != null && a !== b && ((w === m.team_a?.id && a < b) || (w === m.team_b?.id && b < a))) [a, b] = [b, a]
+  return [a, b]
+}
+
+function ligMacLi(origin, m, skorlu) {
+  const an = esc(m.team_a?.name || '?'), bn = esc(m.team_b?.name || '?')
+  const sk = skorlu ? macSkoru(m) : null
+  const orta = sk ? ` ${sk[0]}-${sk[1]} ` : ' vs '
+  const tarih = trTarih(m.scheduled_at)
+  return `<li><a href="${origin}/match/${m.id}">${an}${orta}${bn}</a>${tarih ? ` — ${tarih}` : ''}</li>`
+}
+
+function puanDurumuHtml(maclar) {
+  const tablo = new Map()
+  const satir = t => {
+    if (!tablo.has(t.id)) tablo.set(t.id, { ad: t.name, g: 0, m: 0 })
+    return tablo.get(t.id)
+  }
+  for (const m of maclar) {
+    if (m.status !== 'finished' || !m.team_a?.id || !m.team_b?.id) continue
+    const sk = macSkoru(m)
+    let kazanan = m.winner_id
+    if (kazanan == null && sk && sk[0] !== sk[1]) kazanan = sk[0] > sk[1] ? m.team_a.id : m.team_b.id
+    if (kazanan == null) continue
+    const [k, y] = kazanan === m.team_a.id ? [m.team_a, m.team_b] : [m.team_b, m.team_a]
+    satir(k).g++
+    satir(y).m++
+  }
+  if (!tablo.size) return ''
+  const sirali = [...tablo.values()].sort((x, y) => y.g - x.g || x.m - y.m || String(x.ad).localeCompare(String(y.ad)))
+  return `<h3>Puan durumu</h3><table><thead><tr><th>Sıra</th><th>Takım</th><th>G</th><th>M</th></tr></thead><tbody>${
+    sirali.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.ad)}</td><td>${r.g}</td><td>${r.m}</td></tr>`).join('')
+  }</tbody></table>`
+}
+
+async function buildForLig(slug, origin, url) {
+  const lig = await sbBul(`rpc/lig_sayfasi?p_slug=${ENC(slug)}`)
+  if (!lig) return YOK
+  const turnuvalar = Array.isArray(lig.turnuvalar) ? lig.turnuvalar : []
+  const idler = turnuvalar.map(t => t.id).filter(Number.isFinite)
+  const [maclar, turkler] = idler.length
+    ? await Promise.all([
+        sbFetchAll(`matches?tournament_id=in.(${idler.join(',')})&select=${ENC(LIG_MAC_SEL)}&order=scheduled_at.asc&limit=600`),
+        sbFetchAll('turk_takimlar?select=team_id'),
+      ])
+    : [[], []]
+
+  const baslik = [lig.ad, lig.yil].filter(Boolean).join(' ')
+  const etkinlik = turnuvaAdi({ league_name: lig.league_name, event_name: lig.etkinlik }, false) || baslik
+  const title = `${baslik} Fikstür, Puan Durumu ve Sonuçlar`
+  const asamaAdlari = turnuvalar.map(t => t.name).filter(Boolean).join(', ')
+  const desc = `${etkinlik} fikstürü, puan durumu ve maç sonuçları` +
+    `${asamaAdlari ? `: ${asamaAdlari}` : ''}. Tüm aşamalar tek sayfada — feXt.`
+
+  // Türk takımları (turk_takimlar, TEK KAYNAK) — Türkçe sitenin ayrıştığı yer
+  const turkId = new Set(turkler.map(r => r.team_id))
+  const turkTakim = new Map()
+  for (const m of maclar) {
+    for (const t of [m.team_a, m.team_b]) if (t?.id && turkId.has(t.id)) turkTakim.set(t.id, t.name)
+  }
+  const turkHtml = turkTakim.size
+    ? `<h2>Bu etkinlikteki Türk takımları</h2><ul>${
+      [...turkTakim.entries()].map(([id, ad]) => `<li><a href="${origin}/team/${id}">${esc(ad)}</a></li>`).join('')
+    }</ul>`
+    : ''
+
+  const asamaHtml = turnuvalar.map(t => {
+    const am = maclar.filter(m => m.tournament_id === t.id)
+    const fikstur = am.filter(m => m.status === 'not_started' || m.status === 'running')
+    const sonuc = am.filter(m => m.status === 'finished').reverse()
+    const tarih = [trTarih(t.begin_at), trTarih(t.end_at)].filter(Boolean).join(' – ')
+    return `<section><h2><a href="${origin}/tournament/${t.id}">${esc(t.name || 'Aşama')}</a></h2>` +
+      (tarih ? `<p>${esc(tarih)}</p>` : '') +
+      (ELEME_ASAMA_RE.test(t.name || '') ? '' : puanDurumuHtml(am)) +
+      (fikstur.length ? `<h3>Fikstür</h3><ul>${fikstur.map(m => ligMacLi(origin, m, m.status === 'running')).join('')}</ul>` : '') +
+      (sonuc.length ? `<h3>Sonuçlar</h3><ul>${sonuc.map(m => ligMacLi(origin, m, true)).join('')}</ul>` : '') +
+      (!am.length ? '<p>Bu aşamanın maçları henüz açıklanmadı.</p>' : '') +
+      `</section>`
+  }).join('')
+
+  const gecmis = Array.isArray(lig.gecmis) ? lig.gecmis : []
+  const gecmisHtml = gecmis.length
+    ? `<h2>Önceki etkinlikler</h2><ul>${gecmis.map(g =>
+      `<li><a href="${origin}/tournament/${ENC(g.turnuva_id)}">${esc(turnuvaAdi({ league_name: lig.league_name, event_name: g.etkinlik }, false))}</a></li>`,
+    ).join('')}</ul>`
+    : ''
+
+  const jsonLd = lig.baslangic ? {
+    '@context': 'https://schema.org', '@type': 'SportsEvent', name: etkinlik, sport: 'Esports',
+    ...eventCommon(url, lig.baslangic, desc, ''),
+    endDate: lig.bitis || undefined, url,
+  } : null
+  const body = `<h1>${esc(title)}</h1><p>${esc(desc)}</p>${turkHtml}${asamaHtml}${gecmisHtml}${siteNavHtml(origin)}`
+  // Tanımlı ama etkinliği olmayan lig: sayfa açık kalır, dizine girmez
+  return htmlDoc({ title, desc, url, img: `${origin}${STATIC_OG}`, type: 'website', jsonLd, body,
+    robots: turnuvalar.length ? '' : 'noindex, follow' })
 }
 
 /* ── Statik (liste) rotalar ────────────────────────────────────────────────
@@ -969,12 +1092,18 @@ async function staticFeedHtml(feed, origin) {
       }</ul>`
     }
     if (feed === 'tournaments') {
-      const rows = await sbFetchAll(
-        `tournaments?tier=in.(S,s,A,a)&select=id,name,tier&order=begin_at.desc&limit=25`,
-      )
-      if (!rows.length) return ''
-      return `<h2>Turnuvalar</h2><ul>${
-        rows.map(t => `<li><a href="${origin}/tournament/${t.id}">${esc(t.name)}${t.tier ? ` (${esc(String(t.tier).toUpperCase())}-Tier)` : ''}</a></li>`).join('')
+      const [rows, ligler] = await Promise.all([
+        sbFetchAll(`tournaments?tier=in.(S,s,A,a)&select=${ENC('id,name,tier,league_name,event_name,display_name')}&order=begin_at.desc&limit=25`),
+        sbFetchAll('rpc/lig_listesi'),
+      ])
+      const ligHtml = ligler.length
+        ? `<h2>Ligler — güncel fikstür ve puan durumu</h2><ul>${ligler.map(l =>
+          `<li><a href="${origin}/lig/${esc(l.slug)}">${esc([l.ad, l.yil].filter(Boolean).join(' '))} fikstür ve puan durumu</a></li>`,
+        ).join('')}</ul>`
+        : ''
+      if (!rows.length) return ligHtml
+      return ligHtml + `<h2>Turnuvalar</h2><ul>${
+        rows.map(t => `<li><a href="${origin}/tournament/${t.id}">${esc(turnuvaAdi(t, true) || t.name)}${t.tier ? ` (${esc(String(t.tier).toUpperCase())}-Tier)` : ''}</a></li>`).join('')
       }</ul>`
     }
     if (feed === 'news') {
@@ -1070,6 +1199,8 @@ export default async function middleware(req) {
       if (seg) html = UUID_RE.test(seg) ? await buildForPlayer(seg, SITE_ORIGIN, canon) : YOK
     } else if (path.startsWith('/tournament/')) {
       if (seg) html = SAYI_RE.test(seg) ? await buildForTournament(seg, SITE_ORIGIN, canon) : YOK
+    } else if (path.startsWith('/lig/')) {
+      if (seg) html = LIG_SLUG_RE.test(seg) ? await buildForLig(seg, SITE_ORIGIN, canon) : YOK
     }
 
     if (html === YOK) {

@@ -40,6 +40,7 @@
   "rewrites": [
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/sitemap-static.xml", "destination": "/api/sitemap?type=static" },
+    { "source": "/sitemap-ligler.xml", "destination": "/api/sitemap?type=ligler" },
     { "source": "/sitemap-news.xml", "destination": "/api/sitemap?type=news" },
     { "source": "/sitemap-matches.xml", "destination": "/api/sitemap?type=matches" },
     { "source": "/sitemap-tournaments.xml", "destination": "/api/sitemap?type=tournaments" },

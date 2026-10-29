@@ -11,6 +11,7 @@
  *   /sitemap-news.xml      → ?type=news
  *   /sitemap-matches.xml   → ?type=matches   (sadece finished)
  *   /sitemap-tournaments.xml, /sitemap-teams.xml, /sitemap-players.xml
+ *   /sitemap-ligler.xml    → ?type=ligler   (kalıcı /lig/<slug> sayfaları)
  *
  * Domain: SITE_URL env (kanonik) → yoksa request origin (vercel.app'te test için).
  */
@@ -19,7 +20,7 @@ export const config = { runtime: 'edge' }
 const SB = process.env.VITE_SUPABASE_URL
 const KEY = process.env.VITE_SUPABASE_ANON_KEY
 
-const CHILDREN = ['static', 'news', 'matches', 'tournaments', 'teams', 'players']
+const CHILDREN = ['static', 'ligler', 'news', 'matches', 'tournaments', 'teams', 'players']
 // 'players' 2026-08-25'te ÇIKARILMIŞTI (5.882 ince sayfa crawl bütçesini yiyordu),
 // 2026-09-12'de KALİTE FİLTRESİYLE geri eklendi. O günkü karar doğruydu: sayfalarda
 // hiç veri yoktu. Koşul değişti — player_match_stats artık 6.330 satır / 340 oyuncu
@@ -135,6 +136,23 @@ async function buildChild(type, base) {
       ['/kvkk', 'yearly', '0.3'],
     ]
     return urlset(pages.map(([p, cf, pr]) => ({ loc: base + p, lastmod: today, changefreq: cf, priority: pr })))
+  }
+  if (type === 'ligler') {
+    // Kalıcı lig sayfaları (backend/sql/ligler.sql). Ayrı alt sitemap: lig RPC'si
+    // arızalanırsa statik sitemap etkilenmesin. Sürüyor/yaklaşıyorsa lastmod bugün,
+    // bitmişse etkinliğin bitiş günü (sayfa o günden beri değişmiyor).
+    if (!SB || !KEY) throw new Error('Supabase ortam değişkenleri yok')
+    const istek = () => fetch(`${SB}/rest/v1/rpc/lig_listesi`, { headers: { apikey: KEY, Authorization: `Bearer ${KEY}` } })
+    let res = await istek().catch(() => null)
+    if (!res?.ok) res = await istek()
+    if (!res.ok) throw new Error(`lig_listesi ${res.status}`)
+    const ligler = await res.json()
+    const today = new Date().toISOString().slice(0, 10)
+    return urlset((Array.isArray(ligler) ? ligler : []).map(l => {
+      const bitis = l.bitis ? new Date(l.bitis) : null
+      const bitti = bitis && !Number.isNaN(bitis.getTime()) && bitis.getTime() < Date.now()
+      return { loc: `${base}/lig/${l.slug}`, lastmod: bitti ? bitis.toISOString().slice(0, 10) : today, changefreq: 'daily', priority: '0.9' }
+    }))
   }
   if (type === 'news') {
     const rows = await fetchAll('news_articles', 'id,match_id,tournament_id,title,content_type,created_at')

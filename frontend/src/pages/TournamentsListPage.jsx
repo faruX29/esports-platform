@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { GAMES, useGame } from '../context/GameContext'
 import { normalizeGameId } from '../utils/gameUtils'
@@ -8,6 +8,7 @@ import InitialsImage from '../components/InitialsImage'
 import GameLogo, { GAME_ICON_PATHS } from '../components/GameLogo'
 import { tournamentDisplayName, isGenericStageName, displayRegion } from '../utils/tournamentDisplay'
 import { FEXT } from '../theme'
+import { ligListesiGetir, ligPath, ligBaslik } from '../utils/ligler'
 
 // Kanonik oyuna ait TÜM game_id'ler (mükerrer kayıtlar dahil: CS2 2/8, LoL 3/9).
 function resolveGameIds(activeGame, games) {
@@ -73,6 +74,19 @@ export default function TournamentsListPage() {
   const [teamsByTournament, setTeamsByTournament] = useState({})
 
   const PAGE_SIZE = 30
+
+  // Kalıcı lig sayfaları (/lig/<slug>): adresi yıldan yıla değişmeyen fikstür sayfaları
+  const [ligler, setLigler] = useState(null) // null = yükleniyor
+  useEffect(() => {
+    let iptal = false
+    ligListesiGetir().then(l => { if (!iptal) setLigler(l) })
+    return () => { iptal = true }
+  }, [])
+  const gorunenLigler = useMemo(() => {
+    if (!ligler) return null
+    const secili = activeGame && activeGame !== 'all' ? normalizeGameId(activeGame) : null
+    return secili ? ligler.filter(l => normalizeGameId(l.oyun) === secili) : ligler
+  }, [ligler, activeGame])
 
   // Oyun listesini bir kez çek (aktif oyun → game_id çözümü için).
   useEffect(() => {
@@ -198,6 +212,31 @@ export default function TournamentsListPage() {
       <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--text-3)' }}>
         Aktif ve yaklaşan turnuvalar. Detay, bracket ve puan durumu için bir turnuvaya tıkla.
       </p>
+
+      {/* Ligler: yüklenirken yer tutar (CLS), boşsa hiç çizilmez */}
+      {(gorunenLigler === null || gorunenLigler.length > 0) && (
+        <nav aria-label="Ligler" style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.8px', textTransform: 'uppercase', color: 'var(--text-4)', marginBottom: 7 }}>
+            Ligler — güncel fikstür ve puan durumu
+          </div>
+          <div className="scroll-fade-x" style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 3, scrollbarWidth: 'none', minHeight: 36 }}>
+            {(gorunenLigler || []).map(l => {
+              const renk = GAMES.find(g => g.id === normalizeGameId(l.oyun))?.color || 'var(--text-3)'
+              return (
+                <Link key={l.slug} to={ligPath(l.slug)} style={{
+                  flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '7px 13px', minHeight: 36, boxSizing: 'border-box', borderRadius: 999,
+                  fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', textDecoration: 'none',
+                  border: '1px solid var(--line-2)', background: 'var(--surface)', color: 'var(--text-2)',
+                }}>
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: renk }} />
+                  {ligBaslik(l)}
+                </Link>
+              )
+            })}
+          </div>
+        </nav>
+      )}
 
       <div style={{ marginBottom: 14 }}>
         <input

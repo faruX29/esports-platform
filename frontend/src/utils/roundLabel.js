@@ -23,6 +23,9 @@ export function roundLabel(match) {
   if (/(round[\s_-]*of[\s_-]*16|\bro16\b|1\/8)/.test(s)) return 'Son 16'
   if (/(round[\s_-]*of[\s_-]*32|\bro32\b|1\/16)/.test(s)) return 'Son 32'
   if (/(grand[\s_-]*final|grand final|büyük final)/.test(s)) return 'Büyük Final'
+  // Ayak finalleri "Final" değil (alt ayak finali turnuvanın finali sanılıyordu)
+  if (/\b(lower|lb|losers?)\b[\s\w-]*\bfinal\b/.test(s)) return 'Alt Ayak Finali'
+  if (/\b(upper|ub|winners?)\b[\s\w-]*\bfinal\b/.test(s)) return 'Üst Ayak Finali'
   if (/\bfinal\b/.test(s)) return 'Final'
 
   // Grup / İsviçre / lig aşamaları

@@ -10,9 +10,11 @@
 -- ÇÖZÜM: Postgres'in kendi zamanlayıcısı. Vercel CPU kotası harcanmaz,
 -- GitHub Actions dakikası yemez, gerçekten dakikada bir koşar.
 --
--- KAPSAM: yalnız DELTA — var olan maçın durumu, skoru, kazananı, raw_data'sı.
--- Yeni maç/takım oluşturmaz; onlar Python ETL'in işi. Takımları satırdakiyle
--- eşleşmeyen maça DOKUNMAZ (30 Eylül skor karışması dersi).
+-- KAPSAM: yalnız DELTA — var olan maçın durumu, skoru, kazananı, saati,
+-- raw_data'sı. /running'den düşen (biten) maçın son hâlini de kendi
+-- kaydından alır (29 Ekim). Yeni maç/takım oluşturmaz; onlar Python ETL'in
+-- işi. Takımları satırdakiyle eşleşmeyen maça DOKUNMAZ (30 Eylül skor
+-- karışması dersi).
 --
 -- Uygulama: bu dosya bir kez çalıştırılır. Tekrar çalıştırmak güvenlidir.
 -- ─────────────────────────────────────────────────────────────────────────
@@ -33,6 +35,9 @@ CREATE TABLE IF NOT EXISTS canli.istek (
     olusma      timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS istek_bekleyen ON canli.istek (olusma) WHERE NOT islendi;
+-- Dolu ise istek tek maçın kendi kaydıdır (/matches/{id}), boşsa oyunun /running'i.
+ALTER TABLE canli.istek ADD COLUMN IF NOT EXISTS mac_id bigint;
+CREATE INDEX IF NOT EXISTS istek_mac ON canli.istek (mac_id, olusma) WHERE mac_id IS NOT NULL;
 
 -- ── Token (Vault) ────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION canli.anahtar() RETURNS text
@@ -52,6 +57,7 @@ DECLARE
     tok   text := canli.anahtar();
     slug  text;
     rid   bigint;
+    mid   bigint;
     sayi  integer := 0;
 BEGIN
     IF tok IS NULL THEN
@@ -77,6 +83,44 @@ BEGIN
         INSERT INTO canli.istek (oyun, request_id) VALUES (slug, rid);
         sayi := sayi + 1;
     END LOOP;
+
+    -- Takılı "canlı" maç: DB'de running ama oyununun son /running yanıtında
+    -- yok. Maç bitince /running'den düşer, yukarıdaki istek onu bir daha
+    -- görmez; sync-live.yml (fiilen 2-6 saatte bir) gelene kadar 'running'
+    -- kalırdı (29 Ekim: PGL Bucharest çeyrek finalleri). Bitiş skoru maçın
+    -- kendi kaydından alınır. Kota: turda en çok 5, aynı maç 10 dakikada bir.
+    FOR mid, slug IN
+        WITH son AS (
+            SELECT DISTINCT ON (i.oyun) i.oyun, r.content::jsonb AS icerik
+            FROM canli.istek i
+            JOIN net._http_response r ON r.id = i.request_id
+            WHERE i.mac_id IS NULL AND r.status_code = 200
+              AND i.olusma > now() - interval '5 minutes'
+            ORDER BY i.oyun, i.id DESC
+        )
+        SELECT m.id, g.slug
+        FROM matches m
+        JOIN games g ON g.id = m.game_id
+        JOIN son s ON s.oyun = g.slug
+        WHERE m.status = 'running'
+          AND jsonb_typeof(s.icerik) = 'array'
+          AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(s.icerik) j
+                          WHERE (j->>'id')::bigint = m.id)
+          AND NOT EXISTS (SELECT 1 FROM canli.istek t
+                          WHERE t.mac_id = m.id
+                            AND t.olusma > now() - interval '10 minutes')
+        ORDER BY m.scheduled_at
+        LIMIT 5
+    LOOP
+        SELECT net.http_get(
+            url     := 'https://api.pandascore.co/matches/' || mid,
+            headers := jsonb_build_object('Authorization', 'Bearer ' || tok,
+                                          'Accept', 'application/json'),
+            timeout_milliseconds := 8000
+        ) INTO rid;
+        INSERT INTO canli.istek (oyun, request_id, mac_id) VALUES (slug, rid, mid);
+        sayi := sayi + 1;
+    END LOOP;
     RETURN sayi;
 END;
 $$;
@@ -97,18 +141,26 @@ BEGIN
         ORDER BY i.id
     LOOP
         adet := 0;
-        IF k.status_code = 200 AND jsonb_typeof(k.content::jsonb) = 'array' THEN
+        -- /running dizi, /matches/{id} tek nesne döner; ikisi aynı yoldan yazılır
+        IF k.status_code = 200 AND jsonb_typeof(k.content::jsonb) IN ('array', 'object') THEN
             WITH gelen AS (
                 SELECT (j->>'id')::bigint                AS mid,
                        j->>'status'                      AS durum,
                        nullif(j->>'winner_id','')::bigint AS kazanan,
+                       COALESCE(nullif(j->>'scheduled_at',''),
+                                nullif(j->>'begin_at',''))::timestamptz AS saat,
                        j                                 AS ham
-                FROM jsonb_array_elements(k.content::jsonb) j
+                FROM jsonb_array_elements(
+                         CASE jsonb_typeof(k.content::jsonb)
+                             WHEN 'object' THEN jsonb_build_array(k.content::jsonb)
+                             ELSE k.content::jsonb END) j
                 WHERE j ? 'results'
             ), yazim AS (
                 UPDATE matches m SET
                     status       = gelen.durum,
                     winner_id    = COALESCE(gelen.kazanan, m.winner_id),
+                    -- maç saati öne/arkaya alınabiliyor (29 Ekim QF4: 17:00 → 15:20)
+                    scheduled_at = COALESCE(gelen.saat, m.scheduled_at),
                     team_a_score = (SELECT (x->>'score')::int
                                     FROM jsonb_array_elements(gelen.ham->'results') x
                                     WHERE (x->>'team_id')::bigint = m.team_a_id),

@@ -70,7 +70,7 @@ python radar.py [YYYY-AA-GG] | python karne.py | python champions.py [grup] | py
 - **Vercel CDN Requests** (Hobby: ayda 1M) bot dahil her isteği sayar; kotayı yiyen botu Firewall → Top User Agents'ta bul, custom rule'u UA **Contains** ile kur ("Matches expression" eşleşmedi) ve bot UA'lı curl'de 403 gör. Değersiz bot listesi `middleware.js` `DEGERSIZ_BOT_RE` ile `public/robots.txt`'te eş tutulur.
 - **Gözler:** `saglik.yml` her sabah kontrol eder (eşik aşılırsa "SORUN" e-postası, yoksa yalnız Pazartesi). Tarayıcı hataları ve CSP ihlalleri `client_errors`'a yazılır (`utils/hataBildir.js`, yalnız üretim build'i, oturum başına 5). Eşikler `isletim/saglik.py` başında.
 - **Yedek:** `yedek.yml` Pazar gecesi `pg_dump` + hesap kimlikleri (şifre hash'i yok) → `age` ile şifreli → ayrı private repoya Release; aynı koşuda boş Postgres 17'ye geri yükleyip satır sayısını doğrular.
-- `sync-live.yml` (adı "5-min", fiilen 2-6 saatte bir) pg_cron'un yapmadığı işleri yapar: takılı "canlı" maçı bitirme (orphan), hayalet yaklaşan maç, canlı maç istatistiği. pg_cron var diye silme.
+- `sync-live.yml` (adı "5-min", fiilen 2-6 saatte bir) pg_cron'un yapmadığı işleri yapar: hayalet yaklaşan maç, canlı maç istatistiği, 404 force-finish. Takılı "canlı" maçı (`/running`'den düşen) artık pg_cron da `/matches/{id}` ile bitirir (`canli_senkron.sql`). pg_cron var diye silme.
 - `sync-liquipedia.yml` adı yanıltıcı: Liquipedia senkronu kapalı, iş akışı artık içerik (önizleme, turnuva özeti, transfer haberi) üretiyor.
 
 ## Kod kuralları

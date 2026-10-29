@@ -760,14 +760,27 @@ class PlayerStatsSyncer:
                     {'coklu': set(pandascore_id)  — bu koşuda birden çok takımda
                                                     görünen oyuncular (kayıt YOK),
                      'oyun': 'valorant' | ...,
-                     'bugun': date}
+                     'bugun': date,
+                     'turk': set(team_id)        — turk_takimlar,
+                     'gorulen': set(pandascore_id) — bu koşuda herhangi bir
+                                                    kadroda görünen oyuncular}
+                  Türk takımında (turk_takimlar) iki hareket daha yazılır: önceki takımı
+                  bilinmeyen oyuncunun KATILMASI ve kadrodan düşüp bu koşuda başka
+                  kadroda görünmeyen oyuncunun AYRILMASI (yeni takımı bilinmez).
+                  Yabancı takımda ikisi de gürültü olduğu için yazılmaz.
         Returns: {'upserted', 'flushed', 'transfers'}
         """
         api_ps_ids = [p['id'] for p in api_players]
         transfers = 0
+        turk = transfer is not None and team_id in transfer.get('turk', ())
 
         with conn.cursor() as cur:
             onceki = {}
+            kadro_vardi = False
+            if turk:
+                # Kadrosu ilk kez yüklenen takımda herkes "yeni"dir → katılım yazılmaz.
+                cur.execute("SELECT count(*) FROM players WHERE team_pandascore_id = %s", (team_id,))
+                kadro_vardi = cur.fetchone()[0] >= 2
             if transfer is not None:
                 # Upsert'ten ÖNCE eski takımı oku. Kadrodan düşmüş (NULL) oyuncu için
                 # son takım extra_metadata.son_takim'de saklanır (aşağıdaki flush).
@@ -814,8 +827,15 @@ class PlayerStatsSyncer:
                 if transfer is None or p['id'] in transfer['coklu']:
                     continue
                 player_uuid, eski_takim = onceki.get(p['id'], (None, None))
-                if not player_uuid or not eski_takim or eski_takim == team_id:
-                    continue   # yeni oyuncu / takımı değişmemiş
+                if eski_takim == team_id:
+                    continue   # takımı değişmemiş
+                if not eski_takim:
+                    # Yeni ya da serbest oyuncu: yalnız Türk takımına katılırsa haber
+                    if turk and kadro_vardi:
+                        transfers += self._transfer_yaz(
+                            cur, player_uuid or _player_uuid(p['id']), p, None, team_id,
+                            team_name, transfer)
+                    continue
                 transfers += self._transfer_yaz(
                     cur, player_uuid, p, eski_takim, team_id, team_name, transfer)
 
@@ -833,8 +853,22 @@ class PlayerStatsSyncer:
                 WHERE team_pandascore_id = %s
                   AND pandascore_id IS NOT NULL
                   AND pandascore_id != ALL(%s::bigint[])
+                RETURNING id, pandascore_id, nickname, role
             """, (team_id, team_id, api_ps_ids))
-            flushed = cur.rowcount
+            dusenler = cur.fetchall()
+            flushed = len(dusenler)
+
+            # Türk takımından ayrılış: bu koşuda başka kadroda görünen oyuncu için
+            # yazılmaz (yeni takımına geçişi transfer olarak zaten yazılır/yazılacak).
+            # PandaScore gecikmesiyle düşüp geri gelen oyuncu haber olmasın diye
+            # haber üretimi bu kaydı bekletir (news_generator._fetch_pending_transfers).
+            if turk:
+                for uid, pid, ad, rol in dusenler:
+                    if pid in transfer['coklu'] or pid in transfer.get('gorulen', ()):
+                        continue
+                    transfers += self._transfer_yaz(
+                        cur, uid, {'id': pid, 'name': ad, 'role': rol}, team_id, None,
+                        None, transfer)
 
         conn.commit()
 
@@ -844,10 +878,15 @@ class PlayerStatsSyncer:
         return {'upserted': len(api_players), 'flushed': flushed, 'transfers': transfers}
 
     def _transfer_yaz(self, cur, player_uuid, p, eski_takim, yeni_takim, yeni_ad, transfer):
-        """PandaScore kadro farkından tek roster_changes kaydı. Aynı gün tekrarı yazmaz."""
-        cur.execute("SELECT name FROM teams WHERE id = %s", (eski_takim,))
-        r = cur.fetchone()
-        eski_ad = r[0] if r else None
+        """PandaScore kadro farkından tek roster_changes kaydı. Aynı gün tekrarı yazmaz.
+
+        eski_takim None → katılım (önceki takım bilinmiyor); yeni_takim None → ayrılış.
+        """
+        eski_ad = None
+        if eski_takim:
+            cur.execute("SELECT name FROM teams WHERE id = %s", (eski_takim,))
+            r = cur.fetchone()
+            eski_ad = r[0] if r else None
         bugun = transfer['bugun']
         payload = {
             'old_team': eski_ad, 'new_team': yeni_ad, 'player': p.get('name'),
@@ -858,24 +897,29 @@ class PlayerStatsSyncer:
             INSERT INTO roster_changes
               (player_id, source_team_id, target_team_id, transfer_date,
                transfer_type, data_source, raw_payload, idempotency_hash)
-            VALUES (%s, %s, %s, %s, 'permanent', 'pandascore_roster', %s::jsonb,
+            VALUES (%s, %s, %s, %s, %s, 'pandascore_roster', %s::jsonb,
                     md5(%s))
             ON CONFLICT (idempotency_hash) DO NOTHING
         """, (
-            player_uuid, eski_takim, yeni_takim, bugun, json.dumps(payload),
-            f"ps-roster:{p['id']}:{eski_takim}:{yeni_takim}:{bugun.isoformat()}",
+            player_uuid, eski_takim, yeni_takim, bugun,
+            'release' if yeni_takim is None else 'permanent', json.dumps(payload),
+            f"ps-roster:{p['id']}:{eski_takim or '-'}:{yeni_takim or '-'}:{bugun.isoformat()}",
         ))
         if cur.rowcount:
-            logger.info(f"    🔁 Transfer: {p.get('name')}  {eski_ad or eski_takim} → {yeni_ad}")
+            logger.info(f"    🔁 Transfer: {p.get('name')}  {eski_ad or eski_takim or '?'} → "
+                        f"{yeni_ad or 'kadro dışı'}")
         return cur.rowcount
 
-    def sync_notable_rosters(self, days=60, kaydet=True, pace=0.4):
+    def sync_notable_rosters(self, days=60, kaydet=True, pace=0.4, sadece_turk=False):
         """
         Önemli takımların kadrolarını PandaScore'dan günceller ve kadro FARKINDAN
         transfer kaydı üretir (Liquipedia 21 Eyl'de kapandı; transferin yeni kaynağı).
 
         Kapsam: son `days` günde S/A/B seviyesinde maçı olan takımlar + Türk takımları
-        (teams.country_code='TR'). ~234 takım → günde ~234 istek (ücretsiz sınır 1000/saat).
+        (turk_takimlar). ~234 takım → günde ~234 istek (ücretsiz sınır 1000/saat).
+
+        sadece_turk=True → yalnız son `days` günde maçı olan Türk takımları (~30 istek).
+        Kadro işinin her koşusunda çalışır: Türk takımı haberi günlük işi beklemesin.
 
         kaydet=False → TABAN ÇİZGİSİ: kadrolar güncellenir, transfer yazılmaz. İlk
         koşu böyle yapılmalı: mevcut kadrolar Liquipedia'dan geldiği için PandaScore
@@ -891,6 +935,8 @@ class PlayerStatsSyncer:
         self.ensure_schema()
         with Database.get_connection() as conn:
             with conn.cursor() as cur:
+                cur.execute("SELECT team_id FROM turk_takimlar")
+                turk = {r[0] for r in cur.fetchall()}
                 cur.execute("""
                     SELECT DISTINCT t.id, t.name, g.slug
                     FROM teams t
@@ -898,13 +944,14 @@ class PlayerStatsSyncer:
                     LEFT JOIN tournaments tn ON tn.id = m.tournament_id
                     LEFT JOIN games g ON g.id = t.game_id
                     WHERE m.scheduled_at >= NOW() - make_interval(days => %s)
-                      AND (UPPER(LEFT(COALESCE(tn.tier, ''), 1)) IN ('S', 'A', 'B')
-                           OR t.country_code = 'TR')
+                      AND (t.id = ANY(%s::bigint[])
+                           OR (NOT %s AND UPPER(LEFT(COALESCE(tn.tier, ''), 1)) IN ('S', 'A', 'B')))
                     ORDER BY t.id
-                """, (days,))
+                """, (days, list(turk), sadece_turk))
                 takimlar = cur.fetchall()
 
-        logger.info(f"👥 {len(takimlar)} takımın kadrosu çekiliyor (son {days} gün, "
+        logger.info(f"👥 {len(takimlar)} {'Türk ' if sadece_turk else ''}takımın kadrosu çekiliyor "
+                    f"(son {days} gün, "
                     f"{'transfer kaydıyla' if kaydet else 'TABAN ÇİZGİSİ, transfer yazılmaz'})")
 
         kadrolar, hata = {}, 0
@@ -917,14 +964,48 @@ class PlayerStatsSyncer:
             time.sleep(pace)
 
         sayac = Counter(p['id'] for _, _, oy in kadrolar.values() for p in oy)
+        gorulen = set(sayac)
+
+        # Eski takımı bu koşuda çekilmeyen oyuncu: eski takımın kadrosuna da bak. Hâlâ
+        # oradaysa (ana takım + akademi, stand-in) transfer değil, iki kadroda birden.
+        # Türk modunda bu bakış şart: yabancı takımlar çekilmediği için oyuncu her
+        # koşuda iki takım arasında gidip gelen sahte transfer üretirdi. Aday az
+        # (gerçek geçiş sayısı kadar), istek bütçesine etkisi küçük.
+        ek_takimlar = set()
+        if kaydet and gorulen:
+            with Database.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT pandascore_id,
+                               COALESCE(team_pandascore_id,
+                                        NULLIF(extra_metadata->>'son_takim', '')::bigint)
+                        FROM players WHERE pandascore_id = ANY(%s::bigint[])
+                    """, (list(gorulen),))
+                    eski = dict(cur.fetchall())
+            for tid, (_, _, oyuncular) in kadrolar.items():
+                for p in oyuncular:
+                    e = eski.get(p['id'])
+                    if e and e != tid and e not in kadrolar:
+                        ek_takimlar.add(e)
+        for e in sorted(ek_takimlar):
+            oyuncular = self._fetch_team_roster(e, f"takım {e}")
+            if oyuncular is None:
+                hata += 1
+            for p in oyuncular or []:
+                sayac[p['id']] += 1
+                gorulen.add(p['id'])
+            time.sleep(pace)
+
         coklu = {pid for pid, n in sayac.items() if n > 1}
 
         toplam = {'takim': len(kadrolar), 'oyuncu': 0, 'serbest': 0,
-                  'transfer': 0, 'hata': hata, 'coklu_oyuncu': len(coklu)}
+                  'transfer': 0, 'hata': hata, 'coklu_oyuncu': len(coklu),
+                  'ek_kontrol': len(ek_takimlar)}
         bugun = date.today()
         with Database.get_connection() as conn:
             for tid, (ad, oyun, oyuncular) in kadrolar.items():
-                tr = {'coklu': coklu, 'oyun': oyun, 'bugun': bugun} if kaydet else None
+                tr = ({'coklu': coklu, 'oyun': oyun, 'bugun': bugun,
+                       'turk': turk, 'gorulen': gorulen} if kaydet else None)
                 r = self._upsert_team_roster(tid, ad, oyuncular, conn, transfer=tr)
                 toplam['oyuncu'] += r['upserted']
                 toplam['serbest'] += r['flushed']

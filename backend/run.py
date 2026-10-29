@@ -178,6 +178,12 @@ def main():
              'transfer kaydı üret (Liquipedia 21 Eyl 2026 kapandı; yeni transfer kaynağı)',
     )
     parser.add_argument(
+        '--roster-turk',
+        action='store_true',
+        help='--roster-transfers\'ın yalnız Türk takımları (turk_takimlar, son 60 günde maçı '
+             'olan) sürümü; kadro işinin her koşusunda, Türk transferi günlük işi beklemesin',
+    )
+    parser.add_argument(
         '--roster-baseline',
         action='store_true',
         help='--roster-transfers ile: TABAN ÇİZGİSİ, kadroları güncelle ama transfer YAZMA '
@@ -310,6 +316,7 @@ def main():
         args.generate_tournament_recaps,
         args.generate_weekly,
         args.roster_transfers,
+        args.roster_turk,
     ])
     should_sync_matches = has_non_enrichment_work or not enrichment_only
 
@@ -389,11 +396,13 @@ def main():
         logger.info("=" * 60)
 
     # ── --roster-transfers: kadro güncelle + kadro farkından transfer ──────────
-    if args.roster_transfers:
+    if args.roster_transfers or args.roster_turk:
         logger.info("\n" + "=" * 60)
-        logger.info("🔁 KADRO + TRANSFER TESPİTİ (PandaScore kadro farkı)")
+        logger.info("🔁 KADRO + TRANSFER TESPİTİ (PandaScore kadro farkı"
+                    f"{', yalnız Türk takımları' if args.roster_turk else ''})")
         logger.info("=" * 60)
-        sonuc = PlayerStatsSyncer().sync_notable_rosters(kaydet=not args.roster_baseline)
+        sonuc = PlayerStatsSyncer().sync_notable_rosters(
+            kaydet=not args.roster_baseline, sadece_turk=args.roster_turk)
         logger.info(f"✅ {sonuc['takim']} takım | {sonuc['transfer']} transfer | "
                     f"{sonuc['serbest']} serbest | {sonuc['coklu_oyuncu']} çoklu-takım oyuncu atlandı")
         logger.info("=" * 60)

@@ -913,9 +913,11 @@ const STATIC_ROUTES = {
     heading: 'Haber arşivi',
     feed: 'news',
   },
+  // Başlıkta takım adları: okur Türk takımını adıyla arar. Yalnız metin: Türk takımı
+  // TESPİTİ yine turk_takimlar'dan. TurkTakimlariPage.jsx SeoHead'iyle aynı tutulur.
   '/turk-takimlari': {
-    title: 'Türk Takımları — Maçlar, Sonuçlar ve Haberler',
-    desc: 'Türk espor takımlarının yaklaşan maçları, son sonuçları ve haberleri tek sayfada: VALORANT, CS2 ve League of Legends.',
+    title: 'Türk Espor Takımları: BBL, Eternal Fire, FUT, Galatasaray Maçları',
+    desc: 'BBL Esports, Eternal Fire, FUT Esports, Galatasaray Esports ve diğer Türk takımlarının VALORANT, CS2 ve LoL maç programı, sonuçları, kadro ve transfer haberleri tek sayfada.',
     heading: 'Türk takımları',
     feed: 'turk',
   },
@@ -1043,14 +1045,17 @@ async function staticFeedHtml(feed, origin) {
       const TURK_MAC_SEL = MATCH_SEL + ',team_a_id,team_b_id,status'
       const takimFiltresi = ENC(`(team_a_id.in.(${liste}),team_b_id.in.(${liste}))`)
       const simdi = Date.now()
-      const [takimlar, yaklasan, son, haftalik] = await Promise.all([
-        sbFetchAll(`teams?id=in.(${liste})&select=id,name`),
+      const son60 = `matches?or=${takimFiltresi}&status=eq.finished` +
+        `&scheduled_at=gte.${ENC(new Date(simdi - 60 * 86400000).toISOString())}&order=scheduled_at.desc`
+      const [takimlar, yaklasan, son, oynayanlar, haftalik] = await Promise.all([
+        sbFetchAll(`teams?id=in.(${liste})&select=${ENC('id,name,game:games(slug)')}`),
         sbFetchAll(`matches?or=${takimFiltresi}&status=in.(not_started,running)` +
           `&scheduled_at=gte.${ENC(new Date(simdi - 6 * 3600000).toISOString())}` +
           `&select=${ENC(TURK_MAC_SEL)}&order=scheduled_at.asc&limit=15`),
-        sbFetchAll(`matches?or=${takimFiltresi}&status=eq.finished` +
-          `&scheduled_at=gte.${ENC(new Date(simdi - 60 * 86400000).toISOString())}` +
-          `&select=${ENC(TURK_MAC_SEL)}&order=scheduled_at.desc&limit=80`),
+        sbFetchAll(`${son60}&select=${ENC(TURK_MAC_SEL)}&limit=20`),
+        // Aktif takım kümesi için 60 günün TAMAMI (yalnız kimlik): son 80 maç ancak ~2 haftaya
+        // yetiyordu, Galatasaray gibi iki haftadır oynamayan takım listeden düşüyordu.
+        sbFetchAll(`${son60}&select=team_a_id,team_b_id&limit=1000`),
         sbFetchAll(`news_articles?content_type=eq.haftalik&variant=eq.turk_haftasi&select=${NEWS_LINK_SEL}&order=created_at.desc&limit=10`),
       ])
       // Haberde takım ID'si yok, ad var (haber üretimi adı teams.name'den aynen yazar)
@@ -1061,16 +1066,24 @@ async function staticFeedHtml(feed, origin) {
             `&content_type=neq.haftalik&select=${NEWS_LINK_SEL}&order=created_at.desc&limit=15`)
         : []
       // Izgara SPA'daki gibi: yalnız son 60 günde oynamış ya da maçı olan takımlar
-      const aktif = new Set([...yaklasan, ...son].flatMap(m => [m.team_a_id, m.team_b_id]))
+      const aktif = new Set([...yaklasan, ...oynayanlar].flatMap(m => [m.team_a_id, m.team_b_id]))
       const aktifTakimlar = takimlar.filter(t => aktif.has(t.id))
       const haberHtml = (rows, baslik) => {
         const li = rows.map(n => ({ n, yol: newsPath(n) })).filter(x => x.yol)
           .map(({ n, yol }) => `<li><a href="${origin}${yol}">${esc(n.title)}</a></li>`).join('')
         return li ? `<h2>${esc(baslik)}</h2><ul>${li}</ul>` : ''
       }
-      return (aktifTakimlar.length ? `<h2>Takımlar</h2><ul>${
-        aktifTakimlar.map(t => `<li><a href="${origin}/team/${t.id}">${esc(String(t.name).trim())}</a></li>`).join('')
-      }</ul>` : '') +
+      // Oyuna göre gruplu: "Türk VALORANT takımları" gibi başlıklar aramadaki kalıbın kendisi
+      const OYUN_BASLIK = [['valorant', 'Türk VALORANT takımları'], ['csgo', 'Türk CS2 takımları'],
+        ['lol', 'Türk League of Legends takımları'], [null, 'Diğer Türk takımları']]
+      const oyunu = t => (['valorant', 'csgo', 'lol'].includes(t.game?.slug) ? t.game.slug : null)
+      const takimHtml = OYUN_BASLIK.map(([slug, baslik]) => {
+        const grup = aktifTakimlar.filter(t => oyunu(t) === slug)
+        return grup.length ? `<h2>${esc(baslik)}</h2><ul>${
+          grup.map(t => `<li><a href="${origin}/team/${t.id}">${esc(String(t.name).trim())}</a></li>`).join('')
+        }</ul>` : ''
+      }).join('')
+      return takimHtml +
         // Başlamamış maçta skor 0-0 gelir; "vs" yazılsın
         matchListHtml(origin, yaklasan.map(m => (m.status === 'not_started' ? { ...m, team_a_score: null, team_b_score: null } : m)), 'Yaklaşan Türk maçları') +
         matchListHtml(origin, son.slice(0, 20), 'Son sonuçlar') +

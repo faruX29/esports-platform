@@ -135,6 +135,38 @@ PREVIEW_SYSTEM_PROMPT += _AD_KURALI
 TRANSFER_SYSTEM_PROMPT += _AD_KURALI
 TOURNAMENT_SYSTEM_PROMPT += _AD_KURALI
 
+# Türk takımı başlıkta başa: okur takımı adıyla arar ("BBL Esports'ta ..." kalıbı).
+# Satırı FactSheetBuilder yalnız turk_takimlar'daki takım için yazar.
+_TURK_BASLIK_KURALI = (
+    "\n\nTÜRK TAKIMI: Raporda 'Türk takımı:' satırı varsa başlık (title) O TAKIMIN ADIYLA "
+    "başlasın, rapordaki yazımıyla ve Türkçe ekiyle (örn. 'BBL Esports, ...', "
+    "'Eternal Fire'dan ...', 'FUT Esports'ta ...'). İki Türk takımı varsa biriyle başla. "
+    "Bu kural yalnız başlık içindir; gövde yine en dikkat çekici gerçekle açılır."
+)
+SYSTEM_PROMPT += _TURK_BASLIK_KURALI
+PREVIEW_SYSTEM_PROMPT += _TURK_BASLIK_KURALI
+TRANSFER_SYSTEM_PROMPT += _TURK_BASLIK_KURALI
+
+# Takım başta olunca kaybeden Türk takımının başlığı fiil arar ve LLM "elendi/veda etti"
+# uydurdu (29 Eki denemesi: PGL Bucharest, raporda turnuva durumu yok). Rapor tek maçtır.
+SYSTEM_PROMPT += (
+    "\n\nTURNUVA DURUMU: Raporda turnuvadaki durum (eleme, tur, sıralama) YOK. 'Elendi', "
+    "'veda etti', 'tur atladı', 'finale yükseldi', 'şampiyon oldu', 'yoluna devam etti' gibi "
+    "ifadeleri KULLANMA. Kaybeden takım başlıktaysa skoru söyle (örn. 'X, Y'ye 0-2 kaybetti')."
+)
+# Kadro farkı resmi duyuru değildir (29 Eki denemesi: "resmi açıklamayla ... duyurdu" yazdı).
+TRANSFER_SYSTEM_PROMPT += (
+    "\n\nKAYNAK: Bilgi takımın güncel kadro listesindeki değişiklikten gelir, resmi bir "
+    "açıklamadan DEĞİL. 'Açıkladı', 'duyurdu', 'resmi açıklama', 'imzaladı' YAZMA; "
+    "'kadrosunda artık yer almıyor', 'kadrosuna katıldı', 'yollarını ayırdı' gibi yaz."
+)
+
+
+def _turk_satiri(*takimlar) -> Optional[str]:
+    """(ad, türk_mü) çiftlerinden fact sheet satırı; Türk takımı yoksa None."""
+    adlar = [ad for ad, tr in takimlar if tr and ad]
+    return f"Türk takımı: {' ve '.join(adlar)}" if adlar else None
+
 # ── Tier display labels ───────────────────────────────────────────────────────
 # ⚠️ Etiketlere "Major"/"Premier" gibi ÖZEL AD yazma: LLM bunu turnuvanın adı sanıyor.
 # 15 Eyl'de VCT Americas Stage 2 önizlemeleri "VALORANT Major Playoff'ları" diye
@@ -232,6 +264,9 @@ class FactSheetBuilder:
             f"Eşleşme: {a_name} vs {b_name}",
             f"Tarih: {when}",
         ]
+        turk = _turk_satiri((a_name, match.get("tr_a")), (b_name, match.get("tr_b")))
+        if turk:
+            lines.append(turk)
         # Hibrit veri derinliği: son maç formu (varsa)
         for line in (FactSheetBuilder._fmt_form(a_name, form_a), FactSheetBuilder._fmt_form(b_name, form_b)):
             if line:
@@ -263,10 +298,15 @@ class FactSheetBuilder:
         ttype = (transfer.get("transfer_type") or "permanent").lower()
         game = str(transfer.get("game") or "esports").upper()
 
+        # Kaynak yalnız kadro listesi: katılanın önceki takımı ve ayrılanın yeni takımı ya da
+        # ayrılık nedeni (serbest bırakma, yedeğe alma, emeklilik) bilinmez → LLM'e açıkça yaz.
         if new_team and not old_team:
-            hareket = f"{new_team} kadrosuna KATILDI"
+            hareket = (f"{new_team} kadrosuna KATILDI. Önceki takımı kayıtlı değil; "
+                       f"önceki takım ya da transfer bedeli UYDURMA")
         elif old_team and not new_team:
-            hareket = f"{old_team} kadrosundan AYRILDI (serbest oyuncu)"
+            hareket = (f"{old_team} güncel kadrosunda artık YOK (kadrodan ayrıldı). Yeni takımı "
+                       f"ve ayrılık nedeni BİLİNMİYOR; serbest bırakıldı, yedeğe alındı, "
+                       f"emekli oldu gibi neden UYDURMA")
         else:
             hareket = f"{old_team} → {new_team} TRANSFER oldu"
 
@@ -277,9 +317,14 @@ class FactSheetBuilder:
             f"Hareket: {hareket}",
             f"Tarih: {transfer.get('transfer_date')}",
         ]
+        turk = _turk_satiri((new_team, transfer.get("tr_yeni")), (old_team, transfer.get("tr_eski")))
+        if turk:
+            lines.append(turk)
         if role:
             lines.append(f"Rol: {role}")
-        if ttype in ("loan", "trial", "release"):
+        # 'release' yazılmaz: kadro farkından gelen ayrılış da 'release' ve LLM onu
+        # "serbest bırakıldı" diye okur; Hareket satırı durumu zaten anlatıyor.
+        if ttype in ("loan", "trial"):
             lines.append(f"Transfer tipi: {ttype}")
         if player_form:
             lines.append(f"Oyuncu son dönem performansı: {player_form}")
@@ -445,6 +490,9 @@ class FactSheetBuilder:
             f"Galip: {winner_name} | Mağlup: {loser_name} | Skor: {a_score}:{b_score}",
             f"Harita sayısı: {map_count or 1} | Tempo: {tempo}",
         ]
+        turk = _turk_satiri((a_name, match.get("tr_a")), (b_name, match.get("tr_b")))
+        if turk:
+            lines.append(turk)
         if FactSheetBuilder._fmt_seconds(avg_secs):
             lines.append(f"Ort. harita süresi: {FactSheetBuilder._fmt_seconds(avg_secs)}")
         if FactSheetBuilder._fmt_seconds(longest_secs):
@@ -503,7 +551,8 @@ class NewsGenerator:
                         tn.league_name AS tn_league,
                         tn.event_name  AS tn_event,
                         tn.tier      AS tn_tier,
-                        g.slug       AS game_slug
+                        g.slug       AS game_slug,
+                        f.tr_a, f.tr_b
                     FROM matches m
                     LEFT JOIN teams       t_a ON t_a.id = m.team_a_id
                     LEFT JOIN teams       t_b ON t_b.id = m.team_b_id
@@ -864,7 +913,9 @@ class NewsGenerator:
                         t_b.id AS tb_id, t_b.name AS tb_name, t_b.logo_url AS tb_logo,
                         tn.id AS tn_id, tn.name AS tn_name, tn.tier AS tn_tier,
                         tn.league_name AS tn_league, tn.event_name AS tn_event,
-                        g.slug AS game_slug
+                        g.slug AS game_slug,
+                        EXISTS (SELECT 1 FROM turk_takimlar k WHERE k.team_id = m.team_a_id) AS tr_a,
+                        EXISTS (SELECT 1 FROM turk_takimlar k WHERE k.team_id = m.team_b_id) AS tr_b
                     FROM matches m
                     LEFT JOIN teams       t_a ON t_a.id = m.team_a_id
                     LEFT JOIN teams       t_b ON t_b.id = m.team_b_id
@@ -973,13 +1024,26 @@ class NewsGenerator:
                            COALESCE(tt.name, rc.raw_payload->>'new_team') AS new_team,
                            rc.raw_payload->>'role' AS role,
                            rc.raw_payload->>'game' AS game,
-                           rc.transfer_date, rc.transfer_type
+                           rc.transfer_date, rc.transfer_type,
+                           EXISTS (SELECT 1 FROM turk_takimlar k WHERE k.team_id = rc.source_team_id) AS tr_eski,
+                           EXISTS (SELECT 1 FROM turk_takimlar k WHERE k.team_id = rc.target_team_id) AS tr_yeni
                     FROM roster_changes rc
                     JOIN players p ON p.id = rc.player_id
                     LEFT JOIN teams st ON st.id = rc.source_team_id
                     LEFT JOIN teams tt ON tt.id = rc.target_team_id
                     WHERE rc.news_generated = false
                       AND rc.player_id IS NOT NULL
+                      -- Ayrılış (yeni takım yok, sync_players Türk takımı için yazar):
+                      -- PandaScore oyuncuyu bir koşu düşürüp geri ekleyebilir → 12 saat
+                      -- bekle; oyuncu eski takımına döndüyse ya da sonradan yeni takımı
+                      -- belli olduysa (yeni kayıt o haberi taşır) yazma.
+                      AND (rc.target_team_id IS NOT NULL OR (
+                          rc.created_at < NOW() - interval '12 hours'
+                          AND p.team_pandascore_id IS DISTINCT FROM rc.source_team_id
+                          AND NOT EXISTS (SELECT 1 FROM roster_changes r2
+                                          WHERE r2.player_id = rc.player_id
+                                            AND r2.created_at > rc.created_at)
+                      ))
                       -- TTL (Gemini #53, 2026-08-28): TRANSFER_NEWS_TTL_DAYS'ten eski
                       -- kayıtlardan haber ÜRETİLMEZ. news_articles'ta ayrı bir yayın
                       -- tarihi alanı yok (yalnız created_at) → eski bir transferden
@@ -987,7 +1051,10 @@ class NewsGenerator:
                       -- Tarihsel kayıt roster_changes'te korunur, sadece haber
                       -- kuyruğuna girmez.
                       AND rc.transfer_date >= NOW() - make_interval(days => %s)
-                    ORDER BY rc.transfer_date DESC
+                    -- Türk takımı transferi önce: sitenin ana konusu, LIMIT'e takılmasın
+                    ORDER BY (EXISTS (SELECT 1 FROM turk_takimlar k
+                                      WHERE k.team_id IN (rc.source_team_id, rc.target_team_id))) DESC,
+                             rc.transfer_date DESC
                     LIMIT %s
                     """,
                     (TRANSFER_NEWS_TTL_DAYS, limit,),
@@ -1031,7 +1098,8 @@ class NewsGenerator:
         """Transfer makalesini news_articles'a yazar (content_type='transfer', match_id NULL)."""
         content = "\n\n".join(article["paragraphs"]) if isinstance(article.get("paragraphs"), list) else article.get("content", "")
         old_team = transfer.get("old_team") or "Serbest"
-        new_team = transfer.get("new_team") or "Serbest"
+        # Ayrılışta yeni takım bilinmez; "Serbest" serbest bırakıldı diye okunurdu
+        new_team = transfer.get("new_team") or "Kadro dışı"
         with Database.get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(

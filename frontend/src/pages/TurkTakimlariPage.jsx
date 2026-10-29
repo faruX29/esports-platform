@@ -375,23 +375,44 @@ export default function TurkTakimlariPage() {
     const takimFiltresi = `team_a_id.in.(${liste}),team_b_id.in.(${liste})`
     const simdi = Date.now()
     ;(async () => {
-      const [yaklasanRes, sonRes] = await Promise.all([
+      const bitenler = sel => supabase.from('matches').select(sel)
+        .or(takimFiltresi)
+        .eq('status', 'finished')
+        .gte('scheduled_at', new Date(simdi - SON_MAC_GUN * 86400000).toISOString())
+        .order('scheduled_at', { ascending: false })
+      const [yaklasanRes, sonRes, kimlikRes] = await Promise.all([
         supabase.from('matches').select(MATCH_SELECT)
           .or(takimFiltresi)
           .in('status', ['not_started', 'running'])
           .gte('scheduled_at', new Date(simdi - 6 * 3600000).toISOString())
           .order('scheduled_at', { ascending: true })
           .limit(60),
-        supabase.from('matches').select(MATCH_SELECT)
-          .or(takimFiltresi)
-          .eq('status', 'finished')
-          .gte('scheduled_at', new Date(simdi - SON_MAC_GUN * 86400000).toISOString())
-          .order('scheduled_at', { ascending: false })
-          .limit(80),
+        bitenler(MATCH_SELECT).limit(80),
+        // 80 maç 60 günün ancak ~2 haftasına yetiyor: iki haftadır oynamayan takım
+        // (Galatasaray) ızgaradan düşüyordu → takım başına son maçı kimlikten bul
+        bitenler('id,team_a_id,team_b_id').limit(1000),
       ])
       if (yaklasanRes.error) console.error('Türk takımları yaklaşan maçlar:', yaklasanRes.error.message)
       if (sonRes.error) console.error('Türk takımları son maçlar:', sonRes.error.message)
-      if (!cancelled) setMaclar({ yaklasan: yaklasanRes.data || [], son: sonRes.data || [] })
+      if (kimlikRes.error) console.error('Türk takımları maç kimlikleri:', kimlikRes.error.message)
+      const son = sonRes.data || []
+      const kapsanan = new Set(son.flatMap(m => [m.team_a_id, m.team_b_id]))
+      const turkId = new Set(idler)
+      const eksik = new Set()
+      for (const m of kimlikRes.data || []) {
+        for (const id of [m.team_a_id, m.team_b_id]) {
+          if (turkId.has(id) && !kapsanan.has(id)) { eksik.add(m.id); kapsanan.add(id) }
+        }
+      }
+      let ek = []
+      if (eksik.size) {
+        const ekRes = await supabase.from('matches').select(MATCH_SELECT)
+          .in('id', [...eksik]).order('scheduled_at', { ascending: false })
+        if (ekRes.error) console.error('Türk takımları eski son maçlar:', ekRes.error.message)
+        ek = ekRes.data || []
+      }
+      // "Son sonuçlar" listesi yalnız ilk 80'i gösterir; ek maçlar yalnız ızgaraya
+      if (!cancelled) setMaclar({ yaklasan: yaklasanRes.data || [], son, sonEk: ek })
     })()
     return () => { cancelled = true }
   }, [idler])
@@ -421,7 +442,7 @@ export default function TurkTakimlariPage() {
     for (const m of maclar.yaklasan) {
       for (const id of [m.team_a_id, m.team_b_id]) if (!sonraki.has(id)) sonraki.set(id, m)
     }
-    for (const m of maclar.son) {
+    for (const m of [...maclar.son, ...(maclar.sonEk || [])]) {
       for (const id of [m.team_a_id, m.team_b_id]) if (!son.has(id)) son.set(id, m)
     }
     return takimlar
@@ -440,8 +461,8 @@ export default function TurkTakimlariPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text-1)' }}>
       <SeoHead
-        title="Türk Takımları — Maçlar, Sonuçlar ve Haberler"
-        description="Türk espor takımlarının yaklaşan maçları, son sonuçları ve haberleri tek sayfada: VALORANT, CS2 ve League of Legends."
+        title="Türk Espor Takımları: BBL, Eternal Fire, FUT, Galatasaray Maçları"
+        description="BBL Esports, Eternal Fire, FUT Esports, Galatasaray Esports ve diğer Türk takımlarının VALORANT, CS2 ve LoL maç programı, sonuçları, kadro ve transfer haberleri tek sayfada."
         type="website"
       />
       <div style={{

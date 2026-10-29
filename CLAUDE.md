@@ -129,6 +129,7 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - Türkçe yerelde İngilizce terimi büyük harfe çevirme → "WINNERS" "WİNNERS" olur.
 - Eleme ağacını `round_info`'yu sabit sütunlara eşleyerek ya da "tekrar" sanılan maçı silerek kurma → büyük çift elemelerde alt ayak turları çakışıp maçlar sessizce kayboluyordu. Ağaç `utils/bracketModel.js`'te kurulur; bağlantı takımdan doğrulanır, doğrulanamayan aşama listeye düşer. Değiştirince tüm turnuvalarda "her maç tam bir kez" denetimini yeniden koş.
 - Turnuvayı lige (`/lig/<slug>`) frontend ya da middleware'de ad eşleyerek bağlama → tek kaynak `ligler` tablosu + `lig_eslesir`/`lig_sayfasi`/`turnuva_ligi` (`backend/sql/ligler.sql`); yeni lig = tabloya satır, kod değişmez.
+- Kadroyu transfer kaydı yazmadan güncelleyen adımı (`--players`, `transfer=None`) transfer tespitinden (`--roster-turk`/`--roster-transfers`) önce koşturma → oyuncunun takımı değişir, fark yutulur. Haber istemine kadro farkını "resmi açıklama" diye verme; ayrılışın nedeni bilinmez (`build_transfer`).
 - Windows'ta Türkçe/Unicode içerikli heredoc ile dosya yazma → cp1254 karakterleri bozar.
 - Sosyal videoda Inter dışında font kullanma → Baloo yalnız logoda.
 - Sır, metrik veya kişisel bilgi commit'leme → repo PUBLIC. Actions logları da herkese açık: iş akışında satır sayısı, boyut, e-posta ya da hata metni basma (`saglik.py`/`yedek.py` gövdeyi yalnız e-postaya ya da şifreli arşive yazar).

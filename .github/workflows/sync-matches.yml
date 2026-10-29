@@ -146,7 +146,31 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python -c "from config import Config; print('✅ Config OK')"
 
+      # Türk takımı transferi günlük işi (sync-liquipedia.yml, 05:00 UTC) beklemesin:
+      # her koşuda yalnız Türk takımlarının kadrosu (son 60 günde maçı olan, ~30 istek)
+      # çekilir, kadro farkından katılım/ayrılış/transfer yazılır ve haberi hemen üretilir.
+      # Aşağıdaki genel kadro adımından ÖNCE: onun force kolu transfer yazmadan oyuncunun
+      # takımını değiştirir, önce koşarsa farkı yutardı.
+      - name: Turk takimi kadro + transfer tespiti
+        timeout-minutes: 8
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
+        run: python run.py --roster-turk
+
+      - name: Turk transfer haberi (LLM, bekleyen roster_changes)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 10
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python run.py --generate-transfers
+
       - name: Sync active player rosters (incremental, son 90 gün)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 15
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}

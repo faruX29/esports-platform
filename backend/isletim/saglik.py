@@ -36,6 +36,7 @@ CANLI_SON_BASARI_DK = 10        # pg_cron dakikada bir koşar
 CANLI_HATA_24S = 3              # 30 günde 0 hata görüldü
 PANDASCORE_HATA_ORANI = 0.2     # son 6 saatteki canlı isteklerde 200 dışı yanıt payı
 TAKILI_CANLI_SAAT = 8           # 'running' kalıp bitmeyen maç
+LISTE_DISI_CANLI = 0            # /running'den düşüp kendi kaydı istendiği halde 15 dk'dır 'running' (olağanı 0)
 GECIKMIS_BASLAMADI = 3          # 12 saati geçip hâlâ 'not_started' olan maç sayısı
 YENI_MAC_SAAT = 24              # son yeni maç kaydı (Python ETL ekler)
 SYNC_MATCHES_SAAT = 12          # saatlik iş fiilen 3-6 saatte bir koşuyor
@@ -129,6 +130,35 @@ def canli_senkron(rapor, db):
     if toplam >= 5 and kotu / toplam > PANDASCORE_HATA_ORANI:
         rapor.sorun(f'canlı isteklerin {kotu}/{toplam} tanesi 200 dışı döndü (token, kota ya da PandaScore arızası)')
 
+    # Biten maç /running'den düşer; pg_cron onun /matches/{id} kaydını isteyip bitirir (29 Ekim).
+    # Kaydı 15 dakikadan önce istendiği halde hâlâ 'running' olan maç = bu yol çalışmıyor.
+    cur.execute("""
+        with son as (
+            select distinct on (i.oyun) i.oyun, r.content::jsonb as icerik
+            from canli.istek i join net._http_response r on r.id = i.request_id
+            where i.mac_id is null and r.status_code = 200 and i.olusma > now() - interval '5 minutes'
+            order by i.oyun, i.id desc
+        )
+        select m.id, (select r.status_code from canli.istek t
+                      left join net._http_response r on r.id = t.request_id
+                      where t.mac_id = m.id order by t.id desc limit 1)
+        from matches m
+        join games g on g.id = m.game_id
+        join son s on s.oyun = g.slug
+        where m.status = 'running' and jsonb_typeof(s.icerik) = 'array'
+          and not exists (select 1 from jsonb_array_elements(s.icerik) j where (j->>'id')::bigint = m.id)
+          and exists (select 1 from canli.istek t
+                      where t.mac_id = m.id and t.olusma < now() - interval '15 minutes')
+        order by m.id
+    """)
+    liste_disi = cur.fetchall()
+    rapor.bilgi(f"/running'den düşüp bitirilemeyen canlı maç: {len(liste_disi)}"
+                + (' (' + ', '.join(f'{mid}: {kod or "yanıt yok"}' for mid, kod in liste_disi[:10]) + ')'
+                   if liste_disi else ''))
+    if len(liste_disi) > LISTE_DISI_CANLI:
+        rapor.sorun(f"{len(liste_disi)} maç /running'den düştüğü halde \"canlı\" kaldı "
+                    '(pg_cron /matches/{id} yolu çalışmıyor; canli.istek.mac_id ve yanıt kodlarına bak)')
+
 
 def mac_verisi(rapor, db):
     cur = db.cursor()
@@ -153,7 +183,7 @@ def mac_verisi(rapor, db):
     rapor.bilgi(f'{TAKILI_CANLI_SAAT} saattir canlı görünen: {takili}; 12 saati geçip başlamadı görünen: {gecikmis}')
     rapor.bilgi(f'48 saat içindeki maç: {yaklasan}, tahminsiz: {tahminsiz}')
     if takili:
-        rapor.sorun(f'{takili} maç {TAKILI_CANLI_SAAT} saattir "canlı" görünüyor (--fix-orphans koşmuyor olabilir)')
+        rapor.sorun(f'{takili} maç {TAKILI_CANLI_SAAT} saattir "canlı" görünüyor (pg_cron /matches/{id} yolu ve sync-live --fix-orphans bitiremedi)')
     if gecikmis > GECIKMIS_BASLAMADI:
         rapor.sorun(f'{gecikmis} maç saati 12 saati geçtiği halde "başlamadı" görünüyor')
     if tahminsiz > TAHMINSIZ_MAC:

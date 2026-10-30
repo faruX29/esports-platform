@@ -72,6 +72,16 @@ def main():
     satirlar += ['',
         'Paylasmadan once: videoyu galeriye kaydet, Instagram/TikTok\'a yukle,',
         'muzigi UYGULAMA ICINDEN sec (lisansli + erisimi artiriyor).', '']
+    # Kadro videosu PandaScore kadro farkindan gelir; sahte transfer olabiliyor
+    # (kadro gecikmesi, yedek degisimi). Resmi kaynaktan teyitsiz paylasilmasin.
+    if any(ad.startswith('kadro-') for ad in dosyalar):
+        satirlar += ['KADRO VIDEOSU: veri PandaScore kadro farkindan. Geri alinan degisiklikler',
+                     'otomatik elendi; yine de takimin resmi duyurusunu gormeden paylasma.', '']
+    # Macsiz gunde yalniz kadro videosu varsa radarin bos oldugu da yazilsin
+    bos_not = os.path.join(KLASOR, 'bos-gun.txt')
+    if os.path.exists(bos_not):
+        with open(bos_not, encoding='utf-8') as f:
+            satirlar += [f'Radar: {GUN} icin S/A mac yok. ' + f.read().strip(), '']
 
     # Hazir aciklama metni: her gun ayni metni elle yazmak paylasimi oldurur.
     # Kanca GUNUN VERISINDEN uretiliyor (radar.py -> paylasim_metni):

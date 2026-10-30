@@ -117,6 +117,18 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python radar.py "${{ steps.tarih.outputs.gun }}"
 
+      # Turk takimi kadro degisikligi (30 Eki): son radardan beri yazilan Turk takimi
+      # transfer haberlerinden Reels; ayni e-postayla gelir. Haber ekler.reels ile
+      # isaretlenir, gecikme tekrar ya da kacirma yaratmaz. Radar videosunu bozmasin diye
+      # hata isi durdurmaz. Olculdu (yerel): video basina ~20 sn.
+      - name: Kadro videolari (Turk takimi)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 5
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python kadro.py
+
       - name: Uretilenleri listele
         timeout-minutes: 2
         id: liste

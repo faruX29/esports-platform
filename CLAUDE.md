@@ -50,6 +50,7 @@ npm run build:app                                         # vite --mode app + ca
 cd android && ./gradlew assembleDebug                     # APK: app/build/outputs/apk/debug/
 # sosyal (cd social)
 python radar.py [YYYY-AA-GG] | python karne.py | python champions.py [grup] | python asama.py kazananlar
+python kadro.py --takim <id> [--gun 30]                   # Türk takımı kadro Reels'i (işaretlemez); argsız = radar işi
 ```
 
 ## Ortam değişkenleri (yalnız adlar; değerler `.env` ve GitHub Secrets'ta)

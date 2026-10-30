@@ -132,6 +132,7 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - Kadroyu transfer kaydı yazmadan güncelleyen adımı (`--players`, `transfer=None`) transfer tespitinden (`--roster-turk`/`--roster-transfers`) önce koşturma → oyuncunun takımı değişir, fark yutulur. Haber istemine kadro farkını "resmi açıklama" diye verme; ayrılışın nedeni bilinmez (`build_transfer`).
 - Windows'ta Türkçe/Unicode içerikli heredoc ile dosya yazma → cp1254 karakterleri bozar.
 - Sosyal videoda Inter dışında font kullanma → Baloo yalnız logoda.
+- Sosyal paylaşım metnine 5'ten fazla hashtag koyma → Instagram ve TikTok en fazla 5'e izin veriyor (`radar.py` `MAKS_ETIKET`).
 - Sır, metrik veya kişisel bilgi commit'leme → repo PUBLIC. Actions logları da herkese açık: iş akışında satır sayısı, boyut, e-posta ya da hata metni basma (`saglik.py`/`yedek.py` gövdeyi yalnız e-postaya ya da şifreli arşive yazar).
 - Kullanıcının yazdığı yeni tabloya yalnız `auth.uid() = user_id` politikası koyma → takip için açılan anonim oturum da `authenticated`'dır; RESTRICTIVE `public.kayitli_oturum()` politikası ekle (`backend/sql/anonim_takip.sql`). İstemcide `useAuth().user` anonimi içermez, anonim kimlik `anonUserId`.
 - Kullanıcı tablosunu (`profiles`, `news_likes`) anon'a açma → herkese açık okuma dar görünümden (`profiles_public`, `news_like_counts`); yeni `security_invoker = false` görünümde `revoke all` + yalnız `grant select` şart, yoksa Supabase varsayılan yetkisi anon'a görünüm üzerinden RLS'siz yazma verir.

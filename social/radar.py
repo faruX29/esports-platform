@@ -439,11 +439,14 @@ def paylasim_metni(oyun, maclar, gun):
 
 # ── Hashtag'ler ───────────────────────────────────────────────────────────
 # Eskiden yalnız #espor + oyun etiketiydi; günün takımları hiç geçmiyordu (29 Eki,
-# kurucu: "Aurora maçı varsa #aurora kesin olsun"). Sıra önem sırası, üst sınır var:
-#   #espor → oyun → Türk takımları (HEPSİ, kesilmez) → etkinlik → diğer takımlar.
+# kurucu: "Aurora maçı varsa #aurora kesin olsun"). Instagram ve TikTok en fazla 5
+# etikete izin veriyor (30 Eki) → ilk 5, önem sırasıyla:
+#   Türk takımları (en fazla 3, saat sırası) → oyun → #espor → etkinlik → diğer takımlar.
+# Türk takımı üçle sınırlı: 5'i birden yerse oyun etiketi hiç girmezdi.
 OYUN_ETIKETI = {'VALORANT': '#valorant', 'COUNTER-STRIKE 2': '#cs2',
                 'LEAGUE OF LEGENDS': '#leagueoflegends', 'DOTA 2': '#dota2'}
-MAKS_ETIKET = 12
+MAKS_ETIKET = 5
+MAKS_TURK_ETIKET = 3
 MAKS_UZUNLUK = 24
 # Takım adının sonundaki kurum eki etikete girmez: "Aurora Gaming" → #aurora.
 # Kalan kök 5 harften kısaysa ad bütün kalır: "FUT Esports" → #futesports (#fut
@@ -475,25 +478,26 @@ def etkinlik_etiketi(m):
         return _etiket(lig + re.split(r'[\s:]+', etk)[0])
     return _etiket(lig)
 
+def _tekil(etiketler):
+    sonuc = []
+    for t in etiketler:
+        if t and t not in sonuc:
+            sonuc.append(t)
+    return sonuc
+
 def hashtagler(maclar):
-    sira = ['#espor']
-    sira += sorted({OYUN_ETIKETI.get(m['oyun'], '') for m in maclar} - {''})
     turk, diger = [], []
     for m in maclar:
         for ad, tid in ((m['a'], m['a_id']), (m['b'], m['b_id'])):
             (turk if _turk_mu(tid=tid) else diger).append(takim_etiketi(ad))
-    sira += turk
+    turk = _tekil(turk)
+    sira = turk[:MAKS_TURK_ETIKET]
+    # Oyunlar maç sırasıyla (alfabetik değil): 5 sınırında kesilen, günün ilk oyunu olmasın
+    sira += [OYUN_ETIKETI.get(m['oyun']) for m in maclar]
+    sira += ['#espor']
     sira += [etkinlik_etiketi(m) for m in maclar]
-    sira += diger
-    sonuc = []
-    for t in sira:
-        if t and t not in sonuc:
-            sonuc.append(t)
-    # Türk takımı etiketi üst sınırda kesilmez
-    zorunlu = [t for t in sonuc if t in turk]
-    kalan = [t for t in sonuc if t not in zorunlu]
-    sonuc = [t for t in sonuc if t in zorunlu or t in kalan[:max(0, MAKS_ETIKET - len(zorunlu))]]
-    return sonuc
+    sira += diger + turk[MAKS_TURK_ETIKET:]   # yer kalırsa
+    return _tekil(sira)[:MAKS_ETIKET]
 
 def uret(oyun, renk, maclar, gun, dosya, parca=None):
     exe = ffmpeg_yolu()

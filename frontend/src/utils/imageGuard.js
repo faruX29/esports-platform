@@ -1,4 +1,5 @@
 import BRANDING from '../branding.config'
+import { yedekGorsel } from './gorsel'
 
 const failedImages = new Set()
 const guardedImages = new WeakSet()
@@ -70,6 +71,18 @@ function swapToFallback(img, originalSrc) {
   img.setAttribute('src', fallbackSrc)
 }
 
+// PandaScore görseli açılmadıysa önce kendi yedeğimizi dene (bkz. utils/gorsel.js).
+// Her kaynak için bir kez: yedek de açılmazsa olağan yedek-logo akışı sürer.
+function yedegeGec(img, originalSrc) {
+  const yedek = yedekGorsel(originalSrc)
+  if (!yedek || img.getAttribute('data-yedek-kaynak') === originalSrc) return false
+  img.setAttribute('data-yedek-kaynak', originalSrc)
+  img.setAttribute('data-original-src', originalSrc)
+  img.removeAttribute('srcset')
+  img.setAttribute('src', yedek)
+  return true
+}
+
 function queueFallbackSwap(img, originalSrc) {
   if (!(img instanceof HTMLImageElement)) return
   if (pendingFallbackTimers.has(img)) return
@@ -103,7 +116,7 @@ function markImageForGuard(img) {
   const declaredSrc = getDeclaredSrc(img)
   const normalizedDeclaredSrc = normalizeImageSrc(declaredSrc)
   if (declaredSrc && (failedImages.has(declaredSrc) || failedImages.has(normalizedDeclaredSrc))) {
-    swapToFallback(img, declaredSrc)
+    if (!yedegeGec(img, declaredSrc)) swapToFallback(img, declaredSrc)
   }
 
   if (guardedImages.has(img)) return
@@ -133,6 +146,7 @@ function markImageForGuard(img) {
     if (originalSrc && originalSrc !== EMPTY_PIXEL) {
       failedImages.add(originalSrc)
       if (normalizedOriginalSrc) failedImages.add(normalizedOriginalSrc)
+      if (yedegeGec(img, originalSrc)) return
       queueFallbackSwap(img, originalSrc)
       return
     }

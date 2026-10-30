@@ -1,11 +1,14 @@
 # Yalnız Edge Function ayarları. Dağıtım:
 #   supabase functions deploy <ad> --project-ref owepdnaivhrpadapbtxb --use-api
-# İki fonksiyon da JWT'yi kendisi doğrular (delete-account: auth.getUser,
-# send-push: x-cron-secret); ağ geçidi doğrulaması kapalı.
+# Fonksiyonlar kimliği kendisi doğrular (delete-account: auth.getUser,
+# send-push ve gorsel-yedek: x-cron-secret); ağ geçidi doğrulaması kapalı.
 project_id = "owepdnaivhrpadapbtxb"
 
 [functions.delete-account]
 verify_jwt = false
 
 [functions.send-push]
+verify_jwt = false
+
+[functions.gorsel-yedek]
 verify_jwt = false

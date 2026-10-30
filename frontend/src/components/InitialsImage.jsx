@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { kucukGorsel, THUMB_AZAMI_PX } from '../utils/gorsel'
+import { kucukGorsel, yedekGorsel, THUMB_AZAMI_PX } from '../utils/gorsel'
 
 function buildInitials(name, max = 2) {
   const cleaned = String(name || '')
@@ -42,7 +42,8 @@ function makeTone(seed) {
 // İleride görsel optimizasyonu güvenilir bir çözümle (Vercel Image Opt / self-host
 // imgproxy) yapılabilir; wsrv KULLANMA.
 // Bugünkü küçültme proxy'siz: PandaScore'un kendi thumb_ sürümü (utils/gorsel.js);
-// thumb açılmazsa önce orijinal denenir, o da açılmazsa baş harfler.
+// thumb açılmazsa önce kendi yedeğimiz (PandaScore'u kesen ağlar için), sonra
+// orijinal denenir, hiçbiri açılmazsa baş harfler.
 //
 // priority: ilk ekranda görünen (LCP adayı) görseller için → tembel yükleme yok,
 // tarayıcı yüksek öncelikle çeker. Yalnız ilk birkaç görsele ver.
@@ -62,7 +63,7 @@ export default function InitialsImage({
   fallbackColor,
   priority = false,
 }) {
-  // 0: thumb (ya da küçültülemeyen orijinal), 1: orijinal, 2: baş harfler
+  // Sıradaki aday: thumb (ya da küçültülemeyen orijinal) → yedek → orijinal; sonra baş harfler
   const [deneme, setDeneme] = useState(0)
 
   useEffect(() => {
@@ -84,14 +85,14 @@ export default function InitialsImage({
   const sayisalEn = Math.max(numericWidth, numericHeight)
   const thumbUygun = Number.isFinite(sayisalEn) && sayisalEn <= THUMB_AZAMI_PX
   const thumb = thumbUygun ? kucukGorsel(src) : src
-  const gosterilen = deneme === 0 ? thumb : src
-  // thumb zaten orijinalse ikinci deneme anlamsız → doğrudan baş harfler
-  const sonraki = () => setDeneme(d => (d === 0 && thumb !== src ? 1 : 2))
+  const adaylar = src ? [...new Set([thumb, yedekGorsel(src), src].filter(Boolean))] : []
+  const gosterilen = adaylar[deneme]
+  const sonraki = () => setDeneme(d => d + 1)
 
-  if (src && deneme < 2) {
+  if (gosterilen) {
     return (
       <img
-        // key: thumb → orijinal geçişinde YENİ <img> öğesi. Aynı öğe kalırsa global
+        // key: adaylar arası geçişte YENİ <img> öğesi. Aynı öğe kalırsa global
         // imageGuard'ın 2 sn sonraki yedek-logo değişimi sağlam orijinali de ezer.
         key={gosterilen}
         src={gosterilen}

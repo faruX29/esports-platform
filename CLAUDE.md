@@ -72,6 +72,7 @@ python radar.py [YYYY-AA-GG] | python karne.py | python champions.py [grup] | py
 - **Yedek:** `yedek.yml` Pazar gecesi `pg_dump` + hesap kimlikleri (şifre hash'i yok) → `age` ile şifreli → ayrı private repoya Release; aynı koşuda boş Postgres 17'ye geri yükleyip satır sayısını doğrular.
 - `sync-live.yml` (adı "5-min", fiilen 2-6 saatte bir) pg_cron'un yapmadığı işleri yapar: hayalet yaklaşan maç, canlı maç istatistiği, 404 force-finish. Takılı "canlı" maçı (`/running`'den düşen) artık pg_cron da `/matches/{id}` ile bitirir (`canli_senkron.sql`). pg_cron var diye silme.
 - `sync-liquipedia.yml` adı yanıltıcı: Liquipedia senkronu kapalı, iş akışı artık içerik (önizleme, turnuva özeti, transfer haberi) üretiyor.
+- **Takım logosu yedeği:** PandaScore'u kesen ağlar ("Güvenli İnternet" filtresi) için logolar Supabase Storage `gorsel-yedek`'te; pg_cron `gorsel-yedek` → Edge Function `gorsel-yedek` kopyalar, site PandaScore açılmazsa yedeğe düşer (`utils/gorsel.js` `yedekGorsel`, `InitialsImage`, `imageGuard`). Yol kuralı (`/images/` sonrası, dosya adı `thumb_`) fonksiyonda ve `gorsel.js`'te aynı kalmalı.
 
 ## Kod kuralları
 - UI metinleri ve kod yorumları Türkçe; çevredeki kodun dilini ve yoğunluğunu izle.

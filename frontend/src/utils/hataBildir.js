@@ -94,7 +94,7 @@ export function hataDinleyicileriniKur() {
     hataBildir('promise', hataMetni(e.reason), e.reason?.stack)
   })
 
-  // CSP Report-Only de bu olayı tetikler: zorunlu başlığa geçmeden önce ihlal var mı görürüz.
+  // CSP 2 Kasım'dan beri zorunlu: engellenen her kaynak buraya düşer (listeden unutulan kaynak).
   document.addEventListener('securitypolicyviolation', (e) => {
     const engellenen = e.blockedURI || 'inline'
     if (EKLENTI_RE.test(engellenen) || EKLENTI_RE.test(e.sourceFile || '')) return

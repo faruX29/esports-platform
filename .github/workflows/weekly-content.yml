@@ -1,7 +1,10 @@
 name: Haftalik icerik (Turk takimlari + Fextopus'u yaniltanlar)
 
 # Pazartesi sabahi, ONCEKI haftanin (Pzt-Paz, TSI) iki haftalik haberini yazar,
-# ayni haberlerin mac listesinden iki dikey video uretir ve e-posta ile yollar.
+# ayni haberlerin mac listesinden dikey video uretir ve e-posta ile yollar.
+# Videolar ve e-posta KAPALI (HAFTALIK_VIDEO, 2 Kasim'dan beri gecici olarak).
+# Haberler yazilmaya devam eder: /turk-takimlari'daki "Turk Espor Haftasi" arsivi bunlardan beslenir.
+# Acmak icin HAFTALIK_VIDEO: 'true'. Yaniltanlar videosu ayrica haftalik.py YANILTANLAR_VIDEO ile kapali.
 # Video listesi haberin ekler alanindan okunur: sayfa ile video ayni maclari gosterir.
 on:
   schedule:
@@ -14,6 +17,9 @@ on:
         description: 'Haftanin Pazartesi gunu (YYYY-AA-GG). Bos birakilirsa onceki hafta.'
         required: false
         type: string
+
+env:
+  HAFTALIK_VIDEO: 'false'
 
 concurrency:
   group: weekly-content
@@ -64,7 +70,7 @@ jobs:
       # Haber adimi patlasa da video/mail adimlari kosar: mail "video yok" der,
       # is kirmizi biter ve alarm gider.
       - name: Videolari uret
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && env.HAFTALIK_VIDEO == 'true' }}
         timeout-minutes: 8
         working-directory: social
         env:
@@ -72,7 +78,7 @@ jobs:
         run: python haftalik.py "${{ steps.hafta.outputs.hafta }}"
 
       - name: Uretilenleri listele
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && env.HAFTALIK_VIDEO == 'true' }}
         timeout-minutes: 2
         id: liste
         working-directory: social
@@ -94,7 +100,7 @@ jobs:
           retention-days: 14
 
       - name: E-posta ile gonder
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && env.HAFTALIK_VIDEO == 'true' }}
         timeout-minutes: 5
         working-directory: social
         env:

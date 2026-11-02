@@ -9,6 +9,7 @@ video ile sayfadaki liste birebir aynı maçlar. Haber yoksa video da yok.
   turk-haftasi-<pzt>.mp4     Türk takımlarının haftası: başlık → sonuçlar (kenar rengi Türk
                              takımının sonucu) → gelecek haftanın Türk maçı + soru
   fextopus-yanildi-<pzt>.mp4 Fextopus'u yanıltan maçlar: başlık → liste → haftanın isabeti
+                             KAPALI (YANILTANLAR_VIDEO); haberi yazılmaya devam eder
 
 Tasarım kuralları (karar-kayitlari/sosyal_video_tasarim.md): radara benzemez, tek konu =
 tek video, yalnız Inter, gerçek saydamlık (Katman), her videonun kapanışı farklı.
@@ -28,6 +29,9 @@ S_BASLIK, S_LISTE, S_KAPANIS = 3.0, 8.0, 5.0
 # Sade tasarım (kurucu, 25 Ekim: "çok yazı var"): satırda yalnız logo + kısa ad + skor,
 # sonuç rengi anlatır. Az satır, büyük öğe — telefonda bir bakışta okunmalı.
 LISTE_TURK, LISTE_SURPRIZ = 6, 5
+# 28 Ekim: yanıltanlar videosu durduruldu; haberi
+# sitede kalır. Fextopus tanınınca True yapılır.
+YANILTANLAR_VIDEO = False
 SATIR_H, SATIR_ARA = 190, 22
 OYUN = {'valorant': 'VALORANT', 'csgo': 'CS2', 'cs-go': 'CS2', 'cs2': 'CS2', 'lol': 'LoL',
         'league-of-legends': 'LoL'}
@@ -366,7 +370,7 @@ if __name__ == '__main__':
         print(f'{pzt}: haftalık haber yok — video üretilmedi.')
     for variant, uretici, ad, renkler in (('turk_haftasi', turk_haftasi, 'turk-haftasi', ZEMIN_TURK),
                                           ('surprizler', surprizler, 'fextopus-yanildi', ZEMIN_SURPRIZ)):
-        if variant not in hb:
+        if variant not in hb or (variant == 'surprizler' and not YANILTANLAR_VIDEO):
             continue
         sahneler, aciklama = uretici(hb[variant])
         _yaz(os.path.join(radar.CIKTI, f'{ad}-{pzt:%d-%m}.mp4'), _kareler(sahneler, renkler), aciklama)

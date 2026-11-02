@@ -13,7 +13,7 @@ import InitialsImage                               from '../components/InitialsI
 import TrBadge                                     from '../components/TrBadge'
 import LiquipediaCredit                            from '../components/LiquipediaCredit'
 import PredictionAccuracyBadge                     from '../components/PredictionAccuracyBadge'
-import { DeepScoutBadge, StatsCoverageNotice }     from '../components/ScoutSignals'
+import { DeepScoutBadge }                          from '../components/ScoutSignals'
 import {
   Brain, Vote, Map as MapIcon, Target, Swords, Award, Compass, Star, User,
   Crown, TriangleAlert, PartyPopper, Trophy, Gamepad2, CalendarDays, BarChart3,
@@ -34,6 +34,10 @@ import SeoHead from '../components/SeoHead'
 // altyapısı olmadan oy "en popüler oyuncu" yarışına dönüşüyor (düşük performanslı ama
 // sevilen oyuncu MVP seçilebiliyor). İstatistik motoru olgunlaşınca true yap.
 const MVP_VOTING_ENABLED = false
+// Topluluk tahmini şimdilik GİZLİ (2 Kasım 2026): bileşen voter_id/team_side yazıyor ama
+// tablo user_id/vote_team_id istiyor → hiçbir oy DB'ye düşmedi, herkes yalnız kendi
+// tarayıcısındaki yerel oyu görüyordu. Anonim oturumla yeniden yazılınca true yap.
+const COMMUNITY_VOTE_ENABLED = false
 
 /* ─── Voter fingerprint ─────────────────────────────────────────────────────── */
 const VOTER_KEY = 'esports_voter_id'
@@ -155,8 +159,10 @@ function buildMapWinStats(h2hMatches, teamAId, teamBId) {
   for (const m of (h2hMatches || [])) {
     const games = m?.raw_data?.games || []
     for (const g of games) {
-      const rawName = g?.map?.name || g?.map || 'Unknown'
-      const name = String(rawName).trim() || 'Unknown'
+      // Adı olmayan harita sayılmaz: PandaScore ücretsiz katmanı harita adı vermiyor,
+      // eskiden hepsi tek bir "Unknown" haritada toplanıp "%75 kazanıyor" yazıyordu.
+      const name = String(g?.map?.name || (typeof g?.map === 'string' ? g.map : '')).trim()
+      if (!name || name.toLowerCase() === 'unknown') continue
       if (!agg[name]) agg[name] = { map: name, total: 0, teamAWins: 0, teamBWins: 0 }
       const wId = g?.winner?.id ?? g?.winner_id
       if (wId == null) continue
@@ -174,61 +180,6 @@ function buildMapWinStats(h2hMatches, teamAId, teamBId) {
     }))
     .sort((a, b) => b.total - a.total)
     .slice(0, 8)
-}
-
-function buildAIWinModel(matchStatsRows, teamAId, teamBId, directPredictionA) {
-  function teamSignals(teamId) {
-    let sample = 0
-    let wins = 0
-    let kills = 0
-    let deaths = 0
-
-    for (const row of (matchStatsRows || [])) {
-      if (!idEq(row.team_id, teamId)) continue
-      const s = row.stats || {}
-      const score = toNum(s.score)
-      const opp = toNum(s.opponent_score)
-      if (score != null && opp != null) {
-        sample += 1
-        if (score > opp) wins += 1
-      } else if (typeof s.result === 'string') {
-        sample += 1
-        const r = s.result.toLowerCase()
-        if (r.includes('win')) wins += 1
-      }
-
-      const k = toNum(s.kills ?? s.total_kills ?? s?.kda?.kills)
-      const d = toNum(s.deaths ?? s.total_deaths ?? s?.kda?.deaths)
-      if (k != null) kills += k
-      if (d != null) deaths += d
-    }
-
-    const winRate = sample > 0 ? wins / sample : 0.5
-    const kd = deaths > 0 ? kills / deaths : (kills > 0 ? 2 : 1)
-    const kdSignal = clamp(kd / 2.2, 0.1, 1)
-    const strength = (winRate * 0.75) + (kdSignal * 0.25)
-    return { sample, strength }
-  }
-
-  const a = teamSignals(teamAId)
-  const b = teamSignals(teamBId)
-  let byStats = 0.5
-  if ((a.strength + b.strength) > 0) byStats = a.strength / (a.strength + b.strength)
-
-  const blendedA = directPredictionA != null
-    ? clamp((byStats * 0.8) + (directPredictionA * 0.2), 0.05, 0.95)
-    : clamp(byStats, 0.05, 0.95)
-
-  const sampleFactor = clamp((a.sample + b.sample) / 30, 0, 1)
-  const diffFactor = Math.abs(blendedA - 0.5) * 2
-  const confidence = Math.round(clamp((diffFactor * 0.7) + (sampleFactor * 0.3), 0.35, 0.95) * 100)
-
-  return {
-    teamA: Math.round(blendedA * 100),
-    teamB: 100 - Math.round(blendedA * 100),
-    confidence,
-    samples: a.sample + b.sample,
-  }
 }
 
 function buildLivePlayerBoard(matchRaw, rosters, teamAId, teamBId) {
@@ -297,10 +248,12 @@ function pickScoutMvpCandidate(liveBoard, teamAName, teamBName) {
     ...(liveBoard?.teamA || []).map(player => ({ ...player, teamName: teamAName })),
     ...(liveBoard?.teamB || []).map(player => ({ ...player, teamName: teamBName })),
   ]
-  if (!pool.length) return null
+  // Kadro yedeği (0/0/0) aday değil: eskiden veri yokken listenin ilk oyuncusu "MVP" çıkıyordu.
+  const veriVar = pool.filter(p => Number(p.kills || 0) + Number(p.deaths || 0) + Number(p.assists || 0) > 0)
+  if (!veriVar.length) return null
 
   const score = player => Number(player.kills || 0) * 1.1 + Number(player.assists || 0) * 0.45 - Number(player.deaths || 0) * 0.35
-  return [...pool].sort((left, right) => score(right) - score(left))[0] || null
+  return [...veriVar].sort((left, right) => score(right) - score(left))[0] || null
 }
 
 function asPct(value) {
@@ -450,14 +403,16 @@ function buildTacticalScoutReport({
     if (idEq(match.winner_id, teamBId)) teamBWins += 1
   }
 
+  // Örnek yalnız İKİ TAKIM ARASINDAKİ maçlar (genel form değil); 3'ten azı sinyal değil.
   const recentSample = recent.length
-  const teamAWinRate = recentSample > 0 ? Math.round((teamAWins / recentSample) * 100) : null
-  const teamBWinRate = recentSample > 0 ? Math.round((teamBWins / recentSample) * 100) : null
-  const teamALossRate = recentSample > 0 ? Math.round((teamBWins / recentSample) * 100) : null
-  const teamBLossRate = recentSample > 0 ? Math.round((teamAWins / recentSample) * 100) : null
+  const yeterli = recentSample >= 3
+  const teamAWinRate = yeterli ? Math.round((teamAWins / recentSample) * 100) : null
+  const teamBWinRate = yeterli ? Math.round((teamBWins / recentSample) * 100) : null
+  const teamALossRate = yeterli ? Math.round((teamBWins / recentSample) * 100) : null
+  const teamBLossRate = yeterli ? Math.round((teamAWins / recentSample) * 100) : null
 
-  const streakA = buildStreak(recent, teamAId)
-  const streakB = buildStreak(recent, teamBId)
+  const streakA = yeterli ? buildStreak(recent, teamAId) : { type: null, count: 0 }
+  const streakB = yeterli ? buildStreak(recent, teamBId) : { type: null, count: 0 }
 
   const teamAStrengths = []
   const teamAWeaknesses = []
@@ -478,37 +433,36 @@ function buildTacticalScoutReport({
     teamBWeaknesses.push(`${worstB.map} haritasında zayıf (%${worstB.teamBWinRate})`)
   }
 
-  if (teamAWinRate != null && teamAWinRate >= 55) {
-    teamAStrengths.push(`Son ${recentSample} maç formu güçlü (%${teamAWinRate} galibiyet)`)
+  if (teamAWinRate != null && teamAWinRate >= 60) {
+    teamAStrengths.push(`Aralarındaki son ${recentSample} maçta %${teamAWinRate} galibiyet`)
   }
-  if (teamBWinRate != null && teamBWinRate >= 55) {
-    teamBStrengths.push(`Son ${recentSample} maç formu güçlü (%${teamBWinRate} galibiyet)`)
+  if (teamBWinRate != null && teamBWinRate >= 60) {
+    teamBStrengths.push(`Aralarındaki son ${recentSample} maçta %${teamBWinRate} galibiyet`)
   }
 
-  if (teamALossRate != null && teamALossRate >= 45) {
-    teamAWeaknesses.push(`Son ${recentSample} maç kayıp oranı yüksek (%${teamALossRate})`)
+  if (teamALossRate != null && teamALossRate >= 60) {
+    teamAWeaknesses.push(`Aralarındaki son ${recentSample} maçta %${teamALossRate} mağlubiyet`)
   }
-  if (teamBLossRate != null && teamBLossRate >= 45) {
-    teamBWeaknesses.push(`Son ${recentSample} maç kayıp oranı yüksek (%${teamBLossRate})`)
+  if (teamBLossRate != null && teamBLossRate >= 60) {
+    teamBWeaknesses.push(`Aralarındaki son ${recentSample} maçta %${teamBLossRate} mağlubiyet`)
   }
 
   if (streakA.type === 'W' && streakA.count >= 2) {
-    teamAStrengths.push(`${streakA.count} maçlık galibiyet serisi`)
+    teamAStrengths.push(`Rakibine karşı ${streakA.count} maçlık galibiyet serisi`)
   }
   if (streakA.type === 'L' && streakA.count >= 2) {
-    teamAWeaknesses.push(`${streakA.count} maçlık mağlubiyet serisi`)
+    teamAWeaknesses.push(`Rakibine karşı ${streakA.count} maçlık mağlubiyet serisi`)
   }
   if (streakB.type === 'W' && streakB.count >= 2) {
-    teamBStrengths.push(`${streakB.count} maçlık galibiyet serisi`)
+    teamBStrengths.push(`Rakibine karşı ${streakB.count} maçlık galibiyet serisi`)
   }
   if (streakB.type === 'L' && streakB.count >= 2) {
-    teamBWeaknesses.push(`${streakB.count} maçlık mağlubiyet serisi`)
+    teamBWeaknesses.push(`Rakibine karşı ${streakB.count} maçlık mağlubiyet serisi`)
   }
 
-  if (teamAStrengths.length === 0) teamAStrengths.push('Denge modu: belirgin üstünlük sinyali sınırlı')
-  if (teamAWeaknesses.length === 0) teamAWeaknesses.push('Kritik zayıflık sinyali tespit edilmedi')
-  if (teamBStrengths.length === 0) teamBStrengths.push('Denge modu: belirgin üstünlük sinyali sınırlı')
-  if (teamBWeaknesses.length === 0) teamBWeaknesses.push('Kritik zayıflık sinyali tespit edilmedi')
+  // Gerçek sinyal yoksa kart hiç çıkmaz ("Denge modu…" dolgu satırları kaldırıldı).
+  const sinyalVar = teamAStrengths.length + teamAWeaknesses.length + teamBStrengths.length + teamBWeaknesses.length > 0
+  if (!sinyalVar) return null
 
   return {
     mapsUsed: normalizedMaps.length,
@@ -526,7 +480,7 @@ function TacticalScoutReport({ report }) {
     <div style={{ marginTop: 14, background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--surface-2)', padding: 14 }}>
       <ST Icon={Brain} label="Scout Analiz" />
       <div style={{ marginBottom: 10, fontSize: 11, color: 'var(--text-3)' }}>
-        Harita kaynakları: {report.mapsUsed} · Form örneği: {report.formSample}
+        Aralarındaki maç: {report.formSample}{report.mapsUsed > 0 && ` · Harita: ${report.mapsUsed}`}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 10 }}>
@@ -534,7 +488,7 @@ function TacticalScoutReport({ report }) {
           <div key={team.name} style={{ borderRadius: 10, border: '1px solid var(--surface-2)', background: 'var(--bg)', padding: '10px 11px' }}>
             <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)', marginBottom: 8 }}>{team.name}</div>
 
-            <div style={{ marginBottom: 8 }}>
+            {team.strengths.length > 0 && <div style={{ marginBottom: 8 }}>
               <div style={{ fontSize: 10, fontWeight: 800, color: '#2f9e57', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
                 Güçlü Yönler
               </div>
@@ -543,9 +497,9 @@ function TacticalScoutReport({ report }) {
                   <div key={`s_${idx}`} style={{ fontSize: 11, color: 'var(--text-2)' }}><span style={{ color: '#2f9e57', fontWeight: 700 }}>+</span> {item}</div>
                 ))}
               </div>
-            </div>
+            </div>}
 
-            <div>
+            {team.weaknesses.length > 0 && <div>
               <div style={{ fontSize: 10, fontWeight: 800, color: '#d6394a', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
                 Zayıf Yönler
               </div>
@@ -554,7 +508,11 @@ function TacticalScoutReport({ report }) {
                   <div key={`w_${idx}`} style={{ fontSize: 11, color: 'var(--text-2)' }}><span style={{ color: '#d6394a', fontWeight: 700 }}>−</span> {item}</div>
                 ))}
               </div>
-            </div>
+            </div>}
+
+            {team.strengths.length + team.weaknesses.length === 0 && (
+              <div style={{ fontSize: 11, color: 'var(--text-4)' }}>Belirgin sinyal yok</div>
+            )}
           </div>
         ))}
       </div>
@@ -928,17 +886,22 @@ function PlayerCard({ player, side = 'left' }) {
 
 /* ─── MapRow ────────────────────────────────────────────────────────────────── */
 function MapRow({ map, index, teamAId }) {
-  const aWon = map.winner_id === teamAId
-  const bWon = map.winner_id !== null && !aWon
+  const aWon = map.winner_id != null && idEq(map.winner_id, teamAId)
+  const bWon = map.winner_id != null && !aWon
+  // Ücretsiz katmanda raund skoru yok, yalnız kazanan: skor yerine kazanan tarafa işaret.
+  const skorYok = map.team_a_score == null && map.team_b_score == null
+  const yan = (won, score) => skorYok
+    ? (won ? <CircleCheck size={18} color="#4CAF50" aria-label="Kazandı" /> : <span style={{ color: 'var(--text-6)' }}>—</span>)
+    : (score ?? '—')
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 10, padding: '9px 14px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--surface-2)' }}>
-      <div style={{ textAlign: 'right', fontSize: 20, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: aWon ? '#4CAF50' : bWon ? 'var(--text-6)' : 'var(--text-2)' }}>{map.team_a_score ?? '—'}</div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 20, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: aWon ? '#4CAF50' : bWon ? 'var(--text-6)' : 'var(--text-2)' }}>{yan(aWon, map.team_a_score)}</div>
       <div style={{ textAlign: 'center', minWidth: 80 }}>
         <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-5)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 2 }}>Harita {index + 1}</div>
-        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-4)' }}>{map.map_name || '—'}</div>
+        {map.map_name && <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-4)' }}>{map.map_name}</div>}
         {map.length_seconds && <div style={{ fontSize: 9, color: 'var(--text-5)', marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 3 }}><Clock size={9} /> {fmtDur(map.length_seconds)}</div>}
       </div>
-      <div style={{ textAlign: 'left', fontSize: 20, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: bWon ? '#4CAF50' : aWon ? 'var(--text-6)' : 'var(--text-2)' }}>{map.team_b_score ?? '—'}</div>
+      <div style={{ display: 'flex', justifyContent: 'flex-start', fontSize: 20, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: bWon ? '#4CAF50' : aWon ? 'var(--text-6)' : 'var(--text-2)' }}>{yan(bWon, map.team_b_score)}</div>
     </div>
   )
 }
@@ -990,34 +953,35 @@ function WinProbabilityBar({ teamAName, teamBName, teamAPct, teamBPct }) {
   )
 }
 
+// Rozet KAZANANIN kısa adını yazar. Eskiden W/L yazıyordu ama kime göre olduğu
+// belli değildi (referans A takımıydı). Renk üstteki H2H çubuğuyla aynı: A yeşil, B kırmızı.
+function kisaAd(team) {
+  const ad = String(team?.acronym || team?.name || '?').trim()
+  return ad.length > 5 ? ad.slice(0, 4) : ad
+}
+
 function getH2HBadge(match, refTeamAId) {
+  const tarih = match?.scheduled_at
+    ? new Date(match.scheduled_at).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: '2-digit' })
+    : ''
   if (!match?.winner_id) {
     return {
-      text: 'D',
+      text: '=',
       color: 'var(--text-2)',
       bg: 'rgba(120,120,120,.2)',
       border: 'rgba(120,120,120,.45)',
-      label: 'Berabere',
+      label: `Berabere${tarih ? ` · ${tarih}` : ''}`,
     }
   }
 
-  const isWin = idEq(match.winner_id, refTeamAId)
-  if (isWin) {
-    return {
-      text: 'W',
-      color: '#b3ffd4',
-      bg: 'rgba(76,175,80,.22)',
-      border: 'rgba(76,175,80,.55)',
-      label: 'Galibiyet',
-    }
-  }
-
+  const kazanan = idEq(match.winner_id, match.team_a_id) ? match.team_a : match.team_b
+  const solKazandi = idEq(match.winner_id, refTeamAId)
   return {
-    text: 'L',
-    color: '#ffd2d8',
-    bg: 'rgba(255,70,85,.22)',
-    border: 'rgba(255,70,85,.55)',
-    label: 'Maglubiyet',
+    text: kisaAd(kazanan),
+    color: solKazandi ? '#b3ffd4' : '#ffd2d8',
+    bg: solKazandi ? 'rgba(76,175,80,.22)' : 'rgba(255,70,85,.22)',
+    border: solKazandi ? 'rgba(76,175,80,.55)' : 'rgba(255,70,85,.55)',
+    label: `${kazanan?.name || '?'} kazandı${tarih ? ` · ${tarih}` : ''}`,
   }
 }
 
@@ -1239,7 +1203,6 @@ export default function MatchDetail() {
   const [mapStats, setMapStats] = useState([])
   const [h2h,     setH2h]     = useState({ matches: [], teamAWins: 0, teamBWins: 0, draws: 0, total: 0, teamAId: null, teamBId: null })
   const [streams, setStreams]  = useState([])
-  const [aiWin, setAiWin] = useState({ teamA: 50, teamB: 50, confidence: 50, samples: 0 })
   const [liveBoard, setLiveBoard] = useState({ teamA: [], teamB: [] })
   const [matchPlayerStats, setMatchPlayerStats] = useState([])
 
@@ -1292,7 +1255,7 @@ export default function MatchDetail() {
       }
 
       let h2hQuery = supabase.from('matches')
-        .select('id,game_id,winner_id,status,team_a_id,team_b_id,team_a_score,team_b_score,scheduled_at,raw_data,team_a:teams!matches_team_a_id_fkey(id,name,logo_url),team_b:teams!matches_team_b_id_fkey(id,name,logo_url)')
+        .select('id,game_id,winner_id,status,team_a_id,team_b_id,team_a_score,team_b_score,scheduled_at,raw_data,team_a:teams!matches_team_a_id_fkey(id,name,logo_url,acronym),team_b:teams!matches_team_b_id_fkey(id,name,logo_url,acronym)')
         .eq('status','finished')
         .or(`and(team_a_id.eq.${aId},team_b_id.eq.${bId}),and(team_a_id.eq.${bId},team_b_id.eq.${aId})`)
         .order('scheduled_at',{ascending:false})
@@ -1301,15 +1264,15 @@ export default function MatchDetail() {
       if (aliasGameIds.length > 0) {
         h2hQuery = h2hQuery.in('game_id', aliasGameIds)
       }
+      // Geçmiş = bu maçtan ÖNCEKİLER (eski bir maçın sayfası sonraki karşılaşmaları saymasın)
+      if (m.scheduled_at) {
+        h2hQuery = h2hQuery.lt('scheduled_at', m.scheduled_at)
+      }
 
-      const [plA, plB, h2hRes, statsRes, pmsRes] = await Promise.all([
+      const [plA, plB, h2hRes, pmsRes] = await Promise.all([
         supabase.from('players').select('id,nickname,real_name,role,image_url').eq('team_pandascore_id', aId).order('role'),
         supabase.from('players').select('id,nickname,real_name,role,image_url').eq('team_pandascore_id', bId).order('role'),
         h2hQuery,
-        supabase.from('match_stats')
-          .select('team_id,stats')
-          .in('team_id', [aId, bId])
-          .limit(220),
         // Hybrid v3 oyuncu KDA (bu maç için, varsa) → 5v5 tablo
         supabase.from('player_match_stats')
           .select('team_id,kills,deaths,assists,stats,player:players(nickname,image_url,role)')
@@ -1322,7 +1285,6 @@ export default function MatchDetail() {
       setH2h({ matches:h, teamAWins:h.filter(x=>idEq(x.winner_id, aId)).length, teamBWins:h.filter(x=>idEq(x.winner_id, bId)).length, draws:h.filter(x=>!x.winner_id).length, total:h.length, teamAId:aId, teamBId:bId })
       setMaps(haritalariKur(m, aId, bId))
       setMapStats(buildMapWinStats(h, aId, bId))
-      setAiWin(buildAIWinModel(statsRes.data || [], aId, bId, m.prediction_team_a))
       setLiveBoard(buildLivePlayerBoard(m.raw_data, rosters, aId, bId))
     } catch (e) { console.warn('details:', e.message) }
     finally { setLoadingDetails(false) }
@@ -1381,8 +1343,9 @@ export default function MatchDetail() {
 
   // Skoru VE gerçek ismi olmayan haritaları "Harita Skorları" altında gösterme
   // (LoL/free-tier'da yalnızca süre gelir → boş "—" satırları profesyonel durmaz).
+  // Kazananı belli harita da girer (CS2'de ad/skor yok ama kazanan + süre var).
   const scoredMaps = useMemo(() => (maps || []).filter(m =>
-    m.team_a_score != null || m.team_b_score != null ||
+    m.team_a_score != null || m.team_b_score != null || m.winner_id != null ||
     (m.map_name && String(m.map_name).trim() && String(m.map_name).toLowerCase() !== 'unknown')
   ), [maps])
 
@@ -1440,9 +1403,13 @@ export default function MatchDetail() {
   const isLive= match.status === 'running'
   const isFin = match.status === 'finished'
   const hasTR = isTurkishTeam(match.team_a) || isTurkishTeam(match.team_b)
-  const pctA  = aiWin.teamA
-  const pctB  = aiWin.teamB
-  const predUncertain = isUncertainPrediction(pctA, pctB)
+  // Fextopus oranı DOĞRUDAN prediction_team_a (diğer sayfalarla aynı). Eskiden %80'i
+  // match_stats'tan türetilen sezgisel bir skorla karıştırılıyordu; örneklem 0 olunca
+  // oran %50'ye çekiliyordu (Liquid–Aurora: Fextopus %22, sayfa %44). Tahmin yoksa çubuk yok.
+  const tahminVar = match.prediction_team_a != null
+  const pctA  = tahminVar ? Math.round(Number(match.prediction_team_a) * 100) : null
+  const pctB  = tahminVar ? 100 - pctA : null
+  const predUncertain = tahminVar && isUncertainPrediction(match.prediction_team_a, match.prediction_team_b ?? (1 - match.prediction_team_a), match.prediction_confidence)
   // Seri kazananı winner_id ÖNCELİKLİ (güvenilir alan); skorlar ~%1.2 maçta ters-atanmış.
   const seriesWinner = isFin ? deriveWinnerTeamId(match) : null
   const aWon  = seriesWinner != null && seriesWinner === Number(aId)
@@ -1558,8 +1525,8 @@ export default function MatchDetail() {
             </div>
           </div>
 
-          {/* ── AI Kazanma Olasılığı — tam genişlik (mobilde takım isimleriyle çakışmasın) ── */}
-          <div style={{ marginTop: 18, maxWidth: 440, marginLeft: 'auto', marginRight: 'auto' }}>
+          {/* ── Fextopus Kazanma Olasılığı — tam genişlik (mobilde takım isimleriyle çakışmasın) ── */}
+          {tahminVar && <div style={{ marginTop: 18, maxWidth: 440, marginLeft: 'auto', marginRight: 'auto' }}>
             <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--ai)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><FextopusIcon size={14} /> Fextopus Kazanma Olasılığı{predUncertain && <span style={{ color: 'var(--text-3)', fontWeight: 800 }}>· Belirsiz</span>}</div>
             <div style={{ height: 9, borderRadius: 5, overflow: 'hidden', display: 'flex', border: '1px solid var(--line)' }}>
               <div style={{ flex: pctA, background: predUncertain ? 'var(--text-6)' : 'linear-gradient(90deg,#4ade80,#22c55e)', borderRadius: '5px 0 0 5px' }} />
@@ -1573,11 +1540,10 @@ export default function MatchDetail() {
                 <span style={{ color: '#60a5fa', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>%{pctB} {bName}</span>
               </div>
             )}
-            <div style={{ marginTop: 3, fontSize: 9, color: 'var(--text-6)', textAlign: 'center' }}>Güven Skoru: %{aiWin.confidence} · örneklem: {aiWin.samples}</div>
             <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center' }}>
               <PredictionAccuracyBadge variant="inline" />
             </div>
-          </div>
+          </div>}
         </div>
 
         <LiveScoreboard
@@ -1622,7 +1588,7 @@ export default function MatchDetail() {
             <div style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--surface-2)', padding: 18 }}>
               <ST Icon={MapIcon} label="Harita Skorları" />
               {loadingDetails ? <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>{[1,2,3].map(i => <Sk key={i} h="44px" r="10px" />)}</div>
-                : scoredMaps.length === 0 ? <StatsCoverageNotice compact message="Bu maç için harita bazlı skorlar ve tur detayları yalnızca Tier S/A kapsamındaki maçlarda mevcut." />
+                : scoredMaps.length === 0 ? <div style={{ textAlign: 'center', padding: 18, color: 'var(--text-4)', fontSize: 12 }}>{isFin || isLive ? 'Bu maç için harita bazlı sonuç verisi yok.' : 'Haritalar maç başlayınca burada.'}</div>
 
                 : (
                   <div>
@@ -1704,8 +1670,8 @@ export default function MatchDetail() {
                       <span style={{ color: 'var(--text-1)', fontWeight: 800, minWidth: 0, textAlign: 'right' }}>{aName} {h2h.teamAWins} - {h2h.teamBWins} {bName}</span>
                     </div>
                     <div style={{ marginBottom: 10, background: 'var(--bg)', border: '1px solid var(--surface-2)', borderRadius: 8, padding: '7px 9px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <span style={{ color: 'var(--text-4)', fontSize: 10 }}>Aralarındaki Form</span>
-                      <div style={{ display: 'flex', gap: 6 }}>
+                      <span style={{ color: 'var(--text-4)', fontSize: 10, flexShrink: 0 }}>Son kazananlar <span style={{ color: 'var(--text-5)' }}>(yeniden eskiye)</span></span>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                         {h2hRecentForm.map((badge, idx) => (
                           <span
                             key={`${badge.text}_${idx}`}
@@ -1795,24 +1761,28 @@ export default function MatchDetail() {
           </div>
         </div>
 
-        <div style={{ marginTop: 18, background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--surface-2)', padding: 14 }}>
+        {/* Gözcü Notu yalnız harita profili ya da MVP tahmini varken: yoksa üstteki
+            Fextopus çubuğunun tekrarı + "örneklem 0" satırından ibaretti. */}
+        {(mapStats.length > 0 || scoutMvp) && <div style={{ marginTop: 18, background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--surface-2)', padding: 14 }}>
           <ST Icon={Compass} label="Gözcü Notu" />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 10 }}>
-            <div>
+            {tahminVar && (
               <WinProbabilityBar
                 teamAName={aName}
                 teamBName={bName}
                 teamAPct={pctA}
                 teamBPct={pctB}
               />
-              <div style={{ marginTop: 5, fontSize: 11, color: '#9bc4bf' }}>Güven: %{aiWin.confidence} (örneklem {aiWin.samples})</div>
-            </div>
+            )}
 
-            <div style={{ border: '1px solid rgba(196,181,253,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(124,58,237,.12), var(--surface))', padding: '10px 11px' }}>
-              <div style={{ fontSize: 10, color: 'var(--ai)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5 }}>Harita Profili</div>
-              <div style={{ fontSize: 12, color: 'var(--text-1)' }}>{mapStats.length > 0 ? `${mapStats[0].map} en fazla oynanan harita` : 'Yeterli harita geçmişi yok'}</div>
-              <div style={{ marginTop: 4, fontSize: 11, color: 'var(--text-3)' }}>{mapStats.length > 0 ? `${mapStats[0].total} örnek üzerinden ${aName} ${mapStats[0].teamAWinRate}% - ${mapStats[0].teamBWinRate}% ${bName}` : 'Tahmin nötr modda'}</div>
-            </div>
+            {/* Harita Profili: yalnız adı belli harita geçmişi varsa (yoksa "nötr mod" dolgusu basıyordu) */}
+            {mapStats.length > 0 && (
+              <div style={{ border: '1px solid rgba(196,181,253,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(124,58,237,.12), var(--surface))', padding: '10px 11px' }}>
+                <div style={{ fontSize: 10, color: 'var(--ai)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5 }}>Harita Profili</div>
+                <div style={{ fontSize: 12, color: 'var(--text-1)' }}>{`${mapStats[0].map} en fazla oynanan harita`}</div>
+                <div style={{ marginTop: 4, fontSize: 11, color: 'var(--text-3)' }}>{`${mapStats[0].total} örnek üzerinden ${aName} ${mapStats[0].teamAWinRate}% - ${mapStats[0].teamBWinRate}% ${bName}`}</div>
+              </div>
+            )}
 
             {/* MVP Tahmini: istatistikler seyrek → yalnız gerçek veri varken göster (kurucu isteği) */}
             {scoutMvp && (
@@ -1823,15 +1793,17 @@ export default function MatchDetail() {
               </div>
             )}
           </div>
-        </div>
+        </div>}
 
-        <CommunityPredictionPool
-          matchId={parseInt(id, 10)}
-          teamAName={aName}
-          teamBName={bName}
-          aiWin={aiWin}
-          isFinished={isFin}
-        />
+        {COMMUNITY_VOTE_ENABLED && (
+          <CommunityPredictionPool
+            matchId={parseInt(id, 10)}
+            teamAName={aName}
+            teamBName={bName}
+            aiWin={{ teamA: pctA ?? 50, teamB: pctB ?? 50 }}
+            isFinished={isFin}
+          />
+        )}
 
         <TacticalScoutReport report={tacticalScoutReport} />
       </div>

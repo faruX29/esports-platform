@@ -188,11 +188,16 @@ function Matches() {
     return () => { cancelled = true }
   }, [])
 
+  // Oyun listesi yalnız oyun filtresi seçiliyken gerekir. "Tümü"nde liste inince aynı
+  // sorgu ikinci kez gidiyordu (gamesLoading/gameNames bağımlılığı).
+  const oyunAnahtari = activeGame === 'all' ? 'all'
+    : gamesLoading ? '' : resolveGameIds(activeGame, gameNames).join(',')
+
   useEffect(() => {
     fetchMatches()
     // favFilterKey: yalnızca "Favoriler" açıkken favori seti değişince tekrar çek —
     // filtre kapalıyken yıldız değiştirmek listeyi gereksiz yenilemesin.
-  }, [activeGame, sortBy, activeTab, currentPage, gamesLoading, gameNames, dateFrom, dateTo, debouncedSearch, (showFavoritesOnly ? followedTeamIds.join(',') : '')])  // filtre değişince tekrar çek
+  }, [oyunAnahtari, sortBy, activeTab, currentPage, dateFrom, dateTo, debouncedSearch, (showFavoritesOnly ? followedTeamIds.join(',') : '')])  // filtre değişince tekrar çek
 
   useEffect(() => {
     applyFilters()

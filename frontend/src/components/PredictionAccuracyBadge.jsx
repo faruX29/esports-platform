@@ -13,8 +13,22 @@ import FextopusIcon from './FextopusIcon'
  * variant: 'card' (varsayılan, dashboard) | 'inline' (maç detayında AI bar yanı)
  */
 
-// Modül-seviyesi cache: sayfalar arası tek fetch (accuracy günde bir değişir)
-let _cache = null
+// Modül-seviyesi cache: sayfalar arası tek fetch (accuracy günde bir değişir).
+// RPC tüm biten maçları tarar (~40 bin satır); tekrar gelen ziyaretçi için 6 saat
+// tarayıcıda da saklanır, ana sayfa açılışında veritabanına gitmez.
+const SAKLAMA_ANAHTARI = 'fext_isabet_v1'
+const SAKLAMA_OMRU_MS = 6 * 60 * 60 * 1000
+
+function saklananiOku() {
+  try {
+    const kayit = JSON.parse(localStorage.getItem(SAKLAMA_ANAHTARI) || 'null')
+    return kayit && Date.now() - kayit.zaman < SAKLAMA_OMRU_MS ? kayit.veri : null
+  } catch {
+    return null
+  }
+}
+
+let _cache = saklananiOku()
 let _inflight = null
 
 async function fetchAccuracy() {
@@ -24,6 +38,7 @@ async function fetchAccuracy() {
     const { data, error } = await supabase.rpc('get_prediction_accuracy', { days_back: 0 })
     if (error) throw error
     _cache = data
+    try { localStorage.setItem(SAKLAMA_ANAHTARI, JSON.stringify({ zaman: Date.now(), veri: data })) } catch { /* gizli sekme */ }
     return data
   })()
   try {

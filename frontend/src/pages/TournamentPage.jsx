@@ -831,30 +831,29 @@ export const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
         e.currentTarget.style.boxShadow   = isLive ? '0 0 16px rgba(255,70,85,.18)' : 'none'
       }}
     >
-      {isLive && (
-        <div style={{
-          position: 'absolute', top: 8, right: 10,
-          display: 'flex', alignItems: 'center', gap: 5,
-          fontSize: 9, fontWeight: 800, color: '#FF4655',
-          letterSpacing: '.6px', textTransform: 'uppercase', zIndex: 3,
-        }}>
-          <span style={{
-            width: 7, height: 7, borderRadius: '50%',
-            background: '#FF4655', boxShadow: '0 0 0 0 rgba(255,70,85,.7)',
-            animation: 'livePulse 1.2s infinite',
-          }} />
-          CANLI
-        </div>
-      )}
-
       <div style={{ padding: '14px 16px' }}>
-        {/* Top: game + status + round */}
+        {/* Top: game + status + round. CANLI satırın içinde akar: eskiden kartın
+            sağ üstüne absolute konuyordu, mobilde TR/Bo/tur rozetlerinin üstüne biniyordu. */}
         <div style={{ display: 'flex', justifyContent: 'space-between',
-          alignItems: 'center', marginBottom: 10 }}>
-          <span style={{ fontSize: 10, color: 'var(--text-4)' }}>
+          alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 10, color: 'var(--text-4)' }}>
             {m.game?.name ?? ''}
+            {isLive && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                fontSize: 9, fontWeight: 800, color: '#FF4655',
+                letterSpacing: '.6px',
+              }}>
+                <span style={{
+                  width: 7, height: 7, borderRadius: '50%',
+                  background: '#FF4655', boxShadow: '0 0 0 0 rgba(255,70,85,.7)',
+                  animation: 'livePulse 1.2s infinite',
+                }} />
+                CANLI
+              </span>
+            )}
           </span>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
             {hasTR && <TurkishBadge compact />}
             {getBOFormat(m.team_a_score, m.team_b_score, m.number_of_games) && (
               <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 8,

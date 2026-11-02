@@ -124,6 +124,7 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - `matches`'a `postgres_changes` aboneliği açma ya da tabloyu `supabase_realtime` yayınına ekleme → her satır yazımı (ETL'in değişmeyen yazımları dahil) tam satırıyla her açık sekmeye gider. Canlı veri `maclar` Broadcast'inden; yeni abone `subscribeToMatchesUpdates`'i kullanır. Yoklama için düz `setInterval` değil `useYenileme`.
 - Middleware'de sayfanın ana varlığını `sbFetch` ile çekme → hatayı "yok"la karıştırır; `sbBul` kullan, boşsa `YOK` dön (404 + noindex), hata SPA'ya düşer (geçici arıza 404 olmasın).
 - Önbelleğe giren yanıtta (`api/sitemap.js` gibi `s-maxage`/`stale-while-revalidate`) veri hatasını boş 200'e çevirme → boş sonuç günlerce sunulur (maç sitemap'i Google'a 0 URL gitti); fırlat, 503 + `no-store` dön.
+- Her sayfa açılışında çağrılan RPC'de `matches`'ı tam taratma (ör. `cross join lateral` + `any()`, pencere fonksiyonu) → önbellek soğukken saniyeler sürer; takım başına `limit`'li indeks araması yaz, `explain (analyze, buffers)` ile doğrula (`get_teams_recent_form.sql`).
 - Middleware yanıtına `s-maxage` koyup CPU'yu koruduğunu sanma → middleware önbellekten önce her istekte koşar.
 - Paylaşılan/e-postaya giden linki `window.location.origin` ile kurma → uygulamada `app.fextesports.com` olur; `disariKok()`.
 - Capacitor eklentisini web koduna statik import etme → web paketine girer; `UYGULAMA` koşulu + dinamik import.

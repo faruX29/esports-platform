@@ -1506,7 +1506,7 @@ export default function NewsDetailPage() {
               {canInteract
                 ? <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Yorumun hesabınla paylaşılır.</div>
                 : <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                    Yorum yazmak icin{' '}
+                    Yorum yazmak için{' '}
                     <Link to="/login" style={{ color: FEXT.accentText, textDecoration: 'none', fontWeight: 600 }}>giriş yap</Link>
                     {' '}veya{' '}
                     <Link to="/register" style={{ color: FEXT.accentText, textDecoration: 'none', fontWeight: 600 }}>kayıt ol</Link>.

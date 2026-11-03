@@ -8,6 +8,8 @@
 -- Katmanlar model olasılığına göre:
 --   zirve  >= %70    yuksek >= %65    orta %55-64    dusuk < %55
 -- Dönemler: tum / 90g / 30g  (model bozuluyor mu, karşılaştırılabilsin)
+-- Filtre get_prediction_accuracy ile AYNI: yalnız biten maç, 50/50 tahmin hariç
+-- (4 Kasım'a kadar eşit tahminler "Az emin"de yanlış sayılıyordu, iptal maçlar da giriyordu).
 
 CREATE OR REPLACE VIEW public.fextopus_isabet WITH (security_invoker = true) AS
 WITH temel AS (
@@ -21,9 +23,11 @@ WITH temel AS (
     ((m.prediction_team_a > m.prediction_team_b AND m.winner_id = m.team_a_id)
      OR (m.prediction_team_b > m.prediction_team_a AND m.winner_id = m.team_b_id)) AS dogru
   FROM matches m
-  WHERE m.winner_id IS NOT NULL
+  WHERE m.status = 'finished'
+    AND m.winner_id IS NOT NULL
     AND m.prediction_team_a IS NOT NULL
     AND m.prediction_team_b IS NOT NULL
+    AND m.prediction_team_a <> m.prediction_team_b
     AND m.team_a_id IS NOT NULL
     AND m.team_b_id IS NOT NULL
 ), etiketli AS (

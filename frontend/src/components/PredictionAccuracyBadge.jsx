@@ -7,7 +7,8 @@ import FextopusIcon from './FextopusIcon'
  * AI tahmin doğruluğu "trust signal" rozeti.
  *
  * get_prediction_accuracy RPC'sini çağırır (50/50'ler hariç, dürüst metrik).
- * Öne çıkan rakam: GÜVENLİ tahminlerde doğruluk (fav olasılığı ≥%65 → ~%72).
+ * Öne çıkan rakam: "en güvendiği maçlar" = favori olasılığı ≥%70; /stats'taki
+ * "Çok emin" katmanıyla aynı tanım (RPC ile görünüm aynı filtreyi kullanır).
  * Veri yoksa / RPC eksikse hiçbir şey render etmez (graceful).
  *
  * variant: 'card' (varsayılan, dashboard) | 'inline' (maç detayında AI bar yanı)
@@ -16,7 +17,8 @@ import FextopusIcon from './FextopusIcon'
 // Modül-seviyesi cache: sayfalar arası tek fetch (accuracy günde bir değişir).
 // RPC tüm biten maçları tarar (~40 bin satır); tekrar gelen ziyaretçi için 6 saat
 // tarayıcıda da saklanır, ana sayfa açılışında veritabanına gitmez.
-const SAKLAMA_ANAHTARI = 'fext_isabet_v1'
+// v2: eşik %65 → %70 (4 Kasım); eski kayıt eski tanımı taşır.
+const SAKLAMA_ANAHTARI = 'fext_isabet_v2'
 const SAKLAMA_OMRU_MS = 6 * 60 * 60 * 1000
 
 function saklananiOku() {
@@ -70,18 +72,19 @@ export default function PredictionAccuracyBadge({ variant = 'card' }) {
 
   if (variant === 'inline') {
     return (
-      <div
-        title={`Genel isabet %${overall} · ${(stats.total || 0).toLocaleString('tr-TR')} maçta ölçüldü`}
+      <Link
+        to="/stats"
+        title={`%70 ve üzeri şans verdiği ${sample} maçta ölçüldü · Genel isabet %${overall}`}
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
-          fontSize: 11, fontWeight: 700, color: 'var(--ai)',
+          fontSize: 11, fontWeight: 700, color: 'var(--ai)', textDecoration: 'none',
           padding: '4px 9px', borderRadius: 999,
           background: 'rgba(194,92,208,.12)', border: '1px solid rgba(194,92,208,.28)',
         }}
       >
         <FextopusIcon size={15} />
         Fextopus'un en güvendiği maçlarda %{confPct} net isabet
-      </div>
+      </Link>
     )
   }
 
@@ -105,7 +108,7 @@ export default function PredictionAccuracyBadge({ variant = 'card' }) {
           Fextopus'un En Güvendiği Maçlarda %{confPct} Net İsabet
         </div>
         <div style={{ fontSize: 12, color: '#c6c6c6', lineHeight: 1.5 }}>
-          Elo tabanlı Fextopus, yüksek güvenli tahminlerinde ({sample} maçta ölçüldü) bu isabeti tutturuyor.
+          Elo tabanlı Fextopus, bir takıma %70 ve üzeri şans verdiği {sample} maçta bu isabeti tutturdu.
           Genel isabet %{overall}. <span style={{ color: '#8f8f8f' }}>Her maçı değil — en emin olduklarını.</span>
         </div>
         {/* Rakamin arkasindaki tam dagilim: iddiayi dogrulanabilir kilar */}

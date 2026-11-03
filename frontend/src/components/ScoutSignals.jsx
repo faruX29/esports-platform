@@ -52,7 +52,7 @@ export function StatsCoverageNotice({
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 7 }}>
         <Satellite size={17} />
         <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', letterSpacing: '.3px' }}>{title}</span>
-        <span style={{
+        <span lang="en" style={{
           marginLeft: 'auto', fontSize: 9, fontWeight: 800, letterSpacing: '.5px',
           color: '#D08BE0', border: `1px solid ${TEAL}44`, borderRadius: 999, padding: '2px 8px', textTransform: 'uppercase',
         }}>

@@ -987,7 +987,7 @@ async function staticFeedHtml(feed, origin) {
         `<li>Değerlendirilen maç: ${tr(a.total)}</li>` +
         `<li>Doğru tahmin: ${tr(a.correct)}</li>` +
         `<li>Genel isabet oranı: %${String(a.accuracy_pct).replace('.', ',')}</li>` +
-        `<li>Emin katman (favori olasılığı %65 ve üzeri): ${tr(a.confident_total)} maçta ` +
+        `<li>Çok emin katman (favori olasılığı %70 ve üzeri): ${tr(a.confident_total)} maçta ` +
         `%${String(a.confident_pct).replace('.', ',')} isabet</li>` +
         `</ul><p>Oranlar sonuçlanmış maçlar üzerinde canlı hesaplanır; 50/50 biten ` +
         `tahminler hariç tutulur.</p>`

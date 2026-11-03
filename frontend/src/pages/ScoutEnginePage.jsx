@@ -350,7 +350,7 @@ function CompareTable({ selected, onRemove }) {
 /* ── Keşif tablosu: tüm oyuncular, filtre + sıralama ── */
 const SORTS = [
   { key: 'kd',      label: 'K/D',          value: p => p.kd },
-  { key: 'kpm',     label: 'Kill/harita',  value: p => p.kpm },
+  { key: 'kpm',     label: 'Öldürme/harita',  value: p => p.kpm },
   { key: 'win',     label: 'Galibiyet',    value: p => p.win },
   { key: 'r5kd',    label: 'Son 5 K/D',    value: p => p.r5kd },
   { key: 'matches', label: 'Maç',          value: p => p.matches },
@@ -533,7 +533,7 @@ function DepthStrip({ depth }) {
     // Yıl BİLEREK sayılmıyor: tarihi bir değeri sayaç gibi göstermek anlamsız.
     { Icon: CalendarDays, value: depth.earliestYear ? `${depth.earliestYear}→` : null, label: 'Veri derinliği' },
     { Icon: Target,       num: depth.confidentPct != null ? Math.round(depth.confidentPct) : null,
-                          format: n => `%${n}`, label: 'Fextopus emin katman' },
+                          format: n => `%${n}`, label: 'Fextopus çok emin katman' },
   ].filter(t => t.num != null || t.value)
 
   if (!loading && tiles.length === 0) return null

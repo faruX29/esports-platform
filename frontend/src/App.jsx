@@ -25,6 +25,7 @@ import NavbarComponent from './components/Navbar'
 import Footer from './components/Footer'
 import GameLogo, { GAME_ICON_PATHS } from './components/GameLogo'
 import { FEXT } from './theme'
+import { adDili } from './utils/dil'
 import { Home, CalendarDays, Trophy, BarChart3, Newspaper, Radar, Flag, Search, X as XIcon, Shield, User, ArrowRight, CornerDownLeft } from 'lucide-react'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -510,7 +511,7 @@ function GameSelectorBar() {
                 ? <GameLogo game={g.id} size={15} color={g.soon ? 'var(--text-5)' : g.color} />
                 : <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: g.soon ? 'var(--text-5)' : g.color }} />
               }
-              <span>{g.shortLabel ?? g.label}</span>
+              <span lang={adDili(g.shortLabel ?? g.label)}>{g.shortLabel ?? g.label}</span>
               {g.soon && (
                 <span style={{ fontSize: 8, padding: '1px 4px', borderRadius: 4,
                   background: 'var(--surface-2)', color: 'var(--text-4)', letterSpacing: 0 }}>soon</span>

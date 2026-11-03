@@ -2,7 +2,9 @@
 -- 9000+ satırı client'a çekmek yerine tek sorguda hesaplar.
 --
 -- DÜRÜST metrik: gerçek tahmin yapılmayan maçlar (prediction_team_a = _b, yani
--- 50/50) HARİÇ. "confident" = favori olasılığı >= 0.65 (kalibre alt-küme, ~%72).
+-- 50/50) HARİÇ. "confident" = favori olasılığı >= 0.70; /stats'taki "Çok emin"
+-- katmanıyla (fextopus_isabet 'zirve') aynı tanım ve aynı filtre. 4 Kasım'a kadar
+-- 0.65'ti: rozet "%73", /stats "%75" diyordu, ikisi de "en güvendiği maçlarda".
 --
 -- days_back: 0 veya negatif → tüm zamanlar; >0 → son N gün.
 
@@ -17,10 +19,10 @@ AS $$
     'correct',           COUNT(*) FILTER (WHERE correct),
     'accuracy_pct',      ROUND(100.0 * COUNT(*) FILTER (WHERE correct)
                                / NULLIF(COUNT(*), 0), 1),
-    'confident_total',   COUNT(*) FILTER (WHERE fav_prob >= 0.65),
-    'confident_correct', COUNT(*) FILTER (WHERE correct AND fav_prob >= 0.65),
-    'confident_pct',     ROUND(100.0 * COUNT(*) FILTER (WHERE correct AND fav_prob >= 0.65)
-                               / NULLIF(COUNT(*) FILTER (WHERE fav_prob >= 0.65), 0), 1)
+    'confident_total',   COUNT(*) FILTER (WHERE fav_prob >= 0.70),
+    'confident_correct', COUNT(*) FILTER (WHERE correct AND fav_prob >= 0.70),
+    'confident_pct',     ROUND(100.0 * COUNT(*) FILTER (WHERE correct AND fav_prob >= 0.70)
+                               / NULLIF(COUNT(*) FILTER (WHERE fav_prob >= 0.70), 0), 1)
   )
   FROM (
     SELECT

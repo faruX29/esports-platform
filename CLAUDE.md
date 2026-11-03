@@ -131,7 +131,9 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - Paylaşılan/e-postaya giden linki `window.location.origin` ile kurma → uygulamada `app.fextesports.com` olur; `disariKok()`.
 - Capacitor eklentisini web koduna statik import etme → web paketine girer; `UYGULAMA` koşulu + dinamik import.
 - Uygulamada `supabase.auth.signOut` öncesi push token'ını bırakmadan çıkış akışı yazma → çıkılan telefon bildirim almaya devam eder.
-- Türkçe yerelde İngilizce terimi büyük harfe çevirme → "WINNERS" "WİNNERS" olur.
+- Türkçe yerelde İngilizce terimi büyük harfe çevirme → "WINNERS" "WİNNERS" olur. CSS `textTransform: 'uppercase'` da aynı (`lang="tr"`): İngilizce ad (takım, oyun, "Tier") gösteren büyük harfli öğeye `lang={adDili(ad)}` ya da `lang="en"` ver (`utils/dil.js`); statik Türkçe etikete verme.
+- Saati geçmiş `not_started` maçı "Yaklaşan" gösterme → senkron saatlerce gecikiyor; rozet `statusStyle(status, scheduled_at)`, koşul `saatiGecti` (`theme.js`), metin "Sonuç bekleniyor".
+- Fextopus "en güvendiği" için ayrı eşik yazma → her yerde favori ≥%70; `get_prediction_accuracy` ile `fextopus_isabet` aynı filtreyi kullanır (biten maç, 50/50 hariç). Birini değiştirirsen ötekini de.
 - Eleme ağacını `round_info`'yu sabit sütunlara eşleyerek ya da "tekrar" sanılan maçı silerek kurma → büyük çift elemelerde alt ayak turları çakışıp maçlar sessizce kayboluyordu. Ağaç `utils/bracketModel.js`'te kurulur; bağlantı takımdan doğrulanır, doğrulanamayan aşama listeye düşer. Değiştirince tüm turnuvalarda "her maç tam bir kez" denetimini yeniden koş.
 - Turnuvayı lige (`/lig/<slug>`) frontend ya da middleware'de ad eşleyerek bağlama → tek kaynak `ligler` tablosu + `lig_eslesir`/`lig_sayfasi`/`turnuva_ligi` (`backend/sql/ligler.sql`); yeni lig = tabloya satır, kod değişmez.
 - Kadroyu transfer kaydı yazmadan güncelleyen adımı (`--players`, `transfer=None`) transfer tespitinden (`--roster-turk`/`--roster-transfers`) önce koşturma → oyuncunun takımı değişir, fark yutulur. Haber istemine kadro farkını "resmi açıklama" diye verme; ayrılışın nedeni bilinmez (`build_transfer`).

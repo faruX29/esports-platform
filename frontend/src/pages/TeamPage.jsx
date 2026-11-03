@@ -16,6 +16,7 @@ import {
   Globe, Music, Gamepad2, Link as LinkIcon, Clock, Info,
 } from 'lucide-react'
 import { FEXT } from '../theme'
+import { LIQUIPEDIA_SON_TARIH } from '../components/LiquipediaCredit'
 import Mascot from '../components/Mascot'
 import SeoHead from '../components/SeoHead'
 
@@ -140,22 +141,59 @@ function parseTransferDate(value) {
   return new Date(t)
 }
 
-// Transferler `roster_changes` tablosundan gelir (Liquipedia v3/wikitext ETL).
-// IN/OUT bu takıma göre: target_team_id === bu takım → katıldı (IN); source → ayrıldı (OUT).
+// Kaynaktaki rol adları (Liquipedia/PandaScore İngilizce yazar). Etikete zaten
+// giren roller (inactive, loan, retired) ayrıca rozet olmaz.
+const TRANSFER_ROL_TR = {
+  substitute: 'Yedek', coach: 'Koç', 'head coach': 'Baş koç', 'assistant coach': 'Yardımcı koç',
+  'inactive coach': 'Koç', manager: 'Menajer', 'stand-in': 'Geçici oyuncu', trial: 'Deneme',
+}
+const ETIKETTE_OLAN_ROL = new Set(['inactive', 'loan', 'retired'])
+
+const TRANSFER_TURU = {
+  katildi: { label: 'Katıldı', accent: '#22c55e' },
+  ayrildi: { label: 'Ayrıldı', accent: '#FF4655' },
+  birakti: { label: 'Bıraktı', accent: '#FF4655' },
+  kiralik: { label: 'Kiralık', accent: '#38bdf8' },
+  pasif:   { label: 'Pasife alındı', accent: '#f59e0b' },
+  yedek:   { label: 'Yedeğe alındı', accent: '#f59e0b' },
+  rol:     { label: 'Rol değişti', accent: '#a78bfa' },
+  guncel:  { label: 'Kadro güncellendi', accent: '#a78bfa' },
+}
+
+// Tür bu takıma göre AÇIK eşlenir. Eskiden `changeType.includes('in')` "inactive"i de
+// yakalıyordu; aynı takımda pasife alınan oyuncu "IN · Eski: X · Yeni: X" görünüyordu.
+function transferTuru(row, teamIdNum, rol) {
+  const ayniTakim = row?.source_team_id != null && Number(row.source_team_id) === Number(row?.target_team_id)
+  if (ayniTakim) {
+    if (rol.startsWith('inactive')) return 'pasif'
+    if (rol === 'substitute') return 'yedek'
+    if (rol === 'loan') return 'kiralik'
+    return rol ? 'rol' : 'guncel'
+  }
+  if (rol === 'retired') return 'birakti'
+  if (rol === 'loan') return 'kiralik'
+  const gelen = Number(row?.target_team_id) === teamIdNum && row?.transfer_type !== 'release'
+  return gelen ? 'katildi' : 'ayrildi'
+}
+
+// Transferler `roster_changes` tablosundan gelir (Liquipedia v3 arşivi + PandaScore kadro farkı).
 function mapRosterChanges(rows, teamIdNum) {
   return (rows || [])
     .map(row => {
       const p = row?.raw_payload || {}
-      const isIncoming = Number(row?.target_team_id) === teamIdNum
+      const rol = String(p?.role || '').trim().toLowerCase()
       const dateObj = parseTransferDate(row?.transfer_date || p?.date)
+      const oldTeam = p?.old_team || null
+      const newTeam = p?.new_team || null
       return {
         dateRaw: row?.transfer_date || p?.date || null,
         dateObj,
         player: p?.player || 'Bilinmiyor',
-        role: p?.role || null,
-        changeType: isIncoming ? 'in' : 'out',
-        oldTeam: p?.old_team || null,
-        newTeam: p?.new_team || null,
+        role: !rol || ETIKETTE_OLAN_ROL.has(rol) ? null : (TRANSFER_ROL_TR[rol] || null),
+        tur: TRANSFER_TURU[transferTuru(row, teamIdNum, rol)],
+        // Eski ve yeni takım aynıysa (pasife alma, rol değişimi) satır bilgi taşımaz
+        oldTeam: oldTeam && oldTeam !== newTeam ? oldTeam : null,
+        newTeam: newTeam && oldTeam !== newTeam ? newTeam : null,
       }
     })
     .sort((a, b) => {
@@ -179,14 +217,11 @@ function TransferTimeline({ transfers }) {
     <div style={{ marginTop: 18, background: 'linear-gradient(160deg, rgba(200,16,46,.14), rgba(0,0,0,0) 48%)', border: '1px solid rgba(200,16,46,.28)', borderRadius: 14, padding: '16px 14px 6px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
         <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: '.8px', color: '#ffd9de', textTransform: 'uppercase' }}>Son Transferler</div>
-        <div style={{ fontSize: 11, color: '#ff9cab' }}>Transfer Market</div>
       </div>
 
       <div style={{ display: 'grid', gap: 10 }}>
         {transfers.map((item, index) => {
-          const isIncoming = item.changeType.includes('join') || item.changeType.includes('add') || item.changeType.includes('in')
-          const accent = isIncoming ? '#22c55e' : '#FF4655'
-          const label = isIncoming ? 'IN' : 'OUT'
+          const { accent, label } = item.tur
           const dateLabel = item.dateObj
             ? item.dateObj.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })
             : (item.dateRaw || '—')
@@ -357,7 +392,7 @@ function MatchCard({ match, teamId, navigate }) {
       {/* Top row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-5)', letterSpacing: '.5px' }}>
+          <span lang="en" style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-5)', letterSpacing: '.5px' }}>
             {match.game?.name === 'Counter-Strike 2' ? 'CS2' : match.game?.name === 'League of Legends' ? 'LoL' : (match.game?.name ?? '?')}
           </span>
           {getBOFormat(match.team_a_score, match.team_b_score, match.number_of_games) && (
@@ -832,9 +867,12 @@ export default function TeamPage() {
 
               <TransferTimeline transfers={teamTransfers} />
 
-              <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--surface-2)', fontSize: 12, color: 'var(--text-5)', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                <Info size={13} style={{ flexShrink: 0 }} /> Oyuncu K/D verisi Liquipedia kapsamındaki maçlardan hesaplanır; kadro büyüdükçe zenginleşir
-              </div>
+              {/* "kadro büyüdükçe zenginleşir" diyordu; veri 21 Eylül'den beri donuk, vaat tutmuyordu */}
+              {players.some(p => p.kd != null) && (
+                <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--surface-2)', fontSize: 12, color: 'var(--text-5)', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <Info size={13} style={{ flexShrink: 0 }} /> Oyuncu K/D verisi Liquipedia'dan, {LIQUIPEDIA_SON_TARIH} tarihine kadar oynanan maçlardan hesaplanır
+                </div>
+              )}
             </div>
           )
         )}

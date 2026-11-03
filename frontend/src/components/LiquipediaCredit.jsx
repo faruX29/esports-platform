@@ -1,9 +1,10 @@
 /**
- * LiquipediaCredit — "Data powered by Liquipedia" atıf backlink'i.
+ * LiquipediaCredit — "Oyuncu verisi: Liquipedia" atıf backlink'i.
  *
- * Liquipedia API kullanım şartı (zorunlu): verisini gösterdiğimiz her yerde
- * görünür bir atıf + backlink. Harita/oyuncu KDA (hybrid v3) ve transfer
- * haberlerinin altına hafif tonda yerleştirilir.
+ * Liquipedia kullanım şartı (zorunlu): verisini gösterdiğimiz her yerde görünür
+ * bir atıf + backlink. YALNIZ Liquipedia verisi gösteren blokların altına konur
+ * (oyuncu KDA/ACS, Scout). Harita skorları ve takım analitiği PandaScore'dan;
+ * oraya konursa atıf yanlış veriye iliştirilmiş olur (UX denetimi, 3 Kasım).
  *
  * Props:
  *   align  — 'left' | 'center' | 'right' (varsayılan: left)
@@ -23,7 +24,7 @@ export default function LiquipediaCredit({ align = 'left', compact = false }) {
       textAlign: align,
       letterSpacing: '.2px',
     }}>
-      Data powered by{' '}
+      Oyuncu verisi:{' '}
       <a
         href="https://liquipedia.net"
         target="_blank"
@@ -33,7 +34,7 @@ export default function LiquipediaCredit({ align = 'left', compact = false }) {
       >
         Liquipedia
       </a>
-      {' '}· {LIQUIPEDIA_SON_TARIH}'ye kadar
+      {' '}({LIQUIPEDIA_SON_TARIH}'ya kadar)
     </div>
   )
 }

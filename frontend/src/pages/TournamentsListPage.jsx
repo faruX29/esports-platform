@@ -249,7 +249,7 @@ export default function TournamentsListPage() {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 11, color: 'var(--text-3)', letterSpacing: '.4px' }}>
-          Varsayilan filtre: S-Tier + A-Tier
+          Varsayılan filtre: S-Tier + A-Tier
         </span>
         {/* Ana sayfadaki seviye filtresiyle AYNI davranış: aktif seçimin
             kapsülü kayarak geçiyor, butonlar kendi arka planını taşımıyor.

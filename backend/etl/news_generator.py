@@ -181,6 +181,9 @@ SYSTEM_PROMPT += (
     "\n\nTURNUVA DURUMU: Raporda turnuvadaki durum (eleme, tur, sıralama) YOK. 'Elendi', "
     "'veda etti', 'tur atladı', 'finale yükseldi', 'şampiyon oldu', 'yoluna devam etti' gibi "
     "ifadeleri KULLANMA. Kaybeden takım başlıktaysa skoru söyle (örn. 'X, Y'ye 0-2 kaybetti')."
+    "\n\nSKOR SIRASI: Raporda skor galip-mağlup sırasıyla verilir. Cümlenin öznesi galipse büyük "
+    "sayı önce ('X, Y'yi 2-1 yendi'), kaybedense küçük sayı önce ('Y, X'e 1-2 kaybetti'). "
+    "'2:3'lük skorla geride bıraktı' gibi özneyle çelişen sıra YAZMA."
 )
 # Kadro farkı resmi duyuru değildir (29 Eki denemesi: "resmi açıklamayla ... duyurdu" yazdı).
 TRANSFER_SYSTEM_PROMPT += (
@@ -461,6 +464,7 @@ class FactSheetBuilder:
 
         winner_name = a_name if winner_id == a_id else b_name if winner_id == b_id else "Bilinmiyor"
         loser_name = b_name if winner_name == a_name else a_name
+        galip_skor, maglup_skor = (b_score, a_score) if winner_id == b_id else (a_score, b_score)
         margin = abs(a_score - b_score)
 
         # Prediction signals
@@ -476,8 +480,6 @@ class FactSheetBuilder:
         # Map & tempo signals from match_stats rows
         map_lengths: list[float] = []
         map_count = max(a_score, b_score, 0)
-        impact_team: Optional[str] = None
-        impact_score: Optional[float] = None
 
         for row in stats_rows:
             stats = row.get("stats") or {}
@@ -494,12 +496,6 @@ class FactSheetBuilder:
                     )
                     if isinstance(secs, (int, float)) and secs > 0:
                         map_lengths.append(float(secs))
-            score_val = float(stats.get("score") or 0)
-            if impact_score is None or score_val > impact_score:
-                t_id = str(row.get("team_id") or "")
-                if t_id in (a_id, b_id):
-                    impact_score = score_val
-                    impact_team = a_name if t_id == a_id else b_name
 
         avg_secs = sum(map_lengths) / len(map_lengths) if map_lengths else None
         longest_secs = max(map_lengths) if map_lengths else None
@@ -519,7 +515,9 @@ class FactSheetBuilder:
             "MAÇ ÖZET RAPORU",
             f"Turnuva: {t_name} [{tier_label}]",
             f"Oyun: {game}",
-            f"Galip: {winner_name} | Mağlup: {loser_name} | Skor: {a_score}:{b_score}",
+            # Skor galip önce: A-B sırası verilince galip B'de "X, Y'yi 2:3'lük skorla geride
+            # bıraktı" yazıyordu (UX denetimi, 3 Kas).
+            f"Galip: {winner_name} | Mağlup: {loser_name} | Skor (galip-mağlup): {galip_skor}-{maglup_skor}",
             f"Harita sayısı: {map_count or 1} | Tempo: {tempo}",
         ]
         turk = _turk_satiri((a_name, match.get("tr_a")), (b_name, match.get("tr_b")))
@@ -529,8 +527,6 @@ class FactSheetBuilder:
             lines.append(f"Ort. harita süresi: {FactSheetBuilder._fmt_seconds(avg_secs)}")
         if FactSheetBuilder._fmt_seconds(longest_secs):
             lines.append(f"En uzun harita: {FactSheetBuilder._fmt_seconds(longest_secs)}")
-        if impact_team and impact_score:
-            lines.append(f"MVP tarafı: {impact_team} ({int(impact_score)} impact puanı)")
         top_players = FactSheetBuilder._format_top_players(player_rows or [])
         if top_players:
             lines.append(f"Öne çıkan oyuncular (K/D/A): {top_players}")

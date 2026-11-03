@@ -35,7 +35,7 @@ function GameChip({ game }) {
   const label = meta?.shortLabel || meta?.label || game?.name
   const color = meta?.color || 'var(--text-3)'
   return (
-    <span style={{
+    <span lang="en" style={{
       fontSize: 9, fontWeight: 800, letterSpacing: '.4px', textTransform: 'uppercase',
       color, background: `${color}1f`, border: `1px solid ${color}55`,
       borderRadius: 5, padding: '2px 6px', flexShrink: 0,
@@ -561,7 +561,7 @@ function Sidebar({ filters, onChange, collapsed, onToggle }) {
           <div>
             <div style={{ fontSize: 10, color: 'var(--text-5)', fontWeight: 700,
               letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8 }}>
-              Turnuva Tieri
+              Turnuva seviyesi
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {Object.entries(TIER_META).map(([key, m]) => {

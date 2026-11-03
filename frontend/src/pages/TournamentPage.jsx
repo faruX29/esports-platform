@@ -34,6 +34,7 @@ import SeoHead from '../components/SeoHead'
 import { tournamentDisplayName, isGenericStageName, displayRegion } from '../utils/tournamentDisplay'
 import DragScroll from '../components/DragScroll'
 import { normalizeTurnuvaMaci } from '../utils/turnuvaMaci'
+import LiquipediaCredit from '../components/LiquipediaCredit'
 import { ligPath, ligBaslik, turnuvaLigiGetir } from '../utils/ligler'
 import { buildBracketModel, layoutBracket, BRACKET_DIM, turEtiketi, ayaksizTurNo } from '../utils/bracketModel'
 
@@ -395,9 +396,7 @@ function TopPerformers({ rows }) {
           <div style={{ textAlign: 'right', color: p.acs != null ? '#C25CD0' : 'var(--text-6)', fontWeight: 700 }}>{p.acs ?? '—'}</div>
         </div>
       ))}
-      <div style={{ marginTop: 8, fontSize: 9, color: 'var(--text-5)', textAlign: 'right' }}>
-        Data powered by <a href="https://liquipedia.net" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-4)' }}>Liquipedia</a>
-      </div>
+      <LiquipediaCredit align="right" compact />
     </div>
   )
 }

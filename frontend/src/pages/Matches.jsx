@@ -387,8 +387,8 @@ function Matches() {
   }
 
 
-  function getStatusBadge(status) {
-    return statusStyle(status)
+  function getStatusBadge(status, scheduledAt) {
+    return statusStyle(status, scheduledAt)
   }
 
   // ── Game filtresi debug banner ──────────────────────────────────
@@ -682,7 +682,7 @@ function Matches() {
       ) : (
         <div className='content-in' style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 16 }}>
           {(filteredMatches || []).map(match => {
-            const statusBadge = getStatusBadge(match.status)
+            const statusBadge = getStatusBadge(match.status, match.scheduled_at)
             const cs          = correctedScores(match)  // ters-atanmış skor quirk'ini düzelt
             const isLive      = match.status === 'running'
             const teamAFav    = isTeamFollowed(match.team_a_id)
@@ -733,7 +733,7 @@ function Matches() {
                   {/* Top row */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center', minWidth: 0 }}>
-                      <span style={{ padding: '2px 9px', borderRadius: 6, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', background: 'var(--surface-2)', border: '1px solid var(--line)', color: 'var(--text-4)' }}>
+                      <span lang="en" style={{ padding: '2px 9px', borderRadius: 6, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', background: 'var(--surface-2)', border: '1px solid var(--line)', color: 'var(--text-4)' }}>
                         {gameDisplayName(match.game)}
                       </span>
                       {hasTurkish && <TurkishBadge compact />}

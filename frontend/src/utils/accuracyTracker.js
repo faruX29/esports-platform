@@ -166,7 +166,7 @@ export function getMatchImpactLabel(matchRow = {}) {
   if (confidence >= 0.72) {
     return {
       tone: 'high',
-      text: 'Yuksek Guven',
+      text: 'Yüksek Güven',
       confidencePct,
       color: '#9ef4b5',
       border: 'rgba(76,175,80,.55)',
@@ -177,7 +177,7 @@ export function getMatchImpactLabel(matchRow = {}) {
   if (confidence <= 0.56) {
     return {
       tone: 'risk',
-      text: 'Riskli Mac',
+      text: 'Riskli Maç',
       confidencePct,
       color: '#ffc4cb',
       border: 'rgba(255,70,85,.5)',

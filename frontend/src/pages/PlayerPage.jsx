@@ -13,8 +13,8 @@ import { supabase }                         from '../supabaseClient'
 import { getRoleBadge, resolvePlayerRole }   from '../utils/roleHelper'
 import { normalizeGameId }                   from '../utils/gameUtils'
 import InitialsImage                         from '../components/InitialsImage'
-import LiquipediaCredit                       from '../components/LiquipediaCredit'
-import { DeepScoutBadge, StatsCoverageNotice } from '../components/ScoutSignals'
+import LiquipediaCredit, { LIQUIPEDIA_SON_TARIH } from '../components/LiquipediaCredit'
+import { DeepScoutBadge } from '../components/ScoutSignals'
 import { isTurkishTeam, useTurkTakimlar } from '../constants'
 import { useUser } from '../context/UserContext'
 import { summarizePlayerMatchStats, metricBars } from '../utils/playerMetrics'
@@ -378,12 +378,15 @@ function ScoutPanel({ analytics, individual }) {
   } = analytics
 
   const impactColor = impactScore >= 70 ? '#4CAF50' : impactScore >= 45 ? '#FFB800' : '#FF4655'
-  const mapLabels   = { 1: 'Game 1', 2: 'Game 2', 3: 'Decider' }
+  const mapLabels   = { 1: '1. oyun', 2: '2. oyun', 3: '3. oyun (belirleyici)' }
   const individualBars = individual ? metricBars(individual) : null
 
   return (
     <div style={{ marginBottom: 24 }}>
-      <SectionTitle Icon={ClipboardList} label="Scout Analitiği" />
+      <SectionTitle Icon={ClipboardList} label="Takım Analitiği" />
+      <div style={{ fontSize: 12, color: 'var(--text-4)', margin: '-6px 0 12px', lineHeight: 1.5 }}>
+        Oyuncunun şu anki takımının sonuçlanmış maçlarından hesaplanır; oyuncunun kişisel istatistiği değildir.
+      </div>
 
       {/* Impact + W/L */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
@@ -393,8 +396,11 @@ function ScoutPanel({ analytics, individual }) {
           border: `1px solid ${impactColor}33`, padding: '14px 16px',
           display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center',
         }}>
-          <div style={{ fontSize: 11, color: 'var(--text-5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
-            Impact Score
+          <div
+            title="Kazanma oranı (%50), maç sayısı (%30, 100 maçta tavan) ve 3. oyun kazanma oranından (%20) hesaplanır"
+            style={{ fontSize: 11, color: 'var(--text-5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}
+          >
+            Takım puanı
           </div>
           <div style={{
             fontSize: 38, fontWeight: 900, color: impactColor,
@@ -417,18 +423,18 @@ function ScoutPanel({ analytics, individual }) {
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 22, fontWeight: 900, color: '#4CAF50' }}>{wonMatches}</div>
-              <div style={{ fontSize: 10, color: 'var(--text-5)' }}>W</div>
+              <div style={{ fontSize: 10, color: 'var(--text-5)' }}>G</div>
             </div>
             <div style={{ fontSize: 20, color: 'var(--line)', alignSelf: 'center' }}>/</div>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 22, fontWeight: 900, color: '#FF4655' }}>{lostMatches}</div>
-              <div style={{ fontSize: 10, color: 'var(--text-5)' }}>L</div>
+              <div style={{ fontSize: 10, color: 'var(--text-5)' }}>M</div>
             </div>
           </div>
           <ProgressBar
             pct={overallWinRate}
             color={overallWinRate >= 60 ? '#4CAF50' : overallWinRate >= 45 ? '#FFB800' : '#FF4655'}
-            label="" value={`${Math.round(overallWinRate)}% WR`}
+            label="" value={`%${Math.round(overallWinRate)} kazanma`}
           />
         </div>
       </div>
@@ -436,7 +442,7 @@ function ScoutPanel({ analytics, individual }) {
       {individual && (
         <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--surface-2)', padding: '14px 16px', marginBottom: 10 }}>
           <div style={{ fontSize: 11, color: 'var(--text-5)', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Target size={13} /> Individual Performance (Player Match Stats)
+            <Target size={13} /> Bireysel performans
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(100px,1fr))', gap: 10, marginBottom: 12 }}>
             <StatBox Icon={Swords} value={individual.totalKills} label="Öldürme" color="#ff6a7f" />
@@ -454,7 +460,10 @@ function ScoutPanel({ analytics, individual }) {
       {/* Map win rates */}
       <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--surface-2)', padding: '14px 16px', marginBottom: 10 }}>
         <div style={{ fontSize: 11, color: 'var(--text-5)', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <MapIcon size={13} /> {individual ? 'Oyun Bazlı Performans' : 'Takım Bazlı Performans'}
+          <MapIcon size={13} /> Serideki oyun sırasına göre kazanma
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--text-5)', margin: '-6px 0 12px', lineHeight: 1.5 }}>
+          Takım serilerin 1., 2. ve 3. oyununu ne sıklıkla kazanmış.
         </div>
         {[1, 2, 3].map(pos => {
           const d = mapWinRates[pos]
@@ -479,24 +488,19 @@ function ScoutPanel({ analytics, individual }) {
         <div style={{ display: 'flex', gap: 10 }}>
           {avgWinLen && (
             <div style={{ flex: 1, background: 'var(--surface)', borderRadius: 10, border: '1px solid rgba(76,175,80,.2)', padding: '10px 14px', textAlign: 'center' }}>
-              <div style={{ fontSize: 10, color: 'var(--text-5)', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Clock size={11} /> Ortalama Galibiyet</div>
+              <div style={{ fontSize: 10, color: 'var(--text-5)', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Clock size={11} /> Kazanılan oyun ort. süresi</div>
               <div style={{ fontSize: 16, fontWeight: 800, color: '#4CAF50' }}>{fmtDuration(Math.round(avgWinLen))}</div>
             </div>
           )}
           {avgLossLen && (
             <div style={{ flex: 1, background: 'var(--surface)', borderRadius: 10, border: '1px solid rgba(255,70,85,.2)', padding: '10px 14px', textAlign: 'center' }}>
-              <div style={{ fontSize: 10, color: 'var(--text-5)', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Clock size={11} /> Ortalama Mağlubiyet</div>
+              <div style={{ fontSize: 10, color: 'var(--text-5)', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Clock size={11} /> Kaybedilen oyun ort. süresi</div>
               <div style={{ fontSize: 16, fontWeight: 800, color: '#FF4655' }}>{fmtDuration(Math.round(avgLossLen))}</div>
             </div>
           )}
         </div>
       )}
 
-      {!individual && (
-        <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, background: 'rgba(255,184,0,.05)', border: '1px solid rgba(255,184,0,.15)', fontSize: 11, color: 'var(--text-4)', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Info size={12} style={{ flexShrink: 0 }} /> Bireysel oyuncu satırı bulunamadı; takım bazlı scout verisi gösteriliyor.
-        </div>
-      )}
     </div>
   )
 }
@@ -1232,12 +1236,15 @@ export default function PlayerPage() {
                 />
               )
             })()}
-            <StatBox
-              Icon={Target}
-              value={Math.round(individualStats?.impact ?? analytics.impactScore)}
-              label="Etki"
-              color={(individualStats?.impact ?? analytics.impactScore) >= 70 ? '#4CAF50' : (individualStats?.impact ?? analytics.impactScore) >= 45 ? '#818cf8' : '#FF4655'}
-            />
+            {/* "Etki" yalnız oyuncunun kendi satırından; takım puanı başlıkta oyuncununmuş gibi duruyordu */}
+            {individualStats?.impact != null && (
+              <StatBox
+                Icon={Target}
+                value={Math.round(individualStats.impact)}
+                label="Etki"
+                color={individualStats.impact >= 70 ? '#4CAF50' : individualStats.impact >= 45 ? '#818cf8' : '#FF4655'}
+              />
+            )}
             {individualStats && <StatBox Icon={Zap} value={individualStats.kd.toFixed(2)} label="K/D" color="#ff6a7f" />}
             {individualStats?.acs != null && <StatBox Icon={Flame} value={individualStats.acs} label="ACS" color="#C25CD0" />}
             {individualStats && individualStats.hsPct > 0 && <StatBox Icon={Crosshair} value={`${Math.round(individualStats.hsPct)}%`} label="HS%" color="var(--text-1)" />}
@@ -1256,15 +1263,21 @@ export default function PlayerPage() {
             <ProfessionalStatsPanel stats={professionalStats} isMobile={isMobile} />
           </>
         ) : (
-          <StatsCoverageNotice
-            message="Bu oyuncu için gelişmiş performans metrikleri (harita bazlı KDA, ACS, Impact) yalnızca Tier S/A kapsamındaki maçlardan otomatik üretilir."
-            style={{ marginBottom: 24 }}
-          />
+          // Eskiden "yalnız Tier S/A maçlarından" + /scout kurumsal linki: S maçlarda da veri yok, iddia yanlıştı.
+          <div style={{
+            marginBottom: 24, padding: '12px 14px', borderRadius: 12, background: 'var(--surface)',
+            border: '1px solid var(--surface-2)', fontSize: 12, color: 'var(--text-4)', lineHeight: 1.6,
+            display: 'flex', alignItems: 'flex-start', gap: 8,
+          }}>
+            <Info size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+            Bu oyuncu için bireysel maç istatistiği (KDA, ACS) yok. Oyuncu istatistikleri
+            {' '}{LIQUIPEDIA_SON_TARIH} tarihine kadar Liquipedia'dan geliyordu; sonrası için ücretsiz bir kaynak yok.
+          </div>
         )}
 
-        {/* Scout Analytics */}
+        {/* Takım analitiği (PandaScore); Liquipedia atfı yalnız oyuncunun kendi verisi gösteriliyorsa */}
         <ScoutPanel analytics={analytics} individual={individualStats} />
-        <LiquipediaCredit align="center" />
+        {(professionalStats || individualStats) && <LiquipediaCredit align="center" />}
 
         {PLAYER_SIGNATURE_ENABLED && <PlayerSignatureElements items={signatureElements} />}
 

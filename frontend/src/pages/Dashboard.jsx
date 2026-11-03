@@ -12,7 +12,7 @@ import { isTurkishTeam, useTurkTakimlar }       from '../constants'
 import { useUser }                          from '../context/UserContext'
 import { useAuth }                          from '../context/AuthContext'
 import BRANDING                             from '../branding.config'
-import { Radio, Flag, CalendarDays, Sparkles, Zap, SlidersHorizontal, Clock, Gamepad2, Shield, Trophy, FlaskConical, Newspaper, Flame, Star, TriangleAlert } from 'lucide-react'
+import { Radio, Flag, CalendarDays, Sparkles, Zap, SlidersHorizontal, Clock, CircleCheck, Shield, Trophy, FlaskConical, Newspaper, Flame, Star, TriangleAlert } from 'lucide-react'
 import { buildNewsSlug }                   from '../utils/newsSlug'
 import { calculatePredictionAccuracy } from '../utils/accuracyTracker'
 import { memo }                             from 'react'
@@ -23,7 +23,7 @@ import TurkishBadge                          from '../components/TurkishBadge'
 import { normalizeGameId }                  from '../utils/gameUtils'
 import { tournamentDisplayName }            from '../utils/tournamentDisplay'
 import { getBOFormat }                       from '../utils/matchFormat'
-import { FEXT, statusStyle }                 from '../theme'
+import { FEXT, statusStyle, SAATI_GECTI_ESIGI_MS } from '../theme'
 import { correctedScores }                   from '../utils/matchResult'
 import { isUncertainPrediction }             from '../utils/prediction'
 import { clickableProps }                     from '../utils/a11y'
@@ -40,6 +40,9 @@ const DASHBOARD_YENILEME_CANLI_MS = 5 * 60 * 1000
 const DASHBOARD_YENILEME_YEDEK_MS = 60 * 1000
 // Yayındaki ardışık yapısal olayları (maç bitti/başladı) tek yenilemede topla.
 const DASHBOARD_YAYIN_TOPLAMA_MS = 4 * 1000
+// get_home_feed (ana_sayfa_akisi.sql) ve yedek sorgular (anaSayfaAkisi.js) ile aynı sınırlar
+const AKIS_YAKLASAN_SINIRI = 30
+const AKIS_BITEN_SINIRI = 100
 const DASHBOARD_GLOBAL_ERROR_TEXT = 'Sunucuyla bağlantı kesildi, tekrar deneniyor...'
 const POPULAR_TEAM_SEARCH_TERMS = ['galatasaray', 'eternal fire', 'fut', 'bbl', 'fenerbahce', 'sangal', 'g2', 'fnatic', 'navi']
 const PREFERENCE_GAMES = GAMES.filter(game => ['valorant', 'cs2', 'lol'].includes(game.id))
@@ -194,8 +197,8 @@ function matchesDashboardGame(matchRow, activeGameId) {
   return gameMatchesFilter(combined, activeGameId)
 }
 
-function getStatusBadge(status) {
-  return statusStyle(status)
+function getStatusBadge(status, scheduledAt) {
+  return statusStyle(status, scheduledAt)
 }
 
 function normalizeTierKey(value) {
@@ -1046,7 +1049,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
       {/* Oyun + CANLI */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-          <span style={{
+          <span lang="en" style={{
             padding: '2px 7px', borderRadius: 5, fontSize: 9, fontWeight: 700,
             letterSpacing: '.7px', textTransform: 'uppercase',
             background: 'rgba(255,70,85,.15)', color: '#FF4655',
@@ -1230,7 +1233,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
 /* ── UpcomingRow ──────────────────────────────────────────────────────────── */
 const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForms, showDate }) {
   useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
-  const badge = getStatusBadge(m.status)
+  const badge = getStatusBadge(m.status, m.scheduled_at)
   const isLive = m.status === 'running'
   const turkA = isTurkishTeam(m.team_a)
   const turkB = isTurkishTeam(m.team_b)
@@ -1329,7 +1332,7 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
 
       {/* Badge — mobilde gizli (Maç Programı zaten "yaklaşan"; canlıyı kırmızı nokta belli eder) */}
       <span className="hide-sm" style={{ padding: '2px 0', width: 58, textAlign: 'center', borderRadius: 6, fontSize: 8, fontWeight: 700, color: badge.color, background: badge.bg, flexShrink: 0 }}>
-        {badge.text}
+        {badge.kisa || badge.text}
       </span>
     </div>
   )
@@ -1437,7 +1440,7 @@ export default function Dashboard() {
   const [showAllResults, setShowAllResults] = useState(false)  // Son Sonuçlar: 6 göster / hepsini aç
   const [dreamTeam, setDreamTeam] = useState([])
   const [dreamLoading, setDreamLoading] = useState(false)
-  const [stats,           setStats]           = useState({ total: 0, live: 0, today: 0, teams: 0 })
+  const [stats,           setStats]           = useState({ live: 0, today: 0, todayDone: 0, teams: 0 })
   const [loading,         setLoading]         = useState(true)
   const [globalError, setGlobalError] = useState('')
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 920)
@@ -1606,14 +1609,22 @@ export default function Dashboard() {
     [acikMaclar, oyunVeSeviye],
   )
 
+  // Sayaçlar: "Bugün" eskiden 7 günlük yaklaşan listenin tamamını, "Toplam" canlı+yaklaşanı
+  // sayıyordu (bölüm başlığı "Bugün 18 maç" derken kutu "Bugün 30"). Artık yalnız bugünün
+  // maçları. Akış sınırlı (AKIS_*_SINIRI); sınıra dayandıysa sayı eksiktir → "+" ile gösterilir.
   useEffect(() => {
+    const bugunStr = new Date().toDateString()
+    const bugunMu = m => m?.scheduled_at && new Date(m.scheduled_at).toDateString() === bugunStr
+    const bitenFiltreli = oyunVeSeviye(bitenHam.filter(m => normalizeMatchStatus(m.status) === 'finished'))
     setStats({
       live:  liveMatches.length,
-      today: upcomingMatches.length,
-      total: liveMatches.length + upcomingMatches.length,
+      today: upcomingMatches.filter(bugunMu).length,
+      todayPlus: yaklasanHam.length >= AKIS_YAKLASAN_SINIRI && bugunMu(yaklasanHam[yaklasanHam.length - 1]),
+      todayDone: bitenFiltreli.filter(bugunMu).length,
+      todayDonePlus: bitenHam.length >= AKIS_BITEN_SINIRI && bugunMu(bitenHam[bitenHam.length - 1]),
       teams: new Set([...liveMatches, ...upcomingMatches].flatMap(m => [m.team_a_id, m.team_b_id]).filter(Boolean)).size,
     })
-  }, [liveMatches, upcomingMatches])
+  }, [liveMatches, upcomingMatches, yaklasanHam, bitenHam, oyunVeSeviye])
 
   // Aktif üst-tier turnuvalar: bugün begin_at–end_at arasında olan S/A turnuvalar
   // + katılan takım logoları (akışta hazır gelir). Canlı maçların altında gösterilir.
@@ -2169,11 +2180,11 @@ export default function Dashboard() {
   const statTiles = useMemo(() => [
     // value SAYI kalıyor (string '…' değil) — CountUp 0'dan sayabilsin diye.
     // Yükleniyor durumu ayrı bayrak; sayaç ancak veri gelince başlar.
-    { Icon: Radio,    value: stats.live,  label: 'Canlı',    color: '#FF4655' },
-    { Icon: Clock,    value: stats.today, label: 'Bugün',    color: '#FFB800' },
-    { Icon: Gamepad2, value: stats.total, label: 'Toplam',   color: '#6366f1' },
-    { Icon: Shield,   value: stats.teams, label: 'Takımlar', color: '#4CAF50' },
-  ], [loading, stats.live, stats.today, stats.total, stats.teams])
+    { Icon: Radio,       value: stats.live,      label: 'Canlı',       color: '#FF4655' },
+    { Icon: Clock,       value: stats.today,     label: 'Bugün kalan', color: '#FFB800', arti: stats.todayPlus },
+    { Icon: CircleCheck, value: stats.todayDone, label: 'Bugün biten', color: '#6366f1', arti: stats.todayDonePlus },
+    { Icon: Shield,      value: stats.teams,     label: 'Takımlar',    color: '#4CAF50' },
+  ], [stats])
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: 'calc(100vh - 58px)' }}>
@@ -2526,7 +2537,7 @@ export default function Dashboard() {
                           <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF4655', animation: 'livePulse 1.2s infinite' }} /> CANLI
                         </span>
                       )}
-                      <span style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-5)', textTransform: 'uppercase', letterSpacing: '.4px' }}>{t.game?.name || ''}</span>
+                      <span lang="en" style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-5)', textTransform: 'uppercase', letterSpacing: '.4px' }}>{t.game?.name || ''}</span>
                       {(tierK === 'S' || tierK === 'A') && (
                         <span style={{ marginLeft: 'auto', fontSize: 8, fontWeight: 900, color: '#f0c040', border: '1px solid rgba(240,192,64,.4)', borderRadius: 5, padding: '1px 5px' }}>{tierK}-Tier</span>
                       )}
@@ -2609,7 +2620,7 @@ export default function Dashboard() {
 
         // Live maçlar zaten yukarıda gösteriliyor — burada yalnızca non-live
         // Ayrıca: scheduled_at geçmiş ama hâlâ not_started olanlar stale veri (sync gecikmesi)
-        const staleThreshold = now.getTime() - 20 * 60 * 1000   // 20 dk önce başlamış ama güncellenmemiş
+        const staleThreshold = now.getTime() - SAATI_GECTI_ESIGI_MS   // başlamış ama güncellenmemiş
         const scheduled = upcomingMatches.filter(m =>
           m.status !== 'running' &&
           (!m.scheduled_at || new Date(m.scheduled_at).getTime() >= staleThreshold)
@@ -2783,7 +2794,12 @@ export default function Dashboard() {
       }}>
         <PredictionAccuracyBadge variant="inline" />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 220, justifyContent: 'flex-end' }}>
-          <span style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>Son 30 maç trend</span>
+          {/* Ana sayfa akışındaki son 30 biten maç (seçili oyun, tüm seviyeler); 50/50 tahminler sayılmaz */}
+          <span style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
+            {accuracySummary.evaluatedCount
+              ? `Son ${accuracySummary.evaluatedCount} tahminde ${accuracySummary.correctCount} doğru`
+              : 'Son tahminler'}
+          </span>
           <div style={{ flex: 1, maxWidth: 160, height: 6, borderRadius: 999, overflow: 'hidden', background: 'var(--track)' }}>
             <div style={{ height: '100%', width: `${accuracySummary.accuracyRate ?? 0}%`, background: confidenceTone.accent, transition: 'width .35s ease' }} />
           </div>
@@ -2862,7 +2878,7 @@ export default function Dashboard() {
           >
             <s.Icon size={18} strokeWidth={2} color={s.color} style={{ marginBottom: 6 }} />
             <div style={{ fontSize: 22, fontWeight: 900, color: s.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-              {loading ? '…' : <CountUp value={s.value} />}
+              {loading ? '…' : <><CountUp value={s.value} />{s.arti ? '+' : ''}</>}
             </div>
             <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.6px', marginTop: 4 }}>
               {s.label}

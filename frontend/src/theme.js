@@ -52,10 +52,22 @@ export const GAME_COLORS = {
   dota2:    '#B24A55',
 }
 
-/** Maç durumu → rozet stili (text + renk + arka plan). */
-export function statusStyle(status) {
+// Başlama saatinden bu kadar sonra hâlâ "başlamadı" görünen maç: veri gecikmesi (maç
+// senkronu saatlerce geç koşabiliyor). Maç büyük olasılıkla oynandı ya da oynanıyor.
+export const SAATI_GECTI_ESIGI_MS = 20 * 60 * 1000
+
+/** Başlamamış görünen maçın saati eşikten fazla geçti mi? */
+export function saatiGecti(scheduledAt, simdi = Date.now()) {
+  const t = scheduledAt ? new Date(scheduledAt).getTime() : NaN
+  return Number.isFinite(t) && t < simdi - SAATI_GECTI_ESIGI_MS
+}
+
+/** Maç durumu → rozet stili (text + renk + arka plan). scheduledAt verilirse saati
+ *  geçmiş "başlamadı" maçı "Yaklaşan" değil "Sonuç bekleniyor" olur. */
+export function statusStyle(status, scheduledAt) {
   const s = String(status || '').toLowerCase()
   if (s === 'running' || s === 'live')  return { text: 'CANLI',    ...FEXT.status.live }
   if (s === 'finished')                 return { text: 'Bitti',    ...FEXT.status.finished }
+  if (saatiGecti(scheduledAt))          return { text: 'Sonuç bekleniyor', kisa: 'Bekleniyor', color: FEXT.warn, bg: 'rgba(224,162,77,.12)' }
   return { text: 'Yaklaşan', ...FEXT.status.upcoming } // not_started / upcoming / diğer
 }

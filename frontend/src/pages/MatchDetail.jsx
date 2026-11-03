@@ -25,7 +25,8 @@ import { isUncertainPrediction }                    from '../utils/prediction'
 import { roundLabel }                               from '../utils/roundLabel'
 import { clickableProps }                           from '../utils/a11y'
 import TurkishBadge                                 from '../components/TurkishBadge'
-import { FEXT }                                     from '../theme'
+import { FEXT, saatiGecti }                         from '../theme'
+import { adDili }                                   from '../utils/dil'
 import Mascot from '../components/Mascot'
 import FextopusIcon from '../components/FextopusIcon'
 import SeoHead from '../components/SeoHead'
@@ -526,11 +527,11 @@ function Sk({ w = '100%', h = '16px', r = '8px' }) {
 }
 
 /* ─── SectionTitle ──────────────────────────────────────────────────────────── */
-function ST({ Icon, label }) {
+function ST({ Icon, label, lang }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
       {Icon && <Icon size={15} color="var(--text-3)" />}
-      <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1.5px', color: 'var(--text-5)', textTransform: 'uppercase' }}>{label}</span>
+      <span lang={lang} style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1.5px', color: 'var(--text-5)', textTransform: 'uppercase' }}>{label}</span>
       <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,var(--surface-2),transparent)' }} />
     </div>
   )
@@ -541,7 +542,7 @@ function KdaColumn({ rows, teamName, gc }) {
   const sorted = [...rows].sort((a, b) => (b.kills || 0) - (a.kills || 0))
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ fontSize: 11, fontWeight: 800, color: gc, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{teamName}</div>
+      <div style={{ fontSize: 11, fontWeight: 800, color: gc, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} lang={adDili(teamName)}>{teamName}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {sorted.map((r, i) => {
           const acs = r.stats?.acs_avg
@@ -819,7 +820,7 @@ const ROLES = {
 function RoleBadge({ role }) {
   if (!role) return null
   const s = ROLES[role.toLowerCase()] || { c: 'var(--text-4)', bg: 'rgba(80,80,80,.2)', l: role }
-  return <span style={{ padding: '2px 6px', borderRadius: 4, fontSize: 9, fontWeight: 700, flexShrink: 0, color: s.c, background: s.bg, border: `1px solid ${s.c}44`, textTransform: 'uppercase', letterSpacing: '.5px' }}>{s.l}</span>
+  return <span lang="en" style={{ padding: '2px 6px', borderRadius: 4, fontSize: 9, fontWeight: 700, flexShrink: 0, color: s.c, background: s.bg, border: `1px solid ${s.c}44`, textTransform: 'uppercase', letterSpacing: '.5px' }}>{s.l}</span>
 }
 
 /* ─── FavButton ─────────────────────────────────────────────────────────────── */
@@ -1479,6 +1480,7 @@ export default function MatchDetail() {
             {boFormat && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: 'rgba(96,165,250,.12)', color: '#60a5fa', border: '1px solid rgba(96,165,250,.3)' }}>{boFormat}</span>}
             {isLive && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 800, background: 'rgba(255,70,85,.2)', color: '#FF4655', border: '1px solid rgba(255,70,85,.4)', animation: 'pulse 1.2s infinite' }}>● CANLI</span>}
             {isFin  && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: 'rgba(76,175,80,.1)', color: '#4CAF50', border: '1px solid rgba(76,175,80,.3)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><CircleCheck size={11} /> Tamamlandı</span>}
+            {!isFin && !isLive && saatiGecti(match.scheduled_at) && <span title="Başlama saati geçti; skor henüz gelmedi" style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: 'rgba(224,162,77,.12)', color: FEXT.warn, border: '1px solid rgba(224,162,77,.35)' }}>Sonuç bekleniyor</span>}
           </div>
 
           {/* Teams + Score */}
@@ -1631,7 +1633,6 @@ export default function MatchDetail() {
                   </div>
                 )
               }
-              <LiquipediaCredit compact />
             </div>
 
             {/* Oyuncu KDA (hybrid v3 — enriched maçlarda) */}
@@ -1713,7 +1714,7 @@ export default function MatchDetail() {
                 [Gamepad2,     'Oyun',   gName || '—'],
                 [CalendarDays, 'Tarih',  fmtDate(match.scheduled_at)],
                 [Clock,        'Saat',   fmtTime(match.scheduled_at)],
-                [BarChart3,    'Durum',  isFin ? 'Tamamlandı' : isLive ? 'Canlı' : 'Yakında'],
+                [BarChart3,    'Durum',  isFin ? 'Tamamlandı' : isLive ? 'Canlı' : saatiGecti(match.scheduled_at) ? 'Sonuç bekleniyor' : 'Yakında'],
                 [Hash,         'ID',     String(match.id)],
               ].map(([Icon, label, value]) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--surface)' }}>
@@ -1731,7 +1732,7 @@ export default function MatchDetail() {
             <div style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--surface-2)', padding: 18 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                 {aLogo && <img src={aLogo} alt="" style={{ width: 22, height: 22, objectFit: 'contain' }} />}
-                <ST icon="" label={aName + ' Kadro'} />
+                <ST icon="" label={aName + ' Kadro'} lang={adDili(aName)} />
               </div>
               {loadingDetails ? <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{[1,2,3,4,5].map(i => <Sk key={i} h="50px" r="10px" />)}</div>
                 : players.teamA.length === 0 ? <div style={{ textAlign: 'center', padding: 18, color: 'var(--text-4)', fontSize: 12 }}>Kadro verisi yok</div>
@@ -1743,7 +1744,7 @@ export default function MatchDetail() {
             <div style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--surface-2)', padding: 18 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                 {bLogo && <img src={bLogo} alt="" style={{ width: 22, height: 22, objectFit: 'contain' }} />}
-                <ST icon="" label={bName + ' Kadro'} />
+                <ST icon="" label={bName + ' Kadro'} lang={adDili(bName)} />
               </div>
               {loadingDetails ? <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{[1,2,3,4,5].map(i => <Sk key={i} h="50px" r="10px" />)}</div>
                 : players.teamB.length === 0 ? <div style={{ textAlign: 'center', padding: 18, color: 'var(--text-4)', fontSize: 12 }}>Kadro verisi yok</div>
@@ -1831,7 +1832,7 @@ function LiveScoreboard({ teamAName, teamBName, teamABoard, teamBBoard, isLive }
 
   const table = (title, rows, accent) => (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--surface-2)', borderRadius: 12, padding: 10 }}>
-      <div style={{ fontSize: 11, fontWeight: 800, color: accent, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.8px' }}>{title}</div>
+      <div lang={adDili(title)} style={{ fontSize: 11, fontWeight: 800, color: accent, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.8px' }}>{title}</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 40px 40px 40px', gap: 6, fontSize: 9, color: 'var(--text-5)', marginBottom: 6, padding: '0 4px' }}>
         <span>Oyuncu</span><span style={{ textAlign: 'right' }}>K</span><span style={{ textAlign: 'right' }}>D</span><span style={{ textAlign: 'right' }}>A</span>
       </div>
@@ -1852,7 +1853,7 @@ function LiveScoreboard({ teamAName, teamBName, teamABoard, teamBBoard, isLive }
     <div style={{ marginTop: 16, marginBottom: 4, background: 'linear-gradient(160deg,var(--surface),var(--surface))', borderRadius: 16, border: '1px solid rgba(255,70,85,.25)', padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <div style={{ fontSize: 12, fontWeight: 900, color: '#FF4655', textTransform: 'uppercase', letterSpacing: '1px' }}>Canlı Skor Tablosu</div>
-        <div style={{ fontSize: 10, color: '#7a3038' }}>K/D/A anlik performans</div>
+        <div style={{ fontSize: 10, color: '#7a3038' }}>K/D/A anlık performans</div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {table(teamAName, teamABoard, '#4ade80')}

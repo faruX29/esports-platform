@@ -21,7 +21,7 @@ import { normalizeGameId, getGameMeta } from '../utils/newsStories'
 import { tournamentDisplayName } from '../utils/tournamentDisplay'
 import { deriveWinnerTeamId, correctedScores } from '../utils/matchResult'
 import { buildNewsSlug } from '../utils/newsSlug'
-import { FEXT } from '../theme'
+import { FEXT, saatiGecti } from '../theme'
 
 const MATCH_SELECT = `
   id, scheduled_at, status, winner_id, team_a_id, team_b_id, team_a_score, team_b_score,
@@ -242,8 +242,9 @@ function MacSatiri({ m }) {
             {tournamentDisplayName(m.tournament, { game: gameId })}
           </span>
         </span>
-        <span style={{ whiteSpace: 'nowrap' }}>
-          {canli ? 'Canlı' : bitti ? fmtGun(m.scheduled_at) : ''}
+        {/* Saati geçmiş ama "başlamadı" görünen maç: sonuç henüz gelmedi (senkron gecikmesi) */}
+        <span style={{ whiteSpace: 'nowrap', color: !canli && !bitti && saatiGecti(m.scheduled_at) ? FEXT.warn : undefined }}>
+          {canli ? 'Canlı' : bitti ? fmtGun(m.scheduled_at) : saatiGecti(m.scheduled_at) ? 'Sonuç bekleniyor' : ''}
         </span>
       </div>
     </Link>
@@ -256,9 +257,11 @@ function TakimKarti({ t, sonraki, son }) {
   let satir = null
   if (sonraki) {
     const rakip = Number(sonraki.team_a_id) === Number(t.id) ? sonraki.team_b : sonraki.team_a
+    const canliMi = sonraki.status === 'running'
+    const bekliyor = !canliMi && saatiGecti(sonraki.scheduled_at)
     satir = (
-      <span style={{ color: sonraki.status === 'running' ? FEXT.status.live.color : 'var(--text-2)' }}>
-        {sonraki.status === 'running' ? 'Şu an canlı' : fmtSaat(sonraki.scheduled_at)} · {rakip?.acronym || rakip?.name || 'TBD'}
+      <span style={{ color: canliMi ? FEXT.status.live.color : bekliyor ? FEXT.warn : 'var(--text-2)' }}>
+        {canliMi ? 'Şu an canlı' : bekliyor ? 'Sonuç bekleniyor' : fmtSaat(sonraki.scheduled_at)} · {rakip?.acronym || rakip?.name || 'TBD'}
       </span>
     )
   } else if (son) {

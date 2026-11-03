@@ -30,6 +30,13 @@ import { clickableProps }                     from '../utils/a11y'
 import PredictionAccuracyBadge              from '../components/PredictionAccuracyBadge'
 import { CountUp, FlipNumber }              from '../components/AnimatedNumber'
 
+/** Satırlarda turnuva adı: yalnız aşama ("Regular Season") değil lig + etkinlik.
+ *  Dar yerde aşamasız (withStage=false), tam ad title'da. */
+function turnuvaAdi(m, withStage = true) {
+  if (!m?.tournament) return ''
+  return tournamentDisplayName(m.tournament, { withStage, game: normalizeGameId(m.game?.slug ?? m.game?.name) })
+}
+
 const MVP_HIDE_DREAM_TEAM = true
 const MVP_HIDE_PREDICTIONS = false
 const DASHBOARD_TICKER_CACHE_KEY = 'dashboard_live_ticker_cache_v2'
@@ -137,8 +144,8 @@ const TodaySchedule = memo(function TodaySchedule({ matches, liveMatches, onMatc
                 {tA} <span style={{ color: 'var(--track)' }}>vs</span> {tB}
               </span>
               {/* Tournament */}
-              <span style={{ fontSize: 9, color: 'var(--line-2)', flexShrink: 0, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>
-                {m.tournament?.name || ''}
+              <span title={turnuvaAdi(m)} style={{ fontSize: 9, color: 'var(--line-2)', flexShrink: 0, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>
+                {turnuvaAdi(m, false)}
               </span>
             </div>
           )
@@ -1156,8 +1163,8 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
           <div style={{
             fontSize: 8, color: 'var(--text-4)', marginTop: 3,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 72,
-          }}>
-            {m.tournament?.name || ''}
+          }} title={turnuvaAdi(m)}>
+            {turnuvaAdi(m, false)}
           </div>
         </div>
 
@@ -1324,8 +1331,8 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
 
       {/* Turnuva — sabit genişlik: sağ blok her satırda aynı yer kaplasın ki
           ortadaki "vs" sütunu satırlar boyunca kaymasın. */}
-      <div className="row-tour" style={{ fontSize: 9, color: 'var(--line-2)', flexShrink: 0, width: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>
-        {m.tournament?.name || ''}
+      <div className="row-tour" title={turnuvaAdi(m)} style={{ fontSize: 9, color: 'var(--line-2)', flexShrink: 0, width: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>
+        {turnuvaAdi(m, false)}
       </div>
 
       <MatchImpactPill match={m} compact />

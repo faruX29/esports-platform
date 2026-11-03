@@ -27,6 +27,8 @@ import { clickableProps }                           from '../utils/a11y'
 import TurkishBadge                                 from '../components/TurkishBadge'
 import { FEXT, saatiGecti }                         from '../theme'
 import { adDili }                                   from '../utils/dil'
+import { tournamentDisplayName }                    from '../utils/tournamentDisplay'
+import { normalizeGameId }                          from '../utils/gameUtils'
 import Mascot from '../components/Mascot'
 import FextopusIcon from '../components/FextopusIcon'
 import SeoHead from '../components/SeoHead'
@@ -1221,7 +1223,7 @@ export default function MatchDetail() {
         *, raw_data,
         team_a:teams!matches_team_a_id_fkey(id,name,logo_url,acronym),
         team_b:teams!matches_team_b_id_fkey(id,name,logo_url,acronym),
-        tournament:tournaments(id,name,tier),
+        tournament:tournaments(id,name,tier,league_name,event_name,display_name,region),
         game:games(id,name,slug)
       `).eq('id', id).single()
       if (e) throw e
@@ -1400,6 +1402,8 @@ export default function MatchDetail() {
   const aLogo = match.team_a?.logo_url
   const bLogo = match.team_b?.logo_url
   const gName = match.game?.name || ''
+  // Yalnız aşama adı ("Group B") hangi turnuva olduğunu söylemiyor → lig + etkinlik + aşama
+  const turnuvaAdi = match.tournament ? tournamentDisplayName(match.tournament, { game: normalizeGameId(match.game?.slug ?? gName) }) : ''
   const gc    = gameColor(gName)
   const isLive= match.status === 'running'
   const isFin = match.status === 'finished'
@@ -1431,7 +1435,7 @@ export default function MatchDetail() {
     <div style={{ color: 'var(--text-1)', minHeight: '100vh', background: 'var(--bg)' }}>
       <SeoHead
         title={`${aName} vs ${bName}${gName ? ` — ${gName}` : ''} Canlı Skor`}
-        description={`${aName} vs ${bName}${match.tournament?.name ? ` · ${match.tournament.name}` : ''} — canlı skor, Fextopus tahmini, kadro ve maç istatistikleri. feXt.`}
+        description={`${aName} vs ${bName}${turnuvaAdi ? ` · ${turnuvaAdi}` : ''} — canlı skor, Fextopus tahmini, kadro ve maç istatistikleri. feXt.`}
         image={aLogo || bLogo || ''}
         type="article"
         schema={match.scheduled_at ? {
@@ -1443,7 +1447,7 @@ export default function MatchDetail() {
           eventStatus: 'https://schema.org/EventScheduled',
           eventAttendanceMode: 'https://schema.org/OnlineEventAttendanceMode',
           location: { '@type': 'VirtualLocation', url: typeof window !== 'undefined' ? window.location.href : undefined },
-          description: `${aName} vs ${bName}${match.tournament?.name ? ` · ${match.tournament.name}` : ''} — canlı skor, Fextopus tahmini ve maç istatistikleri.`,
+          description: `${aName} vs ${bName}${turnuvaAdi ? ` · ${turnuvaAdi}` : ''} — canlı skor, Fextopus tahmini ve maç istatistikleri.`,
           image: aLogo || bLogo || undefined,
           organizer: { '@type': 'Organization', name: 'feXt' },
           competitor: [
@@ -1474,7 +1478,7 @@ export default function MatchDetail() {
           {/* Badges */}
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
             <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: `${gc}22`, color: gc, border: `1px solid ${gc}44` }}>{gameShort(gName)} · {gName}</span>
-            {match.tournament && <Link to={`/tournament/${match.tournament.id}`} style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 600, background: 'rgba(255,184,0,.1)', color: '#FFB800', border: '1px solid rgba(255,184,0,.3)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Trophy size={11} /> {match.tournament.name}</Link>}
+            {match.tournament && <Link to={`/tournament/${match.tournament.id}`} style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 600, background: 'rgba(255,184,0,.1)', color: '#FFB800', border: '1px solid rgba(255,184,0,.3)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Trophy size={11} /> <span lang={adDili(turnuvaAdi)}>{turnuvaAdi}</span></Link>}
             {roundLabel(match) && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: FEXT.accentSoftBg, color: FEXT.accentText, border: `1px solid ${FEXT.accentBorder}` }}>{roundLabel(match)}</span>}
             {hasTR && <TurkishBadge />}
             {boFormat && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: 'rgba(96,165,250,.12)', color: '#60a5fa', border: '1px solid rgba(96,165,250,.3)' }}>{boFormat}</span>}
@@ -1572,7 +1576,7 @@ export default function MatchDetail() {
             <Trophy size={22} color="#f0c040" style={{ flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 14, fontWeight: 800, color: '#f0e0b0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {match.tournament.name}
+                {turnuvaAdi}
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Bracket, puan durumu &amp; turnuvanın tüm maçları</div>
             </div>

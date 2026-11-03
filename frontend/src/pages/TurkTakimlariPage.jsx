@@ -497,7 +497,10 @@ export default function TurkTakimlariPage() {
             )}
           </Bolum>
 
-          <Bolum {...bolumProps('yaklasan')}>
+          <Bolum
+            {...bolumProps('yaklasan')}
+            sag={<Link to="/matches?tab=upcoming&turk=1" style={{ fontSize: 12, color: 'var(--text-3)', textDecoration: 'none' }}>Tüm maçlar ›</Link>}
+          >
             {!maclar ? <Iskelet adet={6} min={400} /> : maclar.yaklasan.length === 0 ? <Bos>Planlanmış Türk maçı yok.</Bos> : (
               <div style={izgaraStil(400)}>
                 {maclar.yaklasan.slice(0, 12).map(m => <MacSatiri key={m.id} m={m} />)}
@@ -505,7 +508,10 @@ export default function TurkTakimlariPage() {
             )}
           </Bolum>
 
-          <Bolum {...bolumProps('sonuclar')}>
+          <Bolum
+            {...bolumProps('sonuclar')}
+            sag={<Link to="/matches?tab=past&turk=1" style={{ fontSize: 12, color: 'var(--text-3)', textDecoration: 'none' }}>Tüm sonuçlar ›</Link>}
+          >
             {!maclar ? <Iskelet adet={12} min={400} /> : maclar.son.length === 0 ? <Bos>Son {SON_MAC_GUN} günde sonuç yok.</Bos> : (
               <div style={izgaraStil(400)}>
                 {maclar.son.slice(0, 12).map(m => <MacSatiri key={m.id} m={m} />)}

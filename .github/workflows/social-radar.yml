@@ -8,11 +8,12 @@ name: Fextopus Mac Radari (gunluk sosyal video)
 # platform kendi kutuphanesinden muzik kullanan videolari daha cok dagitiyor.
 # Bu yuzden URETIM otomatik, PAYLASIM elde.
 on:
+  # ASIL TETIK pg_cron (backend/sql/sosyal_tetik.sql): 19:00 TSI'de workflow_dispatch,
+  # gun=yarin acikca verilir. GitHub zamanlanmis kosulari her gun 2,5-7,5 saat gecikiyordu
+  # (22 Eki-2 Kas: 21:40 ile 02:21 TSI arasi; 2 Kas'ta video gece 02:25'te geldi).
+  # Asagidaki schedule YEDEK: son 12 saatte dispatch kosusu varsa kontrol isi atlar.
   schedule:
-    # 19:00 TSI. GitHub zamanlanmis kosulari SAATLERCE geciktirebiliyor
-    # (2 Eylul: 23:30'a kurulan is 01:46'da calisti). Erken kurup gecikmeyi
-    # sogurmak, gece yarisindan once elde olmasini garantiliyor.
-    - cron: '0 16 * * *'
+    - cron: '30 16 * * *'
   workflow_dispatch:
     inputs:
       gun:
@@ -24,8 +25,35 @@ concurrency:
   group: social-radar
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
+  # Yedek schedule, pg_cron'un baslattigi kosuyu tekrarlamasin (cift e-posta olmasin).
+  kontrol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      calistir: ${{ steps.k.outputs.calistir }}
+    steps:
+      - id: k
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          CALISTIR=true
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            SON=$(gh run list -R "${{ github.repository }}" --workflow social-radar.yml                     --event workflow_dispatch --limit 1 --json createdAt -q '.[0].createdAt // ""')
+            if [ -n "$SON" ] && [ $(( $(date -u +%s) - $(date -u -d "$SON" +%s) )) -lt 43200 ]; then
+              echo "Son 12 saatte dispatch kosusu var ($SON) - yedek kosu atlandi."
+              CALISTIR=false
+            fi
+          fi
+          echo "calistir=$CALISTIR" >> "$GITHUB_OUTPUT"
+
   radar:
+    needs: kontrol
+    if: needs.kontrol.outputs.calistir == 'true'
     runs-on: ubuntu-latest
     # 20 -> 30 (2026-09-12): adim sinirlari eklendi, toplamlari 24 -> is
     # butcesi ondan buyuk olmali ki is seviyesinde "cancelled" olmasin.
@@ -117,17 +145,8 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python radar.py "${{ steps.tarih.outputs.gun }}"
 
-      # Turk takimi kadro degisikligi (30 Eki): son radardan beri yazilan Turk takimi
-      # transfer haberlerinden Reels; ayni e-postayla gelir. Haber ekler.reels ile
-      # isaretlenir, gecikme tekrar ya da kacirma yaratmaz. Radar videosunu bozmasin diye
-      # hata isi durdurmaz. Olculdu (yerel): video basina ~20 sn.
-      - name: Kadro videolari (Turk takimi)
-        if: ${{ !cancelled() }}
-        timeout-minutes: 5
-        continue-on-error: true
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: python kadro.py
+      # Kadro videolari 3 Kas'tan beri ayri is: social-kadro.yml, sabah. Ayni anda iki
+      # video paylasmak birbirini kesiyordu.
 
       - name: Uretilenleri listele
         timeout-minutes: 2

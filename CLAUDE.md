@@ -66,6 +66,7 @@ python kadro.py --takim <id> [--gun 30]                   # Türk takımı kadro
 - **Canlı skor istemciye** Realtime Broadcast ile gider: `matches` tetikleyicisi durum/skor/kazanan/saat değişince ifade başına tek mesajı herkese açık `maclar` konusuna atar (`backend/sql/canli_yayin.sql`). İstemcide tek ortak kanal: `subscribeToMatchesUpdates` (`supabaseClient.js`); olay `{eventType, new, old}`, yeniden bağlanınca `RESYNC`. Son mesajlar: `realtime.messages where topic='maclar'`.
 - **Ana sayfa verisi** tek RPC'den: `get_home_feed()` (`backend/sql/ana_sayfa_akisi.sql`, `utils/anaSayfaAkisi.js`); RPC yoksa eski sorgulara düşer. Periyodik yenileme `hooks/useYenileme.js` ile (gizli sekmede durur).
 - **GitHub Actions kısa cron'ları eliyor:** `*/5` fiilen saatlerce gecikir. Sık iş için pg_cron kullan.
+- **Saati önemli GitHub işi:** günlük `schedule` de 2,5-8 sa gecikiyor; pg_cron → `workflow_dispatch` ile başlat (`backend/sql/sosyal_tetik.sql`, Vault `github_dispatch_token`), schedule'ı yedek bırak ve son 12 saatte dispatch varsa atlat (`social-radar.yml` `kontrol` işi).
 - **PandaScore:** saatte 1000 istek (`X-Rate-Limit-Remaining` başlığı).
 - **Vercel ücretsiz CPU kotası** dar; middleware her istekte koşar, `api/og` pahalıdır.
 - **Vercel CDN Requests** (Hobby: ayda 1M) bot dahil her isteği sayar; kotayı yiyen botu Firewall → Top User Agents'ta bul, custom rule'u UA **Contains** ile kur ("Matches expression" eşleşmedi) ve bot UA'lı curl'de 403 gör. Değersiz bot listesi `middleware.js` `DEGERSIZ_BOT_RE` ile `public/robots.txt`'te eş tutulur.

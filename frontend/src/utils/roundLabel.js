@@ -16,17 +16,23 @@ export function roundLabel(match) {
 
   // 3.'lük / bronz maçı
   if (/(3rd[\s_-]*place|third[\s_-]*place|bronze)/.test(s)) return "3.'lük Maçı"
+  if (/(grand[\s_-]*final|büyük final)/.test(s)) return 'Büyük Final'
+  // GSL grup maçları (IEM grupları): "Winners match" ayak sanılmasın
+  if (/\bwinner'?s'?[\s_-]*match\b/.test(s)) return 'Kazananlar Maçı'
+  if (/\belimination[\s_-]*match\b/.test(s)) return 'Eleme Maçı'
+  if (/\bdecider[\s_-]*match\b/.test(s)) return 'Belirleyici Maç'
 
-  // Final aşamaları (büyük finali de kapsar, ama yarı/çeyrek'ten SONRA kontrol et)
-  if (/(semi[\s_-]*final|semifinal|\bsf\b|round[\s_-]*of[\s_-]*4|\bro4\b|1\/2)/.test(s)) return 'Yarı Final'
-  if (/(quarter[\s_-]*final|quarterfinal|\bqf\b|round[\s_-]*of[\s_-]*8|\bro8\b|1\/4)/.test(s)) return 'Çeyrek Final'
-  if (/(round[\s_-]*of[\s_-]*16|\bro16\b|1\/8)/.test(s)) return 'Son 16'
-  if (/(round[\s_-]*of[\s_-]*32|\bro32\b|1\/16)/.test(s)) return 'Son 32'
-  if (/(grand[\s_-]*final|grand final|büyük final)/.test(s)) return 'Büyük Final'
+  // Ayak ÖNCE tespit edilir: "Lower Bracket Quarterfinal" eskiden "Çeyrek Final"
+  // görünüyordu (alt ayaktaki eleme maçı turnuvanın çeyrek finali sanılıyordu).
+  const ayak = /\b(lower|lb|losers?)\b/.test(s) ? 'Alt Ayak'
+    : /\b(upper|ub|winners?)\b/.test(s) ? 'Üst Ayak' : null
+
+  if (/(semi[\s_-]*final|\bsf\b|round[\s_-]*of[\s_-]*4|\bro4\b|1\/2)/.test(s)) return ayak ? `${ayak} Yarı Finali` : 'Yarı Final'
+  if (/(quarter[\s_-]*final|\bqf\b|round[\s_-]*of[\s_-]*8|\bro8\b|1\/4)/.test(s)) return ayak ? `${ayak} Çeyrek Finali` : 'Çeyrek Final'
+  if (/(round[\s_-]*of[\s_-]*16|\bro16\b|1\/8)/.test(s)) return ayak ? `${ayak} Son 16` : 'Son 16'
+  if (/(round[\s_-]*of[\s_-]*32|\bro32\b|1\/16)/.test(s)) return ayak ? `${ayak} Son 32` : 'Son 32'
   // Ayak finalleri "Final" değil (alt ayak finali turnuvanın finali sanılıyordu)
-  if (/\b(lower|lb|losers?)\b[\s\w-]*\bfinal\b/.test(s)) return 'Alt Ayak Finali'
-  if (/\b(upper|ub|winners?)\b[\s\w-]*\bfinal\b/.test(s)) return 'Üst Ayak Finali'
-  if (/\bfinal\b/.test(s)) return 'Final'
+  if (/\bfinal\b/.test(s)) return ayak ? `${ayak} Finali` : 'Final'
 
   // Grup / İsviçre / lig aşamaları
   const grp = s.match(/group[\s_-]*([a-z0-9]+)/)

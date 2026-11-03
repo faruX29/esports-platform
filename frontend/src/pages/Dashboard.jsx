@@ -8,13 +8,12 @@ import { supabase, subscribeToMatchesUpdates } from '../supabaseClient'
 import { useYenileme, useCanliBaglanti }     from '../hooks/useYenileme'
 import { anaSayfaAkisiniGetir }             from '../utils/anaSayfaAkisi'
 import { useGame, gameMatchesFilter, GAMES } from '../context/GameContext'
-import { isTurkishTeam, useTurkTakimlar, turkTakimlariYukle }                   from '../constants'
+import { isTurkishTeam, useTurkTakimlar }       from '../constants'
 import { useUser }                          from '../context/UserContext'
 import { useAuth }                          from '../context/AuthContext'
 import BRANDING                             from '../branding.config'
 import { Radio, Flag, CalendarDays, Sparkles, Zap, SlidersHorizontal, Clock, Gamepad2, Shield, Trophy, FlaskConical, Newspaper, Flame, Star, TriangleAlert } from 'lucide-react'
-import { buildFinishedStory, buildUpcomingStory } from '../utils/newsStories'
-import { isStoryFollowedTeam, prioritizeStoriesForYou } from '../utils/newsPersonalization'
+import { buildNewsSlug }                   from '../utils/newsSlug'
 import { calculatePredictionAccuracy } from '../utils/accuracyTracker'
 import { memo }                             from 'react'
 import InitialsImage                        from '../components/InitialsImage'
@@ -33,8 +32,7 @@ import { CountUp, FlipNumber }              from '../components/AnimatedNumber'
 
 const MVP_HIDE_DREAM_TEAM = true
 const MVP_HIDE_PREDICTIONS = false
-const DASHBOARD_TICKER_CACHE_KEY = 'dashboard_live_ticker_cache_v1'
-const DASHBOARD_NEWS_CACHE_KEY = 'dashboard_news_cache_v1'
+const DASHBOARD_TICKER_CACHE_KEY = 'dashboard_live_ticker_cache_v2'
 const DASHBOARD_CACHE_TTL_MS = 5 * 60 * 1000
 const DASHBOARD_PREF_WIZARD_SEEN_KEY = 'dashboard_pref_wizard_seen_v1'
 // Tam akış yenileme: canlı kanal bağlıyken seyrek (skor yayınla gelir), değilse dakikada bir.
@@ -293,38 +291,60 @@ function yaklasanPencerede(iso) {
   return t >= now - (6 * 60 * 60 * 1000) && t <= now + (UPCOMING_WINDOW_DAYS * 24 * 60 * 60 * 1000)
 }
 
-function buildTickerLines(running, finishedStories, upcomingStories, followedTeamIds = [], followedGameIds = []) {
-  const lines = []
-  const orderedFinished = prioritizeStoriesForYou(finishedStories || [], followedTeamIds, followedGameIds)
-  const orderedUpcoming = prioritizeStoriesForYou(upcomingStories || [], followedTeamIds, followedGameIds)
+// Şerit YALNIZ gerçek veriden kurulur: canlı skor, yayımlanmış haber başlığı, biten
+// maçın skoru, yaklaşan maçın saati. Eskiden newsStories şablonları "kritik roundlarda
+// oyunu çevirdi" gibi veriye dayanmayan cümleler ve "Scout: X MVP 0" satırları
+// üretiyordu; "MVP" denen sayı aslında alınan harita sayısıydı (UX denetimi, 3 Kas).
+function tickerTakipte(match, followedTeamIds) {
+  if (!followedTeamIds?.length) return false
+  const ids = new Set(followedTeamIds.map(String))
+  return ids.has(String(match?.team_a_id ?? match?.team_a?.id)) || ids.has(String(match?.team_b_id ?? match?.team_b?.id))
+}
 
-  ;(running || []).forEach(match => {
+function tickerSaat(iso) {
+  const d = new Date(iso || '')
+  if (Number.isNaN(d.getTime())) return ''
+  const bugun = new Date()
+  const ayniGun = d.toDateString() === bugun.toDateString()
+  const saat = d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+  return ayniGun ? saat : `${d.toLocaleDateString('tr-TR', { weekday: 'short' })} ${saat}`
+}
+
+function haberSatiriId(row) {
+  if (row.content_type === 'transfer') return `transfer_${row.id}`
+  if (row.content_type === 'tournament') return `tournament_${row.tournament_id}`
+  if (row.content_type === 'haftalik') return `haftalik_${row.id}`
+  return `match_${row.match_id}`
+}
+
+function buildTickerLines({ running, finished, upcoming, haberler, followedTeamIds = [] }) {
+  // Takip edilen takımın satırı kendi grubunun başına geçer.
+  const takipOnce = list => [...(list || [])].sort((x, y) => tickerTakipte(y, followedTeamIds) - tickerTakipte(x, followedTeamIds))
+  const lines = []
+  takipOnce(running).forEach(m => lines.push({
+    id: `live_${m.id}`, kind: 'live', followed: tickerTakipte(m, followedTeamIds),
+    text: `${m.team_a?.name || '?'} ${m.team_a_score ?? 0}:${m.team_b_score ?? 0} ${m.team_b?.name || '?'}`,
+    href: `/match/${m.id}`,
+  }))
+  ;(haberler || []).forEach(row => {
+    const id = haberSatiriId(row)
+    lines.push({ id: `news_${row.id}`, kind: 'news', text: row.title, href: `/news/${buildNewsSlug({ id, title: row.title })}` })
+  })
+  takipOnce(finished).slice(0, 6).forEach(m => {
+    const cs = correctedScores(m)
     lines.push({
-      id: `live_${match.id}`,
-      text: `🔴 CANLI ${match.team_a?.name || '?'} ${match.team_a_score ?? 0}:${match.team_b_score ?? 0} ${match.team_b?.name || '?'}`,
-      href: match?.id ? `/match/${match.id}` : null,
+      id: `result_${m.id}`, kind: 'result', followed: tickerTakipte(m, followedTeamIds),
+      text: `${m.team_a?.name || '?'} ${cs.team_a_score ?? 0}:${cs.team_b_score ?? 0} ${m.team_b?.name || '?'}`,
+      href: `/match/${m.id}`,
     })
   })
-  ;orderedFinished.forEach(story => {
-    const forYou = isStoryFollowedTeam(story, followedTeamIds)
-    lines.push({
-      id: `finished_${story.id}`,
-      text: `${forYou ? '⭐ FOR YOU' : '📰'} ${story.title}`,
-      href: story?.id ? `/news/${story.id}` : null,
-    })
-    const scout = scoutSignalLine(story)
-    if (scout) lines.push({ id: `finished_scout_${story.id}`, text: scout, href: null })
-  })
-  ;orderedUpcoming.forEach(story => {
-    const forYou = isStoryFollowedTeam(story, followedTeamIds)
-    lines.push({
-      id: `upcoming_${story.id}`,
-      text: `${forYou ? '⭐ FOR YOU' : '⏳'} ${story.title}`,
-      href: story?.id ? `/news/${story.id}` : null,
-    })
-    const scout = scoutSignalLine(story)
-    if (scout) lines.push({ id: `upcoming_scout_${story.id}`, text: scout, href: null })
-  })
+  // Saati 30 dk'dan fazla geçmiş ama hâlâ 'not_started' kayıt "yaklaşan" değildir.
+  const yaklasanEsik = Date.now() - 30 * 60 * 1000
+  takipOnce(upcoming).filter(m => zamanDamgasi(m.scheduled_at) > yaklasanEsik).slice(0, 5).forEach(m => lines.push({
+    id: `upcoming_${m.id}`, kind: 'upcoming', followed: tickerTakipte(m, followedTeamIds),
+    text: `${tickerSaat(m.scheduled_at)} · ${m.team_a?.name || '?'} – ${m.team_b?.name || '?'}`,
+    href: `/match/${m.id}`,
+  }))
   return lines
 }
 
@@ -643,36 +663,33 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
   )
 })
 
-function scoutSignalLine(story) {
-  const source = story?.source || {}
-  if (source.impactTeam) {
-    return `🧭 Scout: ${source.impactTeam}${source.impactScore != null ? ` MVP ${source.impactScore}` : ' one cikiyor'}`
-  }
-  if (source.favorite) {
-    return `🧭 Scout: Fextopus favorisi ${source.favorite}${source.predictionEdge != null ? ` (+%${Math.round(source.predictionEdge * 100)})` : ''}`
-  }
-  if (source.mapCount || source.mapTempo) {
-    return `🧭 Scout: ${source.mapCount || '?'} map · ${source.mapTempo || 'tempo dengeli'}`
-  }
-  return null
+// Şerit satır türleri: emoji yerine renkli kısa etiket.
+const TICKER_TUR = {
+  live:     { etiket: 'CANLI',    renk: '#ff4655' },
+  news:     { etiket: 'HABER',    renk: FEXT.accentText },
+  result:   { etiket: 'SONUÇ',    renk: 'var(--text-3)' },
+  upcoming: { etiket: 'YAKLAŞAN', renk: '#60a5fa' },
 }
 
 const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
   const [ripple, setRipple] = useState({ key: null, token: 0, x: 0, y: 0 })
+  // Üzerine gelince ya da klavyeyle odaklanınca kayma durur (WCAG 2.2.2).
+  const [durdu, setDurdu] = useState(false)
   const safeItems = (items || []).filter(Boolean)
   const normalized = safeItems.map((item, idx) => (typeof item === 'string'
     ? { id: `text_${idx}`, text: item, href: null }
     : {
       id: item.id || `line_${idx}`,
+      kind: item.kind || null,
+      followed: Boolean(item.followed),
       text: item.text || '',
       href: item.href || null,
     }))
   const lines = safeItems.length > 0
     ? normalized
     : [
-      { id: 'boot_live', text: '🔴 Canlı yayın bağlanıyor...', href: null },
-      { id: 'boot_news', text: '📰 Son haberler hazırlanıyor...', href: null },
-      { id: 'boot_scout', text: '🧭 Scout sinyalleri yükleniyor...', href: null },
+      { id: 'boot_live', kind: 'live', text: 'Canlı skorlar yükleniyor…', href: null },
+      { id: 'boot_news', kind: 'news', text: 'Son haberler yükleniyor…', href: null },
     ]
   const speedSeconds = Math.min(75, Math.max(24, lines.length * 4.2))
 
@@ -704,12 +721,21 @@ const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
         </span>
       </div>
 
-      <div style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}>
-        <div style={{ display: 'inline-flex', minWidth: 'max-content', animation: `tickerScroll ${speedSeconds}s linear infinite` }}>
+      <div
+        style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}
+        onMouseEnter={() => setDurdu(true)}
+        onMouseLeave={() => setDurdu(false)}
+        onFocus={() => setDurdu(true)}
+        onBlur={() => setDurdu(false)}
+      >
+        <div style={{ display: 'inline-flex', minWidth: 'max-content', animation: `tickerScroll ${speedSeconds}s linear infinite`, animationPlayState: durdu ? 'paused' : 'running' }}>
           {[...lines, ...lines].map((line, idx) => (
             <button
               key={`${line.id}_${idx}`}
               onClick={event => handleLineClick(event, line, idx)}
+              // Döngü için ikinci kopya: ekran okuyucu ve Tab sırası yalnız ilkini görür.
+              aria-hidden={idx >= lines.length || undefined}
+              tabIndex={idx >= lines.length ? -1 : undefined}
               style={{
                 position: 'relative',
                 overflow: 'hidden',
@@ -738,6 +764,13 @@ const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
                 e.currentTarget.style.color = 'var(--text-1)'
               }}
             >
+              {TICKER_TUR[line.kind] && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginRight: 8, fontSize: 10, fontWeight: 800, letterSpacing: '.6px', color: TICKER_TUR[line.kind].renk, verticalAlign: 1 }}>
+                  {line.kind === 'live' && <span style={{ width: 6, height: 6, borderRadius: '50%', background: TICKER_TUR.live.renk }} />}
+                  {TICKER_TUR[line.kind].etiket}
+                </span>
+              )}
+              {line.followed && <Star size={12} fill="#FFD700" color="#FFD700" aria-label="Takip ettiğin takım" style={{ marginRight: 6, verticalAlign: -1 }} />}
               {line.text}
               {ripple.key === `${line.id}_${idx}` && (
                 <span
@@ -1876,15 +1909,13 @@ export default function Dashboard() {
     return () => { cancelled = true }
   }, [followedTeamIds, followedPlayerIds, myFeedMatches])
 
-  // Haber/canlı akış şeridi: akıştaki listelerden türetilir (eskiden dakikada bir
-  // 4 istek, biten 100 maçın tüm istatistiği dahil). Yalnız öyküye dönüşen ilk 6
-  // biten maçın istatistiği çekilir ve oturum boyunca önbellekte tutulur.
-  const istatistikOnbellegiRef = useRef(new Map())
+  // Haber/canlı akış şeridi: maçlar akıştaki listelerden türetilir; haber başlıkları
+  // news_articles'tan oturumda bir kez çekilir (yalnız yayımlanmış gerçek haberler).
+  const haberBasliklariRef = useRef(null)
   useEffect(() => {
     let cancelled = false
     const followScope = [...(followedTeamIds || [])].map(id => String(id)).sort().join('-') || 'none'
-    const gameScope = [...(followedGames || [])].map(id => String(id)).sort().join('-') || 'none'
-    const cacheScope = `${activeGame || 'all'}_${showAllTournamentTiers ? 'all' : 'hero'}_${followScope}_${gameScope}`
+    const cacheScope = `${activeGame || 'all'}_${showAllTournamentTiers ? 'all' : 'hero'}_${followScope}`
 
     if (!akisHazir) {
       // Stale-while-revalidate: akış gelene kadar önbellekteki şeridi göster.
@@ -1894,55 +1925,32 @@ export default function Dashboard() {
         setTickerLoading(false)
         return undefined
       }
-      const cachedNews = safeReadCache(DASHBOARD_NEWS_CACHE_KEY)
-      if (isFreshCache(cachedNews, cacheScope)) {
-        const cachedLines = buildTickerLines([], cachedNews.finishedStories || [], cachedNews.upcomingStories || [], followedTeamIds, followedGames)
-        if (cachedLines.length > 0) {
-          setTickerItems(cachedLines.slice(0, 36))
-          setTickerLoading(false)
-          return undefined
-        }
-      }
       setTickerLoading(true)
       return undefined
     }
 
     const running = oyunVeSeviye(acikMaclar.filter(m => normalizeMatchStatus(m.status) === 'running').slice(0, 7))
     const finished = oyunVeSeviye(bitenHam)
-    const upcoming = oyunVeSeviye(acikMaclar.filter(m => isUpcomingStatus(m.status)).slice(0, 8))
-    const storyMatches = finished.slice(0, 6)
+    const upcoming = oyunVeSeviye(acikMaclar.filter(m => isUpcomingStatus(m.status)).slice(0, 30))
 
     ;(async () => {
-      const cache = istatistikOnbellegiRef.current
-      const missingIds = storyMatches.map(m => m.id).filter(id => id && !cache.has(id))
-      if (missingIds.length > 0) {
-        // İstatistik yalnız öyküyü zenginleştirir → hatası şeridi düşürmez.
-        const { data: statRows, error: statErr } = await supabase
-          .from('match_stats')
-          .select('match_id,team_id,stats')
-          .in('match_id', missingIds)
-        if (statErr) {
-          console.error('Dashboard ticker stats:', statErr.message || statErr)
-        } else {
-          for (const id of missingIds) cache.set(id, [])
-          for (const row of (statRows || [])) cache.get(row.match_id)?.push(row)
-        }
+      if (!haberBasliklariRef.current) {
+        // Haber yalnız şeridi zenginleştirir → hatası şeridi düşürmez.
+        const { data, error } = await supabase
+          .from('news_articles')
+          .select('id,title,content_type,match_id,tournament_id,game_slug,created_at')
+          .order('created_at', { ascending: false })
+          .limit(16)
+        if (error) console.error('Dashboard ticker news:', error.message || error)
+        haberBasliklariRef.current = error ? [] : (data || [])
       }
-
-      await turkTakimlariYukle()
       if (cancelled) return
 
-      const finishedStories = prioritizeStoriesForYou(
-        storyMatches.map(match => buildFinishedStory(match, cache, isTurkishTeam)),
-        followedTeamIds,
-        followedGames,
-      )
-      const upcomingStories = prioritizeStoriesForYou(
-        upcoming.slice(0, 5).map(match => buildUpcomingStory(match, isTurkishTeam)),
-        followedTeamIds,
-        followedGames,
-      )
-      const prepared = buildTickerLines(running, finishedStories, upcomingStories, followedTeamIds, followedGames).slice(0, 36)
+      const secili = activeGame && activeGame !== 'all' ? normalizeGameId(activeGame) : null
+      const haberler = haberBasliklariRef.current
+        .filter(r => r.title && (!secili || !r.game_slug || normalizeGameId(r.game_slug) === secili))
+        .slice(0, 5)
+      const prepared = buildTickerLines({ running, finished, upcoming, haberler, followedTeamIds }).slice(0, 36)
 
       setTickerItems(prepared)
       setTickerLoading(false)
@@ -1950,12 +1958,6 @@ export default function Dashboard() {
         scope: cacheScope,
         updatedAt: Date.now(),
         items: prepared,
-      })
-      safeWriteCache(DASHBOARD_NEWS_CACHE_KEY, {
-        scope: cacheScope,
-        updatedAt: Date.now(),
-        finishedStories,
-        upcomingStories,
       })
     })().catch(e => {
       if (cancelled) return
@@ -1966,7 +1968,7 @@ export default function Dashboard() {
     return () => {
       cancelled = true
     }
-  }, [akisHazir, acikMaclar, bitenHam, oyunVeSeviye, activeGame, followedTeamIds, followedGames, showAllTournamentTiers, showGlobalConnectionWarning])
+  }, [akisHazir, acikMaclar, bitenHam, oyunVeSeviye, activeGame, followedTeamIds, showAllTournamentTiers, showGlobalConnectionWarning])
 
   useEffect(() => {
     if (MVP_HIDE_DREAM_TEAM) {

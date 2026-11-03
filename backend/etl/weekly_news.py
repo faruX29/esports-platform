@@ -22,7 +22,7 @@ from typing import Optional
 from psycopg.types.json import Jsonb
 
 from database import Database
-from etl.news_generator import NewsGenerator, _AD_KURALI, tam_turnuva_adi
+from etl.news_generator import NewsGenerator, SURPRIZ_ESIK, _AD_KURALI, tam_turnuva_adi
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ LISTE_SONUC = 10
 LISTE_GELECEK = 8
 # Sürpriz: Fextopus favorisinin en az bu olasılıkla kaybettiği maç. Haftada 4-11 tane
 # çıkıyor (24 Eki ölçümü); en çarpıcı 5'i, 3'ten azsa haber yok.
-SURPRIZ_ESIK = 0.65
+# SURPRIZ_ESIK news_generator.py'den gelir (maç haberiyle aynı eşik).
 SURPRIZ_LISTE = 5
 SURPRIZ_MIN = 3
 

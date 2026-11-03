@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { supabase, subscribeToNewsComments } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useUser } from '../context/UserContext'
 import { isTurkishTeam, turkTakimlariYukle } from '../constants'
 import { tournamentDisplayName } from '../utils/tournamentDisplay'
 import {
-  buildFinishedStory,
-  buildUpcomingStory,
+  buildStoryVisuals,
   normalizeTier,
   storyExplainability,
   weeklyCover,
@@ -195,6 +194,34 @@ function mapTournamentRowToStory(row) {
       teamB: { name: row.team_b_name, logo_url: row.team_b_logo },
     },
     source: {},
+  }
+}
+
+/**
+ * news_articles maç satırını (sonuç haberi ya da önizleme) story şekline çevirir.
+ * Görseller ve tahmin maçın kendisinden gelir; METİN yalnız yayımlanmış haberden.
+ * Eskiden doğrudan açılan /news/match_<id> gerçek haberi hiç okumuyor, şablonla
+ * "kritik roundlarda oyunu çevirdi" gibi uydurma metin kuruyordu (UX denetimi, 3 Kas).
+ */
+function mapMatchRowToStory(row, match) {
+  const isPreview = row.variant === 'preview'
+  return {
+    id: `match_${match.id}`,
+    matchId: match.id,
+    tournamentId: match?.tournament?.id ?? match?.tournament_id ?? null,
+    status: isPreview ? 'upcoming' : 'finished',
+    variant: row.variant || 'close',
+    publishedAt: row.created_at,
+    title: row.title || '',
+    summary: row.summary || '',
+    content: row.content || '',
+    heroScore: row.hero_score || '',
+    visuals: buildStoryVisuals(match, isTurkishTeam),
+    source: {
+      predictionA: match.prediction_team_a,
+      predictionB: match.prediction_team_b,
+      upset: row.variant === 'upset',
+    },
   }
 }
 
@@ -509,6 +536,7 @@ function RelatedLinks({ story }) {
 export default function NewsDetailPage() {
   const { newsId } = useParams()
   const location = useLocation()
+  const navigate = useNavigate()
   const { user, profile } = useAuth()
   const { requireAuth } = useUser()
 
@@ -897,18 +925,23 @@ export default function NewsDetailPage() {
         if (matchErr) throw matchErr
         if (!match) throw new Error('Haber bulunamadı.')
 
-        const { data: statRows, error: statErr } = await supabase
-          .from('match_stats')
-          .select('match_id,team_id,stats')
+        // Bitmiş maçta sonuç haberi önizlemeden önce gelir; ikisi de yoksa haber yok.
+        const { data: articleRows, error: articleErr } = await supabase
+          .from('news_articles')
+          .select('id,title,summary,content,variant,created_at,hero_score')
           .eq('match_id', matchId)
+          .order('created_at', { ascending: false })
+          .limit(4)
+        if (articleErr) throw articleErr
+        const article = (articleRows || []).find(r => r.variant !== 'preview') || (articleRows || [])[0]
+        if (!article) {
+          // Bu maç için yazılmış haber yok: uydurma metin yerine maç sayfası.
+          if (!cancelled) navigate(`/match/${matchId}`, { replace: true })
+          return
+        }
 
-        if (statErr) throw statErr
-
-        const byMatch = new Map([[matchId, statRows || []]])
         await turkTakimlariYukle()
-        const generated = match.status === 'finished'
-          ? buildFinishedStory(match, byMatch, isTurkishTeam)
-          : buildUpcomingStory(match, isTurkishTeam)
+        const generated = mapMatchRowToStory(article, match)
 
         const tournamentId = Number(match?.tournament?.id ?? match?.tournament_id)
         let realtimeTournament = null
@@ -965,7 +998,7 @@ export default function NewsDetailPage() {
 
     loadFromSource()
     return () => { cancelled = true }
-  }, [loadForum, newsId])
+  }, [loadForum, newsId, navigate])
 
   // ── Realtime forum: başkalarının yorumları anında görünür ──
   useEffect(() => {

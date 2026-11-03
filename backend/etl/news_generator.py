@@ -38,6 +38,34 @@ logger = logging.getLogger(__name__)
 # bozar. Kayıtlar roster_changes'te korunur, yalnızca haber kuyruğuna girmezler.
 TRANSFER_NEWS_TTL_DAYS = 14
 
+# Sürpriz = Fextopus favoriye en az bu olasılığı verdi ve favori kaybetti. Tek kaynak:
+# haftalık içerik de buradan okur. Eskiden maç haberinde eşik yoktu, %53'lük ıska bile
+# "SÜRPRİZ SONUÇ" oluyordu (UX denetimi, 3 Kasım).
+SURPRIZ_ESIK = 0.65
+
+# Turnuvanın asıl finali: "Grand final" ya da yalnız "Final". Ayak finalleri
+# ("Upper bracket final") ve yarı/çeyrek finaller eşleşmez.
+_FINAL_RE = re.compile(r"^\s*(grand[\s_-]*finals?|finals?)\b", re.IGNORECASE)
+
+
+def surpriz_mi(pred_a, pred_b, a_kazandi: bool) -> bool:
+    """Favori (olasılığı >= SURPRIZ_ESIK) kaybettiyse True. Tahmin yoksa False."""
+    if pred_a is None or pred_b is None:
+        return False
+    pa, pb = float(pred_a), float(pred_b)
+    fav_p, fav_a = (pa, True) if pa >= pb else (pb, False)
+    return fav_p >= SURPRIZ_ESIK and fav_a != a_kazandi
+
+
+# DB slug'ı → okurun bildiği ad ("CS-GO" büyük harfle "CSGO" diye habere giriyordu).
+_OYUN_ADI = {'valorant': 'VALORANT', 'cs-go': 'CS2', 'csgo': 'CS2', 'cs2': 'CS2',
+             'lol': 'LoL', 'league-of-legends': 'LoL', 'dota-2': 'Dota 2', 'dota2': 'Dota 2'}
+
+
+def oyun_adi(slug) -> str:
+    s = str(slug or '').strip().lower()
+    return _OYUN_ADI.get(s, s.upper() or 'ESPOR')
+
 # ── Editor persona injected as system prompt ──────────────────────────────────
 SYSTEM_PROMPT = (
     "Sen profesyonel bir espor editörüsün. Maç verilerinden ÖZGÜN, tarafsız Türkçe "
@@ -254,7 +282,7 @@ class FactSheetBuilder:
         tier = str(tournament.get("tier") or match.get("tier") or "C").upper()
         tier_label = _TIER_LABELS.get(tier, "Bilinmeyen Tier")
         t_name = tournament.get("name") or match.get("tournament_name") or "Ana Sahne"
-        game = str((match.get("game") or {}).get("slug") or match.get("game_slug") or "esports").upper()
+        game = oyun_adi((match.get("game") or {}).get("slug") or match.get("game_slug"))
         when = match.get("scheduled_at") or "yakında"
 
         lines = [
@@ -296,7 +324,7 @@ class FactSheetBuilder:
         new_team = transfer.get("new_team")
         role = transfer.get("role")
         ttype = (transfer.get("transfer_type") or "permanent").lower()
-        game = str(transfer.get("game") or "esports").upper()
+        game = oyun_adi(transfer.get("game"))
 
         # Kaynak yalnız kadro listesi: katılanın önceki takımı ve ayrılanın yeni takımı ya da
         # ayrılık nedeni (serbest bırakma, yedeğe alma, emeklilik) bilinmez → LLM'e açıkça yaz.
@@ -340,7 +368,7 @@ class FactSheetBuilder:
         tier = str(tournament.get("tier") or "C").upper()
         tier_label = _TIER_LABELS.get(tier, "Bilinmeyen Tier")
         t_name = tournament.get("name") or "Turnuva"
-        game = str(tournament.get("game_slug") or "esports").upper()
+        game = oyun_adi(tournament.get("game_slug"))
 
         # PandaScore turnuvaları AŞAMA'dır (Playoffs/Group Stage). Yalnızca
         # eleme/final aşamasında "şampiyon" gerçekçi; grup aşamasında "lider".
@@ -350,6 +378,9 @@ class FactSheetBuilder:
         is_final = any(k in name_l for k in (
             "playoff", "final", "knockout", "bracket", "grand", "elimination", "şampiyon", "champion"
         ))
+        # Final maçı bulunamadıysa "şampiyon" yazılamaz: puan durumunun lideri yazılır.
+        if not ctx.get("final_found"):
+            is_final = False
 
         lines = [
             "TURNUVA SONUÇ RAPORU",
@@ -362,7 +393,7 @@ class FactSheetBuilder:
             role = "Şampiyon" if is_final else "Aşama lideri"
             champ_line = f"{role}: {ctx['champion']}"
             if ctx.get("runner_up"):
-                champ_line += f" | {'Finalist' if is_final else 'Rakip'}: {ctx['runner_up']}"
+                champ_line += f" | {'Finalist' if is_final else 'İkinci'}: {ctx['runner_up']}"
             if ctx.get("final_score"):
                 champ_line += f" | {'Final' if is_final else 'Son maç'} skoru: {ctx['final_score']}"
             lines.append(champ_line)
@@ -439,7 +470,8 @@ class FactSheetBuilder:
         upset = False
         if pred_a is not None and pred_b is not None:
             predicted_winner = a_name if float(pred_a) >= float(pred_b) else b_name
-            upset = predicted_winner != winner_name and winner_name != "Bilinmiyor"
+            upset = winner_name != "Bilinmiyor" and surpriz_mi(pred_a, pred_b, winner_name == a_name)
+        fav_p = max(float(pred_a), float(pred_b)) if pred_a is not None and pred_b is not None else None
 
         # Map & tempo signals from match_stats rows
         map_lengths: list[float] = []
@@ -481,7 +513,7 @@ class FactSheetBuilder:
         tier = str(tournament.get("tier") or match.get("tier") or "C").upper()
         tier_label = _TIER_LABELS.get(tier, "Bilinmeyen Tier")
         t_name = tournament.get("name") or match.get("tournament_name") or "Ana Sahne"
-        game = str((match.get("game") or {}).get("slug") or match.get("game_slug") or "esports").upper()
+        game = oyun_adi((match.get("game") or {}).get("slug") or match.get("game_slug"))
 
         lines = [
             "MAÇ ÖZET RAPORU",
@@ -513,10 +545,16 @@ class FactSheetBuilder:
             lines.append(
                 f"⚠️ SÜRPRİZ: Tahmin edilen galip {predicted_winner} iken {winner_name} kazandı"
             )
-        elif margin >= 2:
-            lines.append(f"Maç tipi: Dominant galibiyet (fark {margin})")
         else:
-            lines.append(f"Maç tipi: Dar seri (fark {margin})")
+            if predicted_winner and winner_name != "Bilinmiyor" and predicted_winner != winner_name:
+                lines.append(
+                    f"Not: Fextopus {predicted_winner} için yalnız %{round(fav_p * 100)} vermişti; başa baş "
+                    "sayılır, 'sürpriz' ya da 'şok' deme."
+                )
+            if margin >= 2:
+                lines.append(f"Maç tipi: Dominant galibiyet (fark {margin})")
+            else:
+                lines.append(f"Maç tipi: Dar seri (fark {margin})")
 
         return "\n".join(lines)
 
@@ -563,12 +601,12 @@ class NewsGenerator:
                                COALESCE(m.number_of_games, 1) >= 3   AS bo3,
                                EXISTS (SELECT 1 FROM turk_takimlar k WHERE k.team_id = m.team_a_id) AS tr_a,
                                EXISTS (SELECT 1 FROM turk_takimlar k WHERE k.team_id = m.team_b_id) AS tr_b,
-                               COALESCE((m.prediction_team_a > m.prediction_team_b AND m.winner_id = m.team_b_id)
-                                     OR (m.prediction_team_b > m.prediction_team_a AND m.winner_id = m.team_a_id),
+                               COALESCE((m.prediction_team_a >= %(esik)s AND m.winner_id = m.team_b_id)
+                                     OR (m.prediction_team_b >= %(esik)s AND m.winner_id = m.team_a_id),
                                         false) AS surpriz
                     ) f
                     WHERE m.status = 'finished'
-                      AND m.scheduled_at >= %s
+                      AND m.scheduled_at >= %(since)s
                       AND NOT EXISTS (
                           SELECT 1 FROM news_articles na
                           WHERE na.match_id = m.id AND na.variant <> 'preview'
@@ -586,7 +624,7 @@ class NewsGenerator:
                     ORDER BY m.scheduled_at DESC
                     LIMIT 20
                     """,
-                    (since,),
+                    {"since": since, "esik": SURPRIZ_ESIK},
                 )
                 cols = [d[0] for d in cur.description]
                 return [dict(zip(cols, row)) for row in cur.fetchall()]
@@ -721,8 +759,7 @@ class NewsGenerator:
             aid = str((match.get("team_a") or {}).get("id") or "")
             bid = str((match.get("team_b") or {}).get("id") or "")
             winner = aid if wid == aid else (bid if wid == bid else "")
-            fav = aid if float(pa) >= float(pb) else bid
-            if winner and winner != fav:   # sürpriz sonuç
+            if winner and surpriz_mi(pa, pb, winner == aid):   # sürpriz sonuç
                 return True
         return False
 
@@ -791,8 +828,7 @@ class NewsGenerator:
         pred_b = match.get("prediction_team_b")
         upset = False
         if pred_a is not None and pred_b is not None:
-            predicted = a_name if float(pred_a) >= float(pred_b) else b_name
-            upset = predicted != winner_name and winner_name != "?"
+            upset = winner_name != "?" and surpriz_mi(pred_a, pred_b, winner_name == a_name)
         margin = abs(a_score - b_score)
         variant = "upset" if upset else ("stomp" if margin >= 2 else "close")
 
@@ -1186,6 +1222,17 @@ class NewsGenerator:
                           SELECT 1 FROM news_articles na
                           WHERE na.tournament_id = tn.id AND na.content_type = 'tournament'
                       )
+                      -- Aşama BİTMİŞ olmalı. Eskiden yalnız "≥4 bitmiş maç" aranıyordu: özet
+                      -- final oynanmadan yazılıyor, o anki son maçın galibi "şampiyon" ilan
+                      -- ediliyordu (Eylül-Ekim'de 10 yanlış şampiyon başlığı; UX denetimi 3 Kas).
+                      -- Saati 3 günden eski takılı 'not_started' kayıtlar engel sayılmaz.
+                      AND (tn.end_at IS NULL OR tn.end_at < NOW())
+                      AND NOT EXISTS (
+                          SELECT 1 FROM matches p
+                          WHERE p.tournament_id = tn.id
+                            AND p.status IN ('not_started', 'running', 'postponed')
+                            AND (p.scheduled_at IS NULL OR p.scheduled_at > NOW() - INTERVAL '3 days')
+                      )
                     GROUP BY tn.id, tn.name, tn.tier, g.slug, tn.league_name, tn.event_name
                     HAVING COUNT(m.id) >= 4
                        AND MAX(m.scheduled_at) >= %s AND MAX(m.scheduled_at) < NOW()
@@ -1211,7 +1258,7 @@ class NewsGenerator:
                     SELECT ta.name AS a_name, tb.name AS b_name,
                            m.team_a_id, m.team_b_id, m.winner_id,
                            COALESCE(m.team_a_score,0), COALESCE(m.team_b_score,0),
-                           m.prediction_team_a, m.prediction_team_b
+                           m.prediction_team_a, m.prediction_team_b, COALESCE(m.round_info, '')
                     FROM matches m
                     LEFT JOIN teams ta ON ta.id = m.team_a_id
                     LEFT JOIN teams tb ON tb.id = m.team_b_id
@@ -1226,29 +1273,38 @@ class NewsGenerator:
         wl = defaultdict(lambda: [0, 0])  # name -> [w, l]
         upset_count = 0
         notable: list[str] = []
-        for a, b, aid, bid, wid, sa, sb, pa, pb in rows:
+        for a, b, aid, bid, wid, sa, sb, pa, pb, _ri in rows:
             a = a or "Bilinmeyen"; b = b or "Bilinmeyen"
             a_won = str(wid) == str(aid)
             win_name, lose_name = (a, b) if a_won else (b, a)
             wl[win_name][0] += 1
             wl[lose_name][1] += 1
-            if pa is not None and pb is not None and float(pa) != float(pb):
-                fav = a if float(pa) > float(pb) else b
-                if fav == lose_name:
-                    upset_count += 1
-                    if len(notable) < 3:
-                        notable.append(f"{win_name}, favori {lose_name}'i {max(sa, sb)}-{min(sa, sb)} yendi")
-        last = rows[-1]
-        la, lb, laid, _lbid, lwid, lsa, lsb = last[0] or "Bilinmeyen", last[1] or "Bilinmeyen", last[2], last[3], last[4], last[5], last[6]
-        champ = la if str(lwid) == str(laid) else lb
-        runner = lb if champ == la else la
+            if surpriz_mi(pa, pb, a_won):
+                upset_count += 1
+                if len(notable) < 3:
+                    notable.append(f"{win_name}, favori {lose_name}'i {max(sa, sb)}-{min(sa, sb)} yendi")
         standings = sorted(
             ({"team": n, "w": w, "l": l} for n, (w, l) in wl.items()),
             key=lambda s: (s["w"] - s["l"], s["w"]), reverse=True,
         )
+        # Şampiyon = FİNAL maçının galibi; "son oynanan maçın galibi" DEĞİL (3.'lük maçı
+        # ya da bir çeyrek final son satır olabiliyordu). Final yoksa (grup/lig aşaması)
+        # puan durumunun lideri yazılır ve final skoru verilmez.
+        final_row = next((r for r in reversed(rows) if _FINAL_RE.search(r[9])), None)
+        if final_row is None:
+            return {
+                "champion": standings[0]["team"],
+                "runner_up": standings[1]["team"] if len(standings) > 1 else None,
+                "final_score": None, "final_found": False,
+                "standings": standings, "total_matches": len(rows),
+                "notable": notable, "upset_count": upset_count,
+            }
+        fa, fb, faid, _fbid, fwid, fsa, fsb = (final_row[0] or "Bilinmeyen", final_row[1] or "Bilinmeyen",
+                                                final_row[2], final_row[3], final_row[4], final_row[5], final_row[6])
+        champ = fa if str(fwid) == str(faid) else fb
         return {
-            "champion": champ, "runner_up": runner,
-            "final_score": f"{max(lsa, lsb)}-{min(lsa, lsb)}",
+            "champion": champ, "runner_up": fb if champ == fa else fa,
+            "final_score": f"{max(fsa, fsb)}-{min(fsa, fsb)}", "final_found": True,
             "standings": standings, "total_matches": len(rows),
             "notable": notable, "upset_count": upset_count,
         }

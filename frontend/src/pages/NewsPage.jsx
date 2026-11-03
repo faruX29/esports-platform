@@ -612,6 +612,11 @@ export default function NewsPage() {
   }
 
   function openStoryDetail(item) {
+    // Yaklaşan maç kartının yazılmış haberi yok: haber sayfası yerine maç sayfası.
+    if (item.status === 'upcoming' && item.matchId) {
+      navigate(`/match/${item.matchId}`)
+      return
+    }
     navigate(`/news/${buildNewsSlug(item)}`, {
       state: {
         story: item,

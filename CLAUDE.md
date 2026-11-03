@@ -116,6 +116,7 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - LLM'e anlamı/sırası yazılmamış dizi verme (ör. "LLWWW") → ters okur, yanlış haber üretir.
 - LLM'e turnuva durumu vermeden elenme/tur atlama yazmasına izin verme → tek maç sonucundan "elendi" uydurur; prompt'ta yasakla (`weekly_news.py`).
 - Özel adları çevirtme ("VCT Champions" → "Şampiyonlar Ligi") → prompt'larda `_AD_KURALI` var.
+- Haber metnini şablonla üretme, "son oynanan maçın galibi"ni şampiyon sayma, sürprizi eşiksiz yazma → yalnız `news_articles` gösterilir; şampiyon final maçından; eşik `SURPRIZ_ESIK` (`news_generator.py`).
 - Doğrulanmamış tarih, saat veya sayı yazma → maç saatleri değişir, üretmeden önce DB'den tazele.
 - Turnuva adı olarak `tournaments.name`'i tek başına gösterme → çoğu yalnız aşama ("Group Stage"); `league_name,event_name` de çek, `tournamentDisplayName` (middleware'de `turnuvaAdi`) kullan. Türk takımını da ad listesiyle değil `isTurkishTeam` (`turk_takimlar`) ile bul.
 - `App.jsx` `<main>`'in `minHeight`'ini kaldırma ya da sayfanın yükleme hâlini "Yükleniyor..." yazısıyla bırakma → footer ekrana çıkıp veri gelince itilir (CLS); yer tutan iskelet kullan.

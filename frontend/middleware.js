@@ -482,11 +482,11 @@ async function buildForNews(ref, origin, url) {
     )
   }
   if (!row) {
-    // Haberi olmayan maçta SPA maç verisinden sayfa kuruyor (NewsDetailPage) →
-    // maç varsa kabuğa düş (eski davranış), maç da yoksa gerçekten 404.
+    // Haberi olmayan maç → maç sayfasına geçici yönlendirme (SPA da aynısını yapıyor;
+    // eskiden şablonla uydurma "haber" kuruyordu). 302: maç bitince haber yazılabilir.
     if (ref.type !== 'match') return YOK
     const mac = await sbBul(`matches?id=eq.${ENC(ref.id)}&select=id&limit=1`)
-    return mac ? null : YOK
+    return mac ? { yonlendir: `/match/${mac.id}` } : YOK
   }
   const gm = gameMeta(row.game_slug)
   // Maçlardaki OG_FRESH_DAYS kuralı haberlere de (22 Eyl). Haberde tarih sınırı
@@ -1216,6 +1216,12 @@ export default async function middleware(req) {
       if (seg) html = LIG_SLUG_RE.test(seg) ? await buildForLig(seg, SITE_ORIGIN, canon) : YOK
     }
 
+    if (html?.yonlendir) {
+      return new Response(null, {
+        status: 302,
+        headers: { location: SITE_ORIGIN + html.yonlendir, 'cache-control': 'public, max-age=300, s-maxage=3600' },
+      })
+    }
     if (html === YOK) {
       return new Response(bulunamadiHtml(SITE_ORIGIN), {
         status: 404,

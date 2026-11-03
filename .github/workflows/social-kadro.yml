@@ -1,7 +1,7 @@
 name: Kadro videosu (Turk takimi, sabah)
 
-# Yeni Turk takimi transfer haberlerinden Reels (social/kadro.py) uretir; video varsa
-# e-posta ile yollar, yoksa e-posta yok. 3 Kas'a kadar radar isinin icindeydi; ayni
+# Yeni Turk takimi transfer haberlerinden Reels (social/kadro.py) uretir ve her gun e-posta
+# yollar: video varsa ekli, yoksa "bugun kadro haberi yok" (radar gibi; is calisti mi belli olsun). 3 Kas'a kadar radar isinin icindeydi; ayni
 # anda iki video paylasmak birbirini kesiyordu, kadro videosu sabaha ayrildi.
 # Haber ekler.reels ile isaretlenir: gecikme ya da atlanan gun tekrar/kacirma yaratmaz.
 on:
@@ -91,11 +91,11 @@ jobs:
           retention-days: 14
 
       - name: E-posta ile gonder
-        if: steps.liste.outputs.var == 'true'
         timeout-minutes: 5
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           MAIL_KONU: 'kadro videosu'
+          MAIL_BOS_NOT: 'is calisti; yeni Turk takimi kadro haberi yok, video uretilmedi.'
         run: python gonder.py cikti "$(TZ=Europe/Istanbul date +%F)"
 
       - name: "ETL alarmi (Resend)"

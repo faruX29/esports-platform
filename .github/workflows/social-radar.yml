@@ -8,12 +8,12 @@ name: Fextopus Mac Radari (gunluk sosyal video)
 # platform kendi kutuphanesinden muzik kullanan videolari daha cok dagitiyor.
 # Bu yuzden URETIM otomatik, PAYLASIM elde.
 on:
-  # ASIL TETIK pg_cron (backend/sql/sosyal_tetik.sql): 19:00 TSI'de workflow_dispatch,
+  # ASIL TETIK pg_cron (backend/sql/sosyal_tetik.sql): 23:00 TSI'de workflow_dispatch,
   # gun=yarin acikca verilir. GitHub zamanlanmis kosulari her gun 2,5-7,5 saat gecikiyordu
   # (22 Eki-2 Kas: 21:40 ile 02:21 TSI arasi; 2 Kas'ta video gece 02:25'te geldi).
   # Asagidaki schedule YEDEK: son 12 saatte dispatch kosusu varsa kontrol isi atlar.
   schedule:
-    - cron: '30 16 * * *'
+    - cron: '30 20 * * *'
   workflow_dispatch:
     inputs:
       gun:

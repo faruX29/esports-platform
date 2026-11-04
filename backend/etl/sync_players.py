@@ -288,7 +288,7 @@ class PlayerStatsSyncer:
 
     # ── Maç İstatistikleri ────────────────────────────────────────────────────
 
-    def sync_match_stats(self, limit=500, batch_size=100):
+    def sync_match_stats(self, limit=500, batch_size=100, tazele_gun=14):
         """
         raw_data JSONB'den takım bazlı maç istatistiklerini çıkarır.
         Ekstra API çağrısı yoktur — tüm veri zaten DB'de.
@@ -300,6 +300,8 @@ class PlayerStatsSyncer:
         Args:
             limit:      Bir seferde işlenecek max maç sayısı
             batch_size: Kaç satırda bir commit yapılacağı
+            tazele_gun: Canlıyken yazılıp bayat kalan satırı kaç gün geriye kadar tazele;
+                        None = tüm geçmiş (tek seferlik doldurma, sorgu ~6 sn)
 
         Returns:
             int: İşlenen maç sayısı
@@ -363,7 +365,7 @@ class PlayerStatsSyncer:
                           OR (
                               m.status = 'finished'
                               AND NOT (m.raw_data @? '$.games[*] ? (@.status == "running")')
-                              AND m.scheduled_at > now() - interval '14 days'
+                              AND (%s::int IS NULL OR m.scheduled_at > now() - make_interval(days => %s::int))
                               AND EXISTS (
                                   SELECT 1 FROM match_stats ms
                                   WHERE ms.match_id = m.id
@@ -373,7 +375,7 @@ class PlayerStatsSyncer:
                       )
                     ORDER BY m.status DESC, m.id DESC
                     LIMIT %s
-                """, (limit,))
+                """, (tazele_gun, tazele_gun, limit))
                 matches = cur.fetchall()
 
                 if not matches:

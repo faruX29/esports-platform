@@ -23,9 +23,13 @@ import ProtectedRoute from './components/ProtectedRoute'
 import ErrorBoundary from './components/ErrorBoundary'
 import NavbarComponent from './components/Navbar'
 import Footer from './components/Footer'
+import AltGezinme, { useAltGezinme, ALT_GEZINME_YUKSEKLIK } from './components/AltGezinme'
 import GameLogo, { GAME_ICON_PATHS } from './components/GameLogo'
 import { FEXT } from './theme'
 import { adDili } from './utils/dil'
+import OyunRozeti from './components/OyunRozeti'
+import { tournamentDisplayName } from './utils/tournamentDisplay'
+import { normalizeGameId } from './utils/gameUtils'
 import { Home, CalendarDays, Trophy, BarChart3, Newspaper, Radar, Flag, Search, X as XIcon, Shield, User, ArrowRight, CornerDownLeft } from 'lucide-react'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -71,6 +75,8 @@ const NAV_LINKS = [
 
 /* Klavye kısayol simgesi platforma göre (Mac ⌘ / diğer Ctrl) */
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || '')
+/* Kısayol ipucu yalnız fare + klavyeli cihazda: telefonda "Ctrl K" anlamsızdı (mobil menü) */
+const KISAYOL_IPUCU = typeof window !== 'undefined' && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches
 
 /* ─── NavSearch ─────────────────────────────────────────────────────────────── */
 function NavSearch() {
@@ -137,9 +143,9 @@ function NavSearch() {
         // 2.156'sinda acronym dolu -> veri hazirdi, sorgu eksikti.
         supabase
           .from('teams')
-          .select('id, name, acronym, logo_url')
+          .select('id, name, acronym, logo_url, game:games(name,slug)')
           .or(`name.ilike.%${q}%,acronym.ilike.%${q}%`)
-          .limit(4),
+          .limit(5),
         // Gercek isimle de aranabilsin (ayni gerekce: /search bakiyordu, bu bakmiyordu)
         supabase
           .from('players')
@@ -148,8 +154,8 @@ function NavSearch() {
           .limit(4),
         supabase
           .from('tournaments')
-          .select('id, name, tier, game:games(name)')
-          .ilike('name', `%${q}%`)
+          .select('id, name, tier, league_name, event_name, display_name, region, game:games(name,slug)')
+          .or(`name.ilike.%${q}%,league_name.ilike.%${q}%,event_name.ilike.%${q}%`)
           .order('begin_at', { ascending: false, nullsFirst: false })
           .limit(4),
       ])
@@ -216,7 +222,7 @@ function NavSearch() {
             }}
           />
           {/* Kısayol rozeti — Mac'te ⌘K, diğerlerinde Ctrl K */}
-          {!focused && (
+          {!focused && KISAYOL_IPUCU && (
             <span style={{
               fontSize: 9, padding: '2px 5px', borderRadius: 4,
               background: 'var(--surface-2)', border: '1px solid var(--line)',
@@ -294,11 +300,12 @@ function NavSearch() {
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {t.name}
                   </span>
-                  {t.acronym && (
-                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-5)',
+                  {t.acronym && t.acronym !== t.name && (
+                    <span lang="en" style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-5)',
                       flexShrink: 0 }}>{t.acronym}</span>
                   )}
-                  <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-6)' }}>→</span>
+                  {/* Aynı adlı takımlar (Eternal Fire CS2 / VALORANT) oyunla ayrılır */}
+                  <OyunRozeti oyun={t.game} style={{ marginLeft: 'auto' }} />
                 </div>
               ))}
             </div>
@@ -372,12 +379,13 @@ function NavSearch() {
                 >
                   <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--surface-2)', flexShrink: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}><Trophy size={13} /></div>
-                  <span style={{ fontSize: 13, color: 'var(--text-2)',
+                  <span style={{ fontSize: 13, color: 'var(--text-2)', minWidth: 0,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {t.name}
+                    {tournamentDisplayName(t, { game: normalizeGameId(t.game?.slug ?? t.game?.name) })}
                   </span>
+                  <OyunRozeti oyun={t.game} style={{ marginLeft: 'auto' }} />
                   {t.tier && (
-                    <span style={{ marginLeft: 'auto', fontSize: 9, padding: '2px 6px',
+                    <span style={{ fontSize: 9, padding: '2px 6px',
                       borderRadius: 4, background: 'var(--surface-2)', color: 'var(--text-4)', flexShrink: 0 }}>
                       {String(t.tier).toUpperCase()}
                     </span>
@@ -403,7 +411,7 @@ function NavSearch() {
             <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
               "<span style={{ color: FEXT.accentText, fontWeight: 700 }}>{q}</span>" için tüm sonuçları gör
             </span>
-            <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-5)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>Enter <CornerDownLeft size={11} /></span>
+            {KISAYOL_IPUCU && <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-5)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>Enter <CornerDownLeft size={11} /></span>}
           </div>
         </div>
       )}
@@ -652,7 +660,7 @@ function RealtimeToastBridge() {
         <div style={{
           position: 'fixed',
           right: 16,
-          bottom: 16,
+          bottom: 84, // telefonda alt gezinme çubuğunun üstünde kalsın
           zIndex: 10001,
           display: 'flex',
           gap: 8,
@@ -742,6 +750,7 @@ const UygulamaKopru = UYGULAMA ? lazy(() => import('./components/UygulamaKopru')
 
 function AppShell() {
   const { pathname } = useLocation()
+  const altGezinme = useAltGezinme()
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' }}>
       <a href="#main-content" className="skip-link">İçeriğe geç</a>
@@ -799,6 +808,13 @@ function AppShell() {
       </ErrorBoundary>
       </main>
       <Footer />
+      {/* Telefonda alt gezinme; footer'ın sonu çubuğun altında kalmasın diye boşluk */}
+      {altGezinme && (
+        <>
+          <div aria-hidden="true" style={{ height: `calc(${ALT_GEZINME_YUKSEKLIK}px + env(safe-area-inset-bottom))` }} />
+          <AltGezinme />
+        </>
+      )}
     </div>
   )
 }

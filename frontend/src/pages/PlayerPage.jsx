@@ -8,6 +8,7 @@
  *  • Takım linki
  */
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { ondalik } from '../utils/dil'
 import { useParams, useNavigate }           from 'react-router-dom'
 import { supabase }                         from '../supabaseClient'
 import { getRoleBadge, resolvePlayerRole }   from '../utils/roleHelper'
@@ -23,6 +24,7 @@ import { clickableProps } from '../utils/a11y'
 import TurkishBadge from '../components/TurkishBadge'
 import { FEXT } from '../theme'
 import Mascot from '../components/Mascot'
+import TrBadge from '../components/TrBadge'
 import SeoHead from '../components/SeoHead'
 import {
   Brain, ClipboardList, Target, Swords, Skull, Handshake, Crosshair, Map as MapIcon,
@@ -203,7 +205,7 @@ function ProfessionalStatsPanel({ stats, isMobile = false }) {
         padding: isMobile ? '12px 11px' : '14px 14px',
       }}>
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,minmax(0,1fr))' : 'repeat(4,minmax(0,1fr))', gap: 10, marginBottom: 12 }}>
-          <ProMetricCard label="KDA" value={stats.kda.toFixed(2)} sub={`K/D ${stats.kd.toFixed(2)}`} accent={kdaColor} />
+          <ProMetricCard label="KDA" value={ondalik(stats.kda, 2)} sub={`K/D ${ondalik(stats.kd, 2)}`} accent={kdaColor} />
           <ProMetricCard label="Kazanma Oranı" value={`${Math.round(stats.winRate)}%`} sub={`${stats.sampleMatches} örnek maç`} accent={wrColor} />
           {useAcs
             ? <ProMetricCard label="ACS" value={stats.acs} sub="Dövüş Skoru" accent="#C25CD0" />
@@ -218,14 +220,14 @@ function ProfessionalStatsPanel({ stats, isMobile = false }) {
           padding: '10px 10px 8px',
         }}>
           <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 10 }}>Tur bazında verimlilik göstergesi</div>
-          <ProgressBar pct={Math.min(100, stats.kda * 42)} color={kdaColor} label="KDA Pressure" value={stats.kda.toFixed(2)} />
+          <ProgressBar pct={Math.min(100, stats.kda * 42)} color={kdaColor} label="KDA baskısı" value={ondalik(stats.kda, 2)} />
           <ProgressBar pct={stats.winRate} color={wrColor} label="Kazanma Oranı" value={`${Math.round(stats.winRate)}%`} />
           {useAcs
             ? <ProgressBar pct={Math.min(100, (stats.acs / 350) * 100)} color="#C25CD0" label="ACS" value={String(stats.acs)} />
             : <ProgressBar pct={stats.hsPct} color={hsColor} label="Headshot %" value={`${Math.round(stats.hsPct)}%`} />}
-          <ProgressBar pct={Math.min(100, stats.avgKills * 10)} color="#9ad8ff" label="Maç Başı Öldürme" value={stats.avgKills.toFixed(1)} />
-          <ProgressBar pct={Math.min(100, stats.avgAssists * 12)} color="#cab0ff" label="Maç Başı Asist" value={stats.avgAssists.toFixed(1)} />
-          <ProgressBar pct={Math.max(0, 100 - Math.min(100, stats.avgDeaths * 10))} color="var(--text-1)" label="Ölüm Kontrolü" value={stats.avgDeaths.toFixed(1)} />
+          <ProgressBar pct={Math.min(100, stats.avgKills * 10)} color="#9ad8ff" label="Maç Başı Öldürme" value={ondalik(stats.avgKills, 1)} />
+          <ProgressBar pct={Math.min(100, stats.avgAssists * 12)} color="#cab0ff" label="Maç Başı Asist" value={ondalik(stats.avgAssists, 1)} />
+          <ProgressBar pct={Math.max(0, 100 - Math.min(100, stats.avgDeaths * 10))} color="var(--text-1)" label="Ölüm Kontrolü" value={ondalik(stats.avgDeaths, 1)} />
         </div>
       </div>
     </div>
@@ -253,7 +255,7 @@ function PlayerHeroAvatar({ src, name, size = 120, isTR }) {
           }}
         />
         {isTR && (
-          <span style={{ position: 'absolute', bottom: -3, right: -3, fontSize: 13, lineHeight: 1, width: 24, height: 24, borderRadius: '50%', background: 'var(--surface)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,.3)' }}>🇹🇷</span>
+          <span style={{ position: 'absolute', bottom: -3, right: -3, fontSize: 13, lineHeight: 1, width: 24, height: 24, borderRadius: '50%', background: 'var(--surface)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,.3)' }}><TrBadge style={{ fontSize: 9, margin: 0 }} /></span>
         )}
       </div>
     )
@@ -272,7 +274,7 @@ function PlayerHeroAvatar({ src, name, size = 120, isTR }) {
         {initials}
       </div>
       {isTR && (
-        <span style={{ position: 'absolute', bottom: 2, right: 2, fontSize: 18 }}>🇹🇷</span>
+        <span style={{ position: 'absolute', bottom: 2, right: 2, width: 24, height: 24, borderRadius: '50%', background: 'var(--surface)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><TrBadge style={{ fontSize: 9, margin: 0 }} /></span>
       )}
     </div>
   )
@@ -329,7 +331,7 @@ function MatchRow({ match, teamId, isMobile = false }) {
         border:     isWin  ? '1.5px solid #4CAF50' : isLoss ? '1.5px solid #FF4655' : '1.5px solid var(--text-6)',
         color:      isWin  ? '#4CAF50'             : isLoss ? '#FF4655'             : 'var(--text-4)',
       }}>
-        {isWin ? 'W' : isLoss ? 'L' : '—'}
+        {isWin ? 'G' : isLoss ? 'M' : '—'}
       </div>
 
       {/* Opponent */}
@@ -450,7 +452,7 @@ function ScoutPanel({ analytics, individual }) {
             <StatBox Icon={Handshake} value={individual.totalAssists} label="Asist" color="#93c5fd" />
             <StatBox Icon={Crosshair} value={`${Math.round(individual.hsPct)}%`} label="HS%" color="#fff" />
           </div>
-          <ProgressBar pct={individualBars.kdBar} color="#ff6a7f" label="K/D Oranı" value={individual.kd.toFixed(2)} />
+          <ProgressBar pct={individualBars.kdBar} color="#ff6a7f" label="K/D Oranı" value={ondalik(individual.kd, 2)} />
           <ProgressBar pct={individualBars.hsBar} color="var(--text-1)" label="Kafa Vuruşu Oranı" value={`${Math.round(individual.hsPct)}%`} />
           <ProgressBar pct={individualBars.winBar} color="#4CAF50" label="Kazanma Oranı" value={`${Math.round(individual.winRate)}%`} />
           <ProgressBar pct={individualBars.impactBar} color="#ff9aa9" label="Etki Skoru" value={`${Math.round(individual.impact)}`} />
@@ -557,13 +559,6 @@ function computeScoutAnalytics(statsRows, teamId) {
   const impactScore = overallWinRate * 0.5 + Math.min(totalMatches, 100) * 0.3 + (mapWinRates[3]?.rate ?? overallWinRate) * 0.2
 
   return { totalMatches, wonMatches, lostMatches: totalMatches - wonMatches, overallWinRate, mapWinRates, avgWinLen, avgLossLen, impactScore }
-}
-
-// ─── Nationality etiketi ─────────────────────────────────────────────────────
-const NAT_FLAGS = {
-  TR: '🇹🇷', US: '🇺🇸', DE: '🇩🇪', FR: '🇫🇷', BR: '🇧🇷',
-  KR: '🇰🇷', CN: '🇨🇳', RU: '🇷🇺', GB: '🇬🇧', SE: '🇸🇪',
-  DK: '🇩🇰', FI: '🇫🇮', NO: '🇳🇴', PL: '🇵🇱', PT: '🇵🇹',
 }
 
 const SOCIAL_ICON_MAP = {
@@ -1011,7 +1006,8 @@ export default function PlayerPage() {
   const resolvedRole = resolvePlayerRole(player, playerGameId)
   const badge   = getRoleBadge(resolvedRole)
   const isTR    = player.nationality === 'TR' || player.nationality === 'TUR' || isTurkishTeam(team)
-  const flag    = NAT_FLAGS[player.nationality] ?? (isTR ? '🇹🇷' : null)
+  // Bayrak emojisi Windows'ta harf olarak çıkıyordu ("TR TR") → yalnız ülke kodu
+  const ulkeKodu = /^[A-Z]{2}$/.test(String(player.nationality || '').toUpperCase()) ? String(player.nationality).toUpperCase() : null
   const followed = isPlayerFollowed(player.id)
   const liquipediaMeta = player?.extra_metadata?.liquipedia || {}
   const socials = Object.entries(liquipediaMeta.social_links || {}).filter(([_, href]) => typeof href === 'string' && href.trim())
@@ -1118,9 +1114,9 @@ export default function PlayerPage() {
                 }}>{badge.label}</span>
               )}
               {/* Türk oyuncuda TurkishBadge zaten var → generic bayrak rozetini tekrar gösterme */}
-              {flag && !isTR && (
-                <span style={{ padding: '4px 10px', borderRadius: 8, fontSize: 12, fontWeight: 700, background: 'var(--surface-2)', border: '1px solid var(--line)', color: 'var(--text-3)' }}>
-                  {flag} {player.nationality}
+              {ulkeKodu && !isTR && (
+                <span title="Uyruk" style={{ padding: '4px 10px', borderRadius: 8, fontSize: 12, fontWeight: 700, background: 'var(--surface-2)', border: '1px solid var(--line)', color: 'var(--text-3)' }}>
+                  {ulkeKodu}
                 </span>
               )}
               {liquipediaMeta.age && (
@@ -1245,7 +1241,7 @@ export default function PlayerPage() {
                 color={individualStats.impact >= 70 ? '#4CAF50' : individualStats.impact >= 45 ? '#818cf8' : '#FF4655'}
               />
             )}
-            {individualStats && <StatBox Icon={Zap} value={individualStats.kd.toFixed(2)} label="K/D" color="#ff6a7f" />}
+            {individualStats && <StatBox Icon={Zap} value={ondalik(individualStats.kd, 2)} label="K/D" color="#ff6a7f" />}
             {individualStats?.acs != null && <StatBox Icon={Flame} value={individualStats.acs} label="ACS" color="#C25CD0" />}
             {individualStats && individualStats.hsPct > 0 && <StatBox Icon={Crosshair} value={`${Math.round(individualStats.hsPct)}%`} label="HS%" color="var(--text-1)" />}
           </div>

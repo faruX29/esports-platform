@@ -71,7 +71,7 @@ function rowToVisuals(row) {
   const game = getGameMeta(gameId)
   return {
     gameId,
-    gameLabel: game?.shortLabel || game?.label || 'ESPORTS',
+    gameLabel: game?.shortLabel || game?.label || 'ESPOR',
     gameColor: game?.color || '#C8102E',
     gameIcon: game?.icon || null,
     tournamentName: row.tournament_name || 'Ana Sahne',
@@ -262,7 +262,7 @@ export default function NewsArchivePage() {
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text-1)' }}>
       <SeoHead
         title={`Haber Arşivi${page > 1 ? ` — Sayfa ${page}` : ''}`}
-        description="Tüm e-spor haberleri, maç önizlemeleri ve transfer gelişmeleri — Valorant, CS2 ve LoL için kronolojik arşiv."
+        description="Tüm espor haberleri, maç önizlemeleri ve transfer gelişmeleri — Valorant, CS2 ve LoL için kronolojik arşiv."
         type="website"
       />
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: isMobile ? '14px 10px 34px' : '22px 16px 48px' }}>
@@ -270,7 +270,7 @@ export default function NewsArchivePage() {
           <Link to="/news" style={{ fontSize: 12, color: 'var(--accent-fg)', textDecoration: 'none' }}>‹ Günün Bülteni</Link>
           <h1 style={{ margin: '8px 0 4px', fontSize: isMobile ? 26 : 34 }}>Haber Arşivi</h1>
           <p style={{ margin: 0, color: 'var(--text-3)', fontSize: isMobile ? 13 : 14 }}>
-            {total > 0 ? `${total} haber` : 'Tüm e-spor haberleri tek arşivde'} · maç sonuçları, önizlemeler ve transferler.
+            {total > 0 ? `${total} haber` : 'Tüm espor haberleri tek arşivde'} · maç sonuçları, önizlemeler ve transferler.
           </p>
         </div>
 

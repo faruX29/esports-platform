@@ -264,6 +264,7 @@ class MatchSyncer:
                             match['team_a_name'],
                             match.get('team_a_acronym'),
                             match.get('team_a_logo'),
+                            game_id,
                         )
                         team_b_id = self._get_or_create_team(
                             cur,
@@ -271,6 +272,7 @@ class MatchSyncer:
                             match['team_b_name'],
                             match.get('team_b_acronym'),
                             match.get('team_b_logo'),
+                            game_id,
                         )
 
                         tournament_id = None
@@ -562,23 +564,41 @@ class MatchSyncer:
         result = cur.fetchone()
         return result[0] if result else None
     
-    def _get_or_create_team(self, cur, team_id, name, acronym=None, logo_url=None):
-        """Get or create team in database"""
-        cur.execute("SELECT id FROM teams WHERE id = %s", (team_id,))
+    def _get_or_create_team(self, cur, team_id, name, acronym=None, logo_url=None, game_id=None):
+        """Get or create team in database.
+
+        game_id: maçın oyunu. PandaScore takım kimliği oyuna özel (Eternal Fire CS2 ve
+        VALORANT ayrı takım), bu yüzden maçın oyunu takımın oyunudur. Eskiden hiç
+        yazılmıyordu; arama ve takım sayfası aynı adlı takımları oyunla ayırır.
+        """
+        cur.execute("SELECT id, game_id, name FROM teams WHERE id = %s", (team_id,))
         result = cur.fetchone()
+
+        # teams_name_game_unique (name, game_id): aynı oyunda aynı adlı başka takım varsa
+        # game_id boş kalır; yazılsaydı kısıt maçın kaydını da düşürürdü.
+        if game_id is not None and (result is None or result[1] is None):
+            cur.execute(
+                "SELECT 1 FROM teams WHERE name = %s AND game_id = %s AND id <> %s LIMIT 1",
+                (result[2] if result else name, game_id, team_id),
+            )
+            if cur.fetchone():
+                game_id = None
         
         if result:
+            if result[1] is None and game_id is not None:
+                cur.execute("UPDATE teams SET game_id = %s WHERE id = %s AND game_id IS NULL", (game_id, team_id))
             return result[0]
         
         cur.execute("""
-            INSERT INTO teams (id, name, acronym, logo_url)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO teams (id, name, acronym, logo_url, game_id)
+            VALUES (%s, %s, %s, %s, %s)
             ON CONFLICT (id) DO UPDATE SET
                 name = EXCLUDED.name,
                 acronym = EXCLUDED.acronym,
-                logo_url = EXCLUDED.logo_url
+                logo_url = EXCLUDED.logo_url,
+                game_id = COALESCE(teams.game_id, EXCLUDED.game_id)
             RETURNING id
-        """, (team_id, name, acronym, logo_url))
+        """, (team_id, name, acronym, logo_url, game_id))
         
         result = cur.fetchone()
         return result[0]

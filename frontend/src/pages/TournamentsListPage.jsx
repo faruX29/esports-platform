@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import SeoHead from '../components/SeoHead'
 import { useNavigate } from 'react-router-dom'
 import { Radio, CalendarClock, CircleCheck } from 'lucide-react'
 import { supabase } from '../supabaseClient'
@@ -27,7 +28,7 @@ function resolveGameIds(activeGame, games) {
 function gameMeta(game) {
   const canonical = normalizeGameId(game?.slug ?? game?.name)
   const g = GAMES.find(x => x.id === canonical)
-  return { id: canonical, label: g?.shortLabel || g?.label || game?.name || 'Esports', color: g?.color || 'var(--text-3)' }
+  return { id: canonical, label: g?.shortLabel || g?.label || game?.name || 'Espor', color: g?.color || 'var(--text-3)' }
 }
 
 const TIER_COLORS = { S: '#F0A500', A: '#C0C7D0', B: '#7f8c9a', C: 'var(--text-4)', D: 'var(--text-5)' }
@@ -288,6 +289,8 @@ export default function TournamentsListPage() {
 
   return (
     <div style={{ maxWidth: 1440, margin: '0 auto', padding: '24px 16px 80px', color: 'var(--text-1)' }}>
+      {/* Sekme başlığı: bu sayfalar genel "feXt — Espor Maçları…" başlığında kalıyordu */}
+      <SeoHead title="Turnuvalar — Devam Eden, Yaklaşan ve Biten Espor Turnuvaları" description="Devam eden, yaklaşan ve biten S/A seviyesi espor turnuvaları ve Türk ligleri; eleme ağacı, fikstür ve puan durumu." type="website" />
       <h1 style={{ margin: '0 0 8px', fontSize: 30, letterSpacing: '.4px' }}>Turnuvalar</h1>
       <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--text-3)' }}>
         Devam eden, yaklaşan ve biten turnuvalar. Fikstür, eleme ağacı ve puan durumu için bir turnuvaya tıkla.

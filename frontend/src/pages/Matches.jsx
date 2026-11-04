@@ -755,7 +755,7 @@ function MacKarti({ match, gruplu, navigate, isTeamFollowed, onTakip }) {
               </span>
             ) : (
               <span style={{ ...rozet, background: 'rgba(102,126,234,.2)', border: '1px solid rgba(102,126,234,.5)', color: '#818cf8' }}>
-                <Sparkles size={11} /> {Math.round(Math.max(match.prediction_team_a, match.prediction_team_b) * 100)}%
+                <Sparkles size={11} /> %{Math.round(Math.max(match.prediction_team_a, match.prediction_team_b) * 100)}
               </span>
             )
           )}
@@ -786,8 +786,8 @@ function MacKarti({ match, gruplu, navigate, isTeamFollowed, onTakip }) {
             <div style={{ fontSize: 10, color: 'var(--text-4)', marginTop: 3, textAlign: 'center', fontWeight: 700 }}>Fextopus · Belirsiz</div>
           ) : (
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-4)', marginTop: 3 }}>
-              <span style={{ color: match.prediction_team_a >= match.prediction_team_b ? '#818cf8' : undefined }}>{Math.round(match.prediction_team_a * 100)}%</span>
-              <span style={{ color: match.prediction_team_b > match.prediction_team_a ? '#818cf8' : undefined }}>{Math.round(match.prediction_team_b * 100)}%</span>
+              <span style={{ color: match.prediction_team_a >= match.prediction_team_b ? '#818cf8' : undefined }}>%{Math.round(match.prediction_team_a * 100)}</span>
+              <span style={{ color: match.prediction_team_b > match.prediction_team_a ? '#818cf8' : undefined }}>%{Math.round(match.prediction_team_b * 100)}</span>
             </div>
           )}
         </div>

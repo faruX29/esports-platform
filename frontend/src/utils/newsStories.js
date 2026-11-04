@@ -43,7 +43,7 @@ export function getGameMeta(gameId) {
 }
 
 function storyTag(variant) {
-  if (variant === 'upcoming') return 'Haftanın Maçı'
+  if (variant === 'upcoming') return 'Yaklaşan Maç'
   if (variant === 'upset') return 'Sürpriz Sonuç'
   if (variant === 'stomp') return 'Skor Haberi'
   if (variant === 'close') return 'Seri Özeti'
@@ -134,7 +134,7 @@ export function storyExplainability(story) {
     explanations.push('Skor marjı yüksek olduğu için skor odaklı hikaye öne çıktı.')
   }
   if (story?.status === 'upcoming') {
-    explanations.push('Maç başlangıcına kalan süre ve turnuva tier değeri Haftanın Maçı seçimini tetikledi.')
+    explanations.push('Maç başlangıcına kalan süre ve turnuva seviyesi bu maçı öne çıkardı.')
   }
   if (explanations.length === 0) {
     explanations.push('Maç önemi, skor yoğunluğu ve turnuva bağlamı puanlanarak Gündem akışına yerleştirildi.')

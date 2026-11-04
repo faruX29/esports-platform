@@ -122,7 +122,7 @@ function articleRowToStory(row) {
     heroScore: row.hero_score || '',
     visuals: {
       gameId,
-      gameLabel: game?.shortLabel || game?.label || 'ESPORTS',
+      gameLabel: game?.shortLabel || game?.label || 'ESPOR',
       gameColor: game?.color || FEXT.accent,
       gameIcon: game?.icon || null,
       tournamentName: row.tournament_name || 'Ana Sahne',
@@ -166,68 +166,9 @@ function NewsTrustLayer({ item, onReport }) {
   )
 }
 
-function buildScoutRows(item) {
-  const source = item?.source || {}
-  const rows = []
-
-  if (source.mapCount || source.mapTempo) {
-    rows.push({
-      label: 'Harita Profili',
-      value: `${source.mapCount || '?'} harita · ${source.mapTempo || 'tempo bilinmiyor'}`,
-    })
-  }
-
-  if (source.impactTeam || source.impactScore != null) {
-    const scoreLabel = source.impactScore != null ? ` (${Number(source.impactScore).toFixed(0)} puan)` : ''
-    rows.push({
-      label: 'MVP Sinyali',
-      value: `${source.impactTeam || 'Takım'}${scoreLabel}`,
-    })
-  }
-
-  if (source.favorite || source.predictionEdge != null) {
-    const edgeLabel = source.predictionEdge != null
-      ? ` +%${(Number(source.predictionEdge) * 100).toFixed(1)}`
-      : ''
-    rows.push({
-      label: 'Fextopus Farkı',
-      value: `${source.favorite || 'Belirsiz'}${edgeLabel}`,
-    })
-  }
-
-  if (source.upset) {
-    rows.push({ label: 'Durum', value: 'Sürpriz sonucu sınıfı' })
-  }
-
-  return rows.slice(0, 3)
-}
-
-function ScoutNoteCard({ item, compact = false }) {
-  const rows = buildScoutRows(item)
-  if (!rows.length) return null
-
-  return (
-    <div style={{
-      marginTop: compact ? 9 : 12,
-      border: '1px solid rgba(194,92,208,.22)',
-      background: 'linear-gradient(130deg, rgba(194,92,208,.12), var(--surface))',
-      borderRadius: 11,
-      padding: compact ? '8px 9px' : '10px 11px',
-    }}>
-      <div style={{ fontSize: 10, color: 'var(--ai)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.9px', marginBottom: 6 }}>
-        Gözcü Notu
-      </div>
-      <div style={{ display: 'grid', gap: 4 }}>
-        {rows.map((row, idx) => (
-          <div key={`${row.label}-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: compact ? 11 : 12 }}>
-            <span style={{ color: 'var(--text-3)' }}>{row.label}</span>
-            <span style={{ color: 'var(--text-1)', fontWeight: 700, textAlign: 'right' }}>{row.value}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+// "Gözcü Notu" kutusu kaldırıldı (UX P1-22): DB haberlerinde tek satırı "Durum: Sürpriz
+// sonucu sınıfı"ydı (rozet zaten söylüyor), yaklaşan maçta "Fextopus Farkı +%43,7" özetteki
+// "%72"yi kafa karıştırıcı biçimde tekrarlıyordu; harita/MVP alanlarını dolduran kaynak yok.
 
 function NewsCard({ item, likes, liked, comments, onLike, onOpenDetail, onReport, isForYou, isMobile = false }) {
   const { visuals } = item
@@ -271,7 +212,7 @@ function NewsCard({ item, likes, liked, comments, onLike, onOpenDetail, onReport
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             {isForYou && (
               <span style={{ fontSize: 10, color: '#ffe5ac', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.9px', padding: '4px 8px', borderRadius: 999, background: 'rgba(255,183,0,.16)', border: '1px solid rgba(255,183,0,.42)' }}>
-                For You
+                Senin için
               </span>
             )}
             <span style={{ fontSize: 10, color: 'var(--text-1)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, padding: '4px 8px', borderRadius: 999, background: `${visuals.gameColor}22`, border: `1px solid ${visuals.gameColor}55` }}>
@@ -300,7 +241,6 @@ function NewsCard({ item, likes, liked, comments, onLike, onOpenDetail, onReport
         <div style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 8, fontWeight: 700 }}>{item.heroScore}</div>
         <p style={{ margin: 0, color: 'var(--text-2)', lineHeight: 1.6 }}>{item.summary}</p>
 
-        <ScoutNoteCard item={item} compact />
 
         <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <LikeButton liked={liked} count={likes} onToggle={() => onLike(item.id)} />
@@ -476,10 +416,12 @@ export default function NewsPage() {
 
       const finishedStories = articleStories
 
+      // Şablon "yaklaşan maç" kartı yalnız S/A turnuvada: her seviyeden ilk 10 maç akışı
+      // Tier C kartlarıyla dolduruyordu. Önemli maçın gerçek önizlemesi news_articles'ta.
       const upcomingStories = upcomingMatches
         .map(match => buildUpcomingStory(match, isTurkishTeam))
-        .filter(story => story.visuals.gameId && !articleMatchIds.has(story.matchId))
         .map(story => applyRealtimeTournamentToStory(story, tournamentById))
+        .filter(story => story.visuals.gameId && !articleMatchIds.has(story.matchId) && HERO_TIERS.has(story.visuals.tier))
 
       const generated = [...finishedStories, ...upcomingStories]
         .map(story => ({
@@ -554,7 +496,18 @@ export default function NewsPage() {
   // tepe haber. Böylece haftalık eski bir tier-S manşette çakılı kalmaz.
   const hero = filteredStories.find(story => HERO_TIERS.has(story.visuals.tier) && freshnessBucket(story.publishedAt) >= 1)
     || filteredStories[0] || null
-  const agenda = filteredStories.filter(story => story.id !== hero?.id)
+  // Manşetin altındaki akış düz kronolojik (yeniden eskiye). Eskiden tazelik kovası +
+  // öncelik sırasıydı: aynı gün içinde 21:19 → 13:40 → dün 23:41 → 13:40 diye karışıyordu.
+  // Takip edilen haber yerini korur, "Senin için" rozetiyle işaretlenir.
+  // Yaklaşan maç kartının "zamanı" maç saati (gelecekte) → başta, en yakın maç önce.
+  const agenda = filteredStories
+    .filter(story => story.id !== hero?.id)
+    .sort((a, b) => {
+      const ya = a.status === 'upcoming', yb = b.status === 'upcoming'
+      if (ya !== yb) return ya ? -1 : 1
+      const fark = new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0)
+      return ya ? -fark : fark
+    })
   const totalPages = Math.max(1, Math.ceil(agenda.length / NEWS_PAGE_SIZE))
   const pagedAgenda = agenda.slice((page - 1) * NEWS_PAGE_SIZE, page * NEWS_PAGE_SIZE)
   const canInteract = !!user?.id
@@ -627,17 +580,17 @@ export default function NewsPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text-1)' }}>
       <SeoHead
-        title="Günün E-Spor Bülteni"
+        title="Günün Espor Bülteni"
         description="Tier öncelikli manşetler, skora dayalı sonuç haberleri ve yaklaşan haftanın maçları tek akışta — Valorant, CS2, LoL."
         type="website"
       />
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: isMobile ? '14px 10px 34px' : '22px 16px 48px' }}>
         <div style={{ borderRadius: 18, border: '1px solid var(--surface-2)', overflow: 'hidden', marginBottom: 18, background: 'linear-gradient(180deg,var(--bg) 0%,var(--surface) 100%)' }}>
           <div style={{ background: FEXT.accentGrad, color: '#fff', fontSize: 11, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase', textAlign: 'center', padding: 8 }}>
-            Esports News Desk
+            feXt Haber Masası
           </div>
           <div style={{ padding: 18, background: 'radial-gradient(circle at 78% 20%, rgba(194,92,208,.18), transparent 36%), radial-gradient(circle at 10% 12%, var(--hover), transparent 24%), var(--surface)' }}>
-            <h1 style={{ margin: 0, fontSize: isMobile ? 26 : 34, lineHeight: 1.1 }}>Günün E-Spor Bülteni</h1>
+            <h1 style={{ margin: 0, fontSize: isMobile ? 26 : 34, lineHeight: 1.1 }}>Günün Espor Bülteni</h1>
             <p style={{ margin: '8px 0 16px', color: 'var(--text-3)', fontSize: isMobile ? 13 : 14 }}>
               Tier öncelikli manşetler, skora dayalı sonuç haberleri ve yaklaşan haftanın maçları tek akışta.
             </p>
@@ -691,7 +644,7 @@ export default function NewsPage() {
         {hero && (
           <section style={{ marginBottom: 18 }}>
             <div style={{ marginBottom: 8, fontSize: 11, color: '#c61b33', textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 800 }}>
-              {hero.isForYou ? 'Manşet · For You' : 'Manşet'}
+              {hero.isForYou ? 'Manşet · Senin için' : 'Manşet'}
             </div>
             <article onClick={() => openStoryDetail(hero)} style={{ borderRadius: 18, padding: isMobile ? 14 : 20, border: '1px solid var(--line)', background: 'linear-gradient(145deg,var(--surface),var(--surface))', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
               <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: hero.visuals.turkish ? 'radial-gradient(circle at 12% 18%, rgba(194,92,208,.22), transparent 34%)' : 'radial-gradient(circle at 90% 10%, var(--hover), transparent 24%)' }} />
@@ -700,7 +653,7 @@ export default function NewsPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     {hero.isForYou && (
                       <span style={{ fontSize: 10, color: '#ffe5ac', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.9px', padding: '5px 9px', borderRadius: 999, background: 'rgba(255,183,0,.16)', border: '1px solid rgba(255,183,0,.42)' }}>
-                        For You
+                        Senin için
                       </span>
                     )}
                     <span style={{ fontSize: 10, color: 'var(--ai)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.1, padding: '5px 9px', borderRadius: 999, background: 'rgba(194,92,208,.18)', border: '1px solid rgba(194,92,208,.38)' }}>
@@ -728,7 +681,6 @@ export default function NewsPage() {
 
                 <p style={{ margin: 0, color: 'var(--text-1)', lineHeight: 1.7 }}>{hero.summary}</p>
 
-                <ScoutNoteCard item={hero} />
 
                 <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                   <LikeButton liked={likedSet.has(hero.id)} count={likesByNews[hero.id] || 0} onToggle={() => toggleLike(hero.id)} size={16} />

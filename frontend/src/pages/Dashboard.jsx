@@ -3,6 +3,7 @@
  * Ticker → Live Grid → Son Sonuçlar → Maç Programı → Takip Ettiklerim → Quick Links
  */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { ondalik, yuzde } from '../utils/dil'
 import { useNavigate, Link }                from 'react-router-dom'
 import { supabase, subscribeToMatchesUpdates } from '../supabaseClient'
 import { useYenileme, useCanliBaglanti }     from '../hooks/useYenileme'
@@ -65,12 +66,12 @@ function FormStrip({ form, className }) {
   return (
     <div className={className} style={{ display: 'flex', gap: 2, marginTop: 3 }}>
       {form.map((r, i) => (
-        <span key={i} style={{
+        <span key={i} title={r === 'W' ? 'Galibiyet' : 'Mağlubiyet'} style={{
           width: 13, height: 13, borderRadius: 3, flexShrink: 0,
           background: r === 'W' ? 'rgba(76,175,80,.85)' : 'rgba(255,70,85,.75)',
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 7, fontWeight: 900, color: '#fff', letterSpacing: 0,
-        }}>{r}</span>
+        }}>{r === 'W' ? 'G' : 'M'}</span>
       ))}
     </div>
   )
@@ -2493,9 +2494,9 @@ export default function Dashboard() {
                 <span style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.team?.name || 'Free Agent'}</span>
               </div>
               <div style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{p.sampleMatches}</div>
-              <div style={{ fontWeight: 800, color: '#ff9aa9', fontVariantNumeric: 'tabular-nums' }}>{p.avgImpact.toFixed(2)}</div>
+              <div style={{ fontWeight: 800, color: '#ff9aa9', fontVariantNumeric: 'tabular-nums' }}>{ondalik(p.avgImpact, 2)}</div>
               <div style={{ fontWeight: 700, color: p.momentum >= 0 ? '#7ee787' : '#ff9aa9', fontVariantNumeric: 'tabular-nums' }}>
-                {p.momentum >= 0 ? '+' : ''}{p.momentum.toFixed(1)}%
+                {p.momentum >= 0 ? '+' : '−'}{yuzde(Math.abs(p.momentum), 1)}
               </div>
             </div>
           ))}
@@ -2628,7 +2629,7 @@ export default function Dashboard() {
                       )}
                       <span lang="en" style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-5)', textTransform: 'uppercase', letterSpacing: '.4px' }}>{t.game?.name || ''}</span>
                       {(tierK === 'S' || tierK === 'A') && (
-                        <span style={{ marginLeft: 'auto', fontSize: 8, fontWeight: 900, color: '#f0c040', border: '1px solid rgba(240,192,64,.4)', borderRadius: 5, padding: '1px 5px' }}>{tierK}-Tier</span>
+                        <span style={{ marginLeft: 'auto', fontSize: 8, fontWeight: 900, color: '#f0c040', border: '1px solid rgba(240,192,64,.4)', borderRadius: 5, padding: '1px 5px' }}>Tier {tierK}</span>
                       )}
                     </div>
                     <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', minHeight: 32 }}>

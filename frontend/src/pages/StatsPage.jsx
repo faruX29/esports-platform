@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { yuzde } from '../utils/dil'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import SeoHead from '../components/SeoHead'
@@ -99,7 +100,7 @@ export default function StatsPage() {
           padding: 20, borderRadius: 12, background: 'var(--surface)',
           border: '1px solid var(--line)', color: 'var(--text-4)', fontSize: 13,
         }}>
-          İsabet verisi şu an yüklenemedi. Lütfen biraz sonra tekrar deneyin.
+          İsabet verisi şu an yüklenemedi. Biraz sonra tekrar dene.
         </div>
       )}
 
@@ -132,7 +133,7 @@ export default function StatsPage() {
           }}>
             <div>
               <div style={{ fontSize: 34, fontWeight: 800, color: FEXT.good, lineHeight: 1 }}>
-                %{Number(zirve?.isabet || 0).toFixed(0)}
+                {yuzde(Number(zirve?.isabet || 0), 0)}
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-5)', marginTop: 6 }}>
                 en güvendiği maçlarda
@@ -158,7 +159,7 @@ export default function StatsPage() {
                     <span style={{
                       marginLeft: 'auto', fontSize: 20, fontWeight: 800, color: k.renk,
                       fontVariantNumeric: 'tabular-nums',
-                    }}>%{oran.toFixed(1)}</span>
+                    }}>{yuzde(oran, 1)}</span>
                   </div>
                   <div style={{ height: 10, borderRadius: 5, background: 'var(--track)', overflow: 'hidden' }}>
                     <div style={{
@@ -188,7 +189,7 @@ export default function StatsPage() {
             <span style={{
               marginLeft: 'auto', fontSize: 18, fontWeight: 800, color: 'var(--text-2)',
               fontVariantNumeric: 'tabular-nums',
-            }}>%{toplam.isabet.toFixed(1)}</span>
+            }}>{yuzde(toplam.isabet, 1)}</span>
             <span style={{ width: '100%', fontSize: 11, color: 'var(--text-5)' }}>
               {sayi(toplam.mac)} sonuçlanmış maç · {sayi(toplam.dogru)} doğru tahmin
             </span>

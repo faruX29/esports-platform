@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { ondalik } from '../utils/dil'
 import { useParams, useNavigate, Link }     from 'react-router-dom'
 import { supabase }                         from '../supabaseClient'
 import { getRoleBadge }                     from '../utils/roleHelper'
@@ -10,6 +11,10 @@ import { deriveWinnerTeamId, matchOutcome, correctedScores } from '../utils/matc
 import { isUncertainPrediction } from '../utils/prediction'
 import { clickableProps } from '../utils/a11y'
 import TurkishBadge from '../components/TurkishBadge'
+import TrBadge from '../components/TrBadge'
+import OyunRozeti from '../components/OyunRozeti'
+import { tournamentDisplayName } from '../utils/tournamentDisplay'
+import { normalizeGameId } from '../utils/gameUtils'
 import {
   Radio, CircleCheck, X as XIcon, Trophy, Star, MapPin, Flame, Swords, Users,
   Handshake, CalendarDays, ClipboardList, TriangleAlert, Video, AtSign,
@@ -21,12 +26,6 @@ import Mascot from '../components/Mascot'
 import SeoHead from '../components/SeoHead'
 
 // ── Yardımcılar ───────────────────────────────────────────────────────────────
-function calcTeamRating(wins, total) {
-  if (total === 0) return 0
-  const wr = wins / total
-  return Math.round(wr * 100 * 0.6 + Math.min(total, 100) * 0.4)
-}
-
 // skeleton
 function Sk({ w = '100%', h = '16px', r = '8px' }) {
   return <div style={{ width: w, height: h, borderRadius: r, background: 'linear-gradient(90deg,var(--surface) 25%,var(--surface-2) 50%,var(--surface) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
@@ -35,13 +34,13 @@ function Sk({ w = '100%', h = '16px', r = '8px' }) {
 // ── Form pill ─────────────────────────────────────────────────────────────────
 function FormPill({ result }) {
   const cfg = {
-    W: { bg: 'rgba(76,175,80,.25)',  border: '#4CAF50', color: '#4CAF50', label: 'W' },
-    L: { bg: 'rgba(255,70,85,.2)',   border: '#FF4655', color: '#FF4655', label: 'L' },
-    D: { bg: 'rgba(150,150,150,.15)',border: 'var(--text-4)',    color: 'var(--text-4)',    label: 'D' },
-  }[result] ?? { bg: 'var(--surface)', border: 'var(--text-6)', color: 'var(--text-4)', label: '?' }
+    W: { bg: 'rgba(76,175,80,.25)',  border: '#4CAF50', color: '#4CAF50', label: 'G', ad: 'Galibiyet' },
+    L: { bg: 'rgba(255,70,85,.2)',   border: '#FF4655', color: '#FF4655', label: 'M', ad: 'Mağlubiyet' },
+    D: { bg: 'rgba(150,150,150,.15)',border: 'var(--text-4)',    color: 'var(--text-4)',    label: 'B', ad: 'Beraberlik' },
+  }[result] ?? { bg: 'var(--surface)', border: 'var(--text-6)', color: 'var(--text-4)', label: '?', ad: 'Bilinmiyor' }
 
   return (
-    <div style={{
+    <div title={cfg.ad} aria-label={cfg.ad} style={{
       width: 30, height: 30, borderRadius: 8,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: cfg.bg, border: `1.5px solid ${cfg.border}`,
@@ -74,7 +73,7 @@ function WinRateBar({ wins, total }) {
     <div style={{ marginTop: 10 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 5 }}>
         <span style={{ color: 'var(--text-4)' }}>Kazanma Oranı</span>
-        <span style={{ color, fontWeight: 800 }}>{pct}%</span>
+        <span style={{ color, fontWeight: 800 }}>%{pct}</span>
       </div>
       <div style={{ height: 6, borderRadius: 3, background: 'var(--surface)', overflow: 'hidden' }}>
         <div style={{
@@ -110,12 +109,6 @@ function PlayerAvatar({ src, name, size = 64 }) {
       color: 'var(--text-4)', flexShrink: 0,
     }}>{initials}</div>
   )
-}
-
-const NAT_FLAGS = {
-  TR: '🇹🇷', US: '🇺🇸', DE: '🇩🇪', FR: '🇫🇷', BR: '🇧🇷',
-  KR: '🇰🇷', CN: '🇨🇳', RU: '🇷🇺', GB: '🇬🇧', SE: '🇸🇪',
-  DK: '🇩🇰', FI: '🇫🇮', NO: '🇳🇴', PL: '🇵🇱', PT: '🇵🇹',
 }
 
 const SOCIAL_ICON_MAP = {
@@ -256,33 +249,17 @@ function TransferTimeline({ transfers }) {
 }
 
 // ── PlayerCard ────────────────────────────────────────────────────────────────
+// Kart gerçek <Link>: yeni sekmede açılır, botlar oyuncu sayfasını görür. Sosyal
+// linkler iç içe <a> olmasın diye linkin dışında, kartın altında.
 function PlayerCard({ player }) {
-  const navigate = useNavigate()          // ← navigate hook ekle
   const badge    = getRoleBadge(player.role)
   const natCode = String(player.nationality || '').toUpperCase()
-  const flag = NAT_FLAGS[natCode]
   const socials = getPlayerSocials(player)
+  const [hover, setHover] = useState(false)
+  const aktif = hover && player.id
 
-  return (
-    <div
-      onClick={() => player.id && navigate(`/player/${player.id}`)}  // ← tıklanabilir
-      style={{
-        background: 'var(--surface)', borderRadius: 14,
-        border: '1px solid var(--surface-2)', padding: '18px 14px',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-        transition: 'border-color .2s, transform .2s',
-        cursor: player.id ? 'pointer' : 'default',   // ← cursor
-      }}
-      onMouseEnter={e => {
-        // Rolü bilinmeyen oyuncuda rozet yok (getRoleBadge null döner)
-        e.currentTarget.style.borderColor = player.id ? (badge?.border || 'var(--line-2)') : 'var(--surface-2)'
-        e.currentTarget.style.transform   = player.id ? 'translateY(-4px)' : 'none'
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.borderColor = 'var(--surface-2)'
-        e.currentTarget.style.transform   = 'none'
-      }}
-    >
+  const icerik = (
+    <>
       <PlayerAvatar src={player.image_url} name={player.nickname} size={64} />
 
       <div style={{ textAlign: 'center' }}>
@@ -290,8 +267,11 @@ function PlayerCard({ player }) {
         {player.real_name && (
           <div style={{ fontSize: 11, color: 'var(--text-4)', marginTop: 2 }}>{player.real_name}</div>
         )}
-        {flag && (
-          <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 4 }}>{flag} {natCode}</div>
+        {/* Bayrak emojisi Windows'ta "TR" harfi olarak çıkıyordu → yalnız ülke kodu */}
+        {/^[A-Z]{2}$/.test(natCode) && (
+          <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4, fontWeight: 700 }}>
+            {natCode === 'TR' ? <TrBadge style={{ fontSize: 11, margin: 0 }} /> : natCode}
+          </div>
         )}
       </div>
 
@@ -310,16 +290,36 @@ function PlayerCard({ player }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: -2 }}>
           <span style={{ fontSize: 10, color: 'var(--text-4)' }}>K/D</span>
           <span style={{ fontSize: 13, fontWeight: 800, color: player.kd >= 1 ? '#4ade80' : '#ff6a7f', fontVariantNumeric: 'tabular-nums' }}>
-            {player.kd.toFixed(2)}
+            {ondalik(player.kd, 2)}
           </span>
           <span style={{ fontSize: 9, color: 'var(--text-5)' }}>({player.statMatches} maç)</span>
         </div>
       )}
 
-      {/* Profil linki göstergesi */}
       {player.id && (
         <div style={{ fontSize: 9, color: 'var(--text-6)', marginTop: -4 }}>profili gör →</div>
       )}
+    </>
+  )
+
+  const icStil = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textDecoration: 'none', color: 'inherit' }
+
+  return (
+    <div
+      style={{
+        background: 'var(--surface)', borderRadius: 14,
+        border: `1px solid ${aktif ? (badge?.border || 'var(--line-2)') : 'var(--surface-2)'}`,
+        padding: '18px 14px',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+        transition: 'border-color .2s, transform .2s',
+        transform: aktif ? 'translateY(-4px)' : 'none',
+      }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      {player.id
+        ? <Link to={`/player/${player.id}`} aria-label={`${player.nickname} oyuncu profili`} style={icStil}>{icerik}</Link>
+        : <div style={icStil}>{icerik}</div>}
 
       {socials.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -331,8 +331,8 @@ function PlayerCard({ player }) {
                 href={href}
                 target="_blank"
                 rel="noreferrer"
-                onClick={e => e.stopPropagation()}
                 title={meta.label}
+                aria-label={meta.label}
                 style={{
                   width: 24, height: 24, borderRadius: 999,
                   display: 'grid', placeItems: 'center',
@@ -392,9 +392,7 @@ function MatchCard({ match, teamId, navigate }) {
       {/* Top row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <span lang="en" style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-5)', letterSpacing: '.5px' }}>
-            {match.game?.name === 'Counter-Strike 2' ? 'CS2' : match.game?.name === 'League of Legends' ? 'LoL' : (match.game?.name ?? '?')}
-          </span>
+          <OyunRozeti oyun={match.game} />
           {getBOFormat(match.team_a_score, match.team_b_score, match.number_of_games) && (
             <span style={{ fontSize: 9, fontWeight: 700, color: '#60a5fa', background: 'rgba(96,165,250,.12)', border: '1px solid rgba(96,165,250,.3)', borderRadius: 5, padding: '1px 6px' }}>
               {getBOFormat(match.team_a_score, match.team_b_score, match.number_of_games)}
@@ -414,7 +412,7 @@ function MatchCard({ match, teamId, navigate }) {
               border: `1px solid ${isWin ? 'rgba(76,175,80,.4)' : isLoss ? 'rgba(255,70,85,.4)' : 'var(--text-6)'}`,
               display: 'inline-flex', alignItems: 'center', gap: 4,
             }}>
-              {isWin ? <><CircleCheck size={11} /> WIN</> : isLoss ? <><XIcon size={11} /> LOSS</> : '— DRAW'}
+              {isWin ? <><CircleCheck size={11} /> Kazandı</> : isLoss ? <><XIcon size={11} /> Kaybetti</> : 'Berabere'}
             </span>
           )}
         </div>
@@ -458,7 +456,7 @@ function MatchCard({ match, teamId, navigate }) {
         </div>
       </div>
 
-      {/* AI Win bar */}
+      {/* Fextopus olasılık çubuğu */}
       {hasPred && (
         <div style={{ marginBottom: 8 }}>
           {isUncertainPrediction(myPred, oppPred, match.prediction_confidence) ? (
@@ -474,9 +472,9 @@ function MatchCard({ match, teamId, navigate }) {
                 <div style={{ width: `${Math.round(myPred * 100)}%`, height: '100%', background: 'linear-gradient(90deg,#667eea,#764ba2)' }} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginTop: 3, color: 'var(--text-5)' }}>
-                <span style={{ color: myPred >= oppPred ? '#818cf8' : 'var(--text-5)' }}>{Math.round(myPred * 100)}%</span>
+                <span style={{ color: myPred >= oppPred ? '#818cf8' : 'var(--text-5)' }}>%{Math.round(myPred * 100)}</span>
                 <span style={{ color: 'var(--text-5)' }}>Fextopus</span>
-                <span style={{ color: oppPred > myPred ? '#818cf8' : 'var(--text-5)' }}>{Math.round(oppPred * 100)}%</span>
+                <span style={{ color: oppPred > myPred ? '#818cf8' : 'var(--text-5)' }}>%{Math.round(oppPred * 100)}</span>
               </div>
             </>
           )}
@@ -486,7 +484,10 @@ function MatchCard({ match, teamId, navigate }) {
       {/* Bottom */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--surface-2)', paddingTop: 8, gap: 8 }}>
         <div style={{ fontSize: 10, color: 'var(--text-6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
-          <Trophy size={11} style={{ flexShrink: 0 }} /> {match.tournament?.name ?? '—'}
+          <Trophy size={11} style={{ flexShrink: 0 }} />
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {match.tournament ? tournamentDisplayName(match.tournament, { game: normalizeGameId(match.game?.slug ?? match.game?.name) }) : '—'}
+          </span>
         </div>
         {match.stream_url && !isFin && (
           <a
@@ -531,7 +532,7 @@ export default function TeamPage() {
     setError(null)
     try {
       const [teamRes, matchRes, playerRes, rosterChangesRes] = await Promise.all([
-        supabase.from('teams').select('*').eq('id', teamId).single(),
+        supabase.from('teams').select('*, game:games(id, name, slug)').eq('id', teamId).single(),
 
         supabase.from('matches').select(`
           id, status, scheduled_at,
@@ -540,8 +541,8 @@ export default function TeamPage() {
           prediction_team_a, prediction_team_b, prediction_confidence,
           team_a:teams!matches_team_a_id_fkey(id, name, logo_url),
           team_b:teams!matches_team_b_id_fkey(id, name, logo_url),
-          tournament:tournaments(id, name),
-          game:games(id, name)
+          tournament:tournaments(id, name, league_name, event_name, display_name, region),
+          game:games(id, name, slug)
         `)
           .or(`team_a_id.eq.${teamId},team_b_id.eq.${teamId}`)
           .order('scheduled_at', { ascending: false })
@@ -609,8 +610,9 @@ export default function TeamPage() {
   const wins            = pastMatches.filter(m => deriveWinnerTeamId(m) === tidNum).length
   const losses          = pastMatches.filter(m => { const w = deriveWinnerTeamId(m); return w != null && w !== tidNum }).length
   const draws           = pastMatches.length - wins - losses
-  const rating          = calcTeamRating(wins, wins + losses)
   const isTR            = isTurkishTeam(team)
+  // teams.game_id eski kayıtlarda boş olabilir; takım kimliği oyuna özel → maçların oyunu
+  const takimOyunu      = team?.game || matches.find(m => m.game)?.game || null
 
   // Last 10 matches form
   const form = [...pastMatches]
@@ -717,7 +719,8 @@ export default function TeamPage() {
             transition: 'all .15s', fontWeight: isFav ? 700 : 400,
             display: 'inline-flex', alignItems: 'center', gap: 6,
           }}
-        ><Star size={14} fill={isFav ? '#FFD700' : 'none'} color={isFav ? '#FFD700' : 'currentColor'} /> {isFav ? 'Favori' : 'Favoriye Ekle'}</button>
+          aria-pressed={isFav}
+        ><Star size={14} fill={isFav ? '#FFD700' : 'none'} color={isFav ? '#FFD700' : 'currentColor'} /> {isFav ? 'Takip Ediliyor' : 'Takip Et'}</button>
 
         {/* Team identity */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginTop: 24 }}>
@@ -730,9 +733,6 @@ export default function TeamPage() {
               borderRadius={16}
               imgStyle={{ objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,.7))' }}
             />
-            {isTR && (
-              <span style={{ position: 'absolute', bottom: -2, right: -2, fontSize: 20 }}>🇹🇷</span>
-            )}
           </div>
 
           {/* Name + meta */}
@@ -763,10 +763,10 @@ export default function TeamPage() {
                   <MapPin size={12} /> {team.location}
                 </span>
               )}
+              {/* Aynı adlı takımlar (Eternal Fire CS2 / VALORANT) oyunla ayrılır. Eski "Rating N"
+                  açıklamasız uydurma bir puandı (kazanma oranı + maç sayısı); kazanma oranı aşağıda */}
+              <OyunRozeti oyun={takimOyunu} buyuk />
               {isTR && <TurkishBadge />}
-              <span style={{ padding: '3px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700, background: 'rgba(99,102,241,.15)', border: '1px solid rgba(99,102,241,.4)', color: '#818cf8', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                <Star size={12} fill="#818cf8" /> Rating {rating}
-              </span>
             </div>
 
             {/* Form strip */}

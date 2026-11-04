@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import SeoHead from '../components/SeoHead'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useGame, GAMES } from '../context/GameContext'
@@ -19,7 +20,7 @@ function clamp(v, min, max) {
 }
 
 function formatPercent(v) {
-  return `${Math.round(v)}%`
+  return `%${Math.round(v)}`
 }
 
 // Turnuva tier gücü. DB'de tier BÜYÜK/küçük harf karışık + NULL geliyor → normalize.
@@ -248,7 +249,7 @@ export default function RankingsPage() {
 
         const computed = ranked.map(r => ({
           ...r,
-          team: teamById.get(r.teamId) || { name: 'Unknown Team', logo_url: null },
+          team: teamById.get(r.teamId) || { name: 'Bilinmeyen takım', logo_url: null },
         }))
         setRows(computed)
       } catch (e) {
@@ -291,6 +292,8 @@ export default function RankingsPage() {
       color: 'var(--text-1)',
       position: 'relative',
     }}>
+      {/* Sekme başlığı: bu sayfalar genel "feXt — Espor Maçları…" başlığında kalıyordu */}
+      <SeoHead title="Takım Sıralaması — Espor Güç Sıralaması" description="VALORANT, CS2 ve LoL takımlarının form, turnuva seviyesi ve güncelliğe göre güç sıralaması." type="website" />
       <div style={{
         position: 'absolute',
         inset: 0,
@@ -410,7 +413,7 @@ export default function RankingsPage() {
           }}>
             <div>Sıra</div>
             <div>Takım</div>
-            <div>W-L</div>
+            <div>G-M</div>
             <div>Kazanma Oranı</div>
             <div>Kalite</div>
             <div>Güç</div>
@@ -461,15 +464,15 @@ export default function RankingsPage() {
                     <div style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--surface-2)' }} />
                   )}
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.team?.name || 'Unknown Team'}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{row.gameName || 'Global'}</div>
+                    <div style={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.team?.name || 'Bilinmeyen takım'}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{row.gameName || 'Tüm oyunlar'}</div>
                   </div>
                 </div>
 
                 <div style={{ fontSize: 13 }}>
-                  <span style={{ color: 'var(--success-fg)', fontWeight: 700 }}>{row.wins}W</span>
+                  <span style={{ color: 'var(--success-fg)', fontWeight: 700 }}>{row.wins}G</span>
                   <span style={{ color: 'var(--text-4)' }}> / </span>
-                  <span style={{ color: 'var(--danger-fg)', fontWeight: 700 }}>{row.losses}L</span>
+                  <span style={{ color: 'var(--danger-fg)', fontWeight: 700 }}>{row.losses}M</span>
                 </div>
 
                 <div style={{ fontWeight: 700 }}>{formatPercent(row.winRate)}</div>

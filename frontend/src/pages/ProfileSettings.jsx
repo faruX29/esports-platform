@@ -377,6 +377,8 @@ export default function ProfileSettings() {
 
   return (
     <div style={{ maxWidth: 860, margin: '0 auto', padding: '28px 16px 48px' }}>
+      {/* Sekme başlığı: bu sayfalar genel "feXt — Espor Maçları…" başlığında kalıyordu */}
+      <title>Ayarlar | feXt</title>
       <div style={{ height: 4, background: 'linear-gradient(90deg,#DF4888,#8B3AA0 55%,#6A297F)', borderRadius: '14px 14px 0 0' }} />
 
       <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderTop: 'none', borderRadius: '0 0 16px 16px', padding: 20 }}>

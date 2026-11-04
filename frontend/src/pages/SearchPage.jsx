@@ -103,7 +103,7 @@ function getTierMeta(rawTier) {
     key: rawTier || '-',
     color: 'var(--text-3)',
     bg: 'rgba(136,136,136,.12)',
-    label: rawTier ? `Tier ${rawTier}` : 'Tier N/A',
+    label: rawTier ? `Tier ${String(rawTier).toUpperCase()}` : 'Tier —',
   }
 }
 
@@ -994,6 +994,8 @@ export default function SearchPage() {
   // ── Render ────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text-1)', position: 'relative' }}>
+      {/* Sekme başlığı: bu sayfalar genel "feXt — Espor Maçları…" başlığında kalıyordu */}
+      <title>{`${debouncedQ ? `"${debouncedQ}" araması` : 'Arama'} | feXt`}</title>
 
       <style>{`
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
@@ -1187,7 +1189,7 @@ export default function SearchPage() {
                   <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'center' }}><Mascot size={78} dim /></div>
                   <div style={{ fontSize: 16, color: 'var(--text-5)' }}>Sonuç bulunamadı</div>
                   <div style={{ fontSize: 12, color: 'var(--line)', marginBottom: 20 }}>
-                    Farklı bir ifade deneyin veya filtreleri kaldırın
+                    Farklı bir ifade dene ya da filtreleri kaldır
                   </div>
                   {hasActiveFilters && (
                     <button

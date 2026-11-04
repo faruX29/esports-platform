@@ -10,3 +10,16 @@ const TURKCE_HARF = /[çğıöşüÇĞİÖŞÜ]/
 export function adDili(ad) {
   return TURKCE_HARF.test(String(ad || '')) ? 'tr' : 'en'
 }
+
+/** Türkçe ondalık: 47.9 → "47,9". Sayı değilse "—". */
+export function ondalik(n, basamak = 1) {
+  const x = Number(n)
+  if (!Number.isFinite(x)) return '—'
+  return x.toLocaleString('tr-TR', { minimumFractionDigits: basamak, maximumFractionDigits: basamak })
+}
+
+/** Türkçe yüzde: işaret önde, virgüllü ondalık (47.9 → "%47,9"). */
+export function yuzde(n, basamak = 0) {
+  const s = ondalik(n, basamak)
+  return s === '—' ? s : `%${s}`
+}

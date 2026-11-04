@@ -23,6 +23,7 @@ import { deriveWinnerTeamId, correctedScores } from '../utils/matchResult'
 import { buildNewsSlug } from '../utils/newsSlug'
 import { FEXT, saatiGecti } from '../theme'
 import { Asansor, MobilAsansor, useAsansor, ASANSOR_SUTUN } from '../components/Asansor'
+import OyunRozeti from '../components/OyunRozeti'
 
 const MATCH_SELECT = `
   id, scheduled_at, status, winner_id, team_a_id, team_b_id, team_a_score, team_b_score,
@@ -157,9 +158,16 @@ function MacSatiri({ m }) {
   )
 }
 
+// Rakip tam adıyla: kısaltma belirsiz ("BB" hem BetBoom hem Bad Beavers olabiliyor)
+function rakipAdi(rakip) {
+  return String(rakip?.name || '').trim() || rakip?.acronym || 'TBD'
+}
+
 /** Takım kartı: sıradaki maç (yoksa son sonuç). */
 function TakimKarti({ t, sonraki, son }) {
-  const gameId = normalizeGameId(t.game?.slug ?? t.game?.name)
+  // Aynı adlı takımlar (FUT, Eternal Fire, Bushido CS2/VALORANT) oyun rozetiyle ayrılır;
+  // teams.game_id boşsa maçın oyunu (takım kimliği oyuna özel)
+  const oyun = t.game || sonraki?.game || son?.game
   let satir = null
   if (sonraki) {
     const rakip = Number(sonraki.team_a_id) === Number(t.id) ? sonraki.team_b : sonraki.team_a
@@ -167,7 +175,7 @@ function TakimKarti({ t, sonraki, son }) {
     const bekliyor = !canliMi && saatiGecti(sonraki.scheduled_at)
     satir = (
       <span style={{ color: canliMi ? FEXT.status.live.color : bekliyor ? FEXT.warn : 'var(--text-2)' }}>
-        {canliMi ? 'Şu an canlı' : bekliyor ? 'Sonuç bekleniyor' : fmtSaat(sonraki.scheduled_at)} · {rakip?.acronym || rakip?.name || 'TBD'}
+        {canliMi ? 'Şu an canlı' : bekliyor ? 'Sonuç bekleniyor' : fmtSaat(sonraki.scheduled_at)} · {rakipAdi(rakip)}
       </span>
     )
   } else if (son) {
@@ -179,7 +187,7 @@ function TakimKarti({ t, sonraki, son }) {
     satir = (
       <span style={{ color: 'var(--text-3)' }}>
         Son: <b style={{ color: sonuc === 'G' ? FEXT.good : sonuc === 'M' ? FEXT.danger : 'var(--text-2)' }}>{sonuc}</b>{' '}
-        {bizA ? `${sk.team_a_score ?? '-'}-${sk.team_b_score ?? '-'}` : `${sk.team_b_score ?? '-'}-${sk.team_a_score ?? '-'}`} · {rakip?.acronym || rakip?.name || 'TBD'}
+        {bizA ? `${sk.team_a_score ?? '-'}-${sk.team_b_score ?? '-'}` : `${sk.team_b_score ?? '-'}-${sk.team_a_score ?? '-'}`} · {rakipAdi(rakip)}
       </span>
     )
   }
@@ -194,7 +202,7 @@ function TakimKarti({ t, sonraki, son }) {
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 800, minWidth: 0 }}>
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name?.trim()}</span>
-          {gameId && <GameLogo game={gameId} size={12} color={getGameMeta(gameId).color} />}
+          <OyunRozeti oyun={oyun} />
         </div>
         <div style={{ fontSize: 11, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{satir}</div>
       </div>

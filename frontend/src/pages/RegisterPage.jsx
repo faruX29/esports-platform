@@ -67,6 +67,8 @@ export default function RegisterPage() {
 
   return (
     <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'radial-gradient(ellipse at 78% 12%, rgba(223,72,136,.16), transparent 45%), radial-gradient(ellipse at 20% 88%, rgba(106,41,127,.14), transparent 45%), var(--bg)' }}>
+      {/* Sekme başlığı: bu sayfalar genel "feXt — Espor Maçları…" başlığında kalıyordu */}
+      <title>Kayıt ol | feXt</title>
       <div style={{ width: 'min(460px, 100%)', borderRadius: 18, border: '1px solid var(--line)', background: 'var(--surface)', overflow: 'hidden', boxShadow: '0 18px 40px rgba(0,0,0,.5)' }}>
         <div style={{ height: 4, background: 'linear-gradient(90deg,#DF4888,#8B3AA0 55%,#6A297F)' }} />
         <div style={{ padding: 24 }}>
@@ -82,13 +84,36 @@ export default function RegisterPage() {
                 </div>
               </div>
               <div style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid rgba(194,92,208,.35)', background: 'rgba(194,92,208,.08)', fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.55 }}>
-                📬 Mail birkaç dakikada gelmezse <strong style={{ color: 'var(--text)' }}>Spam / Gereksiz</strong> klasörünü kontrol et. Bulursan <strong style={{ color: 'var(--text)' }}>“Spam değil”</strong> işaretle — sonraki maillerimiz doğrudan gelen kutuna düşer.
+                Mail birkaç dakikada gelmezse <strong style={{ color: 'var(--text)' }}>Spam / Gereksiz</strong> klasörünü kontrol et. Bulursan <strong style={{ color: 'var(--text)' }}>“Spam değil”</strong> işaretle — sonraki maillerimiz doğrudan gelen kutuna düşer.
               </div>
               <button onClick={() => navigate('/login')} style={{ border: 'none', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#fff', fontWeight: 800, background: 'linear-gradient(135deg,#DF4888,#8B3AA0 55%,#6A297F)' }}>Giriş sayfasına git</button>
             </div>
           )}
 
           {!pendingEmail && (<>
+          {/* Tek dokunuşla kayıt en üstte (UX P1-28): Google formun altında kalıyordu */}
+          {oauthEnabled && (
+            <>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {GOOGLE_ENABLED && (
+                  <button type="button" onClick={onGoogle} style={{ width: '100%', border: '1px solid var(--line)', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: 'var(--text)', fontWeight: 700, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <GoogleIcon /> <span style={{ color: '#1f2937' }}>Google ile Kayıt Ol</span>
+                  </button>
+                )}
+                {DISCORD_ENABLED && (
+                  <button type="button" onClick={onDiscord} style={{ width: '100%', border: 'none', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#fff', fontWeight: 800, background: '#5865F2', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <MessageCircle size={16} /> Discord ile Kayıt Ol
+                  </button>
+                )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0' }}>
+                <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
+                <span style={{ fontSize: 11, color: 'var(--text-4)' }}>ya da e-postayla</span>
+                <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
+              </div>
+            </>
+          )}
+
           <form onSubmit={onSubmit} style={{ display: 'grid', gap: 10 }}>
             <input required value={username} onChange={e => setUsername(e.target.value)} placeholder="Kullanıcı adı" autoComplete="username" style={inputStyle} />
             <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="E-posta" autoComplete="email" style={inputStyle} />
@@ -104,28 +129,6 @@ export default function RegisterPage() {
               <Link to="/gizlilik" style={{ color: 'var(--text-4)' }}>Gizlilik Politikası</Link>'nı kabul etmiş olursun.
             </p>
           </form>
-
-          {oauthEnabled && (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0' }}>
-                <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
-                <span style={{ fontSize: 11, color: 'var(--text-4)' }}>veya</span>
-                <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
-              </div>
-              <div style={{ display: 'grid', gap: 8 }}>
-                {GOOGLE_ENABLED && (
-                  <button type="button" onClick={onGoogle} style={{ width: '100%', border: '1px solid var(--line)', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: 'var(--text)', fontWeight: 700, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                    <GoogleIcon /> <span style={{ color: '#1f2937' }}>Google ile Kayıt Ol</span>
-                  </button>
-                )}
-                {DISCORD_ENABLED && (
-                  <button type="button" onClick={onDiscord} style={{ width: '100%', border: 'none', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#fff', fontWeight: 800, background: '#5865F2', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                    <MessageCircle size={16} /> Discord ile Kayıt Ol
-                  </button>
-                )}
-              </div>
-            </>
-          )}
 
           <div style={{ marginTop: 16, fontSize: 12, color: 'var(--text-3)' }}>
             Zaten hesabın var mı? <Link to="/login" style={{ color: 'var(--text)' }}>Giriş yap</Link>

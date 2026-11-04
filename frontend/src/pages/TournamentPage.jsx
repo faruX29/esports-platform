@@ -9,6 +9,7 @@
  * • Turkish Pride efekti
  */
 import { useState, useEffect, useCallback, useMemo, memo } from 'react'
+import { ondalik } from '../utils/dil'
 import { useParams, useNavigate, Link }               from 'react-router-dom'
 import { supabase }                                   from '../supabaseClient'
 import { isTurkishTeam, useTurkTakimlar }                              from '../constants'
@@ -43,10 +44,10 @@ import { buildBracketModel, detectFormat, layoutBracket, BRACKET_DIM, turEtiketi
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 
 const TIER_META = {
-  S: { color: '#FFD700', bg: 'rgba(255,215,0,.15)',   border: 'rgba(255,215,0,.4)',   label: 'S-Tier'               },
-  A: { color: '#FF4655', bg: 'rgba(255,70,85,.15)',   border: 'rgba(255,70,85,.4)',   label: 'A-Tier · Major'       },
-  B: { color: '#FF8C00', bg: 'rgba(255,140,0,.15)',   border: 'rgba(255,140,0,.4)',   label: 'B-Tier · Regional'    },
-  C: { color: '#818cf8', bg: 'rgba(129,140,248,.15)', border: 'rgba(129,140,248,.4)', label: 'C-Tier · Challenger'  },
+  S: { color: '#FFD700', bg: 'rgba(255,215,0,.15)',   border: 'rgba(255,215,0,.4)',   label: 'Tier S'               },
+  A: { color: '#FF4655', bg: 'rgba(255,70,85,.15)',   border: 'rgba(255,70,85,.4)',   label: 'Tier A · Major'       },
+  B: { color: '#FF8C00', bg: 'rgba(255,140,0,.15)',   border: 'rgba(255,140,0,.4)',   label: 'Tier B · Bölgesel'    },
+  C: { color: '#818cf8', bg: 'rgba(129,140,248,.15)', border: 'rgba(129,140,248,.4)', label: 'Tier C · Challenger'  },
 }
 
 const TOURNAMENT_DEBUG = false
@@ -93,7 +94,7 @@ function getTierMeta(rawTier) {
     color: 'var(--text-2)',
     bg: 'var(--hover-strong)',
     border: 'rgba(170,170,170,.35)',
-    label: `${fallbackKey}-Tier`,
+    label: `Tier ${fallbackKey}`,
   }
 }
 
@@ -375,7 +376,7 @@ function TopPerformers({ rows }) {
         <div key={p.pid} style={{ display: 'grid', gridTemplateColumns: '20px 1fr 44px 60px 44px', gap: 8, alignItems: 'center', padding: '8px', borderBottom: i === rows.length - 1 ? 'none' : '1px solid var(--surface)', fontSize: 12 }}>
           <div style={{ color: i < 3 ? '#FFD700' : 'var(--text-4)', fontWeight: 800 }}>{i + 1}</div>
           <div style={{ color: 'var(--text-1)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nickname}</div>
-          <div style={{ textAlign: 'right', fontWeight: 800, color: p.kd >= 1 ? '#4ade80' : '#ff6a7f', fontVariantNumeric: 'tabular-nums' }}>{p.kd.toFixed(2)}</div>
+          <div style={{ textAlign: 'right', fontWeight: 800, color: p.kd >= 1 ? '#4ade80' : '#ff6a7f', fontVariantNumeric: 'tabular-nums' }}>{ondalik(p.kd, 2)}</div>
           <div style={{ textAlign: 'right', color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums' }}>{p.k}/{p.d}/{p.a}</div>
           <div style={{ textAlign: 'right', color: p.acs != null ? '#C25CD0' : 'var(--text-6)', fontWeight: 700 }}>{p.acs ?? '—'}</div>
         </div>
@@ -450,7 +451,7 @@ function StandingsTable({ matches, navigate, cikanSayisi = 0 }) {
       <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 4px' }}>
         <thead>
           <tr>
-            {['#', 'Takım', 'W', 'L', 'W%', 'Form', 'Map W', 'Map L'].map(h => (
+            {['#', 'Takım', 'G', 'M', 'G%', 'Form', 'Harita G', 'Harita M'].map(h => (
               <th key={h} style={{
                 padding: '7px 12px', textAlign: h === 'Takım' ? 'left' : 'center',
                 fontSize: 10, color: 'var(--text-5)', fontWeight: 700,
@@ -514,7 +515,7 @@ function StandingsTable({ matches, navigate, cikanSayisi = 0 }) {
                         background: pct >= 60 ? '#4CAF50' : pct >= 40 ? '#FF8C00' : '#FF4655',
                         transition: 'width .6s ease', borderRadius: 3 }} />
                     </div>
-                    <span style={{ fontSize: 11, color: 'var(--text-3)', minWidth: 28 }}>{pct}%</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-3)', minWidth: 28 }}>%{pct}</span>
                   </div>
                 </td>
 
@@ -529,7 +530,7 @@ function StandingsTable({ matches, navigate, cikanSayisi = 0 }) {
                             width: 16, height: 16, borderRadius: 4, fontSize: 9, fontWeight: 800,
                             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                             color: c, background: `${c}22`, border: `1px solid ${c}55`,
-                          }}>{r}</span>
+                          }}>{r === 'W' ? 'G' : r === 'L' ? 'M' : 'B'}</span>
                         )
                       })}
                     </div>
@@ -1303,7 +1304,7 @@ export default function TournamentPage() {
   const gName = tournament?.game?.name ?? ''
   // Ham slug ("Cs-Go"/"League-Of-Legends") yerine temiz oyun adı.
   const gameId = normalizeGameId(tournament?.game?.slug ?? gName)
-  const gLabel = GAMES.find(g => g.id === gameId)?.label || gName || 'Esports'
+  const gLabel = GAMES.find(g => g.id === gameId)?.label || gName || 'Espor'
   const gc    = gameColor(gName)
   const tier  = getTierMeta(tournament?.tier)
   const regionLabel = displayRegion(tournament?.region, gameId)

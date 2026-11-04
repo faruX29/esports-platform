@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { ondalik } from '../utils/dil'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { GAMES, useGame } from '../context/GameContext'
@@ -76,7 +77,7 @@ function resolveRowGameId(row, matchGameById) {
 
 
 function fmt(value, digits = 2) {
-  return Number.isFinite(value) ? value.toFixed(digits) : '0.00'
+  return ondalik(Number.isFinite(value) ? value : 0, digits)
 }
 
 function normalizeSearchText(value) {
@@ -158,8 +159,8 @@ function CompareCard({ player, onClear }) {
 
       <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
         <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>K/D</div><div style={{ fontSize: 15, fontWeight: 800 }}>{fmt(player.kd)}</div></div>
-        <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>HS%</div><div style={{ fontSize: 15, fontWeight: 800 }}>{Math.round(player.hsPct)}%</div></div>
-        <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>Kaz.%</div><div style={{ fontSize: 15, fontWeight: 800 }}>{Math.round(player.winRate)}%</div></div>
+        <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>HS%</div><div style={{ fontSize: 15, fontWeight: 800 }}>%{Math.round(player.hsPct)}</div></div>
+        <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>Kaz.%</div><div style={{ fontSize: 15, fontWeight: 800 }}>%{Math.round(player.winRate)}</div></div>
         <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>Etki</div><div style={{ fontSize: 15, fontWeight: 800, color: '#ff9aa9' }}>{Math.round(player.impact)}</div></div>
       </div>
 
@@ -571,6 +572,8 @@ export default function PlayersPage() {
 
   return (
     <div style={{ maxWidth: 1440, margin: '0 auto', padding: '24px 16px 80px', color: 'var(--text-1)', position: 'relative' }}>
+      {/* Sekme başlığı: bu sayfalar genel "feXt — Espor Maçları…" başlığında kalıyordu */}
+      <title>Oyuncular | feXt</title>
       <div style={{
         position: 'absolute',
         inset: 0,
@@ -715,7 +718,7 @@ export default function PlayersPage() {
                 <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}><SearchX size={26} color="var(--text-5)" /></div>
                 <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', marginBottom: 4 }}>Oyuncu Bulunamadı</div>
                 <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                  Arama kelimesini sadeleştirip tekrar deneyin ya da oyun filtresini değiştirin.
+                  Arama kelimesini sadeleştirip tekrar dene ya da oyun filtresini değiştir.
                 </div>
               </div>
             )}
@@ -780,7 +783,7 @@ export default function PlayersPage() {
                 <div style={{ fontWeight: 700 }}>{fmt(player.kd)}</div>
                 <div style={{ fontWeight: 700, color: player.acs != null ? '#C25CD0' : 'var(--text-5)' }}>{player.acs != null ? player.acs : '—'}</div>
                 <div style={{ fontWeight: 700, color: player.hsPct > 0 ? 'var(--text-1)' : 'var(--text-5)' }}>{player.hsPct > 0 ? `${Math.round(player.hsPct)}%` : '—'}</div>
-                <div style={{ fontWeight: 700 }}>{Math.round(player.winRate)}%</div>
+                <div style={{ fontWeight: 700 }}>%{Math.round(player.winRate)}</div>
                 <div style={{ color: '#ff9aa9', fontWeight: 800 }}>{Math.round(player.impact)}</div>
 
                 <div>

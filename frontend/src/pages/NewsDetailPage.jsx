@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { yuzde } from '../utils/dil'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { supabase, subscribeToNewsComments } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
@@ -11,6 +12,14 @@ import {
   storyExplainability,
   weeklyCover,
 } from '../utils/newsStories'
+import { GAMES } from '../context/GameContext'
+import { normalizeGameId } from '../utils/gameUtils'
+
+// "csgo" slug'ı "CSGO" yazıyordu → oyunun kısa adı (CS2 / VAL / LoL)
+function oyunEtiketi(slug) {
+  const id = normalizeGameId(slug)
+  return GAMES.find(g => g.id === id)?.shortLabel || 'ESPOR'
+}
 import {
   getScoutEmblem,
   getScoutRank,
@@ -41,16 +50,16 @@ function explainCommentInsertError(error) {
   const message = String(error?.message || '').toLowerCase()
 
   if (code === '42501' || message.includes('row-level security') || message.includes('rls')) {
-    return 'Yorum izni reddedildi. Lütfen giriş yapıp tekrar deneyin.'
+    return 'Yorum izni reddedildi. Giriş yapıp tekrar dene.'
   }
   if (code === '23505') {
-    return 'Aynı yorum tekrarlandı. Lütfen farklı bir içerik deneyin.'
+    return 'Aynı yorum tekrarlandı. Farklı bir şey yaz.'
   }
   if (code === '23514') {
-    return 'Yorum metni geçerli değil. Lütfen metni kontrol edin.'
+    return 'Yorum metni geçerli değil. Metni kontrol et.'
   }
 
-  return 'Yorum gönderilemedi, lütfen tekrar deneyin.'
+  return 'Yorum gönderilemedi, tekrar dene.'
 }
 
 function classifyCommentInsertIssue(error) {
@@ -124,7 +133,7 @@ function mapTransferRowToStory(row) {
     heroScore: row.hero_score || '',
     visuals: {
       gameId: row.game_slug || null,
-      gameLabel: (row.game_slug || 'ESPORTS').toUpperCase(),
+      gameLabel: oyunEtiketi(row.game_slug),
       gameColor: FEXT.accent,
       tier: normalizeTier(row.tier),
       tournamentName: row.tournament_name || 'Transfer Haberi',
@@ -185,7 +194,7 @@ function mapTournamentRowToStory(row) {
     heroScore: row.hero_score || '',
     visuals: {
       gameId: row.game_slug || null,
-      gameLabel: (row.game_slug || 'ESPORTS').toUpperCase(),
+      gameLabel: oyunEtiketi(row.game_slug),
       gameColor: FEXT.accent,
       tier: normalizeTier(row.tier),
       tournamentName: row.tournament_name || 'Turnuva',
@@ -313,9 +322,9 @@ function AIProbabilityBar({ story }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          <span style={{ fontSize: 15, fontWeight: 800, color: aFavored ? '#86efac' : '#9ca3af' }}>{pctA.toFixed(1)}%</span>
+          <span style={{ fontSize: 15, fontWeight: 800, color: aFavored ? '#86efac' : '#9ca3af' }}>{yuzde(pctA, 1)}</span>
           <span style={{ fontSize: 11, color: 'var(--text-6)' }}>:</span>
-          <span style={{ fontSize: 15, fontWeight: 800, color: bFavored ? '#86efac' : '#9ca3af' }}>{pctB.toFixed(1)}%</span>
+          <span style={{ fontSize: 15, fontWeight: 800, color: bFavored ? '#86efac' : '#9ca3af' }}>{yuzde(pctB, 1)}</span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flex: '1 1 0', justifyContent: 'flex-end' }}>
@@ -1162,7 +1171,7 @@ export default function NewsDetailPage() {
       }
       console.error('submitComment error details:', details)
       if (issueType === 'RLS') {
-        window.alert('Yorum kaydedilemedi: yetki hatası. Lütfen giriş yapıp tekrar deneyin.')
+        window.alert('Yorum kaydedilemedi: yetki hatası. Giriş yapıp tekrar dene.')
       } else if (issueType === 'SCHEMA') {
         window.alert('Yorum kaydedilemedi: veri yapısı uyuşmazlığı tespit edildi.')
       }

@@ -76,7 +76,7 @@ export default function NewsCover({ visuals, score = '', height = 180, compact =
           padding: '3px 8px', borderRadius: 999,
           background: `${accent}33`, border: `1px solid ${accent}66`,
         }}>
-          {v.gameLabel || 'ESPORTS'}
+          {v.gameLabel || 'ESPOR'}
         </span>
         {v.tier && (
           <span style={{
@@ -165,7 +165,7 @@ export default function NewsCover({ visuals, score = '', height = 180, compact =
           color: '#fff', fontSize: 8, fontWeight: 800, letterSpacing: '.8px',
           padding: '3px 8px', borderRadius: '6px 0 0 6px', textTransform: 'uppercase',
         }}>
-          🇹🇷 TR
+          TR
         </div>
       )}
     </div>

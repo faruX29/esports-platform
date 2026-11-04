@@ -26,7 +26,7 @@ import { roundLabel }                               from '../utils/roundLabel'
 import { clickableProps }                           from '../utils/a11y'
 import TurkishBadge                                 from '../components/TurkishBadge'
 import { FEXT, saatiGecti }                         from '../theme'
-import { adDili }                                   from '../utils/dil'
+import { adDili, ondalik }                          from '../utils/dil'
 import { tournamentDisplayName }                    from '../utils/tournamentDisplay'
 import { normalizeGameId }                          from '../utils/gameUtils'
 import Mascot from '../components/Mascot'
@@ -412,8 +412,6 @@ function buildTacticalScoutReport({
   const yeterli = recentSample >= 3
   const teamAWinRate = yeterli ? Math.round((teamAWins / recentSample) * 100) : null
   const teamBWinRate = yeterli ? Math.round((teamBWins / recentSample) * 100) : null
-  const teamALossRate = yeterli ? Math.round((teamBWins / recentSample) * 100) : null
-  const teamBLossRate = yeterli ? Math.round((teamAWins / recentSample) * 100) : null
 
   const streakA = yeterli ? buildStreak(recent, teamAId) : { type: null, count: 0 }
   const streakB = yeterli ? buildStreak(recent, teamBId) : { type: null, count: 0 }
@@ -444,24 +442,13 @@ function buildTacticalScoutReport({
     teamBStrengths.push(`Aralarındaki son ${recentSample} maçta %${teamBWinRate} galibiyet`)
   }
 
-  if (teamALossRate != null && teamALossRate >= 60) {
-    teamAWeaknesses.push(`Aralarındaki son ${recentSample} maçta %${teamALossRate} mağlubiyet`)
-  }
-  if (teamBLossRate != null && teamBLossRate >= 60) {
-    teamBWeaknesses.push(`Aralarındaki son ${recentSample} maçta %${teamBLossRate} mağlubiyet`)
-  }
-
+  // Aralarındaki maçlar iki takım için aynı bilgidir: A'nın "%60 galibiyeti" B'nin
+  // "%60 mağlubiyeti"dir. Ayna satır yeni bilgi vermiyordu → yalnız önde olanın güçlü yönü.
   if (streakA.type === 'W' && streakA.count >= 2) {
     teamAStrengths.push(`Rakibine karşı ${streakA.count} maçlık galibiyet serisi`)
   }
-  if (streakA.type === 'L' && streakA.count >= 2) {
-    teamAWeaknesses.push(`Rakibine karşı ${streakA.count} maçlık mağlubiyet serisi`)
-  }
   if (streakB.type === 'W' && streakB.count >= 2) {
     teamBStrengths.push(`Rakibine karşı ${streakB.count} maçlık galibiyet serisi`)
-  }
-  if (streakB.type === 'L' && streakB.count >= 2) {
-    teamBWeaknesses.push(`Rakibine karşı ${streakB.count} maçlık mağlubiyet serisi`)
   }
 
   // Gerçek sinyal yoksa kart hiç çıkmaz ("Denge modu…" dolgu satırları kaldırıldı).
@@ -557,7 +544,7 @@ function KdaColumn({ rows, teamName, gc }) {
               <span style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums', color: 'var(--text-2)', minWidth: 62, textAlign: 'right' }}>
                 {r.kills}<span style={{ color: 'var(--text-5)' }}>/</span>{r.deaths}<span style={{ color: 'var(--text-5)' }}>/</span>{r.assists}
               </span>
-              <span style={{ fontSize: 11, fontWeight: 800, color: kd >= 1 ? '#4ade80' : '#ff6a7f', minWidth: 32, textAlign: 'right' }}>{kd.toFixed(2)}</span>
+              <span style={{ fontSize: 11, fontWeight: 800, color: kd >= 1 ? '#4ade80' : '#ff6a7f', minWidth: 32, textAlign: 'right' }}>{ondalik(kd, 2)}</span>
             </div>
           )
         })}
@@ -1132,7 +1119,7 @@ function MVPVoting({ matchId, players, isFinished }) {
     try {
       const { error } = await supabase.from('match_mvp_votes').insert({ match_id: matchId, player_id: player.id, voter_id: voterId.current })
       if (error) {
-        if (error.code === '23505') { setVotedFor(player.id); setVotedLocal(matchId, player.id); setVoteError('Bu maç için zaten oy kullandınız.') }
+        if (error.code === '23505') { setVotedFor(player.id); setVotedLocal(matchId, player.id); setVoteError('Bu maç için zaten oy kullandın.') }
         else throw error
       } else {
         setVotedFor(player.id); setVotedLocal(matchId, player.id)
@@ -1163,7 +1150,7 @@ function MVPVoting({ matchId, players, isFinished }) {
           <div style={{ textAlign: 'right' }}><div style={{ fontSize: 18, fontWeight: 900, color: 'var(--ai)' }}>{totalVotes}</div><div style={{ fontSize: 8, color: 'var(--line)', textTransform: 'uppercase', letterSpacing: '.5px' }}>oy</div></div>
         )}
       </div>
-      {justVoted && <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 9, background: 'rgba(74,222,128,.1)', border: '1px solid rgba(74,222,128,.3)', display: 'flex', alignItems: 'center', gap: 8 }}><PartyPopper size={14} color="#4ade80" /><span style={{ fontSize: 12, fontWeight: 700, color: '#4ade80' }}>Oyunuz kaydedildi!</span></div>}
+      {justVoted && <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 9, background: 'rgba(74,222,128,.1)', border: '1px solid rgba(74,222,128,.3)', display: 'flex', alignItems: 'center', gap: 8 }}><PartyPopper size={14} color="#4ade80" /><span style={{ fontSize: 12, fontWeight: 700, color: '#4ade80' }}>Oyun kaydedildi!</span></div>}
       {voteError && <div style={{ marginBottom: 10, padding: '7px 10px', borderRadius: 8, background: 'rgba(255,70,85,.08)', border: '1px solid rgba(255,70,85,.2)', fontSize: 11, color: '#FF4655', display: 'flex', alignItems: 'center', gap: 6 }}><TriangleAlert size={12} /> {voteError}</div>}
       {!loadingV && topV > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, marginBottom: 14, background: 'rgba(167,139,250,.08)', border: '1px solid rgba(167,139,250,.2)' }}>
@@ -1172,7 +1159,7 @@ function MVPVoting({ matchId, players, isFinished }) {
             <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--ai)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}><Crown size={12} color="#FFD700" /> {top.nickname}</div>
             <div style={{ fontSize: 9, color: 'var(--text-5)' }}>Şu an lider · {topV} oy</div>
           </div>
-          <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--ai)' }}>{totalVotes > 0 ? Math.round(topV / totalVotes * 100) : 0}%</div>
+          <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--ai)' }}>%{totalVotes > 0 ? Math.round(topV / totalVotes * 100) : 0}</div>
         </div>
       )}
       {loadingV
@@ -1206,7 +1193,7 @@ function MVPVoting({ matchId, players, isFinished }) {
                     <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 60 }}>
                       {hasVoted ? (
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 900, color: pct > 0 ? 'var(--ai)' : 'var(--line)', fontVariantNumeric: 'tabular-nums' }}>{pct}%</div>
+                          <div style={{ fontSize: 13, fontWeight: 900, color: pct > 0 ? 'var(--ai)' : 'var(--line)', fontVariantNumeric: 'tabular-nums' }}>%{pct}</div>
                           <div style={{ fontSize: 8, color: 'var(--line)' }}>{pV} oy</div>
                           <div style={{ height: 3, borderRadius: 2, background: 'var(--surface-2)', marginTop: 3, width: 50, overflow: 'hidden' }}>
                             <div style={{ height: '100%', borderRadius: 2, width: `${pct}%`, background: my ? 'linear-gradient(90deg,var(--ai),#7c3aed)' : '#2d2d4e', transition: 'width .8s cubic-bezier(.4,0,.2,1)' }} />
@@ -1226,7 +1213,7 @@ function MVPVoting({ matchId, players, isFinished }) {
         )
       }
       <div style={{ marginTop: 10, fontSize: 9, color: 'var(--text-4)', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-        {hasVoted ? <><CircleCheck size={11} color="#4ade80" /> Oy kullandınız · {totalVotes} toplam oy</> : <><MousePointerClick size={11} /> Bir oyuncuya tıklayarak oy verin</>}
+        {hasVoted ? <><CircleCheck size={11} color="#4ade80" /> Oy kullandın · {totalVotes} toplam oy</> : <><MousePointerClick size={11} /> Bir oyuncuya tıklayarak oy ver</>}
       </div>
     </div>
   )
@@ -1477,7 +1464,13 @@ export default function MatchDetail() {
   return (
     <div style={{ color: 'var(--text-1)', minHeight: '100vh', background: 'var(--bg)' }}>
       <SeoHead
-        title={`${aName} vs ${bName}${gName ? ` — ${gName}` : ''} Canlı Skor`}
+        title={(() => {
+          // Bot HTML'iyle aynı kalıp (middleware.js): biten maçta skor, "Canlı Skor" yalnız canlıda
+          const sk = correctedScores(match)
+          const tur = turnuvaAdi ? ` · ${turnuvaAdi}` : (gName ? ` — ${gName}` : '')
+          if (isFin && sk.team_a_score != null && sk.team_b_score != null) return `${aName} ${sk.team_a_score}-${sk.team_b_score} ${bName}${tur}`
+          return `${aName} vs ${bName}${isLive ? ' Canlı Skor' : ''}${tur}`
+        })()}
         description={`${aName} vs ${bName}${turnuvaAdi ? ` · ${turnuvaAdi}` : ''} — canlı skor, Fextopus tahmini, kadro ve maç istatistikleri. feXt.`}
         image={aLogo || bLogo || ''}
         type="article"
@@ -1526,7 +1519,7 @@ export default function MatchDetail() {
             {hasTR && <TurkishBadge />}
             {boFormat && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: 'rgba(96,165,250,.12)', color: '#60a5fa', border: '1px solid rgba(96,165,250,.3)' }}>{boFormat}</span>}
             {isLive && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 800, background: 'rgba(255,70,85,.2)', color: '#FF4655', border: '1px solid rgba(255,70,85,.4)', animation: 'pulse 1.2s infinite' }}>● CANLI</span>}
-            {isFin  && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: 'rgba(76,175,80,.1)', color: '#4CAF50', border: '1px solid rgba(76,175,80,.3)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><CircleCheck size={11} /> Tamamlandı</span>}
+            {isFin  && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: 'rgba(76,175,80,.1)', color: '#4CAF50', border: '1px solid rgba(76,175,80,.3)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><CircleCheck size={11} /> Bitti</span>}
             {!isFin && !isLive && saatiGecti(match.scheduled_at) && <span title="Başlama saati geçti; skor henüz gelmedi" style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: 'rgba(224,162,77,.12)', color: FEXT.warn, border: '1px solid rgba(224,162,77,.35)' }}>Sonuç bekleniyor</span>}
           </div>
 
@@ -1670,8 +1663,8 @@ export default function MatchDetail() {
                                 <div style={{ width: `${m.teamBWinRate}%`, background: '#60a5fa' }} />
                               </div>
                               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3, fontSize: 9, fontWeight: 700 }}>
-                                <span style={{ color: '#4ade80' }}>{aName} {m.teamAWinRate}%</span>
-                                <span style={{ color: '#60a5fa' }}>{m.teamBWinRate}% {bName}</span>
+                                <span style={{ color: '#4ade80' }}>{aName} %{m.teamAWinRate}</span>
+                                <span style={{ color: '#60a5fa' }}>%{m.teamBWinRate} {bName}</span>
                               </div>
                             </div>
                           ))}
@@ -1701,6 +1694,12 @@ export default function MatchDetail() {
             {/* H2H */}
             <div style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--surface-2)', padding: 18 }}>
               <ST Icon={Swords} label="Rekabet Geçmişi (H2H)" />
+              {/* Liste bu maçtan ÖNCEKİ karşılaşmalar; bu maçın skoru burada sayılmaz */}
+              {!loadingDetails && h2h.total > 0 && (
+                <div style={{ marginTop: -4, marginBottom: 10, fontSize: 10, color: 'var(--text-4)' }}>
+                  Bu maçtan önceki son {h2h.total} karşılaşma; bu maç sayılmaz.
+                </div>
+              )}
               {loadingDetails ? <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>{[1,2,3].map(i => <Sk key={i} h="36px" r="8px" />)}</div>
                 : h2h.total === 0 ? <div style={{ textAlign: 'center', padding: 18, color: 'var(--text-4)', fontSize: 12 }}>İlk karşılaşmaları</div>
                 : (
@@ -1762,12 +1761,13 @@ export default function MatchDetail() {
                 [Gamepad2,     'Oyun',   gName || '—'],
                 [CalendarDays, 'Tarih',  fmtDate(match.scheduled_at)],
                 [Clock,        'Saat',   fmtTime(match.scheduled_at)],
-                [BarChart3,    'Durum',  isFin ? 'Tamamlandı' : isLive ? 'Canlı' : saatiGecti(match.scheduled_at) ? 'Sonuç bekleniyor' : 'Yakında'],
-                [Hash,         'ID',     String(match.id)],
+                // "Bitti" listedeki rozetle aynı (statusStyle); iç kimlik kullanıcıya gösterilmez
+                [BarChart3,    'Durum',  isFin ? 'Bitti' : isLive ? 'Canlı' : saatiGecti(match.scheduled_at) ? 'Sonuç bekleniyor' : 'Yaklaşan'],
+                ...(boFormat ? [[Hash, 'Format', boFormat]] : []),
               ].map(([Icon, label, value]) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--surface)' }}>
                   <span style={{ fontSize: 10, color: 'var(--text-6)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon size={11} /> {label}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-4)', textAlign: 'right', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: label === 'ID' ? 'monospace' : 'inherit' }}>{value}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-4)', textAlign: 'right', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', }}>{value}</span>
                 </div>
               ))}
             </div>
@@ -1829,7 +1829,7 @@ export default function MatchDetail() {
               <div style={{ border: '1px solid rgba(196,181,253,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(124,58,237,.12), var(--surface))', padding: '10px 11px' }}>
                 <div style={{ fontSize: 10, color: 'var(--ai)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5 }}>Harita Profili</div>
                 <div style={{ fontSize: 12, color: 'var(--text-1)' }}>{`${mapStats[0].map} en fazla oynanan harita`}</div>
-                <div style={{ marginTop: 4, fontSize: 11, color: 'var(--text-3)' }}>{`${mapStats[0].total} örnek üzerinden ${aName} ${mapStats[0].teamAWinRate}% - ${mapStats[0].teamBWinRate}% ${bName}`}</div>
+                <div style={{ marginTop: 4, fontSize: 11, color: 'var(--text-3)' }}>{`${mapStats[0].total} örnek üzerinden ${aName} %${mapStats[0].teamAWinRate} - %${mapStats[0].teamBWinRate} ${bName}`}</div>
               </div>
             )}
 

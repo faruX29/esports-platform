@@ -54,6 +54,8 @@ export default function LoginPage() {
 
   return (
     <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'radial-gradient(ellipse at 20% 10%, rgba(223,72,136,.15), transparent 45%), radial-gradient(ellipse at 80% 90%, rgba(106,41,127,.14), transparent 45%), var(--bg)' }}>
+      {/* Sekme başlığı: bu sayfalar genel "feXt — Espor Maçları…" başlığında kalıyordu */}
+      <title>Giriş yap | feXt</title>
       <div style={{ width: 'min(440px, 100%)', borderRadius: 18, border: '1px solid var(--line)', background: 'var(--surface)', overflow: 'hidden', boxShadow: '0 18px 40px rgba(0,0,0,.5)' }}>
         <div style={{ height: 4, background: 'linear-gradient(90deg,#DF4888,#8B3AA0 55%,#6A297F)' }} />
         <div style={{ padding: 24 }}>

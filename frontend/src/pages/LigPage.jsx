@@ -6,22 +6,28 @@
  * Playoffs) tek sayfada gösterir. Etkinlik seçimi DB'de (`lig_sayfasi`, ligler.sql).
  * Aşama gövdesi turnuva sayfasıyla ortak (AsamaIcerigi).
  *
- * • Başlık     — "<Lig> <yıl>" + "Fikstür, Puan Durumu ve Sonuçlar"
- * • Türk takımları bu etkinlikte (varsa)
- * • Sıradaki maçlar (tüm aşamalar)
+ * • Başlık     — "<Lig> <yıl>" + "Fikstür ve Sonuçlar" (puan tablosu olan aşama varsa
+ *                "Puan Durumu" da) + etkinlik bittiyse şampiyon (finalden)
+ * • Türk takımları bu etkinlikte (varsa; Türk liginde gösterilmez)
+ * • Sıradaki maçlar (tüm aşamalar) ya da sezon arası notu
  * • Aşama seçici + seçili aşamanın puan durumu / ağacı / maçları
  * • Önceki etkinlikler (eski turnuva sayfalarına link)
  */
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
-import { CalendarDays, Layers, Radio, History, ChevronRight, Gamepad2, CircleCheck } from 'lucide-react'
+import { CalendarDays, Layers, Radio, History, ChevronRight, Gamepad2, CircleCheck, Trophy, CalendarClock } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { FEXT } from '../theme'
 import SeoHead from '../components/SeoHead'
 import Mascot from '../components/Mascot'
 import TrBadge from '../components/TrBadge'
+import GameLogo from '../components/GameLogo'
+import InitialsImage from '../components/InitialsImage'
+import KapsulSerit from '../components/KapsulSerit'
+import { kapsulStili, kapsulHover } from '../utils/kapsul'
 import NotFoundPage from './NotFoundPage'
 import { AsamaIcerigi, MatchListCard, ST, Sk } from './TournamentPage'
+import { buildBracketModel, detectFormat, sampiyonBul } from '../utils/bracketModel'
 import { GAMES } from '../context/GameContext'
 import { normalizeGameId } from '../utils/gameUtils'
 import { cleanDisplayName } from '../utils/nameCleaner'
@@ -124,7 +130,25 @@ export default function LigPage() {
       .slice(0, 6)
   ), [maclar])
 
+  // Etkinlik bitti mi (oynanacak maç kalmadı) + şampiyon: son aşamanın doğrulanmış
+  // eleme ağacındaki (büyük) finalin galibi. Ağaç kurulamazsa şampiyon yazılmaz.
+  const etkinlikBitti = maclar.length > 0 && !maclar.some(m => ['running', 'not_started'].includes(m.status))
+  const sampiyon = useMemo(() => {
+    if (!etkinlikBitti || !turnuvalar.length) return null
+    const son = turnuvalar[turnuvalar.length - 1]
+    const ms = maclarByAsama.get(String(son.id)) || []
+    if (!ms.length) return null
+    return sampiyonBul(buildBracketModel(ms, { tournament: son }))
+  }, [etkinlikBitti, turnuvalar, maclarByAsama])
+
+  // Başlık yalnız gerçekten varsa "Puan Durumu" vaat eder (AsamaIcerigi'yle aynı koşul)
+  const puanDurumuVar = useMemo(() => turnuvalar.some(t => {
+    const ms = maclarByAsama.get(String(t.id)) || []
+    return detectFormat(ms) !== 'elimination' && ms.some(m => m.status === 'finished')
+  }), [turnuvalar, maclarByAsama])
+
   const turkTakimlar = (() => {
+    if (lig?.turk) return [] // Türk liginde herkes Türk takımı: bölüm gereksiz
     const harita = new Map()
     for (const m of maclar) {
       for (const t of [m.team_a, m.team_b]) {
@@ -175,14 +199,6 @@ export default function LigPage() {
   )
 
   const asamaMaclari = asama ? (maclarByAsama.get(String(asama.id)) || []) : []
-  const pill = aktif => ({
-    flexShrink: 0, cursor: aktif ? 'default' : 'pointer',
-    padding: '7px 13px', minHeight: 36, borderRadius: 999,
-    fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap',
-    border: aktif ? `1px solid ${FEXT.accentBorder}` : '1px solid var(--line-2)',
-    background: aktif ? FEXT.accentSoftBg : 'var(--surface)',
-    color: aktif ? FEXT.accentText : 'var(--text-2)',
-  })
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 0 100px', color: 'var(--text-1)' }}>
@@ -227,7 +243,13 @@ export default function LigPage() {
               padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700,
               background: `${gc}18`, border: `1px solid ${gc}44`, color: gc,
               display: 'inline-flex', alignItems: 'center', gap: 6,
-            }}><span style={{ width: 7, height: 7, borderRadius: '50%', background: gc }} /> {oyun?.label || 'Espor'}</span>
+            }}>{gameId ? <GameLogo game={gameId} size={11} color={gc} /> : null} {oyun?.label || 'Espor'}</span>
+            {lig?.turk && (
+              <span style={{
+                padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700,
+                background: 'rgba(224,69,94,.10)', border: '1px solid rgba(224,69,94,.35)', color: '#E0455E',
+              }}>Türk ligi</span>
+            )}
             {canliSayisi > 0 && (
               <span style={{
                 padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 800,
@@ -240,9 +262,27 @@ export default function LigPage() {
           <h1 style={{ margin: '0 0 10px', lineHeight: 1.15 }}>
             <span style={{ display: 'block', fontSize: 30, fontWeight: 900, color: 'var(--text-1)' }}>{baslik}</span>
             <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: 'var(--text-3)', marginTop: 6 }}>
-              Fikstür, Puan Durumu ve Sonuçlar
+              {puanDurumuVar ? 'Fikstür, Puan Durumu ve Sonuçlar' : 'Fikstür ve Sonuçlar'}
             </span>
           </h1>
+
+          {sampiyon && (
+            <Link to={`/team/${sampiyon.id}`} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 14,
+              padding: '8px 14px 8px 10px', borderRadius: 14, textDecoration: 'none',
+              background: 'rgba(240,165,0,.10)', border: '1px solid rgba(240,165,0,.45)',
+              color: 'var(--text-1)',
+            }}>
+              <Trophy size={18} color="var(--gold-fg)" />
+              <InitialsImage src={sampiyon.logo_url} name={sampiyon.name} width={26} height={26} borderRadius={6} objectFit="contain" />
+              <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+                <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.6px', color: 'var(--gold-fg)' }}>ŞAMPİYON</span>
+                <span style={{ fontSize: 15, fontWeight: 800 }}>
+                  {sampiyon.name}{isTurkishTeam(sampiyon) && <TrBadge />}
+                </span>
+              </span>
+            </Link>
+          )}
 
           <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', fontSize: 12, color: 'var(--text-4)', marginBottom: 14 }}>
             {etkinlikAdi && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Layers size={12} /> {etkinlikAdi}</span>}
@@ -306,13 +346,24 @@ export default function LigPage() {
           </div>
         )}
 
+        {/* ── Sezon arası: oynanacak maç kalmadı ───────────────────── */}
+        {etkinlikBitti && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28,
+            padding: '12px 14px', borderRadius: 12, background: 'var(--surface)',
+            border: '1px solid var(--line-2)', fontSize: 13, color: 'var(--text-3)',
+          }}>
+            <CalendarClock size={16} style={{ flexShrink: 0 }} />
+            <span>
+              {etkinlikAdi || baslik} bitti. Sıradaki etkinliğin fikstürü açıklanınca bu sayfa kendiliğinden ona geçer.
+            </span>
+          </div>
+        )}
+
         {/* ── Aşamalar ─────────────────────────────────────────────── */}
         {turnuvalar.length > 1 && (
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.8px', textTransform: 'uppercase', color: 'var(--text-4)', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Layers size={12} /> Aşamalar
-            </div>
-            <div className="scroll-fade-x" style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 3, scrollbarWidth: 'none' }}>
+            <KapsulSerit Icon={Layers} baslik="Aşamalar">
               {turnuvalar.map(t => {
                 const aktif = String(t.id) === String(asama?.id)
                 return (
@@ -320,22 +371,31 @@ export default function LigPage() {
                     key={t.id}
                     onClick={() => { if (!aktif) setSearchParams({ asama: String(t.id) }, { replace: true }) }}
                     aria-pressed={aktif}
-                    style={pill(aktif)}
+                    style={kapsulStili(aktif)}
+                    {...kapsulHover(aktif)}
                   >
                     {cleanDisplayName(t.name) || t.name || 'Aşama'}
                   </button>
                 )
               })}
-            </div>
+            </KapsulSerit>
           </div>
         )}
 
         {asama && (
           <div key={asama.id}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text-1)' }}>
-                {cleanDisplayName(asama.name) || asama.name}
-              </h2>
+              {/* Şerit varken aşama adı zaten seçili kapsülde: tekrar yerine tarih aralığı */}
+              {turnuvalar.length > 1 ? (
+                <h2 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-3)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <CalendarDays size={13} />
+                  {[trTarih(asama.begin_at), trTarih(asama.end_at)].filter(Boolean).join(' – ') || 'Tarih açıklanmadı'}
+                </h2>
+              ) : (
+                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text-1)' }}>
+                  {cleanDisplayName(asama.name) || asama.name}
+                </h2>
+              )}
               <Link to={`/tournament/${asama.id}`} style={{ fontSize: 12, fontWeight: 700, color: FEXT.accentText, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                 Aşama sayfası <ChevronRight size={13} />
               </Link>

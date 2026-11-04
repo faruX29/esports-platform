@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { Radio, CalendarClock, CircleCheck } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { GAMES, useGame } from '../context/GameContext'
 import { normalizeGameId } from '../utils/gameUtils'
 import { clickableProps } from '../utils/a11y'
 import InitialsImage from '../components/InitialsImage'
 import GameLogo, { GAME_ICON_PATHS } from '../components/GameLogo'
+import LigSeridi from '../components/LigSeridi'
+import TrBadge from '../components/TrBadge'
 import { tournamentDisplayName, isGenericStageName, displayRegion } from '../utils/tournamentDisplay'
 import { FEXT } from '../theme'
-import { ligListesiGetir, ligPath, ligBaslik } from '../utils/ligler'
+import { ligListesiGetir } from '../utils/ligler'
 
 // Kanonik oyuna ait TÜM game_id'ler (mükerrer kayıtlar dahil: CS2 2/8, LoL 3/9).
 function resolveGameIds(activeGame, games) {
@@ -49,6 +52,30 @@ function normalizeTierKey(value) {
 function isHeroTier(rawTier) {
   const key = normalizeTierKey(rawTier)
   return key === 'S' || key === 'A'
+}
+
+// Bitiş tarihi boş turnuva başlangıçtan bu kadar sonra "bitti" sayılır
+const BITISSIZ_SURE_MS = 45 * 24 * 3600 * 1000
+
+/** 'devam' | 'yaklasan' | 'bitti' — turnuvanın tarihlerinden. */
+function turnuvaDurumu(t, simdi) {
+  const bas = Date.parse(t?.begin_at || t?.start_date || '')
+  const son = Date.parse(t?.end_at || t?.end_date || '')
+  if (Number.isFinite(bas) && bas > simdi) return 'yaklasan'
+  if (Number.isFinite(son)) return son >= simdi ? 'devam' : 'bitti'
+  if (Number.isFinite(bas) && simdi - bas < BITISSIZ_SURE_MS) return 'devam'
+  return 'bitti'
+}
+
+const GRUPLAR = [
+  { key: 'devam',    baslik: 'Devam ediyor', Icon: Radio,         renk: '#FF4655', bos: 'Şu an süren turnuva yok.' },
+  { key: 'yaklasan', baslik: 'Yaklaşan',     Icon: CalendarClock, renk: '#4CAF50', bos: 'Açıklanmış yaklaşan turnuva yok.' },
+  { key: 'bitti',    baslik: 'Bitti',        Icon: CircleCheck,   renk: 'var(--text-3)', bos: null },
+]
+
+const tarihDegeri = (t, ...alanlar) => {
+  for (const a of alanlar) { const v = Date.parse(t?.[a] || ''); if (Number.isFinite(v)) return v }
+  return 0
 }
 
 function fmtDate(iso) {
@@ -114,12 +141,17 @@ export default function TournamentsListPage() {
         const gameIds = resolveGameIds(activeGame, games)
         let q = supabase
           .from('tournaments')
-          .select('id,name,tier,region,begin_at,end_at,league_name,event_name,display_name,game:games(id,name,slug)')
-        if (debouncedSearch) q = q.ilike('name', `%${debouncedSearch}%`)
+          .select('id,name,tier,region,begin_at,end_at,start_date,end_date,league_name,event_name,display_name,turk_ligi,game:games(id,name,slug)')
+        if (debouncedSearch) {
+          // Aşama adı çoğu zaman "Playoffs" → lig ve etkinlik adında da ara ("TCL", "Worlds")
+          const desen = `*${debouncedSearch.replace(/[,()*]/g, ' ')}*`
+          q = q.or(`name.ilike.${desen},league_name.ilike.${desen},event_name.ilike.${desen}`)
+        }
         if (gameIds.length) q = q.in('game_id', gameIds)
-        // Tier filtresi SUNUCU-taraflı: eskiden client-side'dı → 120'lik sayfa çoğu
-        // alt-tier olunca S/A az kalıyor, sayfa dolmuyordu. Artık sayfa dolu S/A gelir.
-        if (!showAllTiers) q = q.in('tier', ['S', 's', 'A', 'a'])
+        // Seviye filtresi SUNUCU-taraflı (sayfa dolu gelsin): S/A + Türk ligleri (TCL,
+        // TESFED tier D; `turk_ligi` hesaplanan alanı, ligler.sql). İkinci `or` parametresi
+        // aramanınkiyle VE'lenir.
+        if (!showAllTiers) q = q.or('tier.in.(S,s,A,a),turk_ligi.is.true')
         // begin_at DESC + sayfalama → eski turnuvalara "Daha fazla" ile inilebilir.
         q = q.order('begin_at', { ascending: false, nullsFirst: false })
              .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
@@ -143,35 +175,22 @@ export default function TournamentsListPage() {
     return () => { cancelled = true }
   }, [debouncedSearch, activeGame, page, games, showAllTiers])
 
-  // Gizlenen alt-tier sayısı (S/A modunda) — server-side filtre kullandığımız için ayrı sayım.
-  const [hiddenCount, setHiddenCount] = useState(0)
-  useEffect(() => {
-    if (showAllTiers) { setHiddenCount(0); return }
-    if (activeGame && activeGame !== 'all' && games.length === 0) return
-    let cancelled = false
-    ;(async () => {
-      const gameIds = resolveGameIds(activeGame, games)
-      let q = supabase.from('tournaments').select('id', { count: 'exact', head: true })
-        .or('tier.is.null,tier.not.in.(S,s,A,a)')
-      if (debouncedSearch) q = q.ilike('name', `%${debouncedSearch}%`)
-      if (gameIds.length) q = q.in('game_id', gameIds)
-      const { count } = await q
-      if (!cancelled) setHiddenCount(count || 0)
-    })()
-    return () => { cancelled = true }
-  }, [debouncedSearch, activeGame, games, showAllTiers])
+  // Gruplama anı: sayfa açılışı (liste yeniden çekilince de aynı an yeterli)
+  const [simdi] = useState(() => Date.now())
 
-  const searchedTournaments = useMemo(() => {
-    const q = String(search || '').trim().toLowerCase()
-    if (!q) return tournaments
-    return tournaments.filter(item => String(item?.name || '').toLowerCase().includes(q))
-  }, [search, tournaments])
+  const visibleTournaments = useMemo(() => (
+    showAllTiers ? tournaments : tournaments.filter(t => isHeroTier(t?.tier) || t?.turk_ligi === true)
+  ), [tournaments, showAllTiers])
 
-  const visibleTournaments = useMemo(() => {
-    if (showAllTiers) return searchedTournaments
-    return searchedTournaments.filter(item => isHeroTier(item?.tier))
-  }, [searchedTournaments, showAllTiers])
-
+  // Devam ediyor / Yaklaşan / Bitti. Liste başlangıca göre yeniden eskiye geliyor;
+  // yaklaşanlar en yakını önce, bitenler gelen sırada (sayfalama bozulmasın).
+  const gruplar = useMemo(() => {
+    const g = { devam: [], yaklasan: [], bitti: [] }
+    for (const t of visibleTournaments) g[turnuvaDurumu(t, simdi)].push(t)
+    g.yaklasan.sort((a, b) => tarihDegeri(a, 'begin_at', 'start_date') - tarihDegeri(b, 'begin_at', 'start_date'))
+    g.devam.sort((a, b) => tarihDegeri(a, 'end_at', 'end_date') - tarihDegeri(b, 'end_at', 'end_date'))
+    return g
+  }, [visibleTournaments, simdi])
 
   // Kartlara katılan takım logolarını çek (isim sadece "Playoffs"/"Group A" → logolar bağlam verir).
   // ARTIMLI: sadece henüz logosu ÇEKİLMEMİŞ turnuvaları sorgula (60'lık parça). Böylece "Daha
@@ -206,54 +225,94 @@ export default function TournamentsListPage() {
     return () => { cancelled = true }
   }, [visibleTournaments, teamsByTournament])
 
+  const kart = item => {
+    const gm = gameMeta(item.game)
+    const tierKey = normalizeTierKey(item.tier)
+    const tierColor = TIER_COLORS[tierKey] || 'var(--text-5)'
+    const logos = teamsByTournament[item.id] || []
+    return (
+      <button
+        key={item.id}
+        {...clickableProps(() => navigate(`/tournament/${item.id}`), { label: `${tournamentDisplayName(item, { game: gm.id })} sayfası` })}
+        style={{
+          position: 'relative', overflow: 'hidden', textAlign: 'left',
+          border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-1)',
+          borderRadius: 12, padding: '12px 12px 12px 15px', cursor: 'pointer',
+          transition: 'border-color .15s, transform .15s',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = `${gm.color}66`; e.currentTarget.style.transform = 'translateY(-2px)' }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line)'; e.currentTarget.style.transform = 'translateY(0)' }}
+      >
+        {/* sol renk şeridi (oyun) */}
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: gm.color }} />
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+          <div style={{ fontSize: 14, fontWeight: 800, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {tournamentDisplayName(item, { game: gm.id })}
+          </div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+            {item.turk_ligi && <TrBadge style={{ margin: 0, fontSize: 10 }} />}
+            {tierKey && (
+              <span style={{ fontSize: 10, fontWeight: 900, color: '#0b0f19', background: tierColor, borderRadius: 5, padding: '2px 6px', letterSpacing: '.3px' }}>
+                {tierKey}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontSize: 11, color: 'var(--text-3)' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: gm.color, fontWeight: 700 }}>
+            {GAME_ICON_PATHS[gm.id] ? <GameLogo game={gm.id} size={13} color={gm.color} /> : <span style={{ width: 6, height: 6, borderRadius: '50%', background: gm.color }} />} {gm.label}
+          </span>
+          {item.region && !isGenericStageName(item.name) && <span>· {displayRegion(item.region, gm.id)}</span>}
+        </div>
+
+        {logos.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 9 }}>
+            {logos.slice(0, 5).map(t => (
+              <InitialsImage key={t.id} src={t.logo_url} name={t.name} width={20} height={20} borderRadius={5} objectFit='contain' />
+            ))}
+            {logos.length > 5 && <span style={{ fontSize: 10, color: 'var(--text-4)', marginLeft: 2 }}>+{logos.length - 5}</span>}
+          </div>
+        )}
+
+        <div style={{ marginTop: 9, fontSize: 11.5, color: 'var(--text-3)' }}>
+          {fmtDate(item.begin_at || item.start_date)}
+          {(item.end_at || item.end_date) ? ` – ${fmtDate(item.end_at || item.end_date)}` : ''}
+        </div>
+      </button>
+    )
+  }
+
+  const izgara = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,280px),1fr))', gap: 10 }
+
   return (
     <div style={{ maxWidth: 1440, margin: '0 auto', padding: '24px 16px 80px', color: 'var(--text-1)' }}>
       <h1 style={{ margin: '0 0 8px', fontSize: 30, letterSpacing: '.4px' }}>Turnuvalar</h1>
       <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--text-3)' }}>
-        Aktif ve yaklaşan turnuvalar. Detay, bracket ve puan durumu için bir turnuvaya tıkla.
+        Devam eden, yaklaşan ve biten turnuvalar. Fikstür, eleme ağacı ve puan durumu için bir turnuvaya tıkla.
       </p>
 
-      {/* Ligler: yüklenirken yer tutar (CLS), boşsa hiç çizilmez */}
+      {/* Lig şeridi: yüklenirken yer tutar (CLS), boşsa hiç çizilmez */}
       {(gorunenLigler === null || gorunenLigler.length > 0) && (
-        <nav aria-label="Ligler" style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.8px', textTransform: 'uppercase', color: 'var(--text-4)', marginBottom: 7 }}>
-            Ligler — güncel fikstür ve puan durumu
-          </div>
-          <div className="scroll-fade-x" style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 3, scrollbarWidth: 'none', minHeight: 36 }}>
-            {(gorunenLigler || []).map(l => {
-              const renk = GAMES.find(g => g.id === normalizeGameId(l.oyun))?.color || 'var(--text-3)'
-              return (
-                <Link key={l.slug} to={ligPath(l.slug)} style={{
-                  flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6,
-                  padding: '7px 13px', minHeight: 36, boxSizing: 'border-box', borderRadius: 999,
-                  fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', textDecoration: 'none',
-                  border: '1px solid var(--line-2)', background: 'var(--surface)', color: 'var(--text-2)',
-                }}>
-                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: renk }} />
-                  {ligBaslik(l)}
-                </Link>
-              )
-            })}
-          </div>
-        </nav>
+        <div style={{ marginBottom: 16 }}>
+          <LigSeridi ligler={gorunenLigler} />
+        </div>
       )}
 
       <div style={{ marginBottom: 14 }}>
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder='Turnuva ara...'
+          placeholder='Turnuva ya da lig ara...'
+          aria-label='Turnuva ya da lig ara'
           style={{ height: 40, width: '100%', maxWidth: 420, borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-1)', padding: '0 12px', outline: 'none' }}
         />
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 11, color: 'var(--text-3)', letterSpacing: '.4px' }}>
-          Varsayılan filtre: S-Tier + A-Tier
-        </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
         {/* Ana sayfadaki seviye filtresiyle AYNI davranış: aktif seçimin
-            kapsülü kayarak geçiyor, butonlar kendi arka planını taşımıyor.
-            Eskiden iki buton ayrı ayrı renk değiştiriyordu → geçiş anlıktı. */}
+            kapsülü kayarak geçiyor, butonlar kendi arka planını taşımıyor. */}
         <div style={{
           position: 'relative',
           display: 'inline-flex',
@@ -277,7 +336,7 @@ export default function TournamentsListPage() {
             }}
           />
           {[
-            { key: false, label: 'S/A Pro Pool' },
+            { key: false, label: 'Öne çıkanlar' },
             { key: true,  label: 'Tümü' },
           ].map(opt => {
             const active = showAllTiers === opt.key
@@ -307,14 +366,26 @@ export default function TournamentsListPage() {
             )
           })}
         </div>
-        {!showAllTiers && hiddenCount > 0 && (
-          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
-            {hiddenCount} alt-tier turnuva gizli
-          </span>
-        )}
+        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
+          {showAllTiers ? 'Küçük turnuvalar ve elemeler dahil' : 'S ve A seviyesi turnuvalar + Türk ligleri'}
+        </span>
       </div>
 
-      {loading && <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Turnuvalar yükleniyor...</div>}
+      {/* Yükleniyor: kart iskeleti (CLS) */}
+      {loading && (
+        <div aria-busy="true" aria-label="Turnuvalar yükleniyor">
+          <div style={{ width: 120, height: 14, borderRadius: 6, background: 'var(--surface-2)', marginBottom: 10 }} />
+          <div style={izgara}>
+            {[0, 1, 2, 3, 4, 5].map(i => (
+              <div key={i} style={{
+                height: 118, borderRadius: 12, border: '1px solid var(--line)',
+                background: 'linear-gradient(90deg,var(--surface) 25%,var(--surface-2) 50%,var(--surface) 75%)',
+                backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite',
+              }} />
+            ))}
+          </div>
+        </div>
+      )}
       {!loading && error && <div style={{ fontSize: 13, color: 'var(--danger-fg)' }}>{error}</div>}
 
       {!loading && !error && visibleTournaments.length === 0 && (
@@ -323,65 +394,30 @@ export default function TournamentsListPage() {
         </div>
       )}
 
-      {!loading && !error && visibleTournaments.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 10 }}>
-          {visibleTournaments.map(item => {
-            const gm = gameMeta(item.game)
-            const tierKey = normalizeTierKey(item.tier)
-            const tierColor = TIER_COLORS[tierKey] || 'var(--text-5)'
-            const logos = teamsByTournament[item.id] || []
-            return (
-              <button
-                key={item.id}
-                {...clickableProps(() => navigate(`/tournament/${item.id}`), { label: `${item.name ?? 'Turnuva'} sayfası` })}
-                style={{
-                  position: 'relative', overflow: 'hidden', textAlign: 'left',
-                  border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-1)',
-                  borderRadius: 12, padding: '12px 12px 12px 15px', cursor: 'pointer',
-                  transition: 'border-color .15s, transform .15s',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = `${gm.color}66`; e.currentTarget.style.transform = 'translateY(-2px)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line)'; e.currentTarget.style.transform = 'translateY(0)' }}
-              >
-                {/* sol renk şeridi (oyun) */}
-                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: gm.color }} />
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                  <div style={{ fontSize: 14, fontWeight: 800, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {tournamentDisplayName(item, { game: gm.id })}
-                  </div>
-                  {tierKey && (
-                    <span style={{ fontSize: 10, fontWeight: 900, color: '#0b0f19', background: tierColor, borderRadius: 5, padding: '2px 6px', flexShrink: 0, letterSpacing: '.3px' }}>
-                      {tierKey}
-                    </span>
-                  )}
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontSize: 11, color: 'var(--text-3)' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: gm.color, fontWeight: 700 }}>
-                    {GAME_ICON_PATHS[gm.id] ? <GameLogo game={gm.id} size={13} color={gm.color} /> : <span style={{ width: 6, height: 6, borderRadius: '50%', background: gm.color }} />} {gm.label}
-                  </span>
-                  {item.region && !isGenericStageName(item.name) && <span>· {displayRegion(item.region, gm.id)}</span>}
-                </div>
-
-                {logos.length > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 9 }}>
-                    {logos.slice(0, 5).map(t => (
-                      <InitialsImage key={t.id} src={t.logo_url} name={t.name} width={20} height={20} borderRadius={5} objectFit='contain' />
-                    ))}
-                    {logos.length > 5 && <span style={{ fontSize: 10, color: 'var(--text-4)', marginLeft: 2 }}>+{logos.length - 5}</span>}
-                  </div>
-                )}
-
-                <div style={{ marginTop: 9, fontSize: 11.5, color: 'var(--text-3)' }}>
-                  {fmtDate(item.begin_at)}
-                  {item.end_at ? ` – ${fmtDate(item.end_at)}` : ''}
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      )}
+      {!loading && !error && visibleTournaments.length > 0 && GRUPLAR.map(g => {
+        const liste = gruplar[g.key]
+        // Boş grup: aramada hiç çizilmez; aramasız yalnız kısa not (bitenler hep dolu)
+        if (!liste.length && (debouncedSearch || !g.bos)) return null
+        return (
+          <section key={g.key} aria-labelledby={`grup-${g.key}`} style={{ marginBottom: 26 }}>
+            <h2 id={`grup-${g.key}`} style={{
+              margin: '0 0 10px', fontSize: 13, fontWeight: 800, letterSpacing: '.3px',
+              display: 'flex', alignItems: 'center', gap: 7, color: 'var(--text-2)',
+            }}>
+              <g.Icon size={14} color={g.renk} />
+              {g.baslik}
+              {liste.length > 0 && (
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-4)', fontVariantNumeric: 'tabular-nums' }}>
+                  {liste.length}{g.key === 'bitti' && hasMore ? '+' : ''}
+                </span>
+              )}
+            </h2>
+            {liste.length > 0
+              ? <div style={izgara}>{liste.map(kart)}</div>
+              : <div style={{ fontSize: 12, color: 'var(--text-4)' }}>{g.bos}</div>}
+          </section>
+        )
+      })}
 
       {!loading && !error && hasMore && (
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 18 }}>

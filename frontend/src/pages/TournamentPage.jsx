@@ -33,10 +33,12 @@ import Mascot from '../components/Mascot'
 import SeoHead from '../components/SeoHead'
 import { tournamentDisplayName, isGenericStageName, displayRegion } from '../utils/tournamentDisplay'
 import DragScroll from '../components/DragScroll'
+import KapsulSerit from '../components/KapsulSerit'
+import { kapsulStili, kapsulHover } from '../utils/kapsul'
 import { normalizeTurnuvaMaci } from '../utils/turnuvaMaci'
 import LiquipediaCredit from '../components/LiquipediaCredit'
 import { ligPath, ligBaslik, turnuvaLigiGetir } from '../utils/ligler'
-import { buildBracketModel, layoutBracket, BRACKET_DIM, turEtiketi, ayaksizTurNo } from '../utils/bracketModel'
+import { buildBracketModel, detectFormat, layoutBracket, BRACKET_DIM, turEtiketi, ayaksizTurNo } from '../utils/bracketModel'
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 
@@ -103,24 +105,6 @@ function cleanName(value, fallback = '') {
 
 function getMatchTimestamp(match) {
   return match?.begin_at || match?.scheduled_at || null
-}
-
-// round-robin mi elimination mı?
-function detectFormat(matches) {
-  if (!matches?.length) return 'unknown'
-  // round_info alanı varsa kullan
-  const rounds = [...new Set(matches.map(m => m.round_info || m.name).filter(Boolean))]
-  if (rounds.some(r => /final|semi|quarter|bracket/i.test(r))) return 'elimination'
-  if (rounds.some(r => /group|round|week/i.test(r)))           return 'roundrobin'
-  // Structured bracket alanları varsa elimination.
-  if (matches.some(m =>
-    m.bracket_position != null ||
-    m.next_match_id != null ||
-    m.round != null ||
-    m.position != null
-  )) return 'elimination'
-  // fallback: maç sayısı az + tekrar eden takım çiftleri az → elimination
-  return rounds.length > 0 ? 'roundrobin' : 'elimination'
 }
 
 // GSL grubu (4 takım, çift eleme): açılış → kazananlar / elenme → decider.
@@ -1571,10 +1555,7 @@ export default function TournamentPage() {
         {/* ── Etkinlik aşamaları arası gezinme (aynı serie: Group A / Play-In / Playoffs) ── */}
         {eventStages.length > 1 && (
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.8px', textTransform: 'uppercase', color: 'var(--text-4)', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Layers size={12} /> Bu Etkinliğin Aşamaları
-            </div>
-            <div className="scroll-fade-x" style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 3, scrollbarWidth: 'none' }}>
+            <KapsulSerit Icon={Layers} baslik="Bu Etkinliğin Aşamaları">
               {eventStages.map(s => {
                 const isCurrent = String(s.id) === String(tournamentId)
                 const label = cleanName(s.name, s.name || 'Aşama')
@@ -1583,22 +1564,14 @@ export default function TournamentPage() {
                     key={s.id}
                     onClick={() => { if (!isCurrent) navigate(`/tournament/${s.id}`) }}
                     aria-current={isCurrent ? 'page' : undefined}
-                    style={{
-                      flexShrink: 0, cursor: isCurrent ? 'default' : 'pointer',
-                      padding: '7px 13px', minHeight: 36, borderRadius: 999,
-                      fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap',
-                      border: isCurrent ? `1px solid ${FEXT.accentBorder}` : '1px solid var(--line-2)',
-                      background: isCurrent ? FEXT.accentSoftBg : 'var(--surface)',
-                      color: isCurrent ? FEXT.accentText : 'var(--text-2)',
-                    }}
-                    onMouseEnter={e => { if (!isCurrent) e.currentTarget.style.borderColor = FEXT.accentBorder }}
-                    onMouseLeave={e => { if (!isCurrent) e.currentTarget.style.borderColor = 'var(--line-2)' }}
+                    style={kapsulStili(isCurrent)}
+                    {...kapsulHover(isCurrent)}
                   >
                     {label}
                   </button>
                 )
               })}
-            </div>
+            </KapsulSerit>
           </div>
         )}
 

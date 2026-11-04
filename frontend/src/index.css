@@ -36,6 +36,7 @@
   --accent-fg:    #d08be0;   /* marka moru METİN olarak (koyu üstünde okunur) */
   --success-fg:   #4ade80;   /* başarı metni (koyu üstünde okunur açık yeşil) */
   --danger-fg:    #fb7185;   /* hata/kayıp metni (koyu üstünde okunur açık kırmızı) */
+  --gold-fg:      #F0A500;   /* şampiyon/kupa metni (koyu üstünde) */
   color-scheme: dark;
 }
 
@@ -63,6 +64,7 @@
   --accent-fg:    #9c2bb0;   /* marka moru METİN olarak — aydınlıkta okunur derin magenta */
   --success-fg:   #15803d;   /* başarı metni — aydınlıkta okunur koyu yeşil (açık yeşil beyazda kayboluyordu) */
   --danger-fg:    #dc2626;   /* hata/kayıp metni — aydınlıkta okunur koyu kırmızı (açık kırmızı beyazda kayboluyordu) */
+  --gold-fg:      #a16207;   /* şampiyon/kupa metni — aydınlıkta okunur koyu altın (#F0A500 beyazda ~2:1 kalıyordu) */
   color-scheme: light;
 }
 

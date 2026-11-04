@@ -88,6 +88,13 @@ ON CONFLICT (slug) DO UPDATE SET
 
 CREATE INDEX IF NOT EXISTS tournaments_league_name_idx ON public.tournaments (league_name);
 
+-- Türk ligi: /tournaments'ta tier'dan bağımsız hep görünür (TCL ve TESFED tier D,
+-- VCL Türkiye C), lig şeridinde oyun grubunun başında ve TR rozetiyle durur.
+-- Yeni Türk ligi = satırda turk = true; kod değişmez.
+ALTER TABLE public.ligler ADD COLUMN IF NOT EXISTS turk boolean NOT NULL DEFAULT false;
+UPDATE public.ligler SET turk = true
+WHERE slug IN ('tcl', 'vcl-turkiye', 'tesfed') AND NOT turk;
+
 -- 3) Eşleme kuralı (tek yer) ----------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.lig_eslesir(l public.ligler, p_oyun text, p_lig text, p_etkinlik text)
 RETURNS boolean
@@ -136,6 +143,7 @@ AS $$
         'slug', l.slug,
         'ad', l.ad,
         'oyun', l.oyun,
+        'turk', l.turk,
         'league_name', l.league_name,
         'etkinlik', s.event_name,
         'yil', COALESCE(substring(s.event_name FROM '(\d{4})\D*$'), to_char(s.bas, 'YYYY')),
@@ -191,6 +199,24 @@ AS $$
     WHERE l.aktif AND ls->>'etkinlik' IS NOT NULL
 $$;
 
+-- 7) Turnuva bir Türk ligine mi ait? PostgREST hesaplanan alanı: /tournaments listesi
+-- `or=(tier.in.(S,s,A,a),turk_ligi.is.true)` ile süzer, `select=...,turk_ligi` ile okur.
+CREATE OR REPLACE FUNCTION public.turk_ligi(t public.tournaments)
+RETURNS boolean
+LANGUAGE sql STABLE
+SET search_path = public
+AS $$
+    SELECT EXISTS (
+        SELECT 1
+        FROM ligler l
+        JOIN games g ON g.slug = l.oyun
+        WHERE l.turk AND g.id = t.game_id
+          AND l.league_name = t.league_name   -- ucuz ön süzgeç: desen yalnız aday satırda
+          AND lig_eslesir(l, g.slug, t.league_name, t.event_name)
+    )
+$$;
+
+GRANT EXECUTE ON FUNCTION public.turk_ligi(public.tournaments) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.lig_eslesir(public.ligler, text, text, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.lig_sayfasi(text)  TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.turnuva_ligi(bigint) TO anon, authenticated;

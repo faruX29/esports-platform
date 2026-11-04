@@ -503,6 +503,42 @@ export function buildBracketModel(matches, { tournament = null, now = Date.now()
 
 // ─── Yerleşim ────────────────────────────────────────────────────────────────
 
+/** Aşama formatı: 'elimination' | 'roundrobin' | 'unknown' (puan durumu yalnız eleme dışında). */
+export function detectFormat(matches) {
+  if (!matches?.length) return 'unknown'
+  // round_info alanı varsa kullan
+  const rounds = [...new Set(matches.map(m => m.round_info || m.name).filter(Boolean))]
+  if (rounds.some(r => /final|semi|quarter|bracket/i.test(r))) return 'elimination'
+  if (rounds.some(r => /group|round|week/i.test(r)))           return 'roundrobin'
+  // Structured bracket alanları varsa elimination.
+  if (matches.some(m =>
+    m.bracket_position != null ||
+    m.next_match_id != null ||
+    m.round != null ||
+    m.position != null
+  )) return 'elimination'
+  // fallback: maç sayısı az + tekrar eden takım çiftleri az → elimination
+  return rounds.length > 0 ? 'roundrobin' : 'elimination'
+}
+
+/**
+ * Doğrulanmış eleme ağacının şampiyonu: (büyük) final oynanıp bittiyse kazanan
+ * takım nesnesi, yoksa null. GSL grubu ve ağacı kurulamayan aşama şampiyon vermez
+ * ("son oynanan maçın galibi" şampiyon sayılmaz).
+ */
+export function sampiyonBul(model) {
+  if (!model?.ok || model.kind === 'gsl') return null
+  const upper = model.sides?.find(s => s.side === 'upper')
+  const gfCol = upper?.columns?.find(c => c.stage === 'gf')
+  const finaller = (gfCol?.matches || []).filter(m => !m.is_virtual && m.status === 'finished')
+  if (!finaller.length) return null
+  // Büyük finalde "bracket reset" olursa iki maç olur; şampiyon sonuncunun galibi
+  const m = finaller.reduce((a, b) => (ts(b) > ts(a) ? b : a))
+  const w = winnerOf(m)
+  if (!w) return null
+  return [m.team_a, m.team_b].find(t => t?.id != null && String(t.id) === w) || null
+}
+
 export const BRACKET_DIM = {
   cardW: 212,    // kart genişliği
   headH: 22,     // kartın üst şeridi (tarih · Bo)

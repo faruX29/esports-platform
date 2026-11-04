@@ -885,7 +885,7 @@ const STATIC_ROUTES = {
   },
   '/tournaments': {
     title: 'Turnuvalar — Aktif ve Yaklaşan Espor Turnuvaları',
-    desc: 'S-Tier ve A-Tier espor turnuvaları; bracket, takvim ve puan durumu.',
+    desc: 'Devam eden, yaklaşan ve biten S/A seviyesi espor turnuvaları ve Türk ligleri; eleme ağacı, fikstür ve puan durumu.',
     heading: 'Aktif turnuvalar',
     feed: 'tournaments',
   },
@@ -1106,11 +1106,11 @@ async function staticFeedHtml(feed, origin) {
     }
     if (feed === 'tournaments') {
       const [rows, ligler] = await Promise.all([
-        sbFetchAll(`tournaments?tier=in.(S,s,A,a)&select=${ENC('id,name,tier,league_name,event_name,display_name')}&order=begin_at.desc&limit=25`),
+        sbFetchAll(`tournaments?or=(tier.in.(S,s,A,a),turk_ligi.is.true)&select=${ENC('id,name,tier,league_name,event_name,display_name')}&order=begin_at.desc&limit=25`),
         sbFetchAll('rpc/lig_listesi'),
       ])
       const ligHtml = ligler.length
-        ? `<h2>Ligler — güncel fikstür ve puan durumu</h2><ul>${ligler.map(l =>
+        ? `<h2>Lig sayfaları — tüm aşamalar tek yerde</h2><ul>${ligler.map(l =>
           `<li><a href="${origin}/lig/${esc(l.slug)}">${esc([l.ad, l.yil].filter(Boolean).join(' '))} fikstür ve puan durumu</a></li>`,
         ).join('')}</ul>`
         : ''

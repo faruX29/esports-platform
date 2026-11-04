@@ -314,6 +314,13 @@ class PlayerStatsSyncer:
             DO UPDATE SET stats = EXCLUDED.stats
         """
 
+        # Maçın takımı sonradan değişince (TBD → gerçek takım, kadro düzeltmesi) eski takımın satırı
+        # kalıyordu → o takımın analitiğine oynamadığı maç giriyordu (4 Kas: 216 satır silindi).
+        DELETE_YETIM_SQL = """
+            DELETE FROM match_stats
+            WHERE match_id = %s AND team_id IS NOT NULL AND team_id <> ALL(%s::bigint[])
+        """
+
         INSERT_PLAYER_STATS_SQL = """
             INSERT INTO player_match_stats (
                 player_id,
@@ -386,6 +393,7 @@ class PlayerStatsSyncer:
                 processed = 0
                 skipped   = 0
                 batch     = []   # (match_id, team_id, stats_json)
+                yetim_batch = []  # (match_id, [geçerli team_id'ler])
                 player_batch = []
 
                 cur.execute("SELECT id, pandascore_id, nickname FROM players")
@@ -464,6 +472,7 @@ class PlayerStatsSyncer:
                                     'games_detail': games_detail,
                                 })
                             ))
+                        yetim_batch.append((match_id, [t for t in (team_a_id, team_b_id) if t]))
 
                         player_rows_for_match = self._extract_player_stat_rows(raw_data)
                         for stat_row in player_rows_for_match:
@@ -529,10 +538,12 @@ class PlayerStatsSyncer:
                         # 3) batch_size dolunca flush et
                         if len(batch) >= batch_size:
                             cur.executemany(INSERT_SQL, batch)
+                            cur.executemany(DELETE_YETIM_SQL, yetim_batch)
                             if player_batch:
                                 cur.executemany(INSERT_PLAYER_STATS_SQL, player_batch)
                             conn.commit()
                             batch.clear()
+                            yetim_batch.clear()
                             player_batch.clear()
 
                     except Exception as e:
@@ -542,6 +553,7 @@ class PlayerStatsSyncer:
                 # 4) Kalan satırları yaz
                 if batch:
                     cur.executemany(INSERT_SQL, batch)
+                    cur.executemany(DELETE_YETIM_SQL, yetim_batch)
                 if player_batch:
                     cur.executemany(INSERT_PLAYER_STATS_SQL, player_batch)
                 if batch or player_batch:

@@ -20,7 +20,8 @@ import TrBadge                                        from '../components/TrBadg
 import { deriveWinnerTeamId }                         from '../utils/matchResult'
 import { roundLabel }                                 from '../utils/roundLabel'
 import { isUncertainPrediction }                      from '../utils/prediction'
-import { useAcilisGecisi } from '../hooks/useHareket'
+import { useAcilisGecisi, useGorununce, hareketAzalt } from '../hooks/useHareket'
+import { Sirayla } from '../components/Animasyon'
 import { clickableProps }                             from '../utils/a11y'
 import TurkishBadge                                   from '../components/TurkishBadge'
 import { normalizeGameId }                            from '../utils/gameUtils'
@@ -523,7 +524,7 @@ function StandingsTable({ matches, navigate, cikanSayisi = 0 }) {
                 {/* Form (son 5) */}
                 <td style={{ padding: '10px 12px', textAlign: 'center', background: 'var(--surface)' }}>
                   {t.form.length > 0 ? (
-                    <div style={{ display: 'inline-flex', gap: 3 }}>
+                    <Sirayla style={{ display: 'inline-flex', gap: 3 }}>
                       {t.form.map((r, fi) => {
                         const c = r === 'W' ? '#4CAF50' : r === 'L' ? '#FF4655' : 'var(--text-5)'
                         return (
@@ -534,7 +535,7 @@ function StandingsTable({ matches, navigate, cikanSayisi = 0 }) {
                           }}>{r === 'W' ? 'G' : r === 'L' ? 'M' : 'B'}</span>
                         )
                       })}
-                    </div>
+                    </Sirayla>
                   ) : <span style={{ fontSize: 11, color: 'var(--text-6)' }}>—</span>}
                 </td>
 
@@ -710,15 +711,24 @@ function TurnuvaOlasilikCubugu({ m }) {
   )
 }
 
+// UX P2 A4: ağaç ekrana girince kazananın çizgisinde parlak bir parça bir sonraki
+// tura akar; tur tur (sütun sütun) gecikmeli, kazanan finale doğru ilerliyormuş gibi.
+// Yalnız doğrulanmış ve kazananı belli bağlantılarda; bir kez oynar. CSS animasyonu:
+// hover yeniden çizse de baştan başlamaz (yol aynı eleman kalır).
+const AKIS_TUR_MS = 380
+const AKIS_SURE_MS = 650
+
 function BracketView({ layout: L, navigate, zoom = 1 }) {
   const [hoverTeam, setHoverTeam] = useState(null)
+  const [akisRef, akisGorundu] = useGorununce(0.15)
+  const akisVar = akisGorundu && !hareketAzalt()
   const D = BRACKET_DIM
 
   return (
     // Aktif Turnuvalar şeridiyle aynı davranış: scrollbar gizli, fareyle sürükleme
     // + kenar oklarıyla kayma; sürükleme sonrası tıklama yutulur (maç açılmasın).
     <DragScroll ariaLabel="Turnuva ağacı" arrowAlign="top" style={{ display: 'block', paddingBottom: 4 }}>
-      <div style={{ position: 'relative', width: L.width * zoom, height: L.height * zoom, flexShrink: 0 }}>
+      <div ref={akisRef} style={{ position: 'relative', width: L.width * zoom, height: L.height * zoom, flexShrink: 0 }}>
         <div style={{
           position: 'absolute', left: 0, top: 0,
           width: L.width, height: L.height,
@@ -745,6 +755,24 @@ function BracketView({ layout: L, navigate, zoom = 1 }) {
                 />
               )
             })}
+            {akisVar && L.edges.map(e => (e.verified && e.team != null) && (
+              <path
+                key={`akis-${e.key}`}
+                d={e.d}
+                pathLength={1}
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{
+                  stroke: 'var(--accent-fg)',
+                  strokeWidth: 2.5,
+                  strokeDasharray: '.25 1',
+                  strokeDashoffset: 0.25,
+                  opacity: 0,
+                  animation: `fxAkis ${AKIS_SURE_MS}ms ease-in-out ${(e.col || 0) * AKIS_TUR_MS}ms both`,
+                }}
+              />
+            ))}
           </svg>
 
           {L.sections.map(s => (
@@ -1346,7 +1374,8 @@ export default function TournamentPage() {
 
   // ── Render ────────────────────────────────────────────────────
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 0 100px', color: 'var(--text-1)' }}>
+    // UX P2 A8: iskeletten içeriğe süzülerek geçiş
+    <div className="content-in" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 0 100px', color: 'var(--text-1)' }}>
       <SeoHead
         title={`${tournamentTitle} — Fikstür, Puan Durumu ve Sonuçlar`}
         description={`${tournamentTitle} espor turnuvası: maç programı, bracket, puan durumu ve sonuçlar — feXt.`}

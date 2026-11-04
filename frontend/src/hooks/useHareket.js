@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 /**
- * Animasyon kancaları (UX P2 A1-A3). Hepsi "hareketi azalt" açıkken son hâli
+ * Animasyon kancaları (UX P2). Hepsi "hareketi azalt" açıkken son hâli
  * anında verir; animasyon JS'le sürüldüğü için CSS media query'si yetmez.
  */
 
@@ -85,4 +85,70 @@ export function useDegisimSayaci(deger, kimlik) {
   }, [deger, kimlik])
 
   return sayac
+}
+
+/**
+ * Liste sırası değişince satırlar eski yerinden yenisine kayar (FLIP; UX P2 A6).
+ * `kapRef` içindeki `[data-flip="<anahtar>"]` satırları izlenir; `imza` (sıranın özeti,
+ * ör. anahtarların birleşimi) değişince çalışır. Konum `offsetTop`'tan okunur (transform
+ * etkilemez). `ilkSira` verilirse (anahtar → önceki sıra indeksi) liste ilk kez dolunca
+ * satırlar o sıradaki yerlerinde görünür, kısa bir duraktan sonra yeni yerlerine kayar.
+ */
+export function useSiraGecisi(kapRef, imza, ilkSira = null) {
+  const onceki = useRef(null)
+
+  useLayoutEffect(() => {
+    const kap = kapRef.current
+    if (!kap) return undefined
+    const els = [...kap.querySelectorAll('[data-flip]')]
+    const yeni = new Map(els.map(el => [el.dataset.flip, el.offsetTop]))
+    let eski = onceki.current
+    onceki.current = yeni
+    if (!els.length || hareketAzalt()) return undefined
+
+    let durak = 0
+    if (!eski?.size) {
+      if (!ilkSira) return undefined
+      eski = new Map()
+      for (const el of els) {
+        const i = ilkSira.get(el.dataset.flip)
+        if (i != null) eski.set(el.dataset.flip, els[Math.min(i, els.length - 1)].offsetTop)
+      }
+      durak = 500
+    }
+
+    const hareketli = []
+    for (const el of els) {
+      const o = eski.get(el.dataset.flip)
+      const n = yeni.get(el.dataset.flip)
+      if (o == null || o === n) continue
+      el.style.transition = 'none'
+      el.style.transform = `translateY(${o - n}px)`
+      el.style.position = 'relative'
+      el.style.zIndex = '1'
+      el.style.backgroundColor = 'var(--surface)'
+      hareketli.push(el)
+    }
+    if (!hareketli.length) return undefined
+
+    const temizle = el => {
+      el.style.transition = ''; el.style.transform = ''
+      el.style.position = ''; el.style.zIndex = ''; el.style.backgroundColor = ''
+    }
+    void kap.offsetHeight // reflow: başlangıç konumu çizilsin
+    let bitis = 0
+    const basla = window.setTimeout(() => {
+      for (const el of hareketli) {
+        el.style.transition = 'transform .7s cubic-bezier(.2,.8,.25,1)'
+        el.style.transform = ''
+      }
+      bitis = window.setTimeout(() => hareketli.forEach(temizle), 750)
+    }, durak || 16)
+
+    return () => {
+      window.clearTimeout(basla)
+      window.clearTimeout(bitis)
+      hareketli.forEach(temizle)
+    }
+  }, [imza]) // eslint-disable-line react-hooks/exhaustive-deps -- yalnız sıra değişince
 }

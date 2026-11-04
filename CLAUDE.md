@@ -102,6 +102,7 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - **RLS/yetki:** anon anahtarla REST'e dışarıdan iste; yazma testi veri değiştirmesin diye `{"id":null}` gönder (42501 = RLS reddetti, 23502 = RLS geçti).
 - **SEO/bot HTML:** Googlebot UA ile iste, `?__og=1&cb=<rastgele>` ekleyip önbelleği atla. `<title>` middleware'deki varsayılan kabuk başlığıysa sayfa bozuktur.
 - **Frontend:** `npm run build` + `npm run lint`, sonra canlıda ekran görüntüsü.
+- **Animasyon:** gizli tarayıcı panelinde IntersectionObserver tetiklenmez; ekrana girince başlayanı konsolda `window.IntersectionObserver = undefined` + SPA içi gezinmeyle (`pushState` + `popstate`) zorla.
 - **Video:** ffmpeg ile kare çıkarıp bak.
 - **Uygulama:** USB'li telefona `adb install -r`, ekran `adb exec-out screencap -p`; web görünümüne
   `adb forward tcp:9222 localabstract:webview_devtools_remote_<pid>` ile bağlanıp CDP'den durum oku (debug build).

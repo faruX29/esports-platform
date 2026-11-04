@@ -35,6 +35,7 @@ import { tournamentDisplayName } from '../utils/tournamentDisplay'
 import { isTurkishTeam, useTurkTakimlar } from '../utils/turkTakimlar'
 import { normalizeTurnuvaMaci, TURNUVA_MAC_SECIMI } from '../utils/turnuvaMaci'
 import { ligSayfasiGetir, ligBaslik } from '../utils/ligler'
+import { Konfeti } from '../components/Animasyon'
 
 const AYLAR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
   'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
@@ -201,7 +202,8 @@ export default function LigPage() {
   const asamaMaclari = asama ? (maclarByAsama.get(String(asama.id)) || []) : []
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 0 100px', color: 'var(--text-1)' }}>
+    // UX P2 A8: iskeletten içeriğe süzülerek geçiş
+    <div className="content-in" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 0 100px', color: 'var(--text-1)' }}>
       <SeoHead
         title={`${baslik} Fikstür, Puan Durumu ve Sonuçlar`}
         description={aciklama}
@@ -268,12 +270,17 @@ export default function LigPage() {
 
           {sampiyon && (
             <Link to={`/team/${sampiyon.id}`} style={{
+              position: 'relative',
               display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 14,
               padding: '8px 14px 8px 10px', borderRadius: 14, textDecoration: 'none',
               background: 'rgba(240,165,0,.10)', border: '1px solid rgba(240,165,0,.45)',
               color: 'var(--text-1)',
             }}>
-              <Trophy size={18} color="var(--gold-fg)" />
+              {/* UX P2 A5: kupa bir kez sallanır, kupadan konfeti patlar (hareketi azalt: statik) */}
+              <Konfeti x="19px" y="50%" />
+              <span style={{ display: 'inline-flex', animation: 'fxKupa .9s ease-in-out .15s both', transformOrigin: '50% 80%' }}>
+                <Trophy size={18} color="var(--gold-fg)" />
+              </span>
               <InitialsImage src={sampiyon.logo_url} name={sampiyon.name} width={26} height={26} borderRadius={6} objectFit="contain" />
               <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
                 <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.6px', color: 'var(--gold-fg)' }}>ŞAMPİYON</span>

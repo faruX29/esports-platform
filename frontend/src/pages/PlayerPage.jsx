@@ -26,9 +26,11 @@ import { FEXT } from '../theme'
 import Mascot from '../components/Mascot'
 import TrBadge from '../components/TrBadge'
 import SeoHead from '../components/SeoHead'
+import TakipYildizi from '../components/TakipYildizi'
+import { takipEdildiBildir } from '../utils/takipBildir'
 import {
   Brain, ClipboardList, Target, Swords, Skull, Handshake, Crosshair, Map as MapIcon,
-  Compass, Sparkles, TriangleAlert, Star, MapPin, CircleCheck, X as XIcon, BarChart3,
+  Compass, Sparkles, TriangleAlert, MapPin, CircleCheck, X as XIcon, BarChart3,
   Zap, Flame, Trophy, Inbox, Video, AtSign, Globe, Music, Gamepad2, Link as LinkIcon,
   Clock, Info,
 } from 'lucide-react'
@@ -975,6 +977,7 @@ export default function PlayerPage() {
 
   function handleToggleFollow() {
     if (!player) return
+    if (!followed) takipEdildiBildir(player.nickname)
     togglePlayerFollow(player.id)
   }
 
@@ -1019,7 +1022,8 @@ export default function PlayerPage() {
 
   // ── Render ────────────────────────────────────────────────────
   return (
-    <div style={{ maxWidth: 820, margin: '0 auto', padding: isMobile ? '0 0 42px' : '0 0 80px', color: 'var(--text-1)' }}>
+    // UX P2 A8: iskeletten içeriğe süzülerek geçiş
+    <div className="content-in" style={{ maxWidth: 820, margin: '0 auto', padding: isMobile ? '0 0 42px' : '0 0 80px', color: 'var(--text-1)' }}>
       <SeoHead
         title={`${player.nickname} — Espor Oyuncu Profili, İstatistikler`}
         description={`${player.nickname}${team?.name ? ` (${team.name})` : ''} espor oyuncu profili: rol, KDA, kazanma oranı, kariyer ve istatistikler — feXt.`}
@@ -1077,7 +1081,7 @@ export default function PlayerPage() {
               padding: '6px 14px', fontSize: 13, cursor: 'pointer', transition: 'all .15s', fontWeight: followed ? 700 : 400,
               display: 'inline-flex', alignItems: 'center', gap: 6,
             }}
-          ><Star size={14} fill={followed ? '#FFD700' : 'none'} color={followed ? '#FFD700' : 'currentColor'} /> {followed ? 'Takip Ediliyor' : 'Takip Et'}</button>
+          ><TakipYildizi aktif={followed} /> {followed ? 'Takip Ediliyor' : 'Takip Et'}</button>
         </div>
 
         {/* Oyuncu kimliği */}

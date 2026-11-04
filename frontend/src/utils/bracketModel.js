@@ -665,7 +665,8 @@ export function layoutBracket(model, dim = BRACKET_DIM) {
       ? fx + dim.colGap / 2
       : tx - dim.colGap / 2
     const d = Math.abs(ty - fy) < 1 ? `M ${fx} ${fy} H ${tx}` : `M ${fx} ${fy} H ${midX} V ${ty} H ${tx}`
-    edges.push({ key: `${e.from}>${e.to}`, d, verified: e.verified, team: winnerOf(c.m) })
+    // col: çocuğun sütunu — A4 akış animasyonunda tur tur gecikme için
+    edges.push({ key: `${e.from}>${e.to}`, d, verified: e.verified, team: winnerOf(c.m), col: Math.round(c.x / stepX) })
   }
 
   const allCards = third ? [...cards, third] : cards

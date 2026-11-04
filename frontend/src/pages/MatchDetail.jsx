@@ -15,7 +15,7 @@ import LiquipediaCredit                            from '../components/Liquipedi
 import PredictionAccuracyBadge                     from '../components/PredictionAccuracyBadge'
 import { DeepScoutBadge }                          from '../components/ScoutSignals'
 import {
-  Brain, Vote, Map as MapIcon, Target, Swords, Award, Compass, Star, User,
+  Brain, Vote, Map as MapIcon, Target, Swords, Award, Compass, User,
   Crown, TriangleAlert, PartyPopper, Trophy, Gamepad2, CalendarDays, BarChart3,
   Radio, CircleCheck, Clock, MousePointerClick, Info, Hash, Tv, ExternalLink, Check, X as XIcon,
 } from 'lucide-react'
@@ -35,6 +35,8 @@ import { normalizeGameId }                          from '../utils/gameUtils'
 import Mascot from '../components/Mascot'
 import FextopusIcon from '../components/FextopusIcon'
 import SeoHead from '../components/SeoHead'
+import TakipYildizi from '../components/TakipYildizi'
+import { takipEdildiBildir } from '../utils/takipBildir'
 import { yayinlariSirala, yayinPlatformu, dilAdi } from '../utils/yayin'
 
 // MVP Oylaması şimdilik GİZLİ (kurucu kararı 2026-07-16): gerçek oyuncu istatistiği
@@ -817,10 +819,14 @@ function RoleBadge({ role }) {
 }
 
 /* ─── FavButton ─────────────────────────────────────────────────────────────── */
-function FavButton({ teamId, active, onToggle }) {
+function FavButton({ teamId, ad, active, onToggle }) {
   return (
     <button
-      onClick={e => { e.preventDefault(); e.stopPropagation(); onToggle(teamId) }}
+      onClick={e => {
+        e.preventDefault(); e.stopPropagation()
+        if (!active) takipEdildiBildir(ad)
+        onToggle(teamId)
+      }}
       style={{
         background: 'none',
         border: `1px solid ${active ? 'rgba(255,215,0,.5)' : 'var(--surface-2)'}`,
@@ -831,7 +837,7 @@ function FavButton({ teamId, active, onToggle }) {
       onMouseEnter={e => { e.currentTarget.style.borderColor = active ? '#FFD700' : 'var(--text-6)'; e.currentTarget.style.color = active ? '#FFD700' : 'var(--text-3)' }}
       onMouseLeave={e => { e.currentTarget.style.borderColor = active ? 'rgba(255,215,0,.5)' : 'var(--surface-2)'; e.currentTarget.style.color = active ? '#FFD700' : 'var(--text-6)' }}
     >
-      <Star size={13} fill={active ? '#FFD700' : 'none'} color={active ? '#FFD700' : 'currentColor'} />
+      <TakipYildizi aktif={active} size={13} />
       <span>{active ? 'Takip Ediliyor' : 'Takip Et'}</span>
     </button>
   )
@@ -1514,7 +1520,8 @@ export default function MatchDetail() {
   })()
 
   return (
-    <div style={{ color: 'var(--text-1)', minHeight: '100vh', background: 'var(--bg)' }}>
+    // UX P2 A8: iskeletten içeriğe süzülerek geçiş
+    <div className="content-in" style={{ color: 'var(--text-1)', minHeight: '100vh', background: 'var(--bg)' }}>
       <SeoHead
         title={(() => {
           // Bot HTML'iyle aynı kalıp (middleware.js): biten maçta skor, "Canlı Skor" yalnız canlıda
@@ -1591,7 +1598,7 @@ export default function MatchDetail() {
                 />
                 <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (aWon ? '#4CAF50' : 'var(--text-3)') : 'var(--text-1)', minWidth: 0, overflowWrap: 'break-word', textAlign: 'right', lineHeight: 1.2 }}>{aName}{isTurkishTeam(match.team_a) && <TrBadge />}</div>
               </div>
-              <FavButton teamId={aId} active={favA} onToggle={toggleTeamFollow} />
+              <FavButton teamId={aId} ad={aName} active={favA} onToggle={toggleTeamFollow} />
             </div>
 
             {/* Skor */}
@@ -1618,7 +1625,7 @@ export default function MatchDetail() {
                 />
                 <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (bWon ? '#4CAF50' : 'var(--text-3)') : 'var(--text-1)', minWidth: 0, overflowWrap: 'break-word', textAlign: 'left', lineHeight: 1.2 }}>{isTurkishTeam(match.team_b) && <TrBadge />}{bName}</div>
               </div>
-              <FavButton teamId={bId} active={favB} onToggle={toggleTeamFollow} />
+              <FavButton teamId={bId} ad={bName} active={favB} onToggle={toggleTeamFollow} />
             </div>
           </div>
 

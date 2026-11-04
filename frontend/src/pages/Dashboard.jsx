@@ -32,6 +32,7 @@ import PredictionAccuracyBadge              from '../components/PredictionAccura
 import { CountUp, FlipNumber }              from '../components/AnimatedNumber'
 import { Asansor, MobilAsansor, useAsansor, ASANSOR_SUTUN } from '../components/Asansor'
 import { izleEtiketi }                      from '../utils/yayin'
+import { Sirayla }                         from '../components/Animasyon'
 
 /** Satırlarda turnuva adı: yalnız aşama ("Regular Season") değil lig + etkinlik.
  *  Dar yerde aşamasız (withStage=false), tam ad title'da. */
@@ -64,7 +65,8 @@ const CANLI_GOSTER = 4
 function FormStrip({ form, className }) {
   if (!form?.length) return null
   return (
-    <div className={className} style={{ display: 'flex', gap: 2, marginTop: 3 }}>
+    // UX P2 A10: rozetler soldan sağa sırayla belirir
+    <Sirayla className={className} style={{ display: 'flex', gap: 2, marginTop: 3 }}>
       {form.map((r, i) => (
         <span key={i} title={r === 'W' ? 'Galibiyet' : 'Mağlubiyet'} style={{
           width: 13, height: 13, borderRadius: 3, flexShrink: 0,
@@ -73,7 +75,7 @@ function FormStrip({ form, className }) {
           fontSize: 7, fontWeight: 900, color: '#fff', letterSpacing: 0,
         }}>{r === 'W' ? 'G' : 'M'}</span>
       ))}
-    </div>
+    </Sirayla>
   )
 }
 

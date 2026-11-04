@@ -16,14 +16,17 @@ import OyunRozeti from '../components/OyunRozeti'
 import { tournamentDisplayName } from '../utils/tournamentDisplay'
 import { normalizeGameId } from '../utils/gameUtils'
 import {
-  Radio, CircleCheck, X as XIcon, Trophy, Star, MapPin, Flame, Swords, Users,
+  Radio, CircleCheck, X as XIcon, Trophy, MapPin, Flame, Swords, Users,
   Handshake, CalendarDays, ClipboardList, TriangleAlert, Video, AtSign,
   Globe, Music, Gamepad2, Link as LinkIcon, Clock, Info,
 } from 'lucide-react'
 import { FEXT } from '../theme'
 import { LIQUIPEDIA_SON_TARIH } from '../components/LiquipediaCredit'
 import Mascot from '../components/Mascot'
+import TakipYildizi from '../components/TakipYildizi'
+import { takipEdildiBildir } from '../utils/takipBildir'
 import SeoHead from '../components/SeoHead'
+import { Sirayla } from '../components/Animasyon'
 
 // ── Yardımcılar ───────────────────────────────────────────────────────────────
 // skeleton
@@ -632,6 +635,7 @@ export default function TeamPage() {
   const parsedTeamId = parseInt(teamId)
   const isFav = isTeamFollowed(parsedTeamId)
   function handleToggleFav() {
+    if (!isFav) takipEdildiBildir(team?.name?.trim())
     toggleTeamFollow(parsedTeamId)
   }
 
@@ -657,7 +661,8 @@ export default function TeamPage() {
 
   // ── Render ────────────────────────────────────────────────────
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 0 80px', color: 'var(--text-1)' }}>
+    // UX P2 A8: iskeletten içeriğe süzülerek geçiş
+    <div className="content-in" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 0 80px', color: 'var(--text-1)' }}>
       <SeoHead
         title={`${team.name} — Kadro, Maçlar ve İstatistikler`}
         description={`${team.name} espor takımı: güncel kadro, son maç sonuçları, kazanma oranı, transferler ve istatistikler — feXt.`}
@@ -720,7 +725,7 @@ export default function TeamPage() {
             display: 'inline-flex', alignItems: 'center', gap: 6,
           }}
           aria-pressed={isFav}
-        ><Star size={14} fill={isFav ? '#FFD700' : 'none'} color={isFav ? '#FFD700' : 'currentColor'} /> {isFav ? 'Takip Ediliyor' : 'Takip Et'}</button>
+        ><TakipYildizi aktif={isFav} /> {isFav ? 'Takip Ediliyor' : 'Takip Et'}</button>
 
         {/* Team identity */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginTop: 24 }}>
@@ -786,9 +791,9 @@ export default function TeamPage() {
                     </span>
                   )}
                 </div>
-                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                <Sirayla aralik={50} style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                   {form.map((r, i) => <FormPill key={i} result={r} />)}
-                </div>
+                </Sirayla>
               </div>
             )}
           </div>

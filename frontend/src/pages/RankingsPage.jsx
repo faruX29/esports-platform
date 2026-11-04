@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import SeoHead from '../components/SeoHead'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
@@ -7,7 +7,10 @@ import { useUser } from '../context/UserContext'
 import { correctedScores } from '../utils/matchResult'
 import { normalizeGameId } from '../utils/gameUtils'
 import { clickableProps } from '../utils/a11y'
-import { Medal, Star } from 'lucide-react'
+import { Medal, ChevronUp, ChevronDown } from 'lucide-react'
+import { useSiraGecisi } from '../hooks/useHareket'
+import TakipYildizi from '../components/TakipYildizi'
+import { takipEdildiBildir } from '../utils/takipBildir'
 import { FEXT } from '../theme'
 
 function toNum(v) {
@@ -49,9 +52,9 @@ function resolveGameIds(activeGame, games) {
   return [...new Set(ids)]
 }
 
-function buildPowerRankings(matches, gameLabel = 'Global') {
+// nowMs: güncellik ağırlığının "bugün"ü. Geçen haftanın sırası için 7 gün öncesi verilir.
+function buildPowerRankings(matches, gameLabel = 'Global', nowMs = Date.now()) {
   const map = new Map()
-  const nowMs = Date.now()
 
   for (const m of (matches || [])) {
     const tier = tierKey(m?.tournament?.tier)
@@ -126,6 +129,30 @@ function buildPowerRankings(matches, gameLabel = 'Global') {
     // yeterli maç (≥6) + ortalama en az ~C seviyesi rekabet (sadece unranked/D → elenir).
     .filter(x => x.total >= 6 && x.scheduleStrength >= 0.21)
     .sort((a, b) => b.powerScore - a.powerScore)
+}
+
+const HAFTA_MS = 7 * 24 * 60 * 60 * 1000
+
+// Geçen haftaya göre sıra değişimi (yalnız Güç sıralamasında anlamlı)
+function SiraDegisimi({ row }) {
+  if (row.oncekiSira == null) {
+    return <span title="Geçen hafta listede yoktu" style={{ fontSize: 9, fontWeight: 800, color: 'var(--accent-fg)', letterSpacing: '.3px' }}>YENİ</span>
+  }
+  const d = row.oncekiSira - row.sira
+  if (d === 0) return <span title="Geçen haftayla aynı" style={{ fontSize: 11, color: 'var(--text-6)' }}>–</span>
+  const yukari = d > 0
+  const Ikon = yukari ? ChevronUp : ChevronDown
+  return (
+    <span
+      title={`Geçen hafta #${row.oncekiSira + 1}`}
+      style={{
+        display: 'inline-flex', alignItems: 'center', fontSize: 11, fontWeight: 800,
+        color: yukari ? 'var(--success-fg)' : 'var(--danger-fg)', fontVariantNumeric: 'tabular-nums',
+      }}
+    >
+      <Ikon size={13} strokeWidth={3} />{Math.abs(d)}
+    </span>
+  )
 }
 
 function GameFilterTabs({ activeGame, setActiveGame }) {
@@ -236,6 +263,15 @@ export default function RankingsPage() {
 
         const ranked = buildPowerRankings(allMatches, gameLabel)
 
+        // UX P2 A6: geçen haftanın sırası — aynı maçlardan, 7 gün öncesine kadar
+        // olanlarla ve o günün güncellik ağırlığıyla. Anlık görüntü tablosu gerekmez.
+        const kesim = Date.now() - HAFTA_MS
+        const gecenHafta = buildPowerRankings(
+          allMatches.filter(m => m.scheduled_at && new Date(m.scheduled_at).getTime() <= kesim),
+          gameLabel, kesim,
+        )
+        const oncekiSira = new Map(gecenHafta.map((r, i) => [r.teamId, i]))
+
         // Takım isim/logosunu SADECE listeye girenler için çek (paralel, 200'lük parçalar).
         const ids = ranked.map(r => r.teamId)
         const teamById = new Map()
@@ -247,8 +283,10 @@ export default function RankingsPage() {
         if (cancelled) return
         for (const res of teamResults) for (const t of (res.data || [])) teamById.set(t.id, t)
 
-        const computed = ranked.map(r => ({
+        const computed = ranked.map((r, i) => ({
           ...r,
+          sira: i,
+          oncekiSira: oncekiSira.get(r.teamId) ?? null,
           team: teamById.get(r.teamId) || { name: 'Bilinmeyen takım', logo_url: null },
         }))
         setRows(computed)
@@ -283,6 +321,15 @@ export default function RankingsPage() {
   }, [rows, query, sortKey])
 
   const top = filtered[0]
+
+  // Satırlar sıra değişince (sıralama ölçütü, arama) yer değiştirerek kayar; veri ilk
+  // gelince Güç sıralamasında geçen haftanın yerinden bu haftanınkine kayar.
+  const tabloRef = useRef(null)
+  const guc = sortKey === 'power'
+  const ilkSira = useMemo(() => (
+    guc && !query.trim() ? new Map(rows.map(r => [String(r.teamId), r.oncekiSira])) : null
+  ), [rows, guc, query])
+  useSiraGecisi(tabloRef, loading ? '' : filtered.map(r => r.teamId).join(','), ilkSira)
 
   return (
     <div style={{
@@ -393,7 +440,7 @@ export default function RankingsPage() {
         </div>
 
         <div style={{ overflowX: 'auto' }}>
-          <div style={{
+          <div ref={tabloRef} style={{
             border: '1px solid var(--line)',
             borderRadius: 14,
             overflow: 'hidden',
@@ -402,7 +449,7 @@ export default function RankingsPage() {
           }}>
             <div style={{
             display: 'grid',
-            gridTemplateColumns: '70px 1.6fr 1fr .9fr .9fr .9fr .8fr',
+            gridTemplateColumns: '96px 1.6fr 1fr .9fr .9fr .9fr .8fr',
             gap: 8,
             padding: '12px 14px',
             borderBottom: '1px solid var(--line)',
@@ -439,10 +486,11 @@ export default function RankingsPage() {
             return (
               <div
                 key={row.teamId}
+                data-flip={row.teamId}
                 {...clickableProps(() => navigate(`/team/${row.teamId}`), { label: `${row.team?.name ?? 'Takım'} sayfası` })}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '70px 1.6fr 1fr .9fr .9fr .9fr .8fr',
+                  gridTemplateColumns: '96px 1.6fr 1fr .9fr .9fr .9fr .8fr',
                   gap: 8,
                   alignItems: 'center',
                   padding: '12px 14px',
@@ -455,6 +503,7 @@ export default function RankingsPage() {
               >
                 <div style={{ fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
                   {medalColor && <Medal size={16} color={medalColor} strokeWidth={2.2} />} #{idx + 1}
+                  {guc && <SiraDegisimi row={row} />}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
@@ -483,6 +532,7 @@ export default function RankingsPage() {
                   <button
                     onClick={e => {
                       e.stopPropagation()
+                      if (!followed) takipEdildiBildir(row.team?.name)
                       toggleTeamFollow(row.teamId)
                     }}
                     style={{
@@ -497,7 +547,7 @@ export default function RankingsPage() {
                     }}
                     title={followed ? 'Takibi birak' : 'Takip et'}
                   >
-                    <Star size={15} fill={followed ? '#FFD700' : 'none'} color={followed ? '#FFD700' : 'var(--text-3)'} />
+                    <TakipYildizi aktif={followed} size={15} renk="var(--text-3)" />
                   </button>
                 </div>
               </div>

@@ -169,6 +169,49 @@ button { font-family: inherit; }
   100% { opacity: 1; transform: scale(1)   rotate(var(--damga-aci, 0deg)); }
 }
 
+/* Eleme ağacı: kazananın çizgisinde parlak bir parça bir sonraki tura akar (UX P2 A4).
+   Yol pathLength=1 ile çizilir; tire .25, boşluk 1 → ofset .25'ten -1'e giderken parça baştan sona geçer. */
+@keyframes fxAkis {
+  0%   { stroke-dashoffset: .25; opacity: 1; }
+  85%  { opacity: 1; }
+  100% { stroke-dashoffset: -1;  opacity: 0; }
+}
+
+/* Şampiyon kartı konfetisi (A5): parça önce yukarı/yana savrulur, sonra düşer.
+   Yön ve dönüş Konfeti bileşeninden CSS değişkeniyle gelir. */
+@keyframes fxKonfeti {
+  0%   { opacity: 0; transform: translate(0, 0) rotate(0deg) scale(.4); }
+  8%   { opacity: 1; }
+  38%  { transform: translate(calc(var(--dx) * .75), var(--dy)) rotate(calc(var(--r) * .5)) scale(1); animation-timing-function: cubic-bezier(.4, 0, 1, 1); }
+  80%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx), calc(var(--dy) + 70px)) rotate(var(--r)) scale(.9); }
+}
+/* Kupa bir kez sallanır */
+@keyframes fxKupa {
+  0%, 100% { transform: rotate(0) scale(1); }
+  20% { transform: rotate(-14deg) scale(1.25); }
+  45% { transform: rotate(10deg) scale(1.18); }
+  70% { transform: rotate(-4deg) scale(1.05); }
+}
+
+/* Takip yıldızı "pop" (A7) + çevresinden açılan halka */
+@keyframes fxPop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.45) rotate(-12deg); }
+  65%  { transform: scale(.88) rotate(4deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+@keyframes fxHalka {
+  0%   { opacity: .9; transform: scale(.4); }
+  100% { opacity: 0;  transform: scale(1.9); }
+}
+
+/* Form rozetleri soldan sağa sırayla belirir (A10) */
+@keyframes fxBelir {
+  from { opacity: 0; transform: translateX(-5px) scale(.6); }
+  to   { opacity: 1; transform: none; }
+}
+
 /* Skeleton → gerçek içerik geçişi. İçerik "pat" diye belirmek yerine
    süzülerek gelir; iskelet ile içerik arasındaki kopukluğu kapatır. */
 @keyframes contentIn {

@@ -121,27 +121,12 @@ export function buildUpcomingStory(match, isTurkishTeam) {
   }
 }
 
+// Haber detayı rozeti. Eskiden sıralama mantığını ("tier puanı yüksek olduğu için manşet") okura
+// "Maç Analizi" kutusunda gösteriyordu; iç mantık okura gösterilmez, yalnız sınıf kalır.
 export function storyExplainability(story) {
-  const explanations = []
   const tier = story?.visuals?.tier
-  if (HERO_TIERS.has(tier)) {
-    explanations.push('Turnuva tier puanı yüksek olduğu için manşet önceliği verildi (Tier S/A).')
-  }
-  if (story?.variant === 'upset' || story?.source?.upset) {
-    explanations.push('Fextopus favoriye en az %65 kazanma olasılığı verdiği hâlde favori kaybettiği için haber Sürpriz olarak etiketlendi.')
-  }
-  if (story?.variant === 'stomp') {
-    explanations.push('Skor marjı yüksek olduğu için skor odaklı hikaye öne çıktı.')
-  }
-  if (story?.status === 'upcoming') {
-    explanations.push('Maç başlangıcına kalan süre ve turnuva seviyesi bu maçı öne çıkardı.')
-  }
-  if (explanations.length === 0) {
-    explanations.push('Maç önemi, skor yoğunluğu ve turnuva bağlamı puanlanarak Gündem akışına yerleştirildi.')
-  }
-
   const classification = story?.source?.upset ? 'Sürpriz' : (HERO_TIERS.has(tier) ? 'Manşet' : 'Gündem')
-  return { classification, explanations }
+  return { classification }
 }
 
 /** Haftalık özetin kapak metni (NewsCover visuals.weekly). Detay sayfası da kullanır. */

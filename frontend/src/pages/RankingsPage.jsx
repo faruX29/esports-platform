@@ -234,9 +234,17 @@ export default function RankingsPage() {
         }
 
         // Kaç sayfa gerektiğini öğren (PostgREST max-rows=1000 → tek istekle hepsini alamayız).
-        const { count } = await applyFilters(
-          supabase.from('matches').select('id', { count: 'exact', head: true })
-        )
+        // Game Changers ayrı, kapalı bir devre: takımları yalnız birbiriyle oynuyor, PandaScore
+        // şampiyonasına B veriyor → GC galibiyetleri ana devreyle aynı tartılınca KRÜ Blaze bir
+        // haftada #64 → #15 çıktı (UX P3). GC maçları sıralamaya girmez; kimlikler ayrı küçük sorgudan.
+        const [{ count }, gcRes] = await Promise.all([
+          applyFilters(supabase.from('matches').select('id', { count: 'exact', head: true })),
+          supabase.from('tournaments').select('id')
+            .or('event_name.ilike.*Game Changers*,league_name.ilike.*Game Changers*,name.ilike.*Game Changers*')
+            .limit(1000), // tarih filtresi yok: 13'ünün begin_at'i boş, toplam ~40 turnuva
+        ])
+        if (gcRes.error) throw gcRes.error
+        const gcTurnuvalar = new Set((gcRes.data || []).map(t => t.id))
         const PAGE = 1000
         const MAX_ROWS = 12000
         const total = Math.min(count || 0, MAX_ROWS)
@@ -249,7 +257,7 @@ export default function RankingsPage() {
             applyFilters(
               supabase
                 .from('matches')
-                .select('team_a_id,team_b_id,winner_id,team_a_score,team_b_score,scheduled_at,tournament:tournaments(tier)')
+                .select('team_a_id,team_b_id,winner_id,team_a_score,team_b_score,scheduled_at,tournament_id,tournament:tournaments(tier)')
             )
               .order('scheduled_at', { ascending: false })
               .range(i * PAGE, i * PAGE + PAGE - 1)
@@ -259,7 +267,7 @@ export default function RankingsPage() {
         if (cancelled) return
         const firstErr = pageResults.find(r => r.error)
         if (firstErr) throw firstErr.error
-        const allMatches = pageResults.flatMap(r => r.data || [])
+        const allMatches = pageResults.flatMap(r => r.data || []).filter(m => !gcTurnuvalar.has(m.tournament_id))
 
         const ranked = buildPowerRankings(allMatches, gameLabel)
 
@@ -355,7 +363,7 @@ export default function RankingsPage() {
             Son 6 ayın maçları; turnuva tier'i ve güncellik ağırlıklı güç sıralaması.
           </p>
           <p style={{ margin: '6px 0 0', color: 'var(--text-4)', fontSize: 12 }}>
-            Tier tavanı belirler: düşük tier bir takım yüksek tier bir şampiyonu geçemez. Sıralama tek oyuna göre.
+            Tier tavanı belirler: düşük tier bir takım yüksek tier bir şampiyonu geçemez. Sıralama tek oyuna göre; Game Changers ayrı devre olduğu için sayılmaz.
           </p>
         </div>
 

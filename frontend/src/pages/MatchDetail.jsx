@@ -1631,7 +1631,7 @@ export default function MatchDetail() {
 
           {/* ── Fextopus Kazanma Olasılığı — tam genişlik (mobilde takım isimleriyle çakışmasın) ── */}
           {tahminVar && <div style={{ marginTop: 18, maxWidth: 440, marginLeft: 'auto', marginRight: 'auto' }}>
-            <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--ai)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><FextopusIcon size={14} /> Fextopus Kazanma Olasılığı{predUncertain && <span style={{ color: 'var(--text-3)', fontWeight: 800 }}>· Belirsiz</span>}</div>
+            <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--ai)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><FextopusIcon size={14} /> Fextopus Kazanma Olasılığı{predUncertain && <span style={{ color: 'var(--text-3)', fontWeight: 800 }}>· Başa baş</span>}</div>
             <HeroOlasilik pctA={pctA} aName={aName} bName={bName} belirsiz={predUncertain} />
             {isFin && <FextopusHukmu match={match} />}
             <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center' }}>

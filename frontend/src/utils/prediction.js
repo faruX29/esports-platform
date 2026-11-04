@@ -1,7 +1,7 @@
 import { deriveWinnerTeamId } from './matchResult'
 
 // Tahmin belirsizliği — Elo modeli iki takımı başa baş gördüğünde (güven < %5)
-// yanıltıcı "%52" gibi bir sayı göstermek yerine "Belirsiz" etiketi gösteririz.
+// yanıltıcı "%52" gibi bir sayı göstermek yerine "başa baş" deriz (her yerde aynı terim).
 // conf = |predA - predB| (olasılıklar ~toplam 1). prediction_confidence alanı
 // varsa onu, yoksa predA/predB'den türetilmişini kullanırız.
 

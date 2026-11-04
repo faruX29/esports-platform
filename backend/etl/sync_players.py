@@ -356,6 +356,20 @@ class PlayerStatsSyncer:
                               SELECT 1 FROM match_stats ms
                               WHERE ms.match_id = m.id
                           )
+                          -- Canlıyken yazılıp maç bitince hiç tazelenmeyen satır: oyun hâlâ
+                          -- "running", kazananı boş. raw_data'da da running ise (API henüz
+                          -- güncellemedi) her koşuda boşuna işlenmesin diye atla. 14 gün sınırı
+                          -- sorguyu ~0,3 sn'de tutar (sınırsız tüm geçmişi tarar, ~6 sn).
+                          OR (
+                              m.status = 'finished'
+                              AND NOT (m.raw_data @? '$.games[*] ? (@.status == "running")')
+                              AND m.scheduled_at > now() - interval '14 days'
+                              AND EXISTS (
+                                  SELECT 1 FROM match_stats ms
+                                  WHERE ms.match_id = m.id
+                                    AND ms.stats @? '$.games_detail[*] ? (@.status == "running")'
+                              )
+                          )
                       )
                     ORDER BY m.status DESC, m.id DESC
                     LIMIT %s

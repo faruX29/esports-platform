@@ -1355,7 +1355,7 @@ export default function NewsDetailPage() {
   }
 
   const explain = useMemo(() => {
-    if (!story) return { classification: 'Gündem', explanations: [] }
+    if (!story) return { classification: 'Gündem' }
     return storyExplainability(story)
   }, [story])
 
@@ -1457,19 +1457,6 @@ export default function NewsDetailPage() {
         <AIProbabilityBar story={story} />
 
         <RelatedLinks story={story} />
-
-        {story.status !== 'haftalik' && <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid var(--surface-2)', background: 'var(--surface)', padding: 16 }}>
-          <div style={{ fontSize: 11, color: 'var(--accent-fg)', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800, marginBottom: 10 }}>
-            Maç Analizi
-          </div>
-          <div style={{ display: 'grid', gap: 8 }}>
-            {explain.explanations.map((line, idx) => (
-              <div key={idx} style={{ fontSize: 13, color: 'var(--text-1)', lineHeight: 1.5, padding: '8px 10px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)' }}>
-                {line}
-              </div>
-            ))}
-          </div>
-        </section>}
 
         <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid var(--surface-2)', background: 'var(--surface)', padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>

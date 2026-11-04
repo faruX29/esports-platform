@@ -157,6 +157,10 @@ TOURNAMENT_SYSTEM_PROMPT = (
 _AD_KURALI = (
     "\n\nÖZEL ADLAR: Turnuva, lig ve takım adlarını ÇEVİRME; rapordaki yazımıyla kullan. "
     "Örn. 'VCT Champions' ASLA 'Şampiyonlar Ligi' olmaz, 'Masters' 'Ustalar' olmaz."
+    # Oyun adı (4 Kas UX P3): oyun_adi() öncesi üretilen haberlerde 'CSGO karşılaşması' vardı;
+    # LLM rapor 'CS2' dese de kendi bilgisinden eski adı yazabilir.
+    "\n\nOYUN ADI: Oyunu yalnız rapordaki 'Oyun:' satırının yazımıyla an (CS2, VALORANT, LoL). "
+    "'CSGO', 'CS:GO', 'CS-GO' ASLA yazma; oyun Counter-Strike 2'dir."
 )
 SYSTEM_PROMPT += _AD_KURALI
 PREVIEW_SYSTEM_PROMPT += _AD_KURALI
@@ -190,6 +194,13 @@ TRANSFER_SYSTEM_PROMPT += (
     "\n\nKAYNAK: Bilgi takımın güncel kadro listesindeki değişiklikten gelir, resmi bir "
     "açıklamadan DEĞİL. 'Açıkladı', 'duyurdu', 'resmi açıklama', 'imzaladı' YAZMA; "
     "'kadrosunda artık yer almıyor', 'kadrosuna katıldı', 'yollarını ayırdı' gibi yaz."
+    # Kaynaksız yorum (4 Kas UX P3): "stratejik bir adım olarak değerlendiriliyor" — kim
+    # değerlendiriyor? Raporda değerlendirme yok; haber yalnız olguyu söyler.
+    "\n\nYORUM YOK: Raporda olmayan değerlendirme, gerekçe ya da beklenti YAZMA. "
+    "'Stratejik bir adım olarak değerlendiriliyor', 'takımı güçlendirmesi bekleniyor', "
+    "'yeni bir dönemin başlangıcı', 'kulislere göre', 'uzmanlara göre' gibi kaynağı belirsiz "
+    "edilgen yorumlar YASAK. Transferin nedenini ve etkisini bilmiyoruz; yalnız olguyu, "
+    "rolü ve (verildiyse) oyuncunun son dönem performansını yaz."
 )
 
 

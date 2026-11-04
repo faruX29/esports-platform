@@ -8,7 +8,7 @@
  *  • Takım linki
  */
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { ondalik } from '../utils/dil'
+import { ondalik, yuzde } from '../utils/dil'
 import { useParams, useNavigate }           from 'react-router-dom'
 import { supabase }                         from '../supabaseClient'
 import { getRoleBadge, resolvePlayerRole }   from '../utils/roleHelper'
@@ -208,10 +208,10 @@ function ProfessionalStatsPanel({ stats, isMobile = false }) {
       }}>
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,minmax(0,1fr))' : 'repeat(4,minmax(0,1fr))', gap: 10, marginBottom: 12 }}>
           <ProMetricCard label="KDA" value={ondalik(stats.kda, 2)} sub={`K/D ${ondalik(stats.kd, 2)}`} accent={kdaColor} />
-          <ProMetricCard label="Kazanma Oranı" value={`${Math.round(stats.winRate)}%`} sub={`${stats.sampleMatches} örnek maç`} accent={wrColor} />
+          <ProMetricCard label="Kazanma Oranı" value={yuzde(stats.winRate)} sub={`${stats.sampleMatches} örnek maç`} accent={wrColor} />
           {useAcs
             ? <ProMetricCard label="ACS" value={stats.acs} sub="Dövüş Skoru" accent="#C25CD0" />
-            : <ProMetricCard label="Kafa Vuruşu" value={`${Math.round(stats.hsPct)}%`} sub="İsabet" accent={hsColor} />}
+            : <ProMetricCard label="Kafa Vuruşu" value={yuzde(stats.hsPct)} sub="İsabet" accent={hsColor} />}
           <ProMetricCard label="Etki" value={Math.round(stats.impact)} sub="Scout Skoru" accent={impactColor} />
         </div>
 
@@ -223,10 +223,10 @@ function ProfessionalStatsPanel({ stats, isMobile = false }) {
         }}>
           <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 10 }}>Tur bazında verimlilik göstergesi</div>
           <ProgressBar pct={Math.min(100, stats.kda * 42)} color={kdaColor} label="KDA baskısı" value={ondalik(stats.kda, 2)} />
-          <ProgressBar pct={stats.winRate} color={wrColor} label="Kazanma Oranı" value={`${Math.round(stats.winRate)}%`} />
+          <ProgressBar pct={stats.winRate} color={wrColor} label="Kazanma Oranı" value={yuzde(stats.winRate)} />
           {useAcs
             ? <ProgressBar pct={Math.min(100, (stats.acs / 350) * 100)} color="#C25CD0" label="ACS" value={String(stats.acs)} />
-            : <ProgressBar pct={stats.hsPct} color={hsColor} label="Headshot %" value={`${Math.round(stats.hsPct)}%`} />}
+            : <ProgressBar pct={stats.hsPct} color={hsColor} label="Headshot %" value={yuzde(stats.hsPct)} />}
           <ProgressBar pct={Math.min(100, stats.avgKills * 10)} color="#9ad8ff" label="Maç Başı Öldürme" value={ondalik(stats.avgKills, 1)} />
           <ProgressBar pct={Math.min(100, stats.avgAssists * 12)} color="#cab0ff" label="Maç Başı Asist" value={ondalik(stats.avgAssists, 1)} />
           <ProgressBar pct={Math.max(0, 100 - Math.min(100, stats.avgDeaths * 10))} color="var(--text-1)" label="Ölüm Kontrolü" value={ondalik(stats.avgDeaths, 1)} />
@@ -452,11 +452,11 @@ function ScoutPanel({ analytics, individual }) {
             <StatBox Icon={Swords} value={individual.totalKills} label="Öldürme" color="#ff6a7f" />
             <StatBox Icon={Skull} value={individual.totalDeaths} label="Ölüm" color="var(--text-1)" />
             <StatBox Icon={Handshake} value={individual.totalAssists} label="Asist" color="#93c5fd" />
-            <StatBox Icon={Crosshair} value={`${Math.round(individual.hsPct)}%`} label="HS%" color="#fff" />
+            <StatBox Icon={Crosshair} value={yuzde(individual.hsPct)} label="HS%" color="#fff" />
           </div>
           <ProgressBar pct={individualBars.kdBar} color="#ff6a7f" label="K/D Oranı" value={ondalik(individual.kd, 2)} />
-          <ProgressBar pct={individualBars.hsBar} color="var(--text-1)" label="Kafa Vuruşu Oranı" value={`${Math.round(individual.hsPct)}%`} />
-          <ProgressBar pct={individualBars.winBar} color="#4CAF50" label="Kazanma Oranı" value={`${Math.round(individual.winRate)}%`} />
+          <ProgressBar pct={individualBars.hsBar} color="var(--text-1)" label="Kafa Vuruşu Oranı" value={yuzde(individual.hsPct)} />
+          <ProgressBar pct={individualBars.winBar} color="#4CAF50" label="Kazanma Oranı" value={yuzde(individual.winRate)} />
           <ProgressBar pct={individualBars.impactBar} color="#ff9aa9" label="Etki Skoru" value={`${Math.round(individual.impact)}`} />
         </div>
       )}
@@ -481,7 +481,7 @@ function ScoutPanel({ analytics, individual }) {
               key={pos} pct={d.rate}
               color={d.rate >= 60 ? '#4CAF50' : d.rate >= 45 ? '#FFB800' : '#FF4655'}
               label={`${mapLabels[pos]} (${d.total} maç)`}
-              value={`${Math.round(d.rate)}%`}
+              value={yuzde(d.rate)}
             />
           )
         })}
@@ -536,19 +536,24 @@ function computeScoutAnalytics(statsRows, teamId) {
       continue
     }
     totalMatches++
-    let matchWon = false
-    games.forEach((g, idx) => {
-      const pos = idx + 1
-      if (pos > 3) return
-      mapStats[pos].total++
-      const gWon = Number(g.winner_id) === Number(teamId)
-      if (gWon) { mapStats[pos].won++; matchWon = true }
-      if (g.length_seconds) {
-        if (gWon) winLengths.push(g.length_seconds)
-        else      lossLengths.push(g.length_seconds)
-      }
-    })
-    if (matchWon) wonMatches++
+    // Yalnız oynanıp kazananı belli oyunlar: 2-0 biten Bo3'ün 3. oyunu "not_started", canlıyken
+    // alınmış kayıtta "running" kalıyor; winner_id boş → eskiden kayıp sayılıp 3. oyunu %18 gösteriyordu.
+    let alinan = 0, verilen = 0
+    games
+      .filter(g => g && g.winner_id != null && (!g.status || g.status === 'finished'))
+      .forEach((g, idx) => {
+        const pos = Number(g.position) || idx + 1
+        const gWon = Number(g.winner_id) === Number(teamId)
+        if (gWon) alinan++; else verilen++
+        if (g.length_seconds) {
+          if (gWon) winLengths.push(g.length_seconds)
+          else      lossLengths.push(g.length_seconds)
+        }
+        if (pos > 3) return
+        mapStats[pos].total++
+        if (gWon) mapStats[pos].won++
+      })
+    if (alinan > verilen) wonMatches++
   }
 
   const overallWinRate = totalMatches > 0 ? (wonMatches / totalMatches) * 100 : 0
@@ -1008,7 +1013,9 @@ export default function PlayerPage() {
   const playerGameId = normalizeGameId(team?.game?.slug ?? team?.game?.name ?? '')
   const resolvedRole = resolvePlayerRole(player, playerGameId)
   const badge   = getRoleBadge(resolvedRole)
-  const isTR    = player.nationality === 'TR' || player.nationality === 'TUR' || isTurkishTeam(team)
+  // Uyruk belliyse o karar verir (Türk takımındaki yabancı oyuncu TR değil); uyruk boşsa takıma bak
+  const uyruk   = String(player.nationality || '').trim().toUpperCase()
+  const isTR    = uyruk ? (uyruk === 'TR' || uyruk === 'TUR') : isTurkishTeam(team)
   // Bayrak emojisi Windows'ta harf olarak çıkıyordu ("TR TR") → yalnız ülke kodu
   const ulkeKodu = /^[A-Z]{2}$/.test(String(player.nationality || '').toUpperCase()) ? String(player.nationality).toUpperCase() : null
   const followed = isPlayerFollowed(player.id)
@@ -1230,7 +1237,7 @@ export default function PlayerPage() {
               return (
                 <StatBox
                   Icon={BarChart3}
-                  value={`${Math.round(wr)}%`}
+                  value={yuzde(wr)}
                   label="Kazanma Oranı"
                   color={wr >= 60 ? '#4CAF50' : wr >= 45 ? '#FFB800' : '#FF4655'}
                 />
@@ -1247,7 +1254,7 @@ export default function PlayerPage() {
             )}
             {individualStats && <StatBox Icon={Zap} value={ondalik(individualStats.kd, 2)} label="K/D" color="#ff6a7f" />}
             {individualStats?.acs != null && <StatBox Icon={Flame} value={individualStats.acs} label="ACS" color="#C25CD0" />}
-            {individualStats && individualStats.hsPct > 0 && <StatBox Icon={Crosshair} value={`${Math.round(individualStats.hsPct)}%`} label="HS%" color="var(--text-1)" />}
+            {individualStats && individualStats.hsPct > 0 && <StatBox Icon={Crosshair} value={yuzde(individualStats.hsPct)} label="HS%" color="var(--text-1)" />}
           </div>
         )}
       </div>

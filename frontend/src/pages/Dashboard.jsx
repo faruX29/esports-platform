@@ -922,13 +922,13 @@ function WinBar({ predA, predB, confidence }) {
       {/* Yüzde + AI etiketi */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: 8, color: aFav ? 'var(--ai)' : 'var(--text-5)', fontWeight: aFav ? 700 : 400 }}>
-          {uncertain ? '' : `${pctA}%`}
+          {uncertain ? '' : `%${pctA}`}
         </span>
         <span style={{ fontSize: 8, color: uncertain ? 'var(--text-4)' : (isHot ? '#ff8c42' : 'var(--line-2)'), fontWeight: uncertain || isHot ? 700 : 400, display: 'inline-flex', alignItems: 'center', gap: 2, letterSpacing: uncertain ? '.4px' : 0 }}>
-          {isHot && <Flame size={9} strokeWidth={2.5} />}{uncertain ? 'Fextopus · Belirsiz' : 'Fextopus'}
+          {isHot && <Flame size={9} strokeWidth={2.5} />}{uncertain ? 'Fextopus · Başa baş' : 'Fextopus'}
         </span>
         <span style={{ fontSize: 8, color: bFav ? 'var(--ai)' : 'var(--text-5)', fontWeight: bFav ? 700 : 400 }}>
-          {uncertain ? '' : `${pctB}%`}
+          {uncertain ? '' : `%${pctB}`}
         </span>
       </div>
     </div>

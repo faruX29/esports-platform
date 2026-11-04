@@ -591,7 +591,7 @@ function FiltrePaneli({ acik, onKapat, sonucSayisi, yukleniyor, children }) {
         </div>
         <div style={{ padding: '10px 16px calc(12px + env(safe-area-inset-bottom))', borderTop: '1px solid var(--line)' }}>
           <button type="button" onClick={onKapat} style={{ width: '100%', height: 44, borderRadius: 999, border: 'none', background: FEXT.accent, color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
-            {yukleniyor ? 'Yükleniyor…' : `${sonucSayisi.toLocaleString('tr-TR')} maçı göster`}
+            {yukleniyor ? 'Yükleniyor…' : sonucSayisi == null ? 'Maçları göster' : `${sonucSayisi.toLocaleString('tr-TR')} maçı göster`}
           </button>
         </div>
       </div>
@@ -692,7 +692,7 @@ function KartOlasilikCubugu({ match, belirsiz }) {
         <div style={{ width: `${pA}%`, height: '100%', background: belirsiz ? 'var(--track)' : 'linear-gradient(90deg,#667eea,#764ba2)' }} />
       </div>
       {belirsiz ? (
-        <div style={{ fontSize: 10, color: 'var(--text-4)', marginTop: 3, textAlign: 'center', fontWeight: 700 }}>Fextopus · Belirsiz</div>
+        <div style={{ fontSize: 10, color: 'var(--text-4)', marginTop: 3, textAlign: 'center', fontWeight: 700 }}>Fextopus · Başa baş</div>
       ) : (
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-4)', marginTop: 3, fontVariantNumeric: 'tabular-nums' }}>
           <span style={{ color: match.prediction_team_a >= match.prediction_team_b ? '#818cf8' : undefined }}>%{a}</span>
@@ -764,7 +764,7 @@ function MacKarti({ match, gruplu, navigate, isTeamFollowed, onTakip }) {
           {tahminVar && !bitti && (
             predUncertain ? (
               <span style={{ ...rozet, background: 'var(--hover)', border: '1px solid var(--line-2)', color: 'var(--text-3)' }}>
-                <Sparkles size={11} /> Belirsiz
+                <Sparkles size={11} /> Başa baş
               </span>
             ) : (
               <span style={{ ...rozet, background: 'rgba(102,126,234,.2)', border: '1px solid rgba(102,126,234,.5)', color: '#818cf8' }}>
@@ -813,12 +813,13 @@ function MacKarti({ match, gruplu, navigate, isTeamFollowed, onTakip }) {
       )}
 
       {/* Alt satır */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--surface-2)', paddingTop: 10, gap: 8 }}>
-        <div title={turnuvaAdi} style={{ fontSize: 11, color: 'var(--text-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
+      {/* Ad sığmazsa aşama/yayın çipleri alt satıra iner ("IEM Beijin…" kesilmesin); ad ancak tüm satırı aşarsa kısalır */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--surface-2)', paddingTop: 10, gap: '6px 8px' }}>
+        <div title={turnuvaAdi} style={{ fontSize: 11, color: 'var(--text-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: '1 1 auto', minWidth: 0, maxWidth: '100%', display: 'flex', alignItems: 'center', gap: 5 }}>
           <Trophy size={12} style={{ flexShrink: 0 }} />
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{turnuvaAdi}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 'auto' }}>
           {tur && (
             <span style={{ fontSize: 10, fontWeight: 700, color: FEXT.accentText, background: FEXT.accentSoftBg, border: `1px solid ${FEXT.accentBorder}`, borderRadius: 6, padding: '2px 7px', whiteSpace: 'nowrap' }}>{tur}</span>
           )}
@@ -871,7 +872,8 @@ function Matches() {
   const [panelAcik, setPanelAcik]             = useState(false)
 
   const [matches, setMatches]       = useState([])
-  const [totalCount, setTotalCount] = useState(0)
+  const [totalCount, setTotalCount] = useState(null)   // null: sayım henüz gelmedi
+  const [sonSayfaDolu, setSonSayfaDolu] = useState(false) // sayım gelene dek "Daha fazla" ipucu
   const [yukleniyor, setYukleniyor] = useState('yeni')   // 'yeni' | 'daha' | null
   const [error, setError]           = useState(null)
   const [sayilar, setSayilar]       = useState({ live: null, upcoming: null })
@@ -959,6 +961,7 @@ function Matches() {
   // ── Veri: liste ───────────────────────────────────────────────────────
   // mod: 'yeni' (filtre değişti, baştan) | 'daha' (sonraki 50) | 'sessiz' (arka planda tazele)
   const istekNo = useRef(0)
+  const sayimIstekNo = useRef(0)
   const maclarRef = useRef(matches)
   useEffect(() => { maclarRef.current = matches }, [matches])
 
@@ -970,14 +973,28 @@ function Matches() {
     const to = mod === 'daha' ? mevcut + PAGE_SIZE - 1 : mod === 'sessiz' ? Math.max(mevcut, PAGE_SIZE) - 1 : PAGE_SIZE - 1
     if (mod !== 'sessiz') setYukleniyor(mod)
     if (mod === 'yeni') setError(null)
-    try {
-      let q = supabase.from('matches').select(MAC_SELECT, { count: 'exact' })
-      q = sekmeFiltresi(q, activeTab, new Date().toISOString())
+    const simdiIso = new Date().toISOString()
+    const suz = q => {
+      q = sekmeFiltresi(q, activeTab, simdiIso)
       if (activeTab !== 'live') q = tarihFiltresi(q, tarihAraligi(tarih, activeTab))
       if (turnuva?.ids?.length) q = q.in('tournament_id', turnuva.ids)
-      q = ortakFiltre(q, filtre)
-      q = q.order('scheduled_at', { ascending: artan }).order('id', { ascending: artan }).range(from, to)
-      const { data, error: e, count } = await q
+      return ortakFiltre(q, filtre)
+    }
+    // Toplam sayı ayrı istekte: Geçmiş'te ~40 bin satırlık count(*) önbellek soğukken saniyeler
+    // sürüp listeyi de bekletiyordu (UX P3, ilk açılış ~8 sn; liste sorgusu ~3 ms). Liste önce çizilir.
+    if (mod !== 'daha') {
+      const sayimNo = ++sayimIstekNo.current
+      if (mod === 'yeni') setTotalCount(null)
+      suz(supabase.from('matches').select('id', { count: 'exact', head: true })).then(({ count, error: e }) => {
+        if (sayimNo !== sayimIstekNo.current) return
+        if (e) { console.error('Maç sayısı alınamadı:', e); return }
+        setTotalCount(count ?? 0)
+      })
+    }
+    try {
+      const q = suz(supabase.from('matches').select(MAC_SELECT))
+        .order('scheduled_at', { ascending: artan }).order('id', { ascending: artan }).range(from, to)
+      const { data, error: e } = await q
       if (no !== istekNo.current) return
       if (e) throw e
       const gelen = data || []
@@ -986,7 +1003,7 @@ function Matches() {
         const var_ = new Set(prev.map(m => m.id))
         return [...prev, ...gelen.filter(m => !var_.has(m.id))]
       })
-      setTotalCount(count ?? 0)
+      if (mod !== 'sessiz') setSonSayfaDolu(gelen.length >= (to - from + 1))
     } catch (err) {
       if (no !== istekNo.current) return
       console.error('Maçlar alınamadı:', err)
@@ -1113,7 +1130,8 @@ function Matches() {
   )
 
   const ilkYukleme = (yukleniyor === 'yeni' && matches.length === 0) || !activeTab || !hazir
-  const sonucYazi = `${totalCount.toLocaleString('tr-TR')} maç`
+  const sonucYazi = totalCount == null ? '' : `${totalCount.toLocaleString('tr-TR')} maç`
+  const dahaVar = totalCount == null ? sonSayfaDolu : matches.length < totalCount
 
   // ── Filtre parçaları (masaüstü açılır + mobil panel ortak) ────────────
   const turnuvaListesi = kapat => (
@@ -1225,7 +1243,7 @@ function Matches() {
           {!ilkYukleme && sonucYazi}
           {canliBagli && activeTab !== 'past' && (
             <>
-              {!ilkYukleme && <span aria-hidden="true">·</span>}
+              {!ilkYukleme && sonucYazi && <span aria-hidden="true">·</span>}
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: FEXT.good, animation: 'pulse 2s infinite' }} />
                 canlı güncelleniyor
@@ -1279,7 +1297,7 @@ function Matches() {
             </section>
           ))}
 
-          {matches.length < totalCount && (
+          {dahaVar && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginTop: 8 }}>
               <button
                 type="button" onClick={() => maclariGetir('daha')} disabled={yukleniyor === 'daha'}
@@ -1289,7 +1307,7 @@ function Matches() {
                 Daha fazla yükle
               </button>
               <span style={{ fontSize: 11, color: 'var(--text-5)' }}>
-                {matches.length.toLocaleString('tr-TR')} / {totalCount.toLocaleString('tr-TR')} maç gösteriliyor
+                {matches.length.toLocaleString('tr-TR')}{totalCount != null && ` / ${totalCount.toLocaleString('tr-TR')}`} maç gösteriliyor
               </span>
             </div>
           )}

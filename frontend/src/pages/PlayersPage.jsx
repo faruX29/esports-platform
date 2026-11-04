@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ondalik } from '../utils/dil'
+import { ondalik, yuzde } from '../utils/dil'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { GAMES, useGame } from '../context/GameContext'
@@ -782,7 +782,7 @@ export default function PlayersPage() {
 
                 <div style={{ fontWeight: 700 }}>{fmt(player.kd)}</div>
                 <div style={{ fontWeight: 700, color: player.acs != null ? '#C25CD0' : 'var(--text-5)' }}>{player.acs != null ? player.acs : '—'}</div>
-                <div style={{ fontWeight: 700, color: player.hsPct > 0 ? 'var(--text-1)' : 'var(--text-5)' }}>{player.hsPct > 0 ? `${Math.round(player.hsPct)}%` : '—'}</div>
+                <div style={{ fontWeight: 700, color: player.hsPct > 0 ? 'var(--text-1)' : 'var(--text-5)' }}>{player.hsPct > 0 ? yuzde(player.hsPct) : '—'}</div>
                 <div style={{ fontWeight: 700 }}>%{Math.round(player.winRate)}</div>
                 <div style={{ color: '#ff9aa9', fontWeight: 800 }}>{Math.round(player.impact)}</div>
 

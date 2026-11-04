@@ -467,7 +467,7 @@ function MatchCard({ match, teamId, navigate }) {
               <div style={{ height: 4, borderRadius: 2, background: 'var(--surface)', overflow: 'hidden' }}>
                 <div style={{ width: '50%', height: '100%', background: 'var(--track)' }} />
               </div>
-              <div style={{ fontSize: 10, marginTop: 3, color: 'var(--text-4)', textAlign: 'center', fontWeight: 700 }}>Fextopus · Belirsiz</div>
+              <div style={{ fontSize: 10, marginTop: 3, color: 'var(--text-4)', textAlign: 'center', fontWeight: 700 }}>{isFin ? 'Fextopus başa baş gördü' : 'Fextopus · Başa baş'}</div>
             </>
           ) : (
             <>

@@ -23,11 +23,14 @@ import Mascot                               from '../components/Mascot'
 import SeoHead                              from '../components/SeoHead'
 import GameLogo                             from '../components/GameLogo'
 import { getBOFormat }                      from '../utils/matchFormat'
-import { correctedScores, deriveWinnerTeamId } from '../utils/matchResult'
-import { isUncertainPrediction }            from '../utils/prediction'
+import { correctedScores }                  from '../utils/matchResult'
+import { isUncertainPrediction, fextopusSonucu } from '../utils/prediction'
 import { roundLabel }                       from '../utils/roundLabel'
 import { clickableProps }                   from '../utils/a11y'
 import TurkishBadge                         from '../components/TurkishBadge'
+import { FlipNumber }                       from '../components/AnimatedNumber'
+import { Damga, SkorParlamasi }            from '../components/Animasyon'
+import { useAcilisGecisi, useDegisimSayaci } from '../hooks/useHareket'
 import InitialsImage                        from '../components/InitialsImage'
 import {
   CalendarDays, Clock, Search, Star, Flame, Sparkles, Trophy, Play, Check,
@@ -635,21 +638,6 @@ function KartIskeleti({ adet = 6 }) {
 
 const izgaraStil = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 16 }
 
-/** Bitmiş maçta Fextopus'un favorisi kazandı mı? (isabet tanımıyla aynı: 50/50 sayılmaz) */
-function fextopusSonucu(match) {
-  const a = Number(match.prediction_team_a), b = Number(match.prediction_team_b)
-  if (!Number.isFinite(a) || !Number.isFinite(b) || a === b) return null
-  const kazanan = deriveWinnerTeamId(match)
-  if (kazanan == null) return null
-  const favoriA = a > b
-  return {
-    favoriAd: (favoriA ? match.team_a?.name : match.team_b?.name) || 'Favori',
-    oran: Math.round(Math.max(a, b) * 100),
-    bildi: kazanan === Number(favoriA ? match.team_a_id : match.team_b_id),
-    belirsiz: isUncertainPrediction(a, b, match.prediction_confidence),
-  }
-}
-
 function TakimTarafi({ match, taraf, takipte, onTakip, navigate }) {
   const takim = taraf === 'a' ? match.team_a : match.team_b
   const takimId = taraf === 'a' ? match.team_a_id : match.team_b_id
@@ -686,7 +674,29 @@ function TakimTarafi({ match, taraf, takipte, onTakip, navigate }) {
       </div>
       {skor != null && (
         <div style={{ fontSize: 22, fontWeight: 800, color: kazandi ? FEXT.good : 'var(--text-2)', marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
-          {skor}
+          {match.status === 'running' ? <FlipNumber value={skor} /> : skor}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Bitmemiş maçın Fextopus çubuğu: ekrana girince %50/%50'den hedefe kayar (UX P2 A2). */
+function KartOlasilikCubugu({ match, belirsiz }) {
+  const hedef = Math.round(Number(match.prediction_team_a) * 100)
+  const [ref, pA] = useAcilisGecisi(hedef)
+  const a = Math.round(pA)
+  return (
+    <div ref={ref} style={{ marginBottom: 10 }}>
+      <div style={{ height: 6, borderRadius: 3, background: 'var(--surface-2)', overflow: 'hidden' }}>
+        <div style={{ width: `${pA}%`, height: '100%', background: belirsiz ? 'var(--track)' : 'linear-gradient(90deg,#667eea,#764ba2)' }} />
+      </div>
+      {belirsiz ? (
+        <div style={{ fontSize: 10, color: 'var(--text-4)', marginTop: 3, textAlign: 'center', fontWeight: 700 }}>Fextopus · Belirsiz</div>
+      ) : (
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-4)', marginTop: 3, fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ color: match.prediction_team_a >= match.prediction_team_b ? '#818cf8' : undefined }}>%{a}</span>
+          <span style={{ color: match.prediction_team_b > match.prediction_team_a ? '#818cf8' : undefined }}>%{100 - a}</span>
         </div>
       )}
     </div>
@@ -706,6 +716,8 @@ function MacKarti({ match, gruplu, navigate, isTeamFollowed, onTakip }) {
   const sonuc       = bitti ? fextopusSonucu(match) : null
   const bo          = getBOFormat(match.team_a_score, match.team_b_score, match.number_of_games)
   const tur         = roundLabel(match)
+  // Canlı skor değişince kart 1 sn parlar (yalnız canlıyken; liste yenilemesi yeni kart açar, saymaz)
+  const parlama     = useDegisimSayaci(isLive ? `${match.team_a_score}-${match.team_b_score}` : null, match.id)
 
   const kenar = isLive ? 'rgba(255,70,85,.6)' : isHotPick ? 'rgba(255,100,50,.5)' : hasTurkish ? 'rgba(224,69,94,.5)' : 'var(--line)'
   const golge = isLive ? '0 0 20px rgba(255,70,85,.2)' : isHotPick ? '0 0 14px rgba(255,100,50,.12)' : hasTurkish ? '0 0 14px rgba(224,69,94,.10)' : 'none'
@@ -731,6 +743,7 @@ function MacKarti({ match, gruplu, navigate, isTeamFollowed, onTakip }) {
         e.currentTarget.style.borderColor = kenar
       }}
     >
+      <SkorParlamasi n={parlama} radius={17} />
       {/* Üst satır */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, gap: 6 }}>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', minWidth: 0 }}>
@@ -777,21 +790,7 @@ function MacKarti({ match, gruplu, navigate, isTeamFollowed, onTakip }) {
       </div>
 
       {/* Fextopus: bitmemişte olasılık çubuğu, bitmişte "bildi / yanıldı" */}
-      {tahminVar && !bitti && (
-        <div style={{ marginBottom: 10 }}>
-          <div style={{ height: 6, borderRadius: 3, background: 'var(--surface-2)', overflow: 'hidden' }}>
-            <div style={{ width: `${Math.round(match.prediction_team_a * 100)}%`, height: '100%', background: predUncertain ? 'var(--track)' : 'linear-gradient(90deg,#667eea,#764ba2)', transition: 'width .5s', transformOrigin: 'left', animation: 'winBarFill .8s cubic-bezier(.2,.8,.3,1)' }} />
-          </div>
-          {predUncertain ? (
-            <div style={{ fontSize: 10, color: 'var(--text-4)', marginTop: 3, textAlign: 'center', fontWeight: 700 }}>Fextopus · Belirsiz</div>
-          ) : (
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-4)', marginTop: 3 }}>
-              <span style={{ color: match.prediction_team_a >= match.prediction_team_b ? '#818cf8' : undefined }}>%{Math.round(match.prediction_team_a * 100)}</span>
-              <span style={{ color: match.prediction_team_b > match.prediction_team_a ? '#818cf8' : undefined }}>%{Math.round(match.prediction_team_b * 100)}</span>
-            </div>
-          )}
-        </div>
-      )}
+      {tahminVar && !bitti && <KartOlasilikCubugu match={match} belirsiz={predUncertain} />}
       {sonuc && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10, padding: '6px 10px', borderRadius: 10, background: 'var(--surface-2)', fontSize: 11 }}>
           <span style={{ color: 'var(--text-3)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
@@ -799,14 +798,16 @@ function MacKarti({ match, gruplu, navigate, isTeamFollowed, onTakip }) {
             {sonuc.belirsiz ? 'Fextopus başa baş gördü' : <>Fextopus: <b style={{ color: 'var(--text-2)' }}>{sonuc.favoriAd}</b> %{sonuc.oran}</>}
           </span>
           {!sonuc.belirsiz && (
-            <span style={{
-              ...rozet, flexShrink: 0, fontWeight: 800,
-              background: sonuc.bildi ? 'rgba(70,182,88,.14)' : 'rgba(255,70,85,.12)',
-              border: `1px solid ${sonuc.bildi ? 'rgba(70,182,88,.45)' : 'rgba(255,70,85,.4)'}`,
-              color: sonuc.bildi ? 'var(--success-fg)' : 'var(--danger-fg)',
-            }}>
-              {sonuc.bildi ? <><Check size={11} /> Bildi</> : <><XIcon size={11} /> Yanıldı</>}
-            </span>
+            <Damga style={{ flexShrink: 0 }}>
+              <span style={{
+                ...rozet, fontWeight: 800,
+                background: sonuc.bildi ? 'rgba(70,182,88,.14)' : 'rgba(255,70,85,.12)',
+                border: `1px solid ${sonuc.bildi ? 'rgba(70,182,88,.45)' : 'rgba(255,70,85,.4)'}`,
+                color: sonuc.bildi ? 'var(--success-fg)' : 'var(--danger-fg)',
+              }}>
+                {sonuc.bildi ? <><Check size={11} /> Bildi</> : <><XIcon size={11} /> Yanıldı</>}
+              </span>
+            </Damga>
           )}
         </div>
       )}

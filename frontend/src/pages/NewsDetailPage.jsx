@@ -35,9 +35,11 @@ import NewsCover, { scoreFromHero } from '../components/NewsCover'
 import { cleanDisplayName } from '../utils/nameCleaner'
 import { buildNewsSlug, parseNewsRef } from '../utils/newsSlug'
 import { getEsportsName } from '../utils/esportsName'
-import { X as XIcon, MessageSquare, Swords, Trophy, UserRound, Flag } from 'lucide-react'
+import { X as XIcon, MessageSquare, Swords, Trophy, UserRound, Flag, Check } from 'lucide-react'
 import { FEXT } from '../theme'
-import { isUncertainPrediction } from '../utils/prediction'
+import { isUncertainPrediction, fextopusSonucu } from '../utils/prediction'
+import { Damga } from '../components/Animasyon'
+import { useAcilisGecisi } from '../hooks/useHareket'
 
 function isMissingTableError(error, tableName) {
   const code = error?.code || ''
@@ -229,6 +231,8 @@ function mapMatchRowToStory(row, match) {
     source: {
       predictionA: match.prediction_team_a,
       predictionB: match.prediction_team_b,
+      // Bitmiş maçta "Fextopus bildi / yanıldı" damgası için (önizlemede yok)
+      fextopus: !isPreview && match.status === 'finished' ? fextopusSonucu(match) : null,
       upset: row.variant === 'upset',
     },
   }
@@ -286,11 +290,13 @@ function ScoutRankBadge({ score }) {
 function AIProbabilityBar({ story }) {
   const predA = Number(story.source?.predictionA)
   const predB = Number(story.source?.predictionB)
-  if (!Number.isFinite(predA) || !Number.isFinite(predB) || predA + predB <= 0) return null
+  const gecerli = Number.isFinite(predA) && Number.isFinite(predB) && predA + predB > 0
+  // Ekrana girince %50/%50'den hedefe kayar (UX P2 A2); kanca erken dönüşten önce
+  const [cubukRef, pctA] = useAcilisGecisi(gecerli ? (predA / (predA + predB)) * 100 : NaN)
+  if (!gecerli) return null
 
-  const total = predA + predB
-  const pctA = (predA / total) * 100
-  const pctB = (predB / total) * 100
+  const pctB = 100 - pctA
+  const hukum = story.source?.fextopus
   const teamA = story.visuals?.teamA || {}
   const teamB = story.visuals?.teamB || {}
   const uncertain = isUncertainPrediction(predA, predB)
@@ -322,9 +328,9 @@ function AIProbabilityBar({ story }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          <span style={{ fontSize: 15, fontWeight: 800, color: aFavored ? '#86efac' : '#9ca3af' }}>{yuzde(pctA, 1)}</span>
+          <span style={{ fontSize: 15, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: aFavored ? '#86efac' : '#9ca3af' }}>{yuzde(pctA, 1)}</span>
           <span style={{ fontSize: 11, color: 'var(--text-6)' }}>:</span>
-          <span style={{ fontSize: 15, fontWeight: 800, color: bFavored ? '#86efac' : '#9ca3af' }}>{yuzde(pctB, 1)}</span>
+          <span style={{ fontSize: 15, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: bFavored ? '#86efac' : '#9ca3af' }}>{yuzde(pctB, 1)}</span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flex: '1 1 0', justifyContent: 'flex-end' }}>
@@ -345,14 +351,32 @@ function AIProbabilityBar({ story }) {
         </div>
       </div>
 
-      <div style={{ height: 10, borderRadius: 999, overflow: 'hidden', display: 'flex', background: 'var(--surface)' }}>
-        <div style={{ width: `${pctA}%`, background: aFavored ? 'linear-gradient(90deg,#8B3AA0,#DF4888)' : 'linear-gradient(90deg,var(--text-6),var(--text-5))', transition: 'width 0.4s ease' }} />
-        <div style={{ flex: 1, background: bFavored ? 'linear-gradient(270deg,#1d4ed8,#60a5fa)' : 'linear-gradient(270deg,var(--line),var(--text-6))', transition: 'flex 0.4s ease' }} />
+      <div ref={cubukRef} style={{ height: 10, borderRadius: 999, overflow: 'hidden', display: 'flex', background: 'var(--surface)' }}>
+        <div style={{ width: `${pctA}%`, background: aFavored ? 'linear-gradient(90deg,#8B3AA0,#DF4888)' : 'linear-gradient(90deg,var(--text-6),var(--text-5))' }} />
+        <div style={{ flex: 1, background: bFavored ? 'linear-gradient(270deg,#1d4ed8,#60a5fa)' : 'linear-gradient(270deg,var(--line),var(--text-6))' }} />
       </div>
 
       <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-5)', textAlign: 'center' }}>
         {uncertain ? 'Fextopus iki takımı başa baş görüyor' : 'Fextopus öngörüsü: favori tarafın rengi vurgulanır'}
       </div>
+
+      {/* Bitmiş maç: damga gibi basılan sonuç (UX P2 A3). Başa baş tahminde yok. */}
+      {hukum && !hukum.belirsiz && (
+        <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center' }}>
+          <Damga aci={-4} gecikme={500}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 13px', borderRadius: 8,
+              border: `2px solid ${hukum.bildi ? 'var(--success-fg)' : 'var(--danger-fg)'}`,
+              color: hukum.bildi ? 'var(--success-fg)' : 'var(--danger-fg)',
+              background: hukum.bildi ? 'rgba(70,182,88,.10)' : 'rgba(255,70,85,.08)',
+              fontSize: 12, fontWeight: 900, letterSpacing: '1.1px', textTransform: 'uppercase',
+            }}>
+              {hukum.bildi ? <Check size={15} strokeWidth={3} /> : <XIcon size={15} strokeWidth={3} />}
+              {hukum.bildi ? 'Fextopus bildi' : 'Fextopus yanıldı'}
+            </span>
+          </Damga>
+        </div>
+      )}
     </section>
   )
 }

@@ -80,6 +80,7 @@ python kadro.py --takim <id> [--gun 30]                   # Türk takımı kadro
 - UI metinleri ve kod yorumları Türkçe; çevredeki kodun dilini ve yoğunluğunu izle.
 - **Yeni kodda inline stil kullan, mevcut kodla tutarlı ol. Tailwind kullanma.** Renkler `theme.js`'den.
 - İkon `lucide-react`; UI'da emoji yok.
+- Animasyon `hooks/useHareket.js` + `components/Animasyon.jsx` ile (ekrana girince başlar, "hareketi azalt"ta son hâl); rAF'li geçişi sayfa bileşeninde değil küçük alt bileşende tut (her kare yalnız onu çizsin).
 - Harici API çağrıları `backend/etl/adapters/` üzerinden; sessiz hata yok, her DB/API hatası loglanır.
 - Yeni SQL `backend/sql/` altına, tekrar çalıştırılabilir (`IF NOT EXISTS`, `CREATE OR REPLACE`).
 - Göreve ilgili klasörden başla, tüm projeyi tarama.

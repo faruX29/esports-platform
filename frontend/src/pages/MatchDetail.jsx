@@ -17,11 +17,14 @@ import { DeepScoutBadge }                          from '../components/ScoutSign
 import {
   Brain, Vote, Map as MapIcon, Target, Swords, Award, Compass, Star, User,
   Crown, TriangleAlert, PartyPopper, Trophy, Gamepad2, CalendarDays, BarChart3,
-  Radio, CircleCheck, Clock, MousePointerClick, Info, Hash, Tv, ExternalLink,
+  Radio, CircleCheck, Clock, MousePointerClick, Info, Hash, Tv, ExternalLink, Check, X as XIcon,
 } from 'lucide-react'
 import { getBOFormat }                              from '../utils/matchFormat'
 import { deriveWinnerTeamId, correctedScores }      from '../utils/matchResult'
-import { isUncertainPrediction }                    from '../utils/prediction'
+import { isUncertainPrediction, fextopusSonucu }    from '../utils/prediction'
+import { FlipNumber }                              from '../components/AnimatedNumber'
+import { Damga, SkorParlamasi }                   from '../components/Animasyon'
+import { useAcilisGecisi, useDegisimSayaci }       from '../hooks/useHareket'
 import { roundLabel }                               from '../utils/roundLabel'
 import { clickableProps }                           from '../utils/a11y'
 import TurkishBadge                                 from '../components/TurkishBadge'
@@ -935,6 +938,53 @@ function MapRow({ map, index, teamAId }) {
   )
 }
 
+/** Hero'daki Fextopus çubuğu: ekrana girince %50/%50'den hedefe kayar (UX P2 A2).
+ *  Ayrı bileşen: geçiş her karede yalnız bunu çizer, sayfanın tamamını değil. */
+function HeroOlasilik({ pctA, aName, bName, belirsiz }) {
+  const [ref, deger] = useAcilisGecisi(pctA)
+  const a = Math.round(deger)
+  return (
+    <div ref={ref}>
+      <div style={{ height: 9, borderRadius: 5, overflow: 'hidden', display: 'flex', border: '1px solid var(--line)' }}>
+        <div style={{ flex: deger, background: belirsiz ? 'var(--text-6)' : 'linear-gradient(90deg,#4ade80,#22c55e)', borderRadius: '5px 0 0 5px' }} />
+        <div style={{ flex: 100 - deger, background: belirsiz ? 'var(--text-5)' : 'linear-gradient(90deg,#60a5fa,#3b82f6)', borderRadius: '0 5px 5px 0' }} />
+      </div>
+      {belirsiz ? (
+        <div style={{ marginTop: 4, fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textAlign: 'center' }}>Fextopus başa baş görüyor</div>
+      ) : (
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginTop: 4, fontSize: 10.5, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ color: '#4ade80', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{aName} %{a}</span>
+          <span style={{ color: '#60a5fa', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>%{100 - a} {bName}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Bitmiş maçta "Fextopus bildi / yanıldı" damgası (UX P2 A3). Başa baş tahminde yok
+ *  (isabet tanımıyla aynı: 50/50 sayılmaz). */
+function FextopusHukmu({ match }) {
+  const sonuc = fextopusSonucu(match)
+  if (!sonuc || sonuc.belirsiz) return null
+  const renk = sonuc.bildi ? 'var(--success-fg)' : 'var(--danger-fg)'
+  return (
+    <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center' }}>
+      <Damga aci={-4} gecikme={350}>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 14px', borderRadius: 8,
+          border: `2px solid ${renk}`, color: renk,
+          background: sonuc.bildi ? 'rgba(70,182,88,.10)' : 'rgba(255,70,85,.08)',
+          boxShadow: `inset 0 0 0 1px ${sonuc.bildi ? 'rgba(70,182,88,.25)' : 'rgba(255,70,85,.22)'}`,
+          fontSize: 13, fontWeight: 900, letterSpacing: '1.2px', textTransform: 'uppercase',
+        }}>
+          {sonuc.bildi ? <Check size={16} strokeWidth={3} /> : <XIcon size={16} strokeWidth={3} />}
+          {sonuc.bildi ? 'Fextopus bildi' : 'Fextopus yanıldı'}
+        </span>
+      </Damga>
+    </div>
+  )
+}
+
 function WinProbabilityBar({ teamAName, teamBName, teamAPct, teamBPct }) {
   const normalizedA = clamp(Number(teamAPct) || 0, 0, 100)
   const normalizedB = clamp(Number(teamBPct) || 0, 0, 100)
@@ -1364,6 +1414,8 @@ export default function MatchDetail() {
   )
 
   /* ── Hook-safe derivations — must stay before any early return ── */
+  // Skor değişince (canlı güncelleme, canlıdan bitişe geçiş) hero 1 sn parlar; başka maça geçiş saymaz
+  const skorParlama = useDegisimSayaci(match ? `${match.team_a_score}-${match.team_b_score}` : null, match?.id)
   const aId   = match?.team_a_id || match?.team_a?.id
   const bId   = match?.team_b_id || match?.team_b?.id
   const aName = match?.team_a?.name || '?'
@@ -1510,6 +1562,7 @@ export default function MatchDetail() {
         {/* ── Hero ── */}
         <div style={{ background: 'linear-gradient(135deg,var(--surface),var(--surface))', borderRadius: '20px', border: `2px solid ${isLive ? '#FF4655' : gc + '33'}`, padding: '28px 24px 20px', marginBottom: 8, position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: 0, left: '25%', right: '25%', height: 1, background: `linear-gradient(90deg,transparent,${gc}44,transparent)` }} />
+          <SkorParlamasi n={skorParlama} radius={18} />
 
           {/* Badges */}
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
@@ -1544,7 +1597,9 @@ export default function MatchDetail() {
             {/* Skor */}
             <div style={{ textAlign: 'center', minWidth: 100, flexShrink: 0 }}>
               {(isLive || isFin)
-                ? <div style={{ fontSize: 36, fontWeight: 900, color: isLive ? '#FF4655' : 'var(--text-2)', letterSpacing: 4, fontVariantNumeric: 'tabular-nums', textShadow: isLive ? '0 0 20px rgba(255,70,85,.4)' : 'none' }}>{dispScores.team_a_score ?? 0}:{dispScores.team_b_score ?? 0}</div>
+                ? <div style={{ fontSize: 36, fontWeight: 900, color: isLive ? '#FF4655' : 'var(--text-2)', letterSpacing: 4, fontVariantNumeric: 'tabular-nums', textShadow: isLive ? '0 0 20px rgba(255,70,85,.4)' : 'none', perspective: 400 }}>
+                    <FlipNumber key={`a${match.id}`} value={dispScores.team_a_score ?? 0} />:<FlipNumber key={`b${match.id}`} value={dispScores.team_b_score ?? 0} />
+                  </div>
                 : <div style={{ fontSize: 26, fontWeight: 900, color: FEXT.accentText, letterSpacing: 3 }}>VS</div>
               }
               <div style={{ fontSize: 12, fontWeight: 700, color: isLive ? '#FF4655' : '#4CAF50', marginTop: 4 }}>{isLive ? '● Canlı' : fmtTime(match.scheduled_at)}</div>
@@ -1570,18 +1625,8 @@ export default function MatchDetail() {
           {/* ── Fextopus Kazanma Olasılığı — tam genişlik (mobilde takım isimleriyle çakışmasın) ── */}
           {tahminVar && <div style={{ marginTop: 18, maxWidth: 440, marginLeft: 'auto', marginRight: 'auto' }}>
             <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--ai)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><FextopusIcon size={14} /> Fextopus Kazanma Olasılığı{predUncertain && <span style={{ color: 'var(--text-3)', fontWeight: 800 }}>· Belirsiz</span>}</div>
-            <div style={{ height: 9, borderRadius: 5, overflow: 'hidden', display: 'flex', border: '1px solid var(--line)' }}>
-              <div style={{ flex: pctA, background: predUncertain ? 'var(--text-6)' : 'linear-gradient(90deg,#4ade80,#22c55e)', borderRadius: '5px 0 0 5px' }} />
-              <div style={{ flex: pctB, background: predUncertain ? 'var(--text-5)' : 'linear-gradient(90deg,#60a5fa,#3b82f6)', borderRadius: '0 5px 5px 0' }} />
-            </div>
-            {predUncertain ? (
-              <div style={{ marginTop: 4, fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textAlign: 'center' }}>Fextopus başa baş görüyor</div>
-            ) : (
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginTop: 4, fontSize: 10.5, fontWeight: 800 }}>
-                <span style={{ color: '#4ade80', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{aName} %{pctA}</span>
-                <span style={{ color: '#60a5fa', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>%{pctB} {bName}</span>
-              </div>
-            )}
+            <HeroOlasilik pctA={pctA} aName={aName} bName={bName} belirsiz={predUncertain} />
+            {isFin && <FextopusHukmu match={match} />}
             <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center' }}>
               <PredictionAccuracyBadge variant="inline" />
             </div>

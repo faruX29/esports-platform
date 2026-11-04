@@ -20,6 +20,7 @@ import TrBadge                                        from '../components/TrBadg
 import { deriveWinnerTeamId }                         from '../utils/matchResult'
 import { roundLabel }                                 from '../utils/roundLabel'
 import { isUncertainPrediction }                      from '../utils/prediction'
+import { useAcilisGecisi } from '../hooks/useHareket'
 import { clickableProps }                             from '../utils/a11y'
 import TurkishBadge                                   from '../components/TurkishBadge'
 import { normalizeGameId }                            from '../utils/gameUtils'
@@ -686,6 +687,29 @@ const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, hoverTeam
 
 const SIDE_DOT = { upper: FEXT.accent, mid: FEXT.warn, lower: 'var(--text-4)' }
 
+/** Bitmemiş maçın Fextopus çubuğu: ekrana girince %50/%50'den hedefe kayar (UX P2 A2). */
+function TurnuvaOlasilikCubugu({ m }) {
+  const predUncertain = isUncertainPrediction(m.prediction_team_a, m.prediction_team_b, m.prediction_confidence)
+  const [ref, deger] = useAcilisGecisi(Math.round(m.prediction_team_a * 100))
+  const pA = Math.round(deger)
+  return (
+    <div ref={ref} style={{ marginTop: 10 }}>
+      <div style={{ height: 5, borderRadius: 3, background: 'var(--surface-2)', overflow: 'hidden' }}>
+        <div style={{ width: `${deger}%`, height: '100%', background: predUncertain ? 'var(--track)' : 'linear-gradient(90deg,#667eea,#764ba2)' }} />
+      </div>
+      {predUncertain ? (
+        <div style={{ fontSize: 9, color: 'var(--text-4)', marginTop: 3, textAlign: 'center', fontWeight: 700, letterSpacing: '.4px' }}>FEXTOPUS · BELİRSİZ</div>
+      ) : (
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, marginTop: 3, fontWeight: 700 }}>
+          <span style={{ color: m.prediction_team_a >= m.prediction_team_b ? '#818cf8' : 'var(--text-5)' }}>%{pA}</span>
+          <span style={{ color: 'var(--text-6)' }}>Fextopus</span>
+          <span style={{ color: m.prediction_team_b > m.prediction_team_a ? '#818cf8' : 'var(--text-5)' }}>%{100 - pA}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function BracketView({ layout: L, navigate, zoom = 1 }) {
   const [hoverTeam, setHoverTeam] = useState(null)
   const D = BRACKET_DIM
@@ -909,26 +933,7 @@ export const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
         </div>
 
         {/* AI tahmin çubuğu — yaklaşan/canlı maçlar (bitmişte skor zaten var) */}
-        {m.status !== 'finished' && m.prediction_team_a != null && m.prediction_team_b != null && (() => {
-          const predUncertain = isUncertainPrediction(m.prediction_team_a, m.prediction_team_b, m.prediction_confidence)
-          const pA = Math.round(m.prediction_team_a * 100)
-          return (
-            <div style={{ marginTop: 10 }}>
-              <div style={{ height: 5, borderRadius: 3, background: 'var(--surface-2)', overflow: 'hidden' }}>
-                <div style={{ width: `${pA}%`, height: '100%', background: predUncertain ? 'var(--track)' : 'linear-gradient(90deg,#667eea,#764ba2)', transition: 'width .5s', transformOrigin: 'left', animation: 'winBarFill .8s cubic-bezier(.2,.8,.3,1)' }} />
-              </div>
-              {predUncertain ? (
-                <div style={{ fontSize: 9, color: 'var(--text-4)', marginTop: 3, textAlign: 'center', fontWeight: 700, letterSpacing: '.4px' }}>FEXTOPUS · BELİRSİZ</div>
-              ) : (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, marginTop: 3, fontWeight: 700 }}>
-                  <span style={{ color: m.prediction_team_a >= m.prediction_team_b ? '#818cf8' : 'var(--text-5)' }}>%{pA}</span>
-                  <span style={{ color: 'var(--text-6)' }}>Fextopus</span>
-                  <span style={{ color: m.prediction_team_b > m.prediction_team_a ? '#818cf8' : 'var(--text-5)' }}>%{100 - pA}</span>
-                </div>
-              )}
-            </div>
-          )
-        })()}
+        {m.status !== 'finished' && m.prediction_team_a != null && m.prediction_team_b != null && <TurnuvaOlasilikCubugu m={m} />}
 
         {/* Date */}
         <div style={{ marginTop: 10, fontSize: 10, color: 'var(--text-6)',

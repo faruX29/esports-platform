@@ -152,6 +152,23 @@ button { font-family: inherit; }
   100% { transform: rotateX(0deg)   scale(1);    filter: none; }
 }
 
+/* Canlı skor değişti → kart 1 sn kırmızı parlar (components/Animasyon.jsx SkorParlamasi).
+   İçe vuran gölge: overflow:hidden kartta da kesilmez. */
+@keyframes fxSkorParla {
+  0%   { box-shadow: inset 0 0 0 0 rgba(255,70,85,0);   background: rgba(255,70,85,0); }
+  18%  { box-shadow: inset 0 0 0 2px rgba(255,70,85,.75), inset 0 0 36px rgba(255,70,85,.32); background: rgba(255,70,85,.07); }
+  100% { box-shadow: inset 0 0 0 0 rgba(255,70,85,0);   background: rgba(255,70,85,0); }
+}
+
+/* "Fextopus bildi / yanıldı" damgası: büyük ve eğik gelir, yere vurur, hafif seker.
+   Son eğim --damga-aci (Damga bileşeni verir). */
+@keyframes fxDamga {
+  0%   { opacity: 0; transform: scale(2.3) rotate(calc(var(--damga-aci, 0deg) - 14deg)); filter: blur(2px); }
+  55%  { opacity: 1; transform: scale(.9)  rotate(var(--damga-aci, 0deg)); filter: none; }
+  78%  { transform: scale(1.06) rotate(var(--damga-aci, 0deg)); }
+  100% { opacity: 1; transform: scale(1)   rotate(var(--damga-aci, 0deg)); }
+}
+
 /* Skeleton → gerçek içerik geçişi. İçerik "pat" diye belirmek yerine
    süzülerek gelir; iskelet ile içerik arasındaki kopukluğu kapatır. */
 @keyframes contentIn {
@@ -159,14 +176,6 @@ button { font-family: inherit; }
   to   { opacity: 1; transform: translateY(0); }
 }
 .content-in { animation: contentIn .34s cubic-bezier(.2,.8,.3,1); }
-
-/* Fextopus tahmin barı — kart göründüğünde soldan sağa dolar.
-   width yerine scaleX: GPU'da çalışır, layout tetiklemez ve barın gerçek
-   genişliği reaktif kalır (canlı maçta oran değişince transition devralır). */
-@keyframes winBarFill {
-  from { transform: scaleX(0); }
-  to   { transform: scaleX(1); }
-}
 
 /* Sayfa (route) geçişi — içerik aşağıdan hafifçe süzülerek gelir.
    Anlık "pat" yerine yönü olan bir geçiş; yükleniyor hissini de yumuşatır. */

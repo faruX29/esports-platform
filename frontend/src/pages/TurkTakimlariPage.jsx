@@ -8,7 +8,7 @@
  * Takım listesi tek kaynaktan (turk_takimlar görünümü). Botlara aynı içerik
  * middleware'den basılır (STATIC_ROUTES['/turk-takimlari']).
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CalendarDays, History, Newspaper, Library, Users } from 'lucide-react'
 import { supabase } from '../supabaseClient'
@@ -22,6 +22,7 @@ import { tournamentDisplayName } from '../utils/tournamentDisplay'
 import { deriveWinnerTeamId, correctedScores } from '../utils/matchResult'
 import { buildNewsSlug } from '../utils/newsSlug'
 import { FEXT, saatiGecti } from '../theme'
+import { Asansor, MobilAsansor, useAsansor, ASANSOR_SUTUN } from '../components/Asansor'
 
 const MATCH_SELECT = `
   id, scheduled_at, status, winner_id, team_a_id, team_b_id, team_a_score, team_b_score,
@@ -67,9 +68,6 @@ const BOLUMLER = [
   { id: 'haberler', baslik: 'Türk takımı haberleri', kisa: 'Haberler', ikon: s => <Newspaper size={s} /> },
   { id: 'haftalik', baslik: 'Türk Espor Haftası arşivi', kisa: 'Arşiv', ikon: s => <Library size={s} /> },
 ]
-const NAVBAR_YUKSEKLIK = 58
-const MOBIL_SERIT = 50          // mobilde navbar altındaki yapışkan bölüm şeridi
-const ASANSOR_TUS = 40, ASANSOR_ARA = 6
 // İki sütunlu kart ızgarası (dar ekranda tek sütun)
 const izgaraStil = min => ({ display: 'grid', gap: 8, gridTemplateColumns: `repeat(auto-fill,minmax(min(100%,${min}px),1fr))` })
 
@@ -90,98 +88,6 @@ function Bolum({ id, baslik, ikon, children, sag, vurgulu, ustPay }) {
       </div>
       {children}
     </section>
-  )
-}
-
-/** Masaüstü: solda yapışkan ikon sütunu; vurgu kutusu aktif bölüme kayar (asansör). */
-function Asansor({ aktif, onGit }) {
-  const [uzerinde, setUzerinde] = useState(null)
-  const sira = Math.max(0, BOLUMLER.findIndex(b => b.id === aktif))
-  return (
-    <nav aria-label="Sayfa bölümleri" style={{ position: 'sticky', top: NAVBAR_YUKSEKLIK + 20, alignSelf: 'start' }}>
-      <div style={{ position: 'relative', display: 'grid', gap: ASANSOR_ARA, padding: ASANSOR_ARA, borderRadius: 14, border: '1px solid var(--line)', background: 'var(--surface)' }}>
-        <span aria-hidden="true" style={{
-          position: 'absolute', left: ASANSOR_ARA, top: ASANSOR_ARA, width: ASANSOR_TUS, height: ASANSOR_TUS,
-          borderRadius: 10, background: FEXT.accentSoftBg, border: `1px solid ${FEXT.accentBorder}`, boxSizing: 'border-box',
-          transform: `translateY(${sira * (ASANSOR_TUS + ASANSOR_ARA)}px)`,
-          transition: 'transform .38s cubic-bezier(.34,1.12,.5,1)', pointerEvents: 'none',
-        }} />
-        {BOLUMLER.map(b => {
-          const secili = b.id === aktif
-          const acik = uzerinde === b.id
-          return (
-            <button
-              key={b.id}
-              type="button"
-              onClick={() => onGit(b.id)}
-              aria-label={b.baslik}
-              aria-current={secili ? 'true' : undefined}
-              onMouseEnter={() => setUzerinde(b.id)}
-              onMouseLeave={() => setUzerinde(null)}
-              onFocus={() => setUzerinde(b.id)}
-              onBlur={() => setUzerinde(null)}
-              style={{
-                position: 'relative', width: ASANSOR_TUS, height: ASANSOR_TUS, display: 'grid', placeItems: 'center',
-                border: 'none', background: 'transparent', borderRadius: 10, cursor: 'pointer', padding: 0,
-                color: secili ? 'var(--accent-fg)' : 'var(--text-3)', transition: 'color .2s',
-              }}
-            >
-              {b.ikon(18)}
-              <span style={{
-                position: 'absolute', left: ASANSOR_TUS + 12, top: '50%', zIndex: 5,
-                transform: `translate(${acik ? 0 : -4}px,-50%)`, opacity: acik ? 1 : 0,
-                transition: 'opacity .15s, transform .15s', pointerEvents: 'none', whiteSpace: 'nowrap',
-                fontSize: 12, fontWeight: 700, color: 'var(--text-1)', background: 'var(--surface-2)',
-                border: '1px solid var(--line)', borderRadius: 8, padding: '5px 9px',
-              }}>
-                {b.baslik}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-    </nav>
-  )
-}
-
-/** Mobil: navbar altında yapışkan, yatay kayan bölüm şeridi. */
-function MobilAsansor({ aktif, onGit }) {
-  const seritRef = useRef(null)
-  // Aktif çip şeridin dışında kalmasın (scrollIntoView sayfanın kaymasını bölebilir → elle)
-  useEffect(() => {
-    const serit = seritRef.current
-    const cip = serit?.querySelector('[aria-current="true"]')
-    if (!serit || !cip) return
-    const hedef = cip.offsetLeft - (serit.clientWidth - cip.offsetWidth) / 2
-    serit.scrollTo({ left: Math.max(0, hedef), behavior: 'smooth' })
-  }, [aktif])
-  return (
-    <nav ref={seritRef} aria-label="Sayfa bölümleri" style={{
-      position: 'sticky', top: NAVBAR_YUKSEKLIK, zIndex: 20, height: MOBIL_SERIT, boxSizing: 'border-box',
-      margin: '0 -16px 14px', padding: '8px 16px', background: 'var(--bg)', borderBottom: '1px solid var(--line)',
-      display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none',
-    }}>
-      {BOLUMLER.map(b => {
-        const secili = b.id === aktif
-        return (
-          <button
-            key={b.id}
-            type="button"
-            onClick={() => onGit(b.id)}
-            aria-current={secili ? 'true' : undefined}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, padding: '0 11px', borderRadius: 999,
-              border: `1px solid ${secili ? FEXT.accentBorder : 'var(--line)'}`,
-              background: secili ? FEXT.accentSoftBg : 'var(--surface)',
-              color: secili ? 'var(--accent-fg)' : 'var(--text-3)',
-              fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'background .2s, color .2s, border-color .2s',
-            }}
-          >
-            {b.ikon(14)} {b.kisa}
-          </button>
-        )
-      })}
-    </nav>
   )
 }
 
@@ -327,49 +233,7 @@ export default function TurkTakimlariPage() {
   const idler = useMemo(() => takimlar.map(t => t.id), [takimlar])
 
   // ── Asansör: kaydırırken aktif bölümü izle; tıklayınca yumuşak kaydır ──
-  const ustPay = NAVBAR_YUKSEKLIK + (isMobile ? MOBIL_SERIT + 10 : 16)
-  const [aktif, setAktif] = useState(BOLUMLER[0].id)
-  const [vurgu, setVurgu] = useState(null)
-  const kayiyorRef = useRef(false)   // tıklamayla kayarken ara bölümler aktif olmasın
-  const zamanRef = useRef(null)
-
-  useEffect(() => {
-    let zaman = 0
-    const hesapla = () => {
-      zaman = 0
-      if (kayiyorRef.current) return
-      // Sayfa sonuna gelindiyse son bölüm (kısa bölüm hiçbir zaman tepeye çıkamaz)
-      const altta = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4
-      let secili = BOLUMLER[0].id
-      if (altta) secili = BOLUMLER[BOLUMLER.length - 1].id
-      else {
-        for (const b of BOLUMLER) {
-          const el = document.getElementById(b.id)
-          if (el && el.getBoundingClientRect().top <= ustPay + 40) secili = b.id
-        }
-      }
-      setAktif(secili)
-    }
-    // Kısa zamanlayıcıyla seyreltilir (rAF arka plan sekmesinde hiç çalışmıyor)
-    const onScroll = () => { if (!zaman) zaman = setTimeout(hesapla, 60) }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    onScroll()
-    return () => { window.removeEventListener('scroll', onScroll); clearTimeout(zaman) }
-  }, [ustPay])
-
-  useEffect(() => () => clearTimeout(zamanRef.current), [])
-
-  const bolumeGit = useCallback(id => {
-    const el = document.getElementById(id)
-    if (!el) return
-    const azHareket = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    kayiyorRef.current = true
-    setAktif(id)
-    setVurgu(id)
-    el.scrollIntoView({ behavior: azHareket ? 'auto' : 'smooth', block: 'start' })
-    clearTimeout(zamanRef.current)
-    zamanRef.current = setTimeout(() => { kayiyorRef.current = false; setVurgu(null) }, 900)
-  }, [])
+  const { aktif, vurgu, git: bolumeGit, ustPay } = useAsansor(BOLUMLER, isMobile)
 
   useEffect(() => {
     if (!idler.length) return
@@ -471,9 +335,9 @@ export default function TurkTakimlariPage() {
       <div style={{
         maxWidth: 1180, margin: '0 auto', padding: isMobile ? '14px 16px 34px' : '22px 16px 48px',
         // Masaüstü: solda asansör sütunu, sağda içerik
-        display: isMobile ? 'block' : 'grid', gridTemplateColumns: isMobile ? undefined : `${ASANSOR_TUS + ASANSOR_ARA * 2 + 2}px minmax(0,1fr)`, gap: 20,
+        display: isMobile ? 'block' : 'grid', gridTemplateColumns: isMobile ? undefined : `${ASANSOR_SUTUN}px minmax(0,1fr)`, gap: 20,
       }}>
-        {!isMobile && <Asansor aktif={aktif} onGit={bolumeGit} />}
+        {!isMobile && <Asansor bolumler={BOLUMLER} aktif={aktif} onGit={bolumeGit} />}
 
         <div style={{ minWidth: 0 }}>
           <div style={{ borderRadius: 18, border: '1px solid var(--surface-2)', overflow: 'hidden', marginBottom: isMobile ? 12 : 20, background: 'var(--surface)' }}>
@@ -487,7 +351,7 @@ export default function TurkTakimlariPage() {
             </div>
           </div>
 
-          {isMobile && <MobilAsansor aktif={aktif} onGit={bolumeGit} />}
+          {isMobile && <MobilAsansor bolumler={BOLUMLER} aktif={aktif} onGit={bolumeGit} />}
 
           <Bolum {...bolumProps('takimlar')}>
             {!maclar ? <Iskelet adet={6} min={240} /> : izgara.length === 0 ? <Bos>Son günlerde maçı olan Türk takımı yok.</Bos> : (

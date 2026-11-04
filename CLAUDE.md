@@ -138,6 +138,7 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - Turnuvayı lige (`/lig/<slug>`) frontend ya da middleware'de ad eşleyerek bağlama → tek kaynak `ligler` tablosu + `lig_eslesir`/`lig_sayfasi`/`turnuva_ligi` (`backend/sql/ligler.sql`); yeni lig = tabloya satır, kod değişmez.
 - Kadroyu transfer kaydı yazmadan güncelleyen adımı (`--players`, `transfer=None`) transfer tespitinden (`--roster-turk`/`--roster-transfers`) önce koşturma → oyuncunun takımı değişir, fark yutulur. Haber istemine kadro farkını "resmi açıklama" diye verme; ayrılışın nedeni bilinmez (`build_transfer`).
 - Windows'ta Türkçe/Unicode içerikli heredoc ile dosya yazma → cp1254 karakterleri bozar.
+- Windows'ta Python `open(p, 'w')` ile kaynak dosyası yazma → satır sonları CRLF olur, tüm dosya diff'e girer; `newline=''` ver.
 - Sosyal videoda Inter dışında font kullanma → Baloo yalnız logoda.
 - Sosyal paylaşım metnine 5'ten fazla hashtag koyma → Instagram ve TikTok en fazla 5'e izin veriyor (`radar.py` `MAKS_ETIKET`).
 - Sır, metrik veya kişisel bilgi commit'leme → repo PUBLIC. Actions logları da herkese açık: iş akışında satır sayısı, boyut, e-posta ya da hata metni basma (`saglik.py`/`yedek.py` gövdeyi yalnız e-postaya ya da şifreli arşive yazar).

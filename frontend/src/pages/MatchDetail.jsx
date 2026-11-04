@@ -17,7 +17,7 @@ import { DeepScoutBadge }                          from '../components/ScoutSign
 import {
   Brain, Vote, Map as MapIcon, Target, Swords, Award, Compass, Star, User,
   Crown, TriangleAlert, PartyPopper, Trophy, Gamepad2, CalendarDays, BarChart3,
-  Radio, CircleCheck, Clock, MousePointerClick, Info, Hash,
+  Radio, CircleCheck, Clock, MousePointerClick, Info, Hash, Tv, ExternalLink,
 } from 'lucide-react'
 import { getBOFormat }                              from '../utils/matchFormat'
 import { deriveWinnerTeamId, correctedScores }      from '../utils/matchResult'
@@ -32,6 +32,7 @@ import { normalizeGameId }                          from '../utils/gameUtils'
 import Mascot from '../components/Mascot'
 import FextopusIcon from '../components/FextopusIcon'
 import SeoHead from '../components/SeoHead'
+import { yayinlariSirala, yayinPlatformu, dilAdi } from '../utils/yayin'
 
 // MVP Oylaması şimdilik GİZLİ (kurucu kararı 2026-07-16): gerçek oyuncu istatistiği
 // altyapısı olmadan oy "en popüler oyuncu" yarışına dönüşüyor (düşük performanslı ama
@@ -861,6 +862,44 @@ function TwitchEmbed({ channel }) {
   )
 }
 
+/* ─── YayinListesi — tüm yayınlar dış link (Twitch dışındakiler gömülemiyor) ─── */
+function YayinListesi({ yayinlar, canli }) {
+  return (
+    <div style={{ marginTop: canli ? 0 : 20, marginBottom: 24, padding: '12px 14px', borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--surface-2)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, fontSize: 11, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '.6px', textTransform: 'uppercase' }}>
+        <Tv size={13} /> {canli ? 'Canlı yayınlar' : 'Yayınlar'}
+        {!canli && <span style={{ fontWeight: 600, textTransform: 'none', letterSpacing: 0, color: 'var(--text-5)' }}>· maç başlayınca açılır</span>}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {yayinlar.slice(0, 8).map(s => {
+          const { ad } = yayinPlatformu(s.raw_url)
+          const dil = dilAdi(s.language)
+          return (
+            <a
+              key={s.raw_url}
+              href={s.raw_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 36, padding: '0 12px', borderRadius: 10,
+                background: 'var(--surface-2)', border: '1px solid var(--line)', color: 'var(--text-1)',
+                fontSize: 12, fontWeight: 700, textDecoration: 'none', transition: 'border-color .15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--line-2)' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line)' }}
+            >
+              <span lang="en">{ad}</span>
+              {dil && <span style={{ fontWeight: 600, color: 'var(--text-4)' }}>· {dil}</span>}
+              {s.official && <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--accent-fg)', background: FEXT.accentSoftBg, borderRadius: 5, padding: '1px 5px' }}>Resmi</span>}
+              <ExternalLink size={12} color="var(--text-4)" />
+            </a>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 /* ─── PlayerCard ────────────────────────────────────────────────────────────── */
 function PlayerCard({ player, side = 'left' }) {
   const r = side === 'right'
@@ -1425,10 +1464,14 @@ export default function MatchDetail() {
   const favB  = isTeamFollowed(bId)
   const boFormat = getBOFormat(match.team_a_score, match.team_b_score, match.number_of_games)
 
+  // Yayınlar: Türkçe önce, sonra resmi/ana. Gömülen tek oynatıcı Twitch (YouTube/Kick
+  // gömmesi kanal kimliği ister, PandaScore vermiyor); diğerleri aşağıda dış link.
+  const yayinlar = yayinlariSirala(streams)
   const twitchCh = (() => {
-    const s = streams.find(s => (s.embed_url || s.raw_url || '').toLowerCase().includes('twitch.tv'))
+    const s = yayinlar.find(s => yayinPlatformu(s.raw_url).ad === 'Twitch')
     if (!s) return null
-    return (s.embed_url || s.raw_url || '').split('twitch.tv/').pop()?.split(/[/?]/)[0] || null
+    const kanal = (s.embed_url || '').match(/[?&]channel=([^&]+)/)?.[1] || s.raw_url.split('twitch.tv/').pop()?.split(/[/?]/)[0]
+    return kanal || null
   })()
 
   return (
@@ -1562,6 +1605,7 @@ export default function MatchDetail() {
 
         {/* Twitch */}
         {twitchCh && isLive && <div style={{ marginTop: 20 }}><TwitchEmbed channel={twitchCh} /></div>}
+        {!isFin && yayinlar.length > 0 && <YayinListesi yayinlar={yayinlar} canli={isLive} />}
 
         {/* ── Turnuva bağlamı — bracket & tüm maçlara köprü ── */}
         {match.tournament && (

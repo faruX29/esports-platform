@@ -12,7 +12,7 @@ import { isTurkishTeam, useTurkTakimlar }       from '../constants'
 import { useUser }                          from '../context/UserContext'
 import { useAuth }                          from '../context/AuthContext'
 import BRANDING                             from '../branding.config'
-import { Radio, Flag, CalendarDays, Sparkles, Zap, SlidersHorizontal, Clock, CircleCheck, Shield, Trophy, FlaskConical, Newspaper, Flame, Star, TriangleAlert } from 'lucide-react'
+import { Radio, Flag, CalendarDays, Sparkles, Zap, SlidersHorizontal, Clock, CircleCheck, Shield, Trophy, FlaskConical, Newspaper, Flame, Star, TriangleAlert, Play, ChevronRight } from 'lucide-react'
 import { buildNewsSlug }                   from '../utils/newsSlug'
 import { calculatePredictionAccuracy } from '../utils/accuracyTracker'
 import { memo }                             from 'react'
@@ -29,6 +29,8 @@ import { isUncertainPrediction }             from '../utils/prediction'
 import { clickableProps }                     from '../utils/a11y'
 import PredictionAccuracyBadge              from '../components/PredictionAccuracyBadge'
 import { CountUp, FlipNumber }              from '../components/AnimatedNumber'
+import { Asansor, MobilAsansor, useAsansor, ASANSOR_SUTUN } from '../components/Asansor'
+import { izleEtiketi }                      from '../utils/yayin'
 
 /** Satırlarda turnuva adı: yalnız aşama ("Regular Season") değil lig + etkinlik.
  *  Dar yerde aşamasız (withStage=false), tam ad title'da. */
@@ -54,6 +56,8 @@ const DASHBOARD_GLOBAL_ERROR_TEXT = 'Sunucuyla bağlantı kesildi, tekrar deneni
 const POPULAR_TEAM_SEARCH_TERMS = ['galatasaray', 'eternal fire', 'fut', 'bbl', 'fenerbahce', 'sangal', 'g2', 'fnatic', 'navi']
 const PREFERENCE_GAMES = GAMES.filter(game => ['valorant', 'cs2', 'lol'].includes(game.id))
 const UPCOMING_WINDOW_DAYS = 7
+// Canlı bölümde en fazla bu kadar kart/satır; kalanı "Tüm canlı maçlar (N)" linkinde
+const CANLI_GOSTER = 4
 
 /* ── FormStrip ────────────────────────────────────────────────────────────── */
 function FormStrip({ form, className }) {
@@ -71,89 +75,6 @@ function FormStrip({ form, className }) {
     </div>
   )
 }
-
-/* ── TodaySchedule ────────────────────────────────────────────────────────── */
-const TodaySchedule = memo(function TodaySchedule({ matches, liveMatches, onMatchClick }) {
-  const now   = new Date()
-  const today = matches => (matches || []).filter(m => {
-    if (!m.scheduled_at) return false
-    const d = new Date(m.scheduled_at)
-    return d.getFullYear() === now.getFullYear() &&
-           d.getMonth()    === now.getMonth()    &&
-           d.getDate()     === now.getDate()
-  })
-
-  const todayUpcoming = today(matches)
-  const todayLive     = (liveMatches || [])
-  const all           = [...todayLive, ...todayUpcoming]
-
-  if (all.length === 0) return null
-
-  return (
-    <div style={{ marginBottom: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          padding: '4px 12px', borderRadius: 20,
-          background: 'linear-gradient(135deg,rgba(76,175,80,.15),rgba(76,175,80,.07))',
-          border: '1px solid rgba(76,175,80,.35)', flexShrink: 0,
-        }}>
-          <span style={{ fontSize: 9, fontWeight: 900, color: '#9ee6a3', letterSpacing: '.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            <CalendarDays size={11} /> Bugün
-          </span>
-          <span style={{ padding: '1px 6px', borderRadius: 8, background: 'rgba(76,175,80,.25)', color: '#9ee6a3', fontSize: 10, fontWeight: 700 }}>
-            {all.length}
-          </span>
-        </div>
-        <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(76,175,80,.25),transparent)' }} />
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {all.map(m => {
-          const isLive = m.status === 'running'
-          const gameShort = (m.game?.name || '—').slice(0, 3).toUpperCase()
-          const tA = m.team_a?.name || '?'
-          const tB = m.team_b?.name || '?'
-          return (
-            <div
-              key={m.id}
-              {...clickableProps(() => onMatchClick(m.id), { label: 'Maç detayı' })}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '8px 12px', borderRadius: 10, cursor: 'pointer',
-                background: isLive ? 'rgba(255,70,85,.07)' : 'var(--surface)',
-                border: isLive ? '1px solid rgba(255,70,85,.3)' : '1px solid var(--line)',
-                transition: 'all .15s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = isLive ? 'rgba(255,70,85,.12)' : 'var(--surface-2)'; e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.5)' : 'var(--line-2)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = isLive ? 'rgba(255,70,85,.07)' : 'var(--surface)'; e.currentTarget.style.borderColor = isLive ? 'rgba(255,70,85,.3)' : 'var(--line)' }}
-            >
-              {/* Saat */}
-              <span style={{ fontSize: 11, color: 'var(--text-6)', fontVariantNumeric: 'tabular-nums', flexShrink: 0, width: 38, textAlign: 'center' }}>
-                {isLive
-                  ? <span style={{ color: '#FF4655', fontWeight: 800, animation: 'livePulse 1.2s infinite' }}>● CANLI</span>
-                  : fmtTime(m.scheduled_at)
-                }
-              </span>
-              {/* Game */}
-              <span style={{ fontSize: 8, padding: '2px 5px', borderRadius: 4, background: 'var(--line)', color: 'var(--text-6)', fontWeight: 700, letterSpacing: '.4px', flexShrink: 0 }}>
-                {gameShort}
-              </span>
-              {/* Teams */}
-              <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {tA} <span style={{ color: 'var(--track)' }}>vs</span> {tB}
-              </span>
-              {/* Tournament */}
-              <span title={turnuvaAdi(m)} style={{ fontSize: 9, color: 'var(--line-2)', flexShrink: 0, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>
-                {turnuvaAdi(m, false)}
-              </span>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-})
 
 /* ── Skeleton ─────────────────────────────────────────────────────────────── */
 function Sk({ w = '100%', h = '16px', r = '8px' }) {
@@ -202,6 +123,25 @@ function matchesDashboardGame(matchRow, activeGameId) {
   const gameSlug = String(matchRow?.game?.slug || '')
   const combined = `${gameName} ${gameSlug}`.trim()
   return gameMatchesFilter(combined, activeGameId)
+}
+
+// Satır rozetinde oyun kısaltması: "CS2", "LoL", "VAL" (eskiden adın ilk 3 harfi: "COU", "LEA")
+function oyunKisa(m) {
+  const meta = GAMES.find(g => g.id === normalizeGameId(m?.game?.slug ?? m?.game?.name))
+  return meta?.shortLabel || (m?.game?.name ? String(m.game.name).slice(0, 4) : '—')
+}
+
+// Ana sayfa önceliği: takip edilen > Türk takımı > S/A turnuva > diğer (küçük = önde).
+// Canlı bölümün sırası, "Son Sonuçlar" ve şeridin sonuç satırları aynı ölçütü kullanır.
+function onemSirasi(m, favSet) {
+  if (favSet?.size) {
+    const a = String(m?.team_a_id ?? m?.team_a?.id ?? '')
+    const b = String(m?.team_b_id ?? m?.team_b?.id ?? '')
+    if (favSet.has(a) || favSet.has(b)) return 0
+  }
+  if (isTurkishTeam(m?.team_a) || isTurkishTeam(m?.team_b)) return 1
+  const k = normalizeTierKey(m?.tournament?.tier)
+  return k === 'S' || k === 'A' ? 2 : 3
 }
 
 function getStatusBadge(status, scheduledAt) {
@@ -1031,8 +971,9 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
         transition: 'border-color .2s, transform .2s cubic-bezier(.34,1.4,.64,1), box-shadow .2s',
         /* üst vurgu şeridi köşe yarıçapına göre kırpılsın (sol-üst kayma fix) */
         overflow: 'hidden',
-        /* kart yüksekliği içerikle büyüsün, min sabit */
-        minHeight: 0,
+        /* Dikey flex: alt şerit (İzle / Maç detayı) hep en altta → aynı satırdaki
+           kartlar eş boy; eskiden yayını olmayan kart kısa kalıyordu. */
+        display: 'flex', flexDirection: 'column',
       }}
       onMouseEnter={e => {
         e.currentTarget.style.borderColor = 'rgba(194,92,208,.55)'
@@ -1077,24 +1018,6 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
           CANLI
         </span>
       </div>
-
-      {aggressiveLiveMode && (
-        <div style={{
-          marginBottom: 8,
-          borderRadius: 7,
-          borderLeft: '2px solid rgba(255,70,85,.6)',
-          background: 'rgba(255,70,85,.06)',
-          color: 'var(--text-3)',
-          fontSize: 9,
-          fontWeight: 700,
-          letterSpacing: '.5px',
-          textTransform: 'uppercase',
-          padding: '4px 9px',
-          textAlign: 'left',
-        }}>
-          Canlı takip
-        </div>
-      )}
 
       {/* Teams + Score — 3 sütunlu grid */}
       <div style={{
@@ -1211,28 +1134,39 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
         />
       )}
 
-      {/* ── Stream linki ── */}
-      {m.stream_url && (
-        <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,70,85,.15)' }}>
-          <a
-            href={m.stream_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={e => e.stopPropagation()}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              padding: '11px 0', borderRadius: 8, minHeight: 40,
-              background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.3)',
-              color: 'var(--ai)', fontSize: 11.5, fontWeight: 800,
-              textDecoration: 'none', transition: 'background .15s',
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(167,139,250,.22)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(167,139,250,.12)'}
-          >
-            ▶ Canlı İzle
-          </a>
+      {/* ── Alt şerit: yayın varsa platform adıyla "izle", yoksa maç detayı (kart boyu sabit) ── */}
+      <div style={{ marginTop: 'auto', paddingTop: 10 }}>
+        <div style={{ paddingTop: 10, borderTop: '1px solid rgba(255,70,85,.15)' }}>
+          {m.stream_url ? (
+            <a
+              href={m.stream_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                borderRadius: 8, minHeight: 40,
+                background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.3)',
+                color: 'var(--ai)', fontSize: 11.5, fontWeight: 800,
+                textDecoration: 'none', transition: 'background .15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(167,139,250,.22)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(167,139,250,.12)'}
+            >
+              <Play size={12} fill="currentColor" strokeWidth={0} /> {izleEtiketi(m.stream_url)}
+            </a>
+          ) : (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+              borderRadius: 8, minHeight: 40, boxSizing: 'border-box',
+              background: 'var(--hover)', border: '1px solid var(--line)',
+              color: 'var(--text-4)', fontSize: 11.5, fontWeight: 700,
+            }}>
+              Maç detayı <ChevronRight size={13} />
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 })
@@ -1274,8 +1208,8 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
       </div>
 
       {/* Oyun etiketi */}
-      <span style={{ fontSize: 8, padding: '2px 0', width: 34, textAlign: 'center', borderRadius: 4, background: 'var(--line)', color: 'var(--text-6)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', flexShrink: 0 }}>
-        {m.game?.name?.slice(0, 3).toUpperCase() || '—'}
+      <span lang="en" style={{ fontSize: 8, padding: '2px 0', width: 34, textAlign: 'center', borderRadius: 4, background: 'var(--line)', color: 'var(--text-4)', fontWeight: 700, letterSpacing: '.4px', flexShrink: 0 }}>
+        {oyunKisa(m)}
       </span>
 
       {/* Canlı noktası — canlı olmasa da yer tutar ki "vs" sütunu kaymasın */}
@@ -1345,6 +1279,91 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
   )
 })
 
+/* ── SkorSatiri — mobilde canlı ve biten maç için kompakt satır ──────────────
+   Takımlar alt alta, ad tam genişlikte (yan yana düzende "The..." / "Natus..."
+   diye kesiliyordu); canlı kart yerine ~70 px, birkaç canlı maç tek ekranda. */
+const SkorSatiri = memo(function SkorSatiri({ match: m, onMatchClick, favs }) {
+  useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
+  const canli   = m.status === 'running'
+  const cs      = canli ? m : correctedScores(m)
+  const kazanan = !canli && m.winner_id != null ? Number(m.winner_id) : null
+  const favSet  = new Set((favs || []).map(Number))
+  const takimlar = [
+    { t: m.team_a, id: Number(m.team_a_id || m.team_a?.id), skor: cs.team_a_score, yan: 'a' },
+    { t: m.team_b, id: Number(m.team_b_id || m.team_b?.id), skor: cs.team_b_score, yan: 'b' },
+  ]
+  return (
+    <div
+      {...clickableProps(() => onMatchClick(m.id), { label: 'Maç detayı' })}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '9px 10px 9px 8px', borderRadius: 12, cursor: 'pointer',
+        background: 'var(--surface)',
+        border: `1px solid ${canli ? 'rgba(255,70,85,.35)' : 'var(--line)'}`,
+      }}
+    >
+      <div style={{ width: 44, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+        {canli ? (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9, fontWeight: 800, color: '#ff7683' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF4655', animation: 'liveNeonBlink 1.05s infinite' }} />
+            CANLI
+          </span>
+        ) : (
+          <span style={{ fontSize: 9.5, color: 'var(--text-4)', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2, textAlign: 'center' }}>
+            {fmtWhen(m.scheduled_at)}
+          </span>
+        )}
+        <span lang="en" style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-5)', letterSpacing: '.4px' }}>{oyunKisa(m)}</span>
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0, display: 'grid', gap: 4 }}>
+        {takimlar.map(({ t, id, skor, yan }) => {
+          const kazandi  = kazanan != null && kazanan === id
+          const kaybetti = kazanan != null && kazanan !== id
+          return (
+            <div key={yan} style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+              <InitialsImage src={t?.logo_url} alt={t?.name || ''} name={t?.name} width={16} height={16} borderRadius={4} objectFit='contain' />
+              <span style={{
+                flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: kazandi ? 800 : 600,
+                color: kaybetti ? 'var(--text-5)' : favSet.has(id) ? '#FFD700' : 'var(--text-1)',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {t?.name || '?'}{isTurkishTeam(t) && <TrBadge />}
+              </span>
+              <span style={{
+                fontSize: 14, fontWeight: 900, fontVariantNumeric: 'tabular-nums', minWidth: 14, textAlign: 'right',
+                color: kazandi ? '#4CAF50' : kaybetti ? 'var(--text-5)' : 'var(--text-1)',
+              }}>
+                {canli ? <FlipNumber value={skor ?? 0} /> : (skor ?? '–')}
+              </span>
+            </div>
+          )
+        })}
+        <div title={turnuvaAdi(m)} style={{ fontSize: 9.5, color: 'var(--text-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {turnuvaAdi(m, false)}
+        </div>
+      </div>
+
+      {canli && m.stream_url && (
+        <a
+          href={m.stream_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={e => e.stopPropagation()}
+          aria-label={izleEtiketi(m.stream_url)}
+          title={izleEtiketi(m.stream_url)}
+          style={{
+            flexShrink: 0, width: 38, height: 38, display: 'grid', placeItems: 'center', borderRadius: 10,
+            background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.3)', color: 'var(--ai)',
+          }}
+        >
+          <Play size={14} fill="currentColor" strokeWidth={0} />
+        </a>
+      )}
+    </div>
+  )
+})
+
 /* ── ResultRow — biten maç, skor odaklı (Son Sonuçlar) ────────────────────── */
 const ResultRow = memo(function ResultRow({ match: m, onMatchClick }) {
   useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
@@ -1373,13 +1392,13 @@ const ResultRow = memo(function ResultRow({ match: m, onMatchClick }) {
         {fmtWhen(m.scheduled_at)}
       </span>
 
-      <span style={{ fontSize: 8, padding: '2px 6px', borderRadius: 4, background: 'var(--line)', color: 'var(--text-4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', flexShrink: 0 }}>
-        {m.game?.name?.slice(0, 3).toUpperCase() || '—'}
+      <span lang="en" style={{ fontSize: 8, padding: '2px 0', width: 34, textAlign: 'center', borderRadius: 4, background: 'var(--line)', color: 'var(--text-4)', fontWeight: 700, letterSpacing: '.4px', flexShrink: 0 }}>
+        {oyunKisa(m)}
       </span>
 
       {/* Team A (sağa hizalı, merkeze doğru) */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, minWidth: 0 }}>
-        <span style={{ fontSize: 12, fontWeight: aWon ? 800 : 600, color: aWon ? '#eaeaea' : '#6f6f6f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130, textAlign: 'right' }}>
+        <span style={{ fontSize: 12, fontWeight: aWon ? 800 : 600, color: aWon ? 'var(--text-1)' : 'var(--text-5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130, textAlign: 'right' }}>
           {m.team_a?.name || '?'}{turkA && <TrBadge />}
         </span>
         <InitialsImage src={m.team_a?.logo_url} alt={m.team_a?.name || ''} name={m.team_a?.name} width={18} height={18} borderRadius={4} objectFit='contain' />
@@ -1395,7 +1414,7 @@ const ResultRow = memo(function ResultRow({ match: m, onMatchClick }) {
       {/* Team B */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
         <InitialsImage src={m.team_b?.logo_url} alt={m.team_b?.name || ''} name={m.team_b?.name} width={18} height={18} borderRadius={4} objectFit='contain' />
-        <span style={{ fontSize: 12, fontWeight: bWon ? 800 : 600, color: bWon ? '#eaeaea' : '#6f6f6f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130 }}>
+        <span style={{ fontSize: 12, fontWeight: bWon ? 800 : 600, color: bWon ? 'var(--text-1)' : 'var(--text-5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130 }}>
           {m.team_b?.name || '?'}{turkB && <TrBadge />}
         </span>
       </div>
@@ -1428,6 +1447,7 @@ export default function Dashboard() {
     setFollowedGames,
   } = useUser()
   const { isAuthenticated } = useAuth()
+  const turkListesi = useTurkTakimlar()
 
   // Ham akış (get_home_feed): oyun/seviye filtresi aşağıda useMemo ile uygulanır.
   // Canlı yayın bu listeleri yerinde yamar; liveMatches vb. bunlardan türetilir.
@@ -1604,7 +1624,8 @@ export default function Dashboard() {
   const acikMaclar = useMemo(() => {
     const byId = new Map()
     for (const m of [...canliHam, ...yaklasanHam]) if (m?.id && !byId.has(m.id)) byId.set(m.id, m)
-    return [...byId.values()].sort((a, b) => zamanDamgasi(a.scheduled_at) - zamanDamgasi(b.scheduled_at))
+    return [...byId.values()].sort((a, b) =>
+      zamanDamgasi(a.scheduled_at) - zamanDamgasi(b.scheduled_at) || Number(a.id) - Number(b.id))
   }, [canliHam, yaklasanHam])
 
   const liveMatches = useMemo(
@@ -1615,6 +1636,18 @@ export default function Dashboard() {
     () => oyunVeSeviye(acikMaclar.filter(m => isUpcomingStatus(m.status))),
     [acikMaclar, oyunVeSeviye],
   )
+
+  // Canlı bölümün sırası: takip edilen > Türk takımı > S/A > diğer; eşitlikte başlama
+  // saati, sonra id (kararlı). Eskiden "Tümü"de ilk ekranı tier C/D maçlar dolduruyordu.
+  const liveSirali = useMemo(() => {
+    const favSet = new Set((followedTeamIds || []).map(String))
+    return [...liveMatches].sort((a, b) =>
+      onemSirasi(a, favSet) - onemSirasi(b, favSet)
+      || zamanDamgasi(a.scheduled_at) - zamanDamgasi(b.scheduled_at)
+      || Number(a.id) - Number(b.id))
+    // turkListesi: Türk takımı listesi gelince sıra yeniden hesaplanır
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveMatches, followedTeamIds, turkListesi])
 
   // Sayaçlar: "Bugün" eskiden 7 günlük yaklaşan listenin tamamını, "Toplam" canlı+yaklaşanı
   // sayıyordu (bölüm başlığı "Bugün 18 maç" derken kutu "Bugün 30"). Artık yalnız bugünün
@@ -1652,22 +1685,18 @@ export default function Dashboard() {
     [bitenHam],
   )
 
-  // Son Sonuçlar: yalnız üst-tier (kesin S / A); FAVORİ takım maçları en üstte,
-  // sonra tarih (biten zaten tarih-desc, stable sort korunur).
+  // Son Sonuçlar: öne çıkan biten maçlar (takip edilen, Türk takımı ya da S/A turnuva);
+  // takip edilenler en üstte, sonra tarih (biten zaten tarih-desc, stable sort korunur).
+  // Şeridin "SONUÇ" satırları da bu listeden: eskiden bölüm yalnız S/A, şerit her seviyeyi
+  // gösteriyordu (tier C maç şeritte "haber" oluyordu). Türk takımının TCL maçı artık burada.
   const recentResults = useMemo(() => {
     const favSet = new Set((followedTeamIds || []).map(String))
-    const involvesFav = (m) =>
-      favSet.has(String(m?.team_a_id)) || favSet.has(String(m?.team_b_id)) ||
-      favSet.has(String(m?.team_a?.id)) || favSet.has(String(m?.team_b?.id))
-    const topTierOnly = (m) => {
-      const k = normalizeTierKey(m?.tournament?.tier)
-      return k === 'S' || k === 'A'
-    }
     return oyunVeSeviye(bitenHam)
-      .filter(topTierOnly)
-      .sort((a, b) => (involvesFav(b) ? 1 : 0) - (involvesFav(a) ? 1 : 0))
+      .filter(m => onemSirasi(m, favSet) < 3)
+      .sort((a, b) => (onemSirasi(a, favSet) === 0 ? 0 : 1) - (onemSirasi(b, favSet) === 0 ? 0 : 1))
       .slice(0, 15)
-  }, [bitenHam, oyunVeSeviye, followedTeamIds])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bitenHam, oyunVeSeviye, followedTeamIds, turkListesi])
 
   const handleToggleFav = useCallback((teamId) => {
     if (!teamId) return
@@ -1947,8 +1976,9 @@ export default function Dashboard() {
       return undefined
     }
 
-    const running = oyunVeSeviye(acikMaclar.filter(m => normalizeMatchStatus(m.status) === 'running').slice(0, 7))
-    const finished = oyunVeSeviye(bitenHam)
+    // Canlı ve sonuç satırları bölümlerle aynı liste ve sıra (önem sırası, öne çıkan sonuçlar)
+    const running = liveSirali.slice(0, 7)
+    const finished = recentResults
     const upcoming = oyunVeSeviye(acikMaclar.filter(m => isUpcomingStatus(m.status)).slice(0, 30))
 
     ;(async () => {
@@ -1986,7 +2016,7 @@ export default function Dashboard() {
     return () => {
       cancelled = true
     }
-  }, [akisHazir, acikMaclar, bitenHam, oyunVeSeviye, activeGame, followedTeamIds, showAllTournamentTiers, showGlobalConnectionWarning])
+  }, [akisHazir, acikMaclar, liveSirali, recentResults, oyunVeSeviye, activeGame, followedTeamIds, showAllTournamentTiers, showGlobalConnectionWarning])
 
   useEffect(() => {
     if (MVP_HIDE_DREAM_TEAM) {
@@ -2193,9 +2223,33 @@ export default function Dashboard() {
     { Icon: Shield,      value: stats.teams,     label: 'Takımlar',    color: '#4CAF50' },
   ], [stats])
 
+  // ── Asansör (kurucu fikri, /turk-takimlari ile ortak bileşen): sırası sayfadaki sırayla aynı.
+  // Koşullu bölümler (takip, canlı, turnuva, sonuç) yoksa asansörde de yok.
+  const takipVar = followedTeamIds.length > 0 || followedPlayerIds.length > 0
+  const canliBolumVar = loading || liveMatches.length > 0
+  const anaBolumler = useMemo(() => [
+    takipVar && { id: 'takip', baslik: 'Takip ettiklerim', kisa: 'Takip', ikon: b => <Star size={b} /> },
+    canliBolumVar && { id: 'canli', baslik: 'Şu an canlı', kisa: 'Canlı', ikon: b => <Radio size={b} /> },
+    activeTournaments.length > 0 && { id: 'turnuvalar', baslik: 'Aktif turnuvalar', kisa: 'Turnuvalar', ikon: b => <Trophy size={b} /> },
+    recentResults.length > 0 && { id: 'sonuclar', baslik: 'Son sonuçlar', kisa: 'Sonuçlar', ikon: b => <Flag size={b} /> },
+    { id: 'program', baslik: 'Maç programı', kisa: 'Program', ikon: b => <CalendarDays size={b} /> },
+  ].filter(Boolean), [takipVar, canliBolumVar, activeTournaments.length, recentResults.length])
+  const { aktif: aktifBolum, vurgu: vurguBolum, git: bolumeGit, ustPay } = useAsansor(anaBolumler, isMobile)
+  // Asansörle gelinen bölümün başlığı kısa bir an parlar (box-shadow: yerleşim kaymaz)
+  const baslikStil = id => ({
+    borderRadius: 8, transition: 'background .7s ease, box-shadow .7s ease',
+    background: vurguBolum === id ? FEXT.accentSoftBg : 'transparent',
+    boxShadow: vurguBolum === id ? `0 0 0 6px ${FEXT.accentSoftBg}` : 'none',
+  })
+  const liveGorunen = liveSirali.slice(0, CANLI_GOSTER)
+
   return (
     <div style={{ background: 'var(--bg)', minHeight: 'calc(100vh - 58px)' }}>
     <div style={{ maxWidth: 1440, margin: '0 auto', padding: isMobile ? '14px 12px 44px' : '20px 18px 60px', color: 'var(--text-1)' }}>
+    {isMobile && <MobilAsansor bolumler={anaBolumler} aktif={aktifBolum} onGit={bolumeGit} kenar={12} />}
+    <div style={isMobile ? undefined : { display: 'grid', gridTemplateColumns: `${ASANSOR_SUTUN}px minmax(0,1fr)`, gap: 20 }}>
+    {!isMobile && <Asansor bolumler={anaBolumler} aktif={aktifBolum} onGit={bolumeGit} />}
+    <div style={{ minWidth: 0 }}>
 
       {globalError && (
         <div style={{
@@ -2338,9 +2392,9 @@ export default function Dashboard() {
       </div>
 
       {/* ── Takip Ettiklerim (takip edilen takım/oyuncu maçları) ── */}
-      {(followedTeamIds.length > 0 || followedPlayerIds.length > 0) && (
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+      {takipVar && (
+        <div id="takip" style={{ marginBottom: 24, scrollMarginTop: ustPay }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, ...baslikStil('takip') }}>
             <span style={{
               fontSize: 11, fontWeight: 800, color: '#f0c040',
               letterSpacing: '1.5px', textTransform: 'uppercase',
@@ -2455,9 +2509,9 @@ export default function Dashboard() {
           sayfayı "aşırı boşluklu" / "çok aşağı kaydırıyorum" diye tarif etti.
           HLTV ve VLR.gg de canlı maç yokken bölümü hiç göstermiyor.
           Yükleme sırasında gösterilmeye devam eder → iskelet korunur, CLS olmaz. */}
-      {(loading || liveMatches.length > 0) && (
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+      {canliBolumVar && (
+      <div id="canli" style={{ marginBottom: 24, scrollMarginTop: ustPay }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, ...baslikStil('canli') }}>
           <span style={{ fontSize: 11, fontWeight: 800, color: '#FF4655', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
             <Radio size={13} color="#FF4655" style={{ animation: 'livePulse 1.2s infinite' }} />
             Şu An Canlı
@@ -2469,21 +2523,35 @@ export default function Dashboard() {
           )}
           <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(255,70,85,.3),transparent)' }} />
           <Link
-            to="/matches"
+            to="/matches?tab=live"
             style={{ fontSize: 10, color: 'var(--text-5)', textDecoration: 'none', transition: 'color .15s' }}
             onMouseEnter={e => e.currentTarget.style.color = 'var(--text-4)'}
             onMouseLeave={e => e.currentTarget.style.color = 'var(--text-5)'}
           >Tümü →</Link>
         </div>
 
+        {/* Önem sırasıyla en fazla CANLI_GOSTER maç. Masaüstünde kart (satırda en fazla 4),
+            mobilde kompakt satır: eskiden her kart ~bir ekrandı, 7 canlı maç 4-5 ekran kaydırmaydı. */}
         {loading ? (
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill,minmax(230px,1fr))', gap: 12 }}>
-            {/* Skeleton yüksekliği gerçek LiveMatchCard ile aynı (248px) → CLS'i önler */}
-            {[1,2,3].map(i => <Sk key={i} h="248px" r="16px" />)}
+          isMobile ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {[1,2,3].map(i => <Sk key={i} h="74px" r="12px" />)}
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(max(230px,calc((100% - 36px) / 4)),1fr))', gap: 12 }}>
+              {/* Skeleton yüksekliği gerçek LiveMatchCard ile aynı → CLS'i önler */}
+              {[1,2,3,4].map(i => <Sk key={i} h="222px" r="16px" />)}
+            </div>
+          )
+        ) : isMobile ? (
+          <div className="content-in" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {liveGorunen.map(m => (
+              <SkorSatiri key={m.id} match={m} onMatchClick={handleMatchOpen} favs={followedTeamIds} />
+            ))}
           </div>
         ) : (
-          <div className="content-in" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill,minmax(230px,1fr))', gap: 12 }}>
-            {liveMatches.map((m, i) => (
+          <div className="content-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(max(230px,calc((100% - 36px) / 4)),1fr))', gap: 12 }}>
+            {liveGorunen.map((m, i) => (
               <LiveMatchCard
                 key={m.id}
                 match={m}
@@ -2495,6 +2563,20 @@ export default function Dashboard() {
               />
             ))}
           </div>
+        )}
+        {!loading && liveSirali.length > CANLI_GOSTER && (
+          <Link
+            to="/matches?tab=live"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 8,
+              padding: '9px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--line)',
+              fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textDecoration: 'none', transition: 'border-color .15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--line-2)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line)' }}
+          >
+            Tüm canlı maçlar ({liveSirali.length}) <ChevronRight size={13} />
+          </Link>
         )}
       </div>
       )}
@@ -2510,8 +2592,8 @@ export default function Dashboard() {
           ...activeTournaments.filter(t => !liveTournIds.has(t.id)),
         ]
         return (
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <div id="turnuvalar" style={{ marginBottom: 24, scrollMarginTop: ustPay }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, ...baslikStil('turnuvalar') }}>
               <span style={{ fontSize: 11, fontWeight: 800, color: '#a78bfa', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <Trophy size={13} /> Aktif Turnuvalar
               </span>
@@ -2575,9 +2657,9 @@ export default function Dashboard() {
 
       {/* ── Son Sonuçlar (biten maçlar, skorlu — ana sayfada kalıcı) ───────── */}
       {recentResults.length > 0 && (
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-            <span style={{ fontSize: 11, fontWeight: 800, color: '#f0c040', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <div id="sonuclar" style={{ marginBottom: 24, scrollMarginTop: ustPay }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, ...baslikStil('sonuclar') }}>
+            <span title="Takip ettiklerin, Türk takımları ve S/A turnuvalar" style={{ fontSize: 11, fontWeight: 800, color: '#f0c040', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <Flag size={13} /> Son Sonuçlar
             </span>
             <span style={{ padding: '1px 7px', borderRadius: 8, background: 'rgba(240,192,64,.14)', color: '#f0c040', fontSize: 10, fontWeight: 700 }}>
@@ -2593,7 +2675,9 @@ export default function Dashboard() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {(showAllResults ? recentResults : recentResults.slice(0, 6)).map(m => (
-              <ResultRow key={m.id} match={m} onMatchClick={handleMatchOpen} />
+              isMobile
+                ? <SkorSatiri key={m.id} match={m} onMatchClick={handleMatchOpen} favs={followedTeamIds} />
+                : <ResultRow key={m.id} match={m} onMatchClick={handleMatchOpen} />
             ))}
             {recentResults.length > 6 && (
               <button
@@ -2656,8 +2740,8 @@ export default function Dashboard() {
         }
 
         return (
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <div id="program" style={{ marginBottom: 24, scrollMarginTop: ustPay }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, ...baslikStil('program') }}>
               <span style={{ fontSize: 11, fontWeight: 800, color: '#4CAF50', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <CalendarDays size={13} /> Maç Programı
               </span>
@@ -2972,6 +3056,8 @@ export default function Dashboard() {
         popularTeams={popularTeams}
         loading={popularTeamsLoading}
       />
+    </div>
+    </div>
     </div>
     </div>
   )

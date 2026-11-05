@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { ondalik, yuzde } from '../utils/dil'
 import { Link }                             from 'react-router-dom'
 import { supabase, subscribeToMatchesUpdates } from '../supabaseClient'
+import { takimAra, populerTakimlar } from '../utils/takimAra'
 import { useYenileme, useCanliBaglanti }     from '../hooks/useYenileme'
 import { anaSayfaAkisiniGetir }             from '../utils/anaSayfaAkisi'
 import { useGame, gameMatchesFilter, GAMES } from '../context/GameContext'
@@ -57,7 +58,6 @@ const DASHBOARD_YAYIN_TOPLAMA_MS = 4 * 1000
 const AKIS_YAKLASAN_SINIRI = 30
 const AKIS_BITEN_SINIRI = 100
 const DASHBOARD_GLOBAL_ERROR_TEXT = 'Sunucuyla bağlantı kesildi, tekrar deneniyor...'
-const POPULAR_TEAM_SEARCH_TERMS = ['galatasaray', 'eternal fire', 'fut', 'bbl', 'fenerbahce', 'sangal', 'g2', 'fnatic', 'navi']
 const PREFERENCE_GAMES = GAMES.filter(game => ['valorant', 'cs2', 'lol'].includes(game.id))
 const UPCOMING_WINDOW_DAYS = 7
 // Bölüm başlığındaki "Tümü →": dokunma alanı ≥24 px, negatif kenar boşluğu satırı büyütmesin diye
@@ -378,12 +378,9 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
     setSearching(true)
     clearTimeout(searchDebounceRef.current)
     searchDebounceRef.current = setTimeout(async () => {
-      const { data } = await supabase
-        .from('teams')
-        .select('id,name,acronym,logo_url,game_id,game:games(id,name,slug)')
-        .or(`name.ilike.%${q}%,acronym.ilike.%${q}%`)
-        .order('name', { ascending: true })
-        .limit(14)
+      // Sıra sunucuda (takim_ara): eskiden ada göre alfabetikti, "eternal"de ana takım çıkmıyordu
+      let data = []
+      try { data = await takimAra(q, 14) } catch (e) { console.warn('PreferencePickerModal arama:', e?.message || e) }
       setSearchResults(data || [])
       setSeenTeams(prev => {
         const next = { ...prev }
@@ -1545,42 +1542,11 @@ export default function Dashboard() {
     async function fetchPopularTeams() {
       setPopularTeamsLoading(true)
       try {
-        const searchFilter = POPULAR_TEAM_SEARCH_TERMS.map(term => `name.ilike.%${term}%`).join(',')
-
-        let { data, error } = await supabase
-          .from('teams')
-          .select('id,name,logo_url,game_id,game:games(id,name,slug)')
-          .or(searchFilter)
-          .limit(18)
-
-        if (error) throw error
-
-        if (!data || data.length === 0) {
-          const fallbackRes = await supabase
-            .from('teams')
-            .select('id,name,logo_url,game_id,game:games(id,name,slug)')
-            .order('name', { ascending: true })
-            .limit(12)
-
-          if (fallbackRes.error) throw fallbackRes.error
-          data = fallbackRes.data || []
-        }
-
-        const rank = name => {
-          const normalized = String(name || '').toLowerCase()
-          const idx = POPULAR_TEAM_SEARCH_TERMS.findIndex(term => normalized.includes(term))
-          return idx < 0 ? 99 : idx
-        }
-
-        const prepared = [...(data || [])]
-          .sort((a, b) => {
-            const diff = rank(a.name) - rank(b.name)
-            if (diff !== 0) return diff
-            return String(a.name || '').localeCompare(String(b.name || ''), 'tr')
-          })
-          .slice(0, 12)
-
-        if (!cancelled) setPopularTeams(prepared)
+        // Liste sunucuda (populer_takimlar): aktif Türk takımları + elle seçilmiş dünya
+        // takımları. Eskiden ad parçasıyla sırasız çekiliyordu → ex-FUT Academy,
+        // cobblemon ("bbl") geliyor, Eternal Fire CS2 gelmiyordu.
+        const data = await populerTakimlar()
+        if (!cancelled) setPopularTeams(data)
       } catch (e) {
         if (!cancelled) setPopularTeams([])
         console.error('Dashboard preferences teams fetch:', e?.message || e)

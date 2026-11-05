@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams }                           from 'react-router-dom'
 import { supabase }                                  from '../supabaseClient'
+import { takimAra }                                  from '../utils/takimAra'
 import { getRoleBadge }                              from '../utils/roleHelper'
 import { isTurkishTeam, useTurkTakimlar }                             from '../constants'
 import { GAMES }                                     from '../context/GameContext'
@@ -907,12 +908,9 @@ export default function SearchPage() {
     // hata dondurur. (2026-09-02 — ayni acik navbar aramasinda da kapatildi.)
     const q = String(rawQuery ?? '').replace(/[,()]/g, ' ').trim()
     try {
-      const [teamRes, playerRes] = await Promise.all([
-        supabase
-          .from('teams')
-          .select('id, name, acronym, logo_url, location, game:games(id, name, slug)')
-          .or(`name.ilike.%${q}%,acronym.ilike.%${q}%`)
-          .limit(12),
+      const [takimlar, playerRes] = await Promise.all([
+        // Takımlar: sıra sunucuda (takim_ara) — tam/ön ek eşleşme, Türk takımı, önem puanı
+        takimAra(rawQuery, 12).catch(e => { console.error('runSearch takimAra:', e?.message || e); return [] }),
         supabase
           .from('players')
           .select('id, nickname, real_name, role, image_url, nationality, team_pandascore_id')
@@ -920,44 +918,31 @@ export default function SearchPage() {
           .limit(16),
       ])
 
-      if (teamRes.error || playerRes.error) {
-        const baseMsg = [teamRes.error?.message, playerRes.error?.message]
-          .filter(Boolean)
-          .join(' | ')
-
+      if (playerRes.error) {
         // Kolon geçişlerinde once eski schema'yi destekleyen fallback dene.
-        if (/location|nationality/i.test(baseMsg)) {
-          const [teamFallback, playerFallback] = await Promise.all([
-            supabase
-              .from('teams')
-              .select('id, name, acronym, logo_url, game:games(id, name, slug)')
-              .ilike('name', `%${q}%`)
-              .limit(12),
-            supabase
-              .from('players')
-              .select('id, nickname, real_name, role, image_url, team_pandascore_id')
-              .or(`nickname.ilike.%${q}%,real_name.ilike.%${q}%`)
-              .limit(16),
-          ])
+        if (/nationality/i.test(playerRes.error.message || '')) {
+          const playerFallback = await supabase
+            .from('players')
+            .select('id, nickname, real_name, role, image_url, team_pandascore_id')
+            .or(`nickname.ilike.%${q}%,real_name.ilike.%${q}%`)
+            .limit(16)
 
-          if (teamFallback.error || playerFallback.error) {
-            throw new Error(
-              `Search fallback failed: ${teamFallback.error?.message || ''} ${playerFallback.error?.message || ''}`.trim()
-            )
+          if (playerFallback.error) {
+            throw new Error(`Search fallback failed: ${playerFallback.error.message || ''}`.trim())
           }
 
-          setTeams(teamFallback.data || [])
+          setTeams(takimlar)
           setPlayers(playerFallback.data || [])
           setSearchDone(true)
           return
         }
 
-        throw new Error(baseMsg || 'Search query failed')
+        throw new Error(playerRes.error.message || 'Search query failed')
       }
 
-      if (SEARCH_DEBUG) console.log(`🔍 Search "${q}": teams=${teamRes.data?.length}, players=${playerRes.data?.length}`)
+      if (SEARCH_DEBUG) console.log(`🔍 Search "${q}": teams=${takimlar.length}, players=${playerRes.data?.length}`)
 
-      setTeams(teamRes.data   || [])
+      setTeams(takimlar)
       setPlayers(playerRes.data || [])
       setSearchDone(true)
     } catch (e) {

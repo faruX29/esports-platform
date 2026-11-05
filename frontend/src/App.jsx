@@ -31,6 +31,7 @@ import OyunRozeti from './components/OyunRozeti'
 import FextopusIcon from './components/FextopusIcon'
 import { tournamentDisplayName } from './utils/tournamentDisplay'
 import { normalizeGameId } from './utils/gameUtils'
+import { takimAra } from './utils/takimAra'
 import { Home, CalendarDays, Trophy, BarChart3, Newspaper, Radar, Flag, Search, X as XIcon, Shield, User, ArrowRight, CornerDownLeft } from 'lucide-react'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -140,16 +141,10 @@ function NavSearch({ ustuneBin = false }) {
       // aksi halde "a,b" gibi bir arama filtreyi bozup sorguyu patlatir.
       const q = query.replace(/[,()]/g, ' ').trim()
 
-      const [teamRes, playerRes, tourRes] = await Promise.all([
-        // Kisaltmayla arama (2026-09-02, beta geri bildirimi #004/#005):
-        // kullanici navbar'a "fnc" yaziyordu, sonuc gelmiyordu. /search sayfasi
-        // acronym'e zaten bakiyordu, hizli arama bakmiyordu. 2.836 takimin
-        // 2.156'sinda acronym dolu -> veri hazirdi, sorgu eksikti.
-        supabase
-          .from('teams')
-          .select('id, name, acronym, logo_url, game:games(name,slug)')
-          .or(`name.ilike.%${q}%,acronym.ilike.%${q}%`)
-          .limit(5),
+      const [takimlar, playerRes, tourRes] = await Promise.all([
+        // Ad + kısaltma, sıra sunucuda (takim_ara, utils/takimAra.js): eskiden sırasız
+        // limit 5'ti, "eternal" yazınca iki ana Eternal Fire hiç çıkmıyordu.
+        takimAra(query, 5).catch(e => { console.error('NavSearch takimAra:', e?.message || e); return [] }),
         // Gercek isimle de aranabilsin (ayni gerekce: /search bakiyordu, bu bakmiyordu)
         supabase
           .from('players')
@@ -164,7 +159,7 @@ function NavSearch({ ustuneBin = false }) {
           .limit(4),
       ])
       setResults({
-        teams:       teamRes.data   || [],
+        teams:       takimlar,
         players:     playerRes.data || [],
         tournaments: tourRes.data   || [],
       })

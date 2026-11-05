@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { takimAra } from '../utils/takimAra'
 import InitialsImage from './InitialsImage'
 import GameLogo from './GameLogo'
 import { normalizeGameId } from '../utils/gameUtils'
@@ -46,13 +47,9 @@ export default function TeamPicker({ value, onChange, placeholder = 'Favori tak�
     if (!query.trim() || query.trim().length < 2) { setResults([]); return }
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
-      const q = query.trim()
-      const { data } = await supabase
-        .from('teams')
-        .select('id,name,acronym,logo_url,game:games(id,name,slug)')
-        .or(`name.ilike.%${q}%,acronym.ilike.%${q}%`)
-        .order('name', { ascending: true })
-        .limit(8)
+      // Sıra sunucuda (takim_ara); eskiden alfabetikti, ana takım "Eternal 21"in altında kalıyordu
+      let data = []
+      try { data = await takimAra(query, 8) } catch (e) { console.warn('TeamPicker arama:', e?.message || e) }
       setResults(data || [])
       setOpen(true)
     }, 250)

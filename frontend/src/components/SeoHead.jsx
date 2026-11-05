@@ -9,6 +9,36 @@
  * JS çalıştıran crawler'lar (Googlebot) ve link-unfurl yapan bazı botlar için
  * çalışır. Tam SSR/prerender ileride sitemap + statik render ile güçlendirilebilir.
  */
+import { useLayoutEffect } from 'react'
+
+/* ── index.html varsayılanları ──────────────────────────────────────────────
+ * React 19 hoisting mevcut etiketin ÜZERİNE YAZMAZ, yanına ekler: DOM'da iki
+ * description, iki og:title... (Google'ın JS'li çiziminde ikisi de görünür).
+ * index.html'deki varsayılanlar `data-varsayilan="<anahtar>"` ile işaretli;
+ * SeoHead aynı anahtarı çizdiği sürece varsayılanı DOM'dan ayırır, son SeoHead
+ * gidince geri takar (SeoHead'siz sayfalar — ana sayfa, giriş — varsayılanla
+ * kalır). Dosyadan SİLİNMEZ: middleware'in değersiz bot/YOK kabuğu index.html'i
+ * olduğu gibi sunar. Sayaç: aynı anda iki SeoHead ve StrictMode çift çağrısı. */
+const sayac = new Map()
+const ayrilan = new Map()
+
+function varsayilaniAyir(anahtar) {
+  const n = (sayac.get(anahtar) || 0) + 1
+  sayac.set(anahtar, n)
+  if (n !== 1) return
+  const els = [...document.head.querySelectorAll(`[data-varsayilan="${anahtar}"]`)]
+  els.forEach(el => el.remove())
+  ayrilan.set(anahtar, els)
+}
+
+function varsayilaniGeriTak(anahtar) {
+  const n = (sayac.get(anahtar) || 0) - 1
+  sayac.set(anahtar, Math.max(n, 0))
+  if (n > 0) return
+  ;(ayrilan.get(anahtar) || []).forEach(el => document.head.appendChild(el))
+  ayrilan.delete(anahtar)
+}
+
 export default function SeoHead({
   title,
   description = '',
@@ -24,6 +54,21 @@ export default function SeoHead({
   // user-selected canonical" (Search Console) çözülür.
   const SITE_ORIGIN = 'https://fextesports.com'
   const canonical = url || (typeof window !== 'undefined' ? SITE_ORIGIN + window.location.pathname : '')
+
+  // Bu SeoHead'in çizdiği anahtarlar; yalnız bunların varsayılanı ayrılır
+  // (görseli olmayan sayfada varsayılan og:image kalır).
+  const anahtarlar = [
+    'title', 'og:site_name', 'og:type', 'og:title', 'twitter:card',
+    ...(description ? ['description', 'og:description'] : []),
+    ...(canonical ? ['og:url'] : []),
+    ...(image ? ['og:image', 'twitter:image'] : []),
+  ].join(' ')
+
+  useLayoutEffect(() => {
+    const liste = anahtarlar.split(' ')
+    liste.forEach(varsayilaniAyir)
+    return () => liste.forEach(varsayilaniGeriTak)
+  }, [anahtarlar])
 
   return (
     <>

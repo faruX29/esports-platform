@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import SeoHead from '../components/SeoHead'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { useGame, GAMES } from '../context/GameContext'
+import { GAMES } from '../context/GameContext'
+import useSayfaOyunu from '../hooks/useSayfaOyunu'
 import { useUser } from '../context/UserContext'
 import { correctedScores } from '../utils/matchResult'
 import { normalizeGameId } from '../utils/gameUtils'
@@ -191,9 +192,9 @@ function GameFilterTabs({ activeGame, setActiveGame }) {
 
 export default function RankingsPage() {
   const navigate = useNavigate()
-  const { activeGame, setActiveGame } = useGame()
+  // Sayfaya özel seçim (?oyun=); ortak filtreyi değiştirmez → ana sayfaya dönünce filtre aynı.
+  const [activeGame, setActiveGame] = useSayfaOyunu()
   const { isTeamFollowed, toggleTeamFollow } = useUser()
-  const defaultGameId = GAMES.find(g => !g.soon && g.id !== 'all')?.id || 'valorant'
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -202,17 +203,11 @@ export default function RankingsPage() {
   const [rows, setRows] = useState([])
 
   useEffect(() => {
-    if (!activeGame || activeGame === 'all') {
-      setActiveGame(defaultGameId)
-    }
-  }, [activeGame, setActiveGame, defaultGameId])
-
-  useEffect(() => {
     let cancelled = false
 
     async function fetchData() {
-      // 'all' iken çekme: diğer effect az sonra oyunu default'a çevirip yeniden
-      // tetikler. Aksi halde ilk yüklemede boşa 12-sayfalık tüm-oyun taraması olur.
+      // useSayfaOyunu hep tek oyun döner; yine de 'all' gelirse 12 sayfalık
+      // tüm-oyun taraması yapma.
       if (!activeGame || activeGame === 'all') return
 
       setLoading(true)

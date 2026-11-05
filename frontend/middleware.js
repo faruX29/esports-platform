@@ -63,7 +63,9 @@ export const config = {
 
 // Geniş kapsam: isimli crawler'lar + jenerik önizleme/araç token'ları. Gerçek
 // tarayıcı UA'ları (Mozilla/Chrome/Safari/Edg) bu token'ları içermez → etkilenmez.
-const BOT_RE = /(bot|crawler|spider|slurp|preview|unfurl|embed|opengraph|open graph|metadata|validator|facebookexternalhit|whatsapp|telegram|slack|discord|twitter|reddit|linkedin|pinterest|applebot|skype|vkshare|iframely|curl|wget|python-requests|axios|go-http|okhttp|headless)/i
+// Kullanıcı adına sayfa açan yapay zekâ ajanlarının UA'sında "bot" yok
+// (Perplexity-User; ChatGPT-User'ı yalnız "+https://openai.com/bot" eki yakalıyordu).
+const BOT_RE = /(bot|crawler|spider|slurp|preview|unfurl|embed|opengraph|open graph|metadata|validator|facebookexternalhit|whatsapp|telegram|slack|discord|twitter|reddit|linkedin|pinterest|applebot|skype|vkshare|iframely|curl|wget|python-requests|axios|go-http|okhttp|headless|perplexity-user|chatgpt-user|claude-user)/i
 
 // Bize ZİYARETÇİ GETİRMEYEN botlar: SEO araçları + yapay zekâ EĞİTİM tarayıcıları.
 // Bunlara bot HTML'i ÜRETİLMEZ, SPA kabuğu gider (statik, 0 CPU).

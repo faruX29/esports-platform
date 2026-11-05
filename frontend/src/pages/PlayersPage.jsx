@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ondalik, yuzde } from '../utils/dil'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { GAMES, useGame } from '../context/GameContext'
+import { GAMES } from '../context/GameContext'
+import useSayfaOyunu from '../hooks/useSayfaOyunu'
 import { getRoleBadge, normalizeRoleForGame } from '../utils/roleHelper'
 import { useUser } from '../context/UserContext'
 import { summarizePlayerMatchStats, metricBars, pickRowTimestamp } from '../utils/playerMetrics'
@@ -180,10 +181,9 @@ function CompareCard({ player, onClear }) {
 
 export default function PlayersPage() {
   const navigate = useNavigate()
-  const { activeGame, setActiveGame } = useGame()
+  // Sayfaya özel seçim (?oyun=); ortak filtreyi değiştirmez → ana sayfaya dönünce filtre aynı.
+  const [selectedGameId, setActiveGame] = useSayfaOyunu()
   const { isPlayerFollowed, togglePlayerFollow } = useUser()
-  const defaultGameId = GAMES.find(game => !game.soon && game.id !== 'all')?.id || 'valorant'
-  const selectedGameId = activeGame && activeGame !== 'all' ? activeGame : defaultGameId
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -197,12 +197,6 @@ export default function PlayersPage() {
   const [compareBId, setCompareBId] = useState('')
   const searchCacheRef = useRef(new Map())
   const normalizedSearch = useMemo(() => normalizeSearchToken(search), [search])
-
-  useEffect(() => {
-    if (!activeGame || activeGame === 'all') {
-      setActiveGame(defaultGameId)
-    }
-  }, [activeGame, setActiveGame, defaultGameId])
 
   useEffect(() => {
     setCompareAId('')

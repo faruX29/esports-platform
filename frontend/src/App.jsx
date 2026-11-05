@@ -451,8 +451,9 @@ function GameSelectorBar() {
     }
   }, [activeGame, location.pathname])
 
-  // Sadece belirli sayfalarda göster
-  const showOn = ['/', '/matches', '/rankings', '/tournaments']
+  // Sadece belirli sayfalarda göster. /rankings ve /players yok: tek oyun
+  // ister, kendi sekmesini tutar (useSayfaOyunu); ortak filtreyle çelişmesin.
+  const showOn = ['/', '/matches', '/tournaments']
   if (!showOn.includes(location.pathname)) return null
 
   return (

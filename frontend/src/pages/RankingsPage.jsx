@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import SeoHead from '../components/SeoHead'
-import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { GAMES } from '../context/GameContext'
 import useSayfaOyunu from '../hooks/useSayfaOyunu'
 import { useUser } from '../context/UserContext'
 import { correctedScores } from '../utils/matchResult'
 import { normalizeGameId } from '../utils/gameUtils'
-import { clickableProps } from '../utils/a11y'
+import { KartOrtusu, UST_KATMAN } from '../components/KartLink'
 import { Medal, ChevronUp, ChevronDown } from 'lucide-react'
 import { useSiraGecisi } from '../hooks/useHareket'
 import TakipYildizi from '../components/TakipYildizi'
@@ -191,7 +190,6 @@ function GameFilterTabs({ activeGame, setActiveGame }) {
 }
 
 export default function RankingsPage() {
-  const navigate = useNavigate()
   // Sayfaya özel seçim (?oyun=); ortak filtreyi değiştirmez → ana sayfaya dönünce filtre aynı.
   const [activeGame, setActiveGame] = useSayfaOyunu()
   const { isTeamFollowed, toggleTeamFollow } = useUser()
@@ -490,8 +488,8 @@ export default function RankingsPage() {
               <div
                 key={row.teamId}
                 data-flip={row.teamId}
-                {...clickableProps(() => navigate(`/team/${row.teamId}`), { label: `${row.team?.name ?? 'Takım'} sayfası` })}
                 style={{
+                  position: 'relative',
                   display: 'grid',
                   gridTemplateColumns: '96px 1.6fr 1fr .9fr .9fr .9fr .8fr',
                   gap: 8,
@@ -504,6 +502,8 @@ export default function RankingsPage() {
                 onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover)' }}
                 onMouseLeave={e => { e.currentTarget.style.background = idx < 3 ? 'linear-gradient(90deg, rgba(194,92,208,.12), transparent 55%)' : 'transparent' }}
               >
+                {/* Satırın tamamı takım linki; takip düğmesi UST_KATMAN ile üstünde */}
+                <KartOrtusu to={`/team/${row.teamId}`} label={`${row.team?.name ?? 'Takım'} sayfası`} />
                 <div style={{ fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
                   {medalColor && <Medal size={16} color={medalColor} strokeWidth={2.2} />} #{idx + 1}
                   {guc && <SiraDegisimi row={row} />}
@@ -533,12 +533,13 @@ export default function RankingsPage() {
 
                 <div>
                   <button
-                    onClick={e => {
-                      e.stopPropagation()
+                    onClick={() => {
                       if (!followed) takipEdildiBildir(row.team?.name)
                       toggleTeamFollow(row.teamId)
                     }}
+                    aria-label={`${row.team?.name ?? 'Takım'} ${followed ? 'takibini bırak' : 'takip et'}`}
                     style={{
+                      ...UST_KATMAN,
                       height: 30,
                       width: 30,
                       borderRadius: 8,

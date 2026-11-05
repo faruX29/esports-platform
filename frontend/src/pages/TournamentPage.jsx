@@ -22,7 +22,7 @@ import { roundLabel }                                 from '../utils/roundLabel'
 import { isUncertainPrediction }                      from '../utils/prediction'
 import { useAcilisGecisi, useGorununce, hareketAzalt } from '../hooks/useHareket'
 import { Sirayla } from '../components/Animasyon'
-import { clickableProps }                             from '../utils/a11y'
+import { KartLink }                                   from '../components/KartLink'
 import TurkishBadge                                   from '../components/TurkishBadge'
 import { normalizeGameId }                            from '../utils/gameUtils'
 import { GAMES }                                      from '../context/GameContext'
@@ -166,7 +166,7 @@ function getRoundDisplayLabel(match) {
   return turEtiketi(match) || ''
 }
 
-function StageListView({ matches, navigate, gc }) {
+function StageListView({ matches, gc }) {
   const [visibleGroups, setVisibleGroups] = useState(8)
   // Gruplama: her maç ayaksız "Tur n" ise (İsviçre / lig usulü) tur tur; her maçın
   // tanınan bir aşaması varsa (ağacı çizilemeyen eleme) aşama aşama; yoksa tarih tarih
@@ -243,7 +243,7 @@ function StageListView({ matches, navigate, gc }) {
               )}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 10 }}>
                 {list.map(m => (
-                  <MatchListCard key={m.id} m={m} navigate={navigate} gc={gc} />
+                  <MatchListCard key={m.id} m={m} gc={gc} />
                 ))}
               </div>
             </div>
@@ -473,9 +473,11 @@ function StandingsTable({ matches, navigate, cikanSayisi = 0 }) {
             // okunuyordu. Çıkanlar ayrıca işaretlenir (cikanSayisi).
             const cikiyor = cikanSayisi > 0 && i < cikanSayisi
             return (
+              // <tr> link olamaz: takım adı gerçek link (orta tık, klavye), satırın geri kalanı
+              // fare kolaylığı olarak aynı yere gider.
               <tr
                 key={t.id}
-                {...clickableProps(() => navigate(`/team/${t.id}`), { label: `${t.name} takım sayfası` })}
+                onClick={() => navigate(`/team/${t.id}`)}
                 style={{ cursor: 'pointer' }}
               >
                 {/* Rank */}
@@ -489,13 +491,13 @@ function StandingsTable({ matches, navigate, cikanSayisi = 0 }) {
 
                 {/* Team */}
                 <td style={{ padding: '10px 12px', background: 'var(--surface)', minWidth: 160 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <KartLink to={`/team/${t.id}`} onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <TeamAv src={t.logo} name={t.name} size={28} />
                     <span style={{ fontSize: 13, fontWeight: 700,
                       color: isTR ? '#FFD700' : 'var(--text-1)' }}>
                       {t.name}{isTR && <TrBadge />}
                     </span>
-                  </div>
+                  </KartLink>
                 </td>
 
                 {/* W */}
@@ -573,7 +575,7 @@ function fmtKisaTarih(d) {
   return t.toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
-const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, hoverTeam, onHoverTeam }) {
+const BracketMatchCard = memo(function BracketMatchCard({ m, hoverTeam, onHoverTeam }) {
   useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
   const D = BRACKET_DIM
   const [hov, setHov] = useState(false)
@@ -591,9 +593,12 @@ const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, hoverTeam
     { team: m.team_b, id: m.team_b?.id ?? m.team_b_id, name: bName, score: m.team_b_score },
   ]
 
+  // Oynanacak/oynanmış maç gerçek link; sanal (rakibi belirsiz) kutu düz div.
+  // draggable=false: ağaç sürüklenerek kaydırılıyor, tarayıcının link sürüklemesi araya girmesin.
+  const Kok = canNavigate ? KartLink : 'div'
   return (
-    <div
-      {...(canNavigate ? clickableProps(() => navigate(`/match/${m.id}`), { label: `${aName} - ${bName} maç detayı` }) : {})}
+    <Kok
+      {...(canNavigate ? { to: `/match/${m.id}`, draggable: false, 'aria-label': `${aName} - ${bName} maç detayı` } : {})}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
@@ -682,7 +687,7 @@ const BracketMatchCard = memo(function BracketMatchCard({ m, navigate, hoverTeam
           </div>
         )
       })}
-    </div>
+    </Kok>
   )
 })
 
@@ -718,7 +723,7 @@ function TurnuvaOlasilikCubugu({ m }) {
 const AKIS_TUR_MS = 380
 const AKIS_SURE_MS = 650
 
-function BracketView({ layout: L, navigate, zoom = 1 }) {
+function BracketView({ layout: L, zoom = 1 }) {
   const [hoverTeam, setHoverTeam] = useState(null)
   const [akisRef, akisGorundu] = useGorununce(0.15)
   const akisVar = akisGorundu && !hareketAzalt()
@@ -801,7 +806,7 @@ function BracketView({ layout: L, navigate, zoom = 1 }) {
 
           {L.cards.map(c => (
             <div key={c.m.id} style={{ position: 'absolute', left: c.x, top: c.y }}>
-              <BracketMatchCard m={c.m} navigate={navigate} hoverTeam={hoverTeam} onHoverTeam={setHoverTeam} />
+              <BracketMatchCard m={c.m} hoverTeam={hoverTeam} onHoverTeam={setHoverTeam} />
             </div>
           ))}
 
@@ -816,7 +821,7 @@ function BracketView({ layout: L, navigate, zoom = 1 }) {
                 <Medal size={12} /> Üçüncülük Maçı
               </div>
               <div style={{ position: 'absolute', left: L.third.x, top: L.third.y }}>
-                <BracketMatchCard m={L.third.m} navigate={navigate} hoverTeam={hoverTeam} onHoverTeam={setHoverTeam} />
+                <BracketMatchCard m={L.third.m} hoverTeam={hoverTeam} onHoverTeam={setHoverTeam} />
               </div>
             </>
           )}
@@ -828,7 +833,7 @@ function BracketView({ layout: L, navigate, zoom = 1 }) {
 
 // ─── Match List Card ──────────────────────────────────────────────────────────
 
-export const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
+export const MatchListCard = memo(function MatchListCard({ m, gc }) {
   useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
   const aId   = m.team_a?.id || m.team_a_id
   const bId   = m.team_b?.id || m.team_b_id
@@ -840,8 +845,8 @@ export const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
   const hasTR = isTRA || isTRB
 
   return (
-    <div
-      {...clickableProps(() => navigate(`/match/${m.id}`), { label: `${m.team_a?.name ?? ''} - ${m.team_b?.name ?? ''} maç detayı` })}
+    <KartLink
+      to={`/match/${m.id}`}
       style={{
         position: 'relative', overflow: 'hidden',
         borderRadius: 14, cursor: 'pointer',
@@ -970,7 +975,7 @@ export const MatchListCard = memo(function MatchListCard({ m, navigate, gc }) {
           <CalendarDays size={11} /> {fmtDateTime(getMatchTimestamp(m))}
         </div>
       </div>
-    </div>
+    </KartLink>
   )
 })
 
@@ -1090,7 +1095,7 @@ export function AsamaIcerigi({ tournament, matches, navigate, gc, topPerformers 
             background: 'var(--bg)', borderRadius: 16,
             border: '1px solid var(--line)', padding: '14px 16px 12px',
           }}>
-            <BracketView layout={bracketLayout} navigate={navigate} zoom={bracketZoom} />
+            <BracketView layout={bracketLayout} zoom={bracketZoom} />
             <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: '4px 16px', fontSize: 11, color: 'var(--text-5)' }}>
               <span className="hide-sm">Takımın üstüne gelince turnuvadaki yolu vurgulanır.</span>
               {yerTutucuVar && <span>Kesik çizgili kutular: rakipleri henüz belli olmayan maçlar.</span>}
@@ -1120,7 +1125,7 @@ export function AsamaIcerigi({ tournament, matches, navigate, gc, topPerformers 
                 <span>Bu aşamanın eşleşme ağacı veriden güvenilir biçimde çıkarılamadı; maçlar liste olarak gösteriliyor.</span>
               </div>
             )}
-            <StageListView matches={matches} navigate={navigate} gc={gc} />
+            <StageListView matches={matches} gc={gc} />
           </div>
         </div>
       )}
@@ -1176,7 +1181,7 @@ export function AsamaIcerigi({ tournament, matches, navigate, gc, topPerformers 
           <div style={{ display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 12 }}>
             {(activeTab === 'upcoming' ? upcomingMatches : pastMatches).map(m => (
-              <MatchListCard key={m.id} m={m} navigate={navigate} gc={gc} />
+              <MatchListCard key={m.id} m={m} gc={gc} />
             ))}
           </div>
         )}

@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import SeoHead from '../components/SeoHead'
-import { useNavigate } from 'react-router-dom'
 import { Radio, CalendarClock, CircleCheck } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { GAMES, useGame } from '../context/GameContext'
 import { normalizeGameId } from '../utils/gameUtils'
-import { clickableProps } from '../utils/a11y'
+import { KartLink } from '../components/KartLink'
 import InitialsImage from '../components/InitialsImage'
 import GameLogo, { GAME_ICON_PATHS } from '../components/GameLogo'
 import LigSeridi from '../components/LigSeridi'
@@ -87,7 +86,6 @@ function fmtDate(iso) {
 }
 
 export default function TournamentsListPage() {
-  const navigate = useNavigate()
   const { activeGame } = useGame()
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -232,11 +230,11 @@ export default function TournamentsListPage() {
     const tierColor = TIER_COLORS[tierKey] || 'var(--text-5)'
     const logos = teamsByTournament[item.id] || []
     return (
-      <button
+      <KartLink
         key={item.id}
-        {...clickableProps(() => navigate(`/tournament/${item.id}`), { label: `${tournamentDisplayName(item, { game: gm.id })} sayfası` })}
+        to={`/tournament/${item.id}`}
         style={{
-          position: 'relative', overflow: 'hidden', textAlign: 'left',
+          position: 'relative', overflow: 'hidden', textAlign: 'left', lineHeight: 'normal',
           border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-1)',
           borderRadius: 12, padding: '12px 12px 12px 15px', cursor: 'pointer',
           transition: 'border-color .15s, transform .15s',
@@ -281,7 +279,7 @@ export default function TournamentsListPage() {
           {fmtDate(item.begin_at || item.start_date)}
           {(item.end_at || item.end_date) ? ` – ${fmtDate(item.end_at || item.end_date)}` : ''}
         </div>
-      </button>
+      </KartLink>
     )
   }
 

@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { ondalik, yuzde } from '../utils/dil'
-import { useNavigate, Link }                from 'react-router-dom'
+import { Link }                             from 'react-router-dom'
 import { supabase, subscribeToMatchesUpdates } from '../supabaseClient'
 import { useYenileme, useCanliBaglanti }     from '../hooks/useYenileme'
 import { anaSayfaAkisiniGetir }             from '../utils/anaSayfaAkisi'
@@ -27,7 +27,7 @@ import { getBOFormat }                       from '../utils/matchFormat'
 import { FEXT, statusStyle, SAATI_GECTI_ESIGI_MS } from '../theme'
 import { correctedScores }                   from '../utils/matchResult'
 import { isUncertainPrediction }             from '../utils/prediction'
-import { clickableProps }                     from '../utils/a11y'
+import { KartLink, KartOrtusu, UST_KATMAN }  from '../components/KartLink'
 import PredictionAccuracyBadge              from '../components/PredictionAccuracyBadge'
 import { CountUp, FlipNumber }              from '../components/AnimatedNumber'
 import { Asansor, MobilAsansor, useAsansor, ASANSOR_SUTUN } from '../components/Asansor'
@@ -624,7 +624,7 @@ const TICKER_TUR = {
   upcoming: { etiket: 'YAKLAŞAN', renk: '#60a5fa' },
 }
 
-const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
+const LiveTicker = memo(function LiveTicker({ items, loading }) {
   const [ripple, setRipple] = useState({ key: null, token: 0, x: 0, y: 0 })
   // Üzerine gelince ya da klavyeyle odaklanınca kayma durur (WCAG 2.2.2).
   const [durdu, setDurdu] = useState(false)
@@ -661,8 +661,7 @@ const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
     window.setTimeout(() => {
       setRipple(prev => (prev.token === token ? { key: null, token: 0, x: 0, y: 0 } : prev))
     }, 420)
-
-    onItemOpen?.(line)
+    // Gezinmeyi <Link> yapar (orta tık yeni sekme); burada yalnız dalga efekti.
   }
 
   return (
@@ -682,9 +681,12 @@ const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
         onBlur={() => setDurdu(false)}
       >
         <div style={{ display: 'inline-flex', minWidth: 'max-content', animation: `tickerScroll ${speedSeconds}s linear infinite`, animationPlayState: durdu ? 'paused' : 'running' }}>
-          {[...lines, ...lines].map((line, idx) => (
-            <button
+          {[...lines, ...lines].map((line, idx) => {
+            const Satir = line.href ? Link : 'span'
+            return (
+            <Satir
               key={`${line.id}_${idx}`}
+              {...(line.href ? { to: line.href } : {})}
               onClick={event => handleLineClick(event, line, idx)}
               // Döngü için ikinci kopya: ekran okuyucu ve Tab sırası yalnız ilkini görür.
               aria-hidden={idx >= lines.length || undefined}
@@ -692,6 +694,9 @@ const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
               style={{
                 position: 'relative',
                 overflow: 'hidden',
+                display: 'inline-block',
+                textDecoration: 'none',
+                lineHeight: 'normal',
                 fontSize: 13.5,
                 fontWeight: 500,
                 color: line.href ? 'var(--text-1)' : 'var(--text-3)',
@@ -741,8 +746,9 @@ const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
                   }}
                 />
               )}
-            </button>
-          ))}
+            </Satir>
+            )
+          })}
         </div>
       </div>
     </div>
@@ -758,7 +764,11 @@ const LiveTicker = memo(function LiveTicker({ items, loading, onItemOpen }) {
  * onu "Tercihlerin" butonuyla aynı satırda çiziyor (eskiden tercih butonu
  * tek başına tam satır kaplayıp bu barı bir satır aşağı itiyordu).
  */
-const QuickAccessBar = memo(function QuickAccessBar({ entries, loading, onOpen }) {
+const hizliErisimAdresi = entry => entry.matchId
+  ? `/match/${entry.matchId}`
+  : entry.type === 'team' ? `/team/${entry.id}` : `/player/${entry.id}`
+
+const QuickAccessBar = memo(function QuickAccessBar({ entries, loading }) {
   const [ripple, setRipple] = useState({ key: null, token: 0, x: 0, y: 0 })
 
   const handleEntryOpen = (event, entry) => {
@@ -775,8 +785,7 @@ const QuickAccessBar = memo(function QuickAccessBar({ entries, loading, onOpen }
     window.setTimeout(() => {
       setRipple(prev => (prev.token === token ? { key: null, token: 0, x: 0, y: 0 } : prev))
     }, 420)
-
-    onOpen(entry)
+    // Gezinmeyi <Link> yapar; burada yalnız dalga efekti.
   }
 
   if (loading) {
@@ -794,11 +803,15 @@ const QuickAccessBar = memo(function QuickAccessBar({ entries, loading, onOpen }
       {entries.map((entry, idx) => {
         const key = `${entry.type}_${entry.id}`
         return (
-          <button
+          <Link
             key={key}
+            to={hizliErisimAdresi(entry)}
             onClick={event => handleEntryOpen(event, entry)}
             title={entry.label}
             style={{
+              textDecoration: 'none',
+              color: 'inherit',
+              lineHeight: 'normal',
               display: 'flex',
               alignItems: 'center',
               gap: 9,
@@ -881,7 +894,7 @@ const QuickAccessBar = memo(function QuickAccessBar({ entries, loading, onOpen }
                 }}
               />
             )}
-          </button>
+          </Link>
         )
       })}
     </div>
@@ -943,7 +956,7 @@ function MatchImpactPill() {
 }
 
 /* ── LiveMatchCard ────────────────────────────────────────────────────────── */
-const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs, onToggleFav, teamForms, oncelikli = false }) {
+const LiveMatchCard = memo(function LiveMatchCard({ match: m, favs, onToggleFav, teamForms, oncelikli = false }) {
   useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
   const isLive     = m.status === 'running'
   const isFin      = m.status === 'finished'
@@ -962,7 +975,6 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
 
   return (
     <div
-      {...clickableProps(() => onMatchClick(m.id), { label: 'Maç detayı' })}
       style={{
         position: 'relative',
         borderRadius: 16,
@@ -989,6 +1001,9 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
         e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,.35)'
       }}
     >
+      {/* Kartın tamamı maç linki; yıldız ve yayın linki UST_KATMAN ile üstünde */}
+      <KartOrtusu to={`/match/${m.id}`} label={`${m.team_a?.name ?? ''} - ${m.team_b?.name ?? ''} maç detayı`} />
+
       {/* Üst ince kırmızı vurgu — yavaş süzülen soft hareket (glow yok) */}
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0, height: 2,
@@ -1031,7 +1046,8 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
         marginBottom: 4,   /* WinBar için küçük boşluk */
       }}>
         {/* Team A */}
-        <div style={{ textAlign: 'center', minWidth: 0, opacity: isFin && bWon ? 0.45 : 1 }}>
+        <div style={{ textAlign: 'center', minWidth: 0 }}>
+          <div style={{ opacity: isFin && bWon ? 0.45 : 1 }}>
           <InitialsImage
             src={m.team_a?.logo_url}
             alt={m.team_a?.name || ''}
@@ -1055,10 +1071,12 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
               <FormStrip form={formA} />
             </div>
           )}
+          </div>
           {favA && (
             <button
-              onClick={e => { e.stopPropagation(); onToggleFav(aId) }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#FFD700', padding: '1px 0', display: 'flex', justifyContent: 'center', margin: '0 auto' }}
+              onClick={() => onToggleFav(aId)}
+              aria-label={`${m.team_a?.name ?? 'Takım'} takibini bırak`}
+              style={{ ...UST_KATMAN, background: 'none', border: 'none', cursor: 'pointer', color: '#FFD700', padding: '1px 0', display: 'flex', justifyContent: 'center', margin: '0 auto' }}
             ><Star size={11} strokeWidth={2} fill="#FFD700" /></button>
           )}
         </div>
@@ -1095,7 +1113,8 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
         </div>
 
         {/* Team B */}
-        <div style={{ textAlign: 'center', minWidth: 0, opacity: isFin && aWon ? 0.45 : 1 }}>
+        <div style={{ textAlign: 'center', minWidth: 0 }}>
+          <div style={{ opacity: isFin && aWon ? 0.45 : 1 }}>
           <InitialsImage
             src={m.team_b?.logo_url}
             alt={m.team_b?.name || ''}
@@ -1119,10 +1138,12 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
               <FormStrip form={formB} />
             </div>
           )}
+          </div>
           {favB && (
             <button
-              onClick={e => { e.stopPropagation(); onToggleFav(bId) }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#FFD700', padding: '1px 0', display: 'flex', justifyContent: 'center', margin: '0 auto' }}
+              onClick={() => onToggleFav(bId)}
+              aria-label={`${m.team_b?.name ?? 'Takım'} takibini bırak`}
+              style={{ ...UST_KATMAN, background: 'none', border: 'none', cursor: 'pointer', color: '#FFD700', padding: '1px 0', display: 'flex', justifyContent: 'center', margin: '0 auto' }}
             ><Star size={11} strokeWidth={2} fill="#FFD700" /></button>
           )}
         </div>
@@ -1145,8 +1166,8 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
               href={m.stream_url}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={e => e.stopPropagation()}
               style={{
+                ...UST_KATMAN,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 borderRadius: 8, minHeight: 40,
                 background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.3)',
@@ -1175,7 +1196,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, onMatchClick, favs
 })
 
 /* ── UpcomingRow ──────────────────────────────────────────────────────────── */
-const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForms, showDate }) {
+const UpcomingRow = memo(function UpcomingRow({ match: m, teamForms, showDate }) {
   useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
   const badge = getStatusBadge(m.status, m.scheduled_at)
   const isLive = m.status === 'running'
@@ -1186,8 +1207,8 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
   const formA = teamForms?.get(aId) || []
   const formB = teamForms?.get(bId) || []
   return (
-    <div
-      {...clickableProps(() => onMatchClick(m.id), { label: 'Maç detayı' })}
+    <KartLink
+      to={`/match/${m.id}`}
       style={{
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '9px 14px', borderRadius: 12, cursor: 'pointer',
@@ -1278,14 +1299,14 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, onMatchClick, teamForm
       <span className="hide-sm" style={{ padding: '2px 0', width: 58, textAlign: 'center', borderRadius: 6, fontSize: 8, fontWeight: 700, color: badge.color, background: badge.bg, flexShrink: 0 }}>
         {badge.kisa || badge.text}
       </span>
-    </div>
+    </KartLink>
   )
 })
 
 /* ── SkorSatiri — mobilde canlı ve biten maç için kompakt satır ──────────────
    Takımlar alt alta, ad tam genişlikte (yan yana düzende "The..." / "Natus..."
    diye kesiliyordu); canlı kart yerine ~70 px, birkaç canlı maç tek ekranda. */
-const SkorSatiri = memo(function SkorSatiri({ match: m, onMatchClick, favs }) {
+const SkorSatiri = memo(function SkorSatiri({ match: m, favs }) {
   useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
   const canli   = m.status === 'running'
   const cs      = canli ? m : correctedScores(m)
@@ -1297,14 +1318,16 @@ const SkorSatiri = memo(function SkorSatiri({ match: m, onMatchClick, favs }) {
   ]
   return (
     <div
-      {...clickableProps(() => onMatchClick(m.id), { label: 'Maç detayı' })}
       style={{
+        position: 'relative',
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '9px 10px 9px 8px', borderRadius: 12, cursor: 'pointer',
         background: 'var(--surface)',
         border: `1px solid ${canli ? 'rgba(255,70,85,.35)' : 'var(--line)'}`,
       }}
     >
+      {/* Satırın tamamı maç linki; yayın düğmesi UST_KATMAN ile üstünde */}
+      <KartOrtusu to={`/match/${m.id}`} label={`${m.team_a?.name ?? ''} - ${m.team_b?.name ?? ''} maç detayı`} />
       <div style={{ width: 44, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
         {canli ? (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9, fontWeight: 800, color: '#ff7683' }}>
@@ -1352,10 +1375,10 @@ const SkorSatiri = memo(function SkorSatiri({ match: m, onMatchClick, favs }) {
           href={m.stream_url}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={e => e.stopPropagation()}
           aria-label={izleEtiketi(m.stream_url)}
           title={izleEtiketi(m.stream_url)}
           style={{
+            ...UST_KATMAN,
             flexShrink: 0, width: 38, height: 38, display: 'grid', placeItems: 'center', borderRadius: 10,
             background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.3)', color: 'var(--ai)',
           }}
@@ -1368,7 +1391,7 @@ const SkorSatiri = memo(function SkorSatiri({ match: m, onMatchClick, favs }) {
 })
 
 /* ── ResultRow — biten maç, skor odaklı (Son Sonuçlar) ────────────────────── */
-const ResultRow = memo(function ResultRow({ match: m, onMatchClick }) {
+const ResultRow = memo(function ResultRow({ match: m }) {
   useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
   const cs   = correctedScores(m)
   const aId  = Number(m.team_a_id || m.team_a?.id)
@@ -1380,8 +1403,8 @@ const ResultRow = memo(function ResultRow({ match: m, onMatchClick }) {
   const tierLetter = String(m.tournament?.tier || '').toUpperCase().replace(/[^SABCDE]/g, '').charAt(0)
   const isHero = tierLetter === 'S' || tierLetter === 'A'
   return (
-    <div
-      {...clickableProps(() => onMatchClick(m.id), { label: 'Maç detayı' })}
+    <KartLink
+      to={`/match/${m.id}`}
       style={{
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '9px 12px', borderRadius: 12, cursor: 'pointer',
@@ -1431,7 +1454,7 @@ const ResultRow = memo(function ResultRow({ match: m, onMatchClick }) {
           border: isHero ? '1px solid rgba(240,192,64,.35)' : '1px solid #2b3a58',
         }}>{tierLetter}</span>
       )}
-    </div>
+    </KartLink>
   )
 })
 
@@ -1439,7 +1462,6 @@ const ResultRow = memo(function ResultRow({ match: m, onMatchClick }) {
    Dashboard — default export
 ══════════════════════════════════════════════════════════════════════════════ */
 export default function Dashboard() {
-  const navigate       = useNavigate()
   const { activeGame } = useGame()
   const {
     followedTeamIds,
@@ -1706,28 +1728,6 @@ export default function Dashboard() {
     toggleTeamFollow(teamId)
   }, [toggleTeamFollow])
 
-  const handleMatchOpen = useCallback((matchId) => {
-    if (!matchId) return
-    navigate(`/match/${matchId}`)
-  }, [navigate])
-
-  const handleQuickAccessOpen = useCallback((entry) => {
-    if (!entry) return
-    if (entry.matchId) {
-      navigate(`/match/${entry.matchId}`)
-      return
-    }
-    if (entry.type === 'team') {
-      navigate(`/team/${entry.id}`)
-      return
-    }
-    navigate(`/player/${entry.id}`)
-  }, [navigate])
-
-  const handleTickerItemOpen = useCallback((item) => {
-    if (!item?.href) return
-    navigate(item.href)
-  }, [navigate])
 
   // Yayın yapısal değişim bildirince (maç başladı/bitti, yeni maç, yeniden bağlanma)
   // tam akışı tazele; ardışık olayları tek isteğe topla.
@@ -2324,7 +2324,7 @@ export default function Dashboard() {
         </button>
       </div>
 
-      <QuickAccessBar entries={quickAccess} loading={quickLoading} onOpen={handleQuickAccessOpen} />
+      <QuickAccessBar entries={quickAccess} loading={quickLoading} />
 
       {/* Turnuva seviye filtresi — eskiden başlık + açıklama + buton olan iki
           satırlık bir karttı. Artık tek satır segmented control; aktif seçimin
@@ -2442,7 +2442,7 @@ export default function Dashboard() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               {myFeedMatches.slice(0, 8).map(m => (
-                <UpcomingRow key={m.id} match={m} onMatchClick={handleMatchOpen} teamForms={teamFormMap} showDate />
+                <UpcomingRow key={m.id} match={m} teamForms={teamFormMap} showDate />
               ))}
             </div>
           )}
@@ -2468,7 +2468,7 @@ export default function Dashboard() {
           {dreamLoading && <div style={{ padding: 14, color: 'var(--text-5)', fontSize: 12 }}>Dream Team hesaplanıyor...</div>}
           {!dreamLoading && dreamTeam.length === 0 && <div style={{ padding: 14, color: 'var(--text-5)', fontSize: 12 }}>Haftalık oyuncu verisi bulunamadı.</div>}
           {!dreamLoading && dreamTeam.map((p, idx) => (
-            <div key={p.id} {...clickableProps(() => navigate(`/player/${p.id}`), { label: `${p.nickname ?? 'Oyuncu'} profili` })} style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1fr .9fr .9fr .9fr', gap: 8, alignItems: 'center', padding: '11px 14px', borderBottom: '1px solid var(--line)', cursor: 'pointer', background: idx === 0 ? 'linear-gradient(90deg, rgba(200,16,46,.22), transparent 62%)' : 'transparent' }}>
+            <KartLink key={p.id} to={`/player/${p.id}`} style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1fr .9fr .9fr .9fr', gap: 8, alignItems: 'center', padding: '11px 14px', borderBottom: '1px solid var(--line)', cursor: 'pointer', background: idx === 0 ? 'linear-gradient(90deg, rgba(200,16,46,.22), transparent 62%)' : 'transparent' }}>
               <div style={{ fontWeight: 800, color: '#f4f4f4' }}>#{idx + 1}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                 <InitialsImage
@@ -2500,7 +2500,7 @@ export default function Dashboard() {
               <div style={{ fontWeight: 700, color: p.momentum >= 0 ? '#7ee787' : '#ff9aa9', fontVariantNumeric: 'tabular-nums' }}>
                 {p.momentum >= 0 ? '+' : '−'}{yuzde(Math.abs(p.momentum), 1)}
               </div>
-            </div>
+            </KartLink>
           ))}
         </div>
       </div>}
@@ -2549,7 +2549,7 @@ export default function Dashboard() {
         ) : isMobile ? (
           <div className="content-in" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {liveGorunen.map(m => (
-              <SkorSatiri key={m.id} match={m} onMatchClick={handleMatchOpen} favs={followedTeamIds} />
+              <SkorSatiri key={m.id} match={m} favs={followedTeamIds} />
             ))}
           </div>
         ) : (
@@ -2559,7 +2559,6 @@ export default function Dashboard() {
                 key={m.id}
                 match={m}
                 oncelikli={i < 2}
-                onMatchClick={handleMatchOpen}
                 favs={followedTeamIds}
                 onToggleFav={handleToggleFav}
                 teamForms={teamFormMap}
@@ -2611,9 +2610,10 @@ export default function Dashboard() {
                 const isLiveT = liveTournIds.has(t.id)
                 const tierK = normalizeTierKey(t.tier)
                 return (
-                  <div
+                  <KartLink
                     key={t.id}
-                    {...clickableProps(() => navigate(`/tournament/${t.id}`), { label: `${t.name} turnuvası` })}
+                    to={`/tournament/${t.id}`}
+                    draggable={false}
                     style={{
                       flexShrink: 0, width: 210, cursor: 'pointer',
                       background: 'var(--surface)', border: `1px solid ${isLiveT ? 'rgba(255,70,85,.4)' : 'var(--line)'}`,
@@ -2650,7 +2650,7 @@ export default function Dashboard() {
                         {t.teams.length > 6 && <span style={{ fontSize: 9, color: 'var(--text-5)', marginLeft: 6 }}>+{t.teams.length - 6}</span>}
                       </div>
                     )}
-                  </div>
+                  </KartLink>
                 )
               })}
             </DragScroll>
@@ -2679,8 +2679,8 @@ export default function Dashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {(showAllResults ? recentResults : recentResults.slice(0, 6)).map(m => (
               isMobile
-                ? <SkorSatiri key={m.id} match={m} onMatchClick={handleMatchOpen} favs={followedTeamIds} />
-                : <ResultRow key={m.id} match={m} onMatchClick={handleMatchOpen} />
+                ? <SkorSatiri key={m.id} match={m} favs={followedTeamIds} />
+                : <ResultRow key={m.id} match={m} />
             ))}
             {recentResults.length > 6 && (
               <button
@@ -2704,7 +2704,7 @@ export default function Dashboard() {
           Kurucu kararı (5 Eyl): üstte duracak kadar kritik değil, üstelik
           "ana sayfa aşırı boşluklu" geri bildirimini besliyordu. Artık
           "olan bitti" ile "gelecek maçlar" arasında ayraç görevi görüyor. */}
-      <LiveTicker items={tickerItems} loading={tickerLoading} onItemOpen={handleTickerItemOpen} />
+      <LiveTicker items={tickerItems} loading={tickerLoading} />
 
       {/* ── Maç Programı ─────────────────────────────────────────────────── */}
       {(() => {
@@ -2801,7 +2801,7 @@ export default function Dashboard() {
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                           {visible.map(m => (
-                            <UpcomingRow key={m.id} match={m} onMatchClick={handleMatchOpen} teamForms={teamFormMap} />
+                            <UpcomingRow key={m.id} match={m} teamForms={teamFormMap} />
                           ))}
                           {!isExpanded && hidden > 0 && (
                             <button
@@ -2869,7 +2869,7 @@ export default function Dashboard() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 3, opacity: 0.45 }}>
                       {stale.map(m => (
-                        <UpcomingRow key={m.id} match={m} onMatchClick={handleMatchOpen} teamForms={teamFormMap} />
+                        <UpcomingRow key={m.id} match={m} teamForms={teamFormMap} />
                       ))}
                     </div>
                   </div>

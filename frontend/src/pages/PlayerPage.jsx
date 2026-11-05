@@ -20,7 +20,7 @@ import { isTurkishTeam, useTurkTakimlar } from '../constants'
 import { useUser } from '../context/UserContext'
 import { summarizePlayerMatchStats, metricBars } from '../utils/playerMetrics'
 import { deriveWinnerTeamId, correctedScores } from '../utils/matchResult'
-import { clickableProps } from '../utils/a11y'
+import { KartLink } from '../components/KartLink'
 import TurkishBadge from '../components/TurkishBadge'
 import { FEXT } from '../theme'
 import Mascot from '../components/Mascot'
@@ -299,7 +299,6 @@ function computeRecordFromMatches(matchRows, teamId) {
 }
 
 function MatchRow({ match, teamId, isMobile = false }) {
-  const navigate = useNavigate()
   const isA      = match.team_a_id === teamId
   const opp      = isA ? match.team_b : match.team_a
   const cs       = correctedScores(match)
@@ -310,8 +309,8 @@ function MatchRow({ match, teamId, isMobile = false }) {
   const isLoss   = winnerTeam != null && winnerTeam !== Number(teamId)
 
   return (
-    <div
-      {...clickableProps(() => navigate(`/match/${match.id}`), { label: 'Maç detayı' })}
+    <KartLink
+      to={`/match/${match.id}`}
       style={{
         display: 'grid',
         gridTemplateColumns: isMobile ? '32px 1fr auto' : '36px 1fr auto auto auto',
@@ -368,7 +367,7 @@ function MatchRow({ match, teamId, isMobile = false }) {
           {new Date(match.scheduled_at).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' })}
         </div>
       )}
-    </div>
+    </KartLink>
   )
 }
 
@@ -1140,8 +1139,8 @@ export default function PlayerPage() {
 
             {/* Takım linki */}
             {team ? (
-              <div
-                {...clickableProps(() => navigate(`/team/${team.id}`), { label: `${team.name ?? 'Takım'} sayfası` })}
+              <KartLink
+                to={`/team/${team.id}`}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 10,
                   padding: '8px 14px', borderRadius: 12, cursor: 'pointer',
@@ -1157,7 +1156,7 @@ export default function PlayerPage() {
                   {team.location && <div style={{ fontSize: 10, color: 'var(--text-4)', display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={10} /> {team.location}</div>}
                 </div>
                 <span style={{ fontSize: 11, color: 'var(--text-5)', marginLeft: 'auto' }}>→</span>
-              </div>
+              </KartLink>
             ) : (
               <div style={{ fontSize: 12, color: 'var(--text-6)', fontStyle: 'italic' }}>Takım bilgisi yok (Free Agent?)</div>
             )}

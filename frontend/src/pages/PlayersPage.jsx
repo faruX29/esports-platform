@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ondalik, yuzde } from '../utils/dil'
-import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { GAMES } from '../context/GameContext'
 import useSayfaOyunu from '../hooks/useSayfaOyunu'
@@ -9,7 +8,7 @@ import { useUser } from '../context/UserContext'
 import { summarizePlayerMatchStats, metricBars, pickRowTimestamp } from '../utils/playerMetrics'
 import InitialsImage from '../components/InitialsImage'
 import { normalizeGameId } from '../utils/gameUtils'
-import { clickableProps } from '../utils/a11y'
+import { KartLink } from '../components/KartLink'
 import { DeepScoutBadge } from '../components/ScoutSignals'
 import { X as XIcon, SearchX, Star } from 'lucide-react'
 import { FEXT } from '../theme'
@@ -180,7 +179,6 @@ function CompareCard({ player, onClear }) {
 }
 
 export default function PlayersPage() {
-  const navigate = useNavigate()
   // Sayfaya özel seçim (?oyun=); ortak filtreyi değiştirmez → ana sayfaya dönünce filtre aynı.
   const [selectedGameId, setActiveGame] = useSayfaOyunu()
   const { isPlayerFollowed, togglePlayerFollow } = useUser()
@@ -721,6 +719,7 @@ export default function PlayersPage() {
             const followed = isPlayerFollowed(player.id)
             const roleBadge = getRoleBadge(player.role)
             const showRoleBadge = roleBadge !== null
+            const TakimHucresi = player.team?.id ? KartLink : 'div'
             return (
               <div
                 key={player.id}
@@ -734,8 +733,8 @@ export default function PlayersPage() {
                   background: idx < 3 ? 'linear-gradient(90deg, rgba(194,92,208,.11), transparent 58%)' : 'transparent',
                 }}
               >
-                <div
-                  {...clickableProps(() => navigate(`/player/${player.id}`), { label: `${player.nickname ?? 'Oyuncu'} profili` })}
+                <KartLink
+                  to={`/player/${player.id}`}
                   style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, cursor: 'pointer' }}
                 >
                   <InitialsImage
@@ -756,10 +755,10 @@ export default function PlayersPage() {
                     </div>
                   )}
                   </div>
-                </div>
+                </KartLink>
 
-                <div
-                  onClick={() => player.team?.id && navigate(`/team/${player.team.id}`)}
+                <TakimHucresi
+                  {...(player.team?.id ? { to: `/team/${player.team.id}` } : {})}
                   style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: player.team?.id ? 'pointer' : 'default', minWidth: 0 }}
                 >
                   <InitialsImage
@@ -772,7 +771,7 @@ export default function PlayersPage() {
                     objectFit='contain'
                   />
                   <span style={{ fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.team?.name || 'Free Agent'}</span>
-                </div>
+                </TakimHucresi>
 
                 <div style={{ fontWeight: 700 }}>{fmt(player.kd)}</div>
                 <div style={{ fontWeight: 700, color: player.acs != null ? '#C25CD0' : 'var(--text-5)' }}>{player.acs != null ? player.acs : '—'}</div>

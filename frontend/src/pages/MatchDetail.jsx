@@ -26,7 +26,7 @@ import { FlipNumber }                              from '../components/AnimatedN
 import { Damga, SkorParlamasi }                   from '../components/Animasyon'
 import { useAcilisGecisi, useDegisimSayaci }       from '../hooks/useHareket'
 import { roundLabel }                               from '../utils/roundLabel'
-import { clickableProps }                           from '../utils/a11y'
+import { KartLink }                                 from '../components/KartLink'
 import TurkishBadge                                 from '../components/TurkishBadge'
 import { FEXT, saatiGecti }                         from '../theme'
 import { adDili, ondalik }                          from '../utils/dil'
@@ -899,11 +899,12 @@ function YayinListesi({ yayinlar, canli }) {
 /* ─── PlayerCard ────────────────────────────────────────────────────────────── */
 function PlayerCard({ player, side = 'left' }) {
   const r = side === 'right'
-  const navigate = useNavigate()
   const clickable = !!player.id
+  // Kimliği olan oyuncu gerçek link (orta tık yeni sekme); olmayan düz kutu
+  const Kok = clickable ? KartLink : 'div'
   return (
-    <div
-      onClick={() => clickable && navigate(`/player/${player.id}`)}
+    <Kok
+      {...(clickable ? { to: `/player/${player.id}` } : {})}
       title={clickable ? `${player.nickname} profilini gör` : undefined}
       style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--surface-2)', flexDirection: r ? 'row-reverse' : 'row', transition: 'border-color .15s,background .15s', cursor: clickable ? 'pointer' : 'default' }}
       onMouseEnter={e => { e.currentTarget.style.borderColor = clickable ? FEXT.accent : 'var(--line)'; e.currentTarget.style.background = clickable ? 'var(--surface-2)' : 'var(--surface)' }}
@@ -918,7 +919,7 @@ function PlayerCard({ player, side = 'left' }) {
         {player.real_name && <div style={{ fontSize: 10, color: 'var(--text-5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.real_name}</div>}
       </div>
       <RoleBadge role={player.role} />
-    </div>
+    </Kok>
   )
 }
 
@@ -1588,7 +1589,7 @@ export default function MatchDetail() {
 
             {/* Team A */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, minWidth: 0 }}>
-              <div {...clickableProps(() => navigate(`/team/${aId}`), { label: `${aName} takım sayfası` })} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, cursor: 'pointer', opacity: isFin && bWon ? 0.62 : 1, transition: 'opacity .2s', minWidth: 0, maxWidth: '100%' }}>
+              <KartLink to={`/team/${aId}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, cursor: 'pointer', opacity: isFin && bWon ? 0.62 : 1, transition: 'opacity .2s', minWidth: 0, maxWidth: '100%' }}>
                 <InitialsImage
                   src={aLogo}
                   name={aName}
@@ -1597,7 +1598,7 @@ export default function MatchDetail() {
                   imgStyle={{ objectFit: 'contain', filter: isFin && bWon ? 'grayscale(80%)' : 'none' }}
                 />
                 <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (aWon ? '#4CAF50' : 'var(--text-3)') : 'var(--text-1)', minWidth: 0, overflowWrap: 'break-word', textAlign: 'right', lineHeight: 1.2 }}>{aName}{isTurkishTeam(match.team_a) && <TrBadge />}</div>
-              </div>
+              </KartLink>
               <FavButton teamId={aId} ad={aName} active={favA} onToggle={toggleTeamFollow} />
             </div>
 
@@ -1615,7 +1616,7 @@ export default function MatchDetail() {
 
             {/* Team B */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8, minWidth: 0 }}>
-              <div {...clickableProps(() => navigate(`/team/${bId}`), { label: `${bName} takım sayfası` })} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6, cursor: 'pointer', opacity: isFin && aWon ? 0.62 : 1, transition: 'opacity .2s', minWidth: 0, maxWidth: '100%' }}>
+              <KartLink to={`/team/${bId}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6, cursor: 'pointer', opacity: isFin && aWon ? 0.62 : 1, transition: 'opacity .2s', minWidth: 0, maxWidth: '100%' }}>
                 <InitialsImage
                   src={bLogo}
                   name={bName}
@@ -1624,7 +1625,7 @@ export default function MatchDetail() {
                   imgStyle={{ objectFit: 'contain', filter: isFin && aWon ? 'grayscale(80%)' : 'none' }}
                 />
                 <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (bWon ? '#4CAF50' : 'var(--text-3)') : 'var(--text-1)', minWidth: 0, overflowWrap: 'break-word', textAlign: 'left', lineHeight: 1.2 }}>{isTurkishTeam(match.team_b) && <TrBadge />}{bName}</div>
-              </div>
+              </KartLink>
               <FavButton teamId={bId} ad={bName} active={favB} onToggle={toggleTeamFollow} />
             </div>
           </div>
@@ -1796,9 +1797,9 @@ export default function MatchDetail() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       {h2h.matches.slice(0, 5).map(m => (
-                        <div key={m.id} {...clickableProps(() => navigate(`/match/${m.id}`), { label: 'Maç detayı' })} style={{ cursor: 'pointer' }}>
+                        <KartLink key={m.id} to={`/match/${m.id}`}>
                           <H2HRow match={m} refTeamAId={h2h.teamAId} />
-                        </div>
+                        </KartLink>
                       ))}
                     </div>
                   </div>

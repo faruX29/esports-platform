@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useUser } from '../context/UserContext'
@@ -25,6 +25,7 @@ import { buildNewsSlug } from '../utils/newsSlug'
 import { MessageSquare, Library } from 'lucide-react'
 import LikeButton from '../components/LikeButton'
 import { FEXT } from '../theme'
+import { KartOrtusu, UST_KATMAN } from '../components/KartLink'
 
 const GAME_FILTERS = GAMES.filter(game => !game.soon && game.id !== 'all' && ['valorant', 'cs2', 'lol'].includes(game.id))
 const CATEGORY_TABS = [
@@ -142,13 +143,10 @@ function NewsTrustLayer({ item, onReport }) {
   return (
     <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
       <span style={{ fontSize: 11, color: 'var(--text-3)' }}>PandaScore verileriyle otomatik üretilmiştir.</span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+      <div style={{ ...UST_KATMAN, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
         <ShareButton path={`/news/${buildNewsSlug(item)}`} title={item.title} compact />
         <button
-          onClick={e => {
-            e.stopPropagation()
-            onReport(item)
-          }}
+          onClick={() => onReport(item)}
           style={{
             border: '1px solid var(--text-6)',
             background: 'var(--surface)',
@@ -170,12 +168,20 @@ function NewsTrustLayer({ item, onReport }) {
 // sonucu sınıfı"ydı (rozet zaten söylüyor), yaklaşan maçta "Fextopus Farkı +%43,7" özetteki
 // "%72"yi kafa karıştırıcı biçimde tekrarlıyordu; harita/MVP alanlarını dolduran kaynak yok.
 
-function NewsCard({ item, likes, liked, comments, onLike, onOpenDetail, onReport, isForYou, isMobile = false }) {
+// Haber kartının adresi: yaklaşan maç kartının yazılmış haberi yok → maç sayfası.
+function haberAdresi(item) {
+  return item.status === 'upcoming' && item.matchId
+    ? `/match/${item.matchId}`
+    : `/news/${buildNewsSlug(item)}`
+}
+// Detay sayfası hikâyeyi yeniden çekmeden açsın diye (yalnız haber adresinde anlamlı)
+const haberDurumu = item => (item.status === 'upcoming' && item.matchId ? undefined : { story: item })
+
+function NewsCard({ item, likes, liked, comments, onLike, onReport, isForYou, isMobile = false }) {
   const { visuals } = item
 
   return (
     <article
-      onClick={() => onOpenDetail(item)}
       style={{
         background: 'linear-gradient(180deg,var(--surface) 0%,var(--bg) 100%)',
         border: '1px solid var(--line)',
@@ -207,7 +213,10 @@ function NewsCard({ item, likes, liked, comments, onLike, onOpenDetail, onReport
           : 'radial-gradient(circle at 85% 0%, var(--hover), transparent 28%)',
       }} />
 
-      <div style={{ position: 'relative', zIndex: 1 }}>
+      {/* Kartın tamamı haber linki; beğeni, paylaş, hata bildir UST_KATMAN ile üstünde */}
+      <KartOrtusu to={haberAdresi(item)} state={haberDurumu(item)} label={item.title} />
+
+      <div style={{ position: 'relative' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             {isForYou && (
@@ -243,16 +252,15 @@ function NewsCard({ item, likes, liked, comments, onLike, onOpenDetail, onReport
 
 
         <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <LikeButton liked={liked} count={likes} onToggle={() => onLike(item.id)} />
-          <button
-            onClick={e => {
-              e.stopPropagation()
-              onOpenDetail(item)
-            }}
+          <span style={{ ...UST_KATMAN, display: 'inline-flex' }}>
+            <LikeButton liked={liked} count={likes} onToggle={() => onLike(item.id)} />
+          </span>
+          {/* Düğme görünümlü etiket: tıklama kartın linkine düşer (haber sayfası, yorumlar orada) */}
+          <span
             style={{ fontSize: 11, color: comments.length > 0 ? '#a0c4ff' : 'var(--text-3)', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 8, background: comments.length > 0 ? 'rgba(100,160,255,.08)' : 'var(--surface)', border: comments.length > 0 ? '1px solid rgba(100,160,255,.2)' : '1px solid var(--line)', fontWeight: comments.length > 0 ? 700 : 400, cursor: 'pointer' }}
           >
             <MessageSquare size={12} /> {comments.length > 0 ? `${comments.length} yorum` : 'Yorum yap'} ›
-          </button>
+          </span>
         </div>
 
         <NewsTrustLayer item={item} onReport={onReport} />
@@ -262,7 +270,6 @@ function NewsCard({ item, likes, liked, comments, onLike, onOpenDetail, onReport
 }
 
 export default function NewsPage() {
-  const navigate = useNavigate()
   const { user, profile } = useAuth()
   const { followedTeamIds, followedGames, requireAuth } = useUser()
   const [activeCategory, setActiveCategory] = useState('all')
@@ -564,19 +571,6 @@ export default function NewsPage() {
     }
   }
 
-  function openStoryDetail(item) {
-    // Yaklaşan maç kartının yazılmış haberi yok: haber sayfası yerine maç sayfası.
-    if (item.status === 'upcoming' && item.matchId) {
-      navigate(`/match/${item.matchId}`)
-      return
-    }
-    navigate(`/news/${buildNewsSlug(item)}`, {
-      state: {
-        story: item,
-      },
-    })
-  }
-
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text-1)' }}>
       <SeoHead
@@ -646,9 +640,10 @@ export default function NewsPage() {
             <div style={{ marginBottom: 8, fontSize: 11, color: '#c61b33', textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 800 }}>
               {hero.isForYou ? 'Manşet · Senin için' : 'Manşet'}
             </div>
-            <article onClick={() => openStoryDetail(hero)} style={{ borderRadius: 18, padding: isMobile ? 14 : 20, border: '1px solid var(--line)', background: 'linear-gradient(145deg,var(--surface),var(--surface))', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
+            <article style={{ borderRadius: 18, padding: isMobile ? 14 : 20, border: '1px solid var(--line)', background: 'linear-gradient(145deg,var(--surface),var(--surface))', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
               <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: hero.visuals.turkish ? 'radial-gradient(circle at 12% 18%, rgba(194,92,208,.22), transparent 34%)' : 'radial-gradient(circle at 90% 10%, var(--hover), transparent 24%)' }} />
-              <div style={{ position: 'relative', zIndex: 1 }}>
+              <KartOrtusu to={haberAdresi(hero)} state={haberDurumu(hero)} label={hero.title} />
+              <div style={{ position: 'relative' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     {hero.isForYou && (
@@ -683,7 +678,9 @@ export default function NewsPage() {
 
 
                 <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <LikeButton liked={likedSet.has(hero.id)} count={likesByNews[hero.id] || 0} onToggle={() => toggleLike(hero.id)} size={16} />
+                  <span style={{ ...UST_KATMAN, display: 'inline-flex' }}>
+                    <LikeButton liked={likedSet.has(hero.id)} count={likesByNews[hero.id] || 0} onToggle={() => toggleLike(hero.id)} size={16} />
+                  </span>
                   <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Yorum: {(commentsByNews[hero.id] || []).length}</span>
                 </div>
 
@@ -704,7 +701,6 @@ export default function NewsPage() {
                 liked={likedSet.has(item.id)}
                 comments={commentsByNews[item.id] || []}
                 onLike={toggleLike}
-                onOpenDetail={openStoryDetail}
                 onReport={reportStoryIssue}
                 isForYou={item.isForYou}
                 isMobile={isMobile}

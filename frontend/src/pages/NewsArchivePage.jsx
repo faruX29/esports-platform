@@ -7,6 +7,7 @@ import SeoHead from '../components/SeoHead'
 import NewsCover, { scoreFromHero } from '../components/NewsCover'
 import GameLogo from '../components/GameLogo'
 import LikeButton from '../components/LikeButton'
+import { KartOrtusu, UST_KATMAN } from '../components/KartLink'
 import { getGameMeta, normalizeGameId, normalizeTier, weeklyCover } from '../utils/newsStories'
 import { buildNewsSlug } from '../utils/newsSlug'
 import { isTurkishTeam, useTurkTakimlar } from '../constants'
@@ -82,17 +83,15 @@ function rowToVisuals(row) {
   }
 }
 
-/** Arşiv kartı — SEO için GERÇEK <a> (Link). Crawler'lar bu iç linkleri takip eder. */
+/** Arşiv kartı — SEO için GERÇEK <a> (Link). Crawler'lar bu iç linkleri takip eder.
+ *  Kartı kaplayan link + üstünde beğeni düğmesi (<a> içinde <button> olmasın). */
 function ArchiveCard({ row, isMobile, liked, likeCount, onToggleLike }) {
   useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
   const visuals = rowToVisuals(row)
   return (
-    <Link
-      to={`/news/${slugFor(row)}`}
+    <article
       style={{
-        display: 'block',
-        textDecoration: 'none',
-        color: 'inherit',
+        position: 'relative',
         background: 'linear-gradient(180deg,var(--surface) 0%,var(--bg) 100%)',
         border: '1px solid var(--line)',
         borderRadius: 14,
@@ -111,6 +110,7 @@ function ArchiveCard({ row, isMobile, liked, likeCount, onToggleLike }) {
         e.currentTarget.style.boxShadow = 'none'
       }}
     >
+      <KartOrtusu to={`/news/${slugFor(row)}`} label={row.title} />
       <NewsCover
         visuals={visuals}
         score={row.content_type === 'transfer' ? '➜' : row.content_type === 'tournament' ? '🏆' : row.content_type === 'haftalik' ? '' : scoreFromHero(row.hero_score)}
@@ -142,9 +142,11 @@ function ArchiveCard({ row, isMobile, liked, likeCount, onToggleLike }) {
       )}
       <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <span style={{ fontSize: 11, color: 'var(--text-4)' }}>{fmtDate(row.created_at)}</span>
-        <LikeButton liked={liked} count={likeCount} onToggle={onToggleLike} />
+        <span style={{ ...UST_KATMAN, display: 'inline-flex' }}>
+          <LikeButton liked={liked} count={likeCount} onToggle={onToggleLike} />
+        </span>
       </div>
-    </Link>
+    </article>
   )
 }
 

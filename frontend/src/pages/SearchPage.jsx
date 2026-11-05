@@ -9,13 +9,13 @@
  * • Turkish Pride + Radial Glow tasarım dili
  */
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate, useSearchParams }              from 'react-router-dom'
+import { useSearchParams }                           from 'react-router-dom'
 import { supabase }                                  from '../supabaseClient'
 import { getRoleBadge }                              from '../utils/roleHelper'
 import { isTurkishTeam, useTurkTakimlar }                             from '../constants'
 import { GAMES }                                     from '../context/GameContext'
 import { normalizeGameId }                           from '../utils/gameUtils'
-import { clickableProps }                            from '../utils/a11y'
+import { KartLink }                                  from '../components/KartLink'
 import TurkishBadge                                  from '../components/TurkishBadge'
 import TrBadge                                        from '../components/TrBadge'
 import {
@@ -186,12 +186,12 @@ function Av({ src, name, size = 40, round = true }) {
 
 // ─── Team Result Card ─────────────────────────────────────────────────────────
 
-function TeamCard({ team, navigate }) {
+function TeamCard({ team }) {
   useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
   const isTR = isTurkishTeam(team)
   return (
-    <div
-      {...clickableProps(() => navigate(`/team/${team.id}`), { label: `${team.name ?? 'Takım'} sayfası` })}
+    <KartLink
+      to={`/team/${team.id}`}
       style={{
         display: 'flex', alignItems: 'center', gap: 12,
         padding: '12px 14px', borderRadius: 12, background: 'var(--surface)',
@@ -224,17 +224,17 @@ function TeamCard({ team, navigate }) {
         </div>
       </div>
       <span style={{ fontSize: 11, color: 'var(--text-6)' }}>→</span>
-    </div>
+    </KartLink>
   )
 }
 
 // ─── Player Result Card ───────────────────────────────────────────────────────
 
-function PlayerCard({ player, navigate }) {
+function PlayerCard({ player }) {
   const badge = getRoleBadge(player.role)
   return (
-    <div
-      {...clickableProps(() => navigate(`/player/${player.id}`), { label: `${player.nickname ?? 'Oyuncu'} profili` })}
+    <KartLink
+      to={`/player/${player.id}`}
       style={{
         display: 'flex', alignItems: 'center', gap: 12,
         padding: '12px 14px', borderRadius: 12,
@@ -272,20 +272,21 @@ function PlayerCard({ player, navigate }) {
           {badge.label}
         </span>
       )}
-    </div>
+    </KartLink>
   )
 }
 
 // ─── Tournament Bento Card ────────────────────────────────────────────────────
 
-function TournamentCard({ t, navigate, highlighted }) {
+function TournamentCard({ t, highlighted }) {
   const gm   = slugToGame(t.game?.name ?? t.name ?? '')
   const tier = getTierMeta(t.tier)
   const isTR = t.region === 'TR'
   const [hov, setHov] = useState(false)
 
   return (
-    <div
+    <KartLink
+      to={`/tournament/${t.id}`}
       style={{
         position: 'relative', overflow: 'hidden', borderRadius: 16,
         padding: '0 0 14px', background: 'var(--surface)',
@@ -299,7 +300,6 @@ function TournamentCard({ t, navigate, highlighted }) {
           : isTR ? '0 0 12px rgba(200,16,46,.1)' : 'none',
         cursor: 'pointer', transition: 'all .2s',
       }}
-      {...clickableProps(() => navigate(`/tournament/${t.id}`), { label: `${t.name ?? 'Turnuva'} sayfası` })}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
     >
@@ -360,9 +360,9 @@ function TournamentCard({ t, navigate, highlighted }) {
         )}
 
         {/* Özet butonu */}
-        <button
-          onClick={e => { e.stopPropagation(); navigate(`/tournament/${t.id}`) }}
+        <span
           style={{
+            display: 'block', textAlign: 'center',
             width: '100%', padding: '7px 0', borderRadius: 8,
             background: `${gm.color}18`, border: `1px solid ${gm.color}44`,
             color: gm.color, fontSize: 12, fontWeight: 700,
@@ -370,9 +370,9 @@ function TournamentCard({ t, navigate, highlighted }) {
           }}
           onMouseEnter={e => e.currentTarget.style.background = `${gm.color}30`}
           onMouseLeave={e => e.currentTarget.style.background = `${gm.color}18`}
-        ><span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, justifyContent: 'center' }}><Search size={12} /> Özet →</span></button>
+        ><span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, justifyContent: 'center' }}><Search size={12} /> Özet →</span></span>
       </div>
-    </div>
+    </KartLink>
   )
 }
 
@@ -625,7 +625,6 @@ function DebugPanel({ info, onClose }) {
 // ─── Ana Bileşen ──────────────────────────────────────────────────────────────
 
 export default function SearchPage() {
-  const navigate                        = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const initialYear = Number(searchParams.get('year'))
   const initialTier = normalizeTierKey(searchParams.get('tier'))
@@ -1156,7 +1155,7 @@ export default function SearchPage() {
                   <ST Icon={Shield} label="Takımlar" count={teams.length} />
                   <div style={{ display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))', gap: 10 }}>
-                    {teams.map(t => <TeamCard key={t.id} team={t} navigate={navigate} />)}
+                    {teams.map(t => <TeamCard key={t.id} team={t} />)}
                   </div>
                 </div>
               )}
@@ -1166,7 +1165,7 @@ export default function SearchPage() {
                   <ST Icon={User} label="Oyuncular" count={players.length} />
                   <div style={{ display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))', gap: 10 }}>
-                    {players.map(p => <PlayerCard key={p.id} player={p} navigate={navigate} />)}
+                    {players.map(p => <PlayerCard key={p.id} player={p} />)}
                   </div>
                 </div>
               )}
@@ -1177,7 +1176,7 @@ export default function SearchPage() {
                   <div style={{ display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 220px), 1fr))', gap: 12 }}>
                     {visibleTournaments.slice(0, 9).map(t => (
-                      <TournamentCard key={t.id} t={t} navigate={navigate} highlighted />
+                      <TournamentCard key={t.id} t={t} highlighted />
                     ))}
                   </div>
                 </div>
@@ -1348,7 +1347,7 @@ export default function SearchPage() {
               <div style={{ display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 220px), 1fr))', gap: 12 }}>
                 {visibleTournaments.map(t => (
-                  <TournamentCard key={t.id} t={t} navigate={navigate} highlighted={false} />
+                  <TournamentCard key={t.id} t={t} highlighted={false} />
                 ))}
               </div>
             )}

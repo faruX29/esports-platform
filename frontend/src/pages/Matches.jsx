@@ -8,7 +8,7 @@
  */
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { createPortal }                     from 'react-dom'
-import { useNavigate, useSearchParams }     from 'react-router-dom'
+import { Link, useSearchParams }            from 'react-router-dom'
 import { supabase, subscribeToMatchesUpdates } from '../supabaseClient'
 import { useYenileme, useCanliBaglanti }    from '../hooks/useYenileme'
 import { useGame }                          from '../context/GameContext'
@@ -26,7 +26,7 @@ import { getBOFormat }                      from '../utils/matchFormat'
 import { correctedScores }                  from '../utils/matchResult'
 import { isUncertainPrediction, fextopusSonucu } from '../utils/prediction'
 import { roundLabel }                       from '../utils/roundLabel'
-import { clickableProps }                   from '../utils/a11y'
+import { KartOrtusu, UST_KATMAN }           from '../components/KartLink'
 import TurkishBadge                         from '../components/TurkishBadge'
 import { FlipNumber }                       from '../components/AnimatedNumber'
 import { Damga, SkorParlamasi }            from '../components/Animasyon'
@@ -638,7 +638,7 @@ function KartIskeleti({ adet = 6 }) {
 
 const izgaraStil = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 16 }
 
-function TakimTarafi({ match, taraf, takipte, onTakip, navigate }) {
+function TakimTarafi({ match, taraf, takipte, onTakip }) {
   const takim = taraf === 'a' ? match.team_a : match.team_b
   const takimId = taraf === 'a' ? match.team_a_id : match.team_b_id
   const turk = isTurkishTeam(takim)
@@ -646,21 +646,25 @@ function TakimTarafi({ match, taraf, takipte, onTakip, navigate }) {
   const cs = skorVar ? correctedScores(match) : null
   const skor = cs ? (taraf === 'a' ? cs.team_a_score : cs.team_b_score) : null
   const kazandi = match.status === 'finished' && match.winner_id != null && Number(match.winner_id) === Number(takimId)
+  // Takım tarafı kendi linki (takım sayfası), kartın maç örtüsünün üstünde; yıldız linkin
+  // dışında kardeş öğe (<a> içinde <button> olmasın).
+  const Govde = takimId ? Link : 'div'
   return (
-    <div
-      onClick={e => { e.stopPropagation(); navigate(`/team/${takimId}`) }}
-      style={{ flex: 1, minWidth: 0, textAlign: 'center', cursor: 'pointer', position: 'relative', padding: '8px 4px' }}
-      onMouseEnter={e => e.currentTarget.style.opacity = '.75'}
-      onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-    >
+    <div style={{ ...UST_KATMAN, flex: 1, minWidth: 0, textAlign: 'center' }}>
       <button
         type="button"
-        onClick={e => { e.stopPropagation(); onTakip(takimId) }}
+        onClick={() => onTakip(takimId)}
         aria-label={`${takim?.name || 'Takım'} ${takipte ? 'takipten çık' : 'takip et'}`}
         aria-pressed={takipte}
         style={{ position: 'absolute', top: 0, [taraf === 'a' ? 'left' : 'right']: 2, background: 'none', border: 'none', cursor: 'pointer', padding: 2, minWidth: 24, minHeight: 24, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
         <Star size={15} fill={takipte ? '#FFD700' : 'none'} color={takipte ? '#FFD700' : 'var(--text-4)'} />
       </button>
+      <Govde
+        {...(takimId ? { to: `/team/${takimId}` } : {})}
+        style={{ display: 'block', padding: '8px 4px', color: 'inherit', textDecoration: 'none', cursor: takimId ? 'pointer' : 'default' }}
+        onMouseEnter={e => { e.currentTarget.style.opacity = '.75' }}
+        onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
+      >
       <InitialsImage
         src={takim?.logo_url}
         name={takim?.name ?? '?'}
@@ -677,6 +681,7 @@ function TakimTarafi({ match, taraf, takipte, onTakip, navigate }) {
           {match.status === 'running' ? <FlipNumber value={skor} /> : skor}
         </div>
       )}
+      </Govde>
     </div>
   )
 }
@@ -703,7 +708,7 @@ function KartOlasilikCubugu({ match, belirsiz }) {
   )
 }
 
-function MacKarti({ match, gruplu, navigate, isTeamFollowed, onTakip }) {
+function MacKarti({ match, gruplu, isTeamFollowed, onTakip }) {
   const statusBadge = statusStyle(match.status, match.scheduled_at)
   const isLive      = match.status === 'running'
   const bitti       = match.status === 'finished'
@@ -725,7 +730,6 @@ function MacKarti({ match, gruplu, navigate, isTeamFollowed, onTakip }) {
 
   return (
     <div
-      {...clickableProps(() => navigate(`/match/${match.id}`), { label: `${match.team_a?.name ?? ''} - ${match.team_b?.name ?? ''} maç detayı` })}
       style={{
         position: 'relative', borderRadius: 18, padding: '18px 18px 14px',
         background: 'var(--surface)', border: `1.5px solid ${kenar}`, boxShadow: golge,
@@ -743,6 +747,8 @@ function MacKarti({ match, gruplu, navigate, isTeamFollowed, onTakip }) {
         e.currentTarget.style.borderColor = kenar
       }}
     >
+      {/* Kartın tamamı maç linki; takım tarafları, yıldız ve "İzle" UST_KATMAN ile üstünde */}
+      <KartOrtusu to={`/match/${match.id}`} label={`${match.team_a?.name ?? ''} - ${match.team_b?.name ?? ''} maç detayı`} />
       <SkorParlamasi n={parlama} radius={17} />
       {/* Üst satır */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, gap: 6 }}>
@@ -780,13 +786,13 @@ function MacKarti({ match, gruplu, navigate, isTeamFollowed, onTakip }) {
 
       {/* Takımlar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 14 }}>
-        <TakimTarafi match={match} taraf="a" takipte={isTeamFollowed(match.team_a_id)} onTakip={onTakip} navigate={navigate} />
+        <TakimTarafi match={match} taraf="a" takipte={isTeamFollowed(match.team_a_id)} onTakip={onTakip} />
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
           <span style={{ fontSize: 11, fontWeight: 800, color: FEXT.accentText, letterSpacing: '2px' }}>VS</span>
           <div style={{ width: 1, height: 24, background: 'var(--line)' }} />
           {match.status === 'not_started' && <Countdown target={matchTimeIso(match)} />}
         </div>
-        <TakimTarafi match={match} taraf="b" takipte={isTeamFollowed(match.team_b_id)} onTakip={onTakip} navigate={navigate} />
+        <TakimTarafi match={match} taraf="b" takipte={isTeamFollowed(match.team_b_id)} onTakip={onTakip} />
       </div>
 
       {/* Fextopus: bitmemişte olasılık çubuğu, bitmişte "bildi / yanıldı" */}
@@ -826,8 +832,7 @@ function MacKarti({ match, gruplu, navigate, isTeamFollowed, onTakip }) {
           {match.stream_url && !bitti && (
             <a
               href={match.stream_url} target="_blank" rel="noopener noreferrer"
-              onClick={e => e.stopPropagation()}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: 'var(--ai)', background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.35)', borderRadius: 6, padding: '2px 8px', textDecoration: 'none' }}
+              style={{ ...UST_KATMAN, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: 'var(--ai)', background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.35)', borderRadius: 6, padding: '2px 8px', textDecoration: 'none' }}
             >
               <Play size={10} fill="currentColor" /> İzle
             </a>
@@ -847,7 +852,6 @@ function MacKarti({ match, gruplu, navigate, isTeamFollowed, onTakip }) {
 
 function Matches() {
   const turkTakimlar = useTurkTakimlar()  // Türk takımı listesi yüklenince yeniden çiz
-  const navigate = useNavigate()
   const { activeGame } = useGame()
   // Takip = site geneli takip sistemi (DB); herhangi bir yerde takip edilen takım burada da sayılır.
   const { followedTeamIds, toggleTeamFollow, isTeamFollowed } = useUser()
@@ -1290,7 +1294,7 @@ function Matches() {
                 {g.maclar.map(match => (
                   <MacKarti
                     key={match.id} match={match} gruplu={!!g.baslik}
-                    navigate={navigate} isTeamFollowed={isTeamFollowed} onTakip={toggleTeamFollow}
+                    isTeamFollowed={isTeamFollowed} onTakip={toggleTeamFollow}
                   />
                 ))}
               </div>

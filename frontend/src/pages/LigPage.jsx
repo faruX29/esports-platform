@@ -348,7 +348,7 @@ export default function LigPage() {
           <div style={{ marginBottom: 32 }}>
             <ST Icon={Radio} label="Sıradaki maçlar" />
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 12 }}>
-              {siradaki.map(m => <MatchListCard key={m.id} m={m} navigate={navigate} gc={gc} />)}
+              {siradaki.map(m => <MatchListCard key={m.id} m={m} gc={gc} />)}
             </div>
           </div>
         )}

@@ -9,7 +9,7 @@ import InitialsImage                        from '../components/InitialsImage'
 import { getBOFormat }                       from '../utils/matchFormat'
 import { deriveWinnerTeamId, matchOutcome, correctedScores } from '../utils/matchResult'
 import { isUncertainPrediction } from '../utils/prediction'
-import { clickableProps } from '../utils/a11y'
+import { KartOrtusu, UST_KATMAN } from '../components/KartLink'
 import TurkishBadge from '../components/TurkishBadge'
 import TrBadge from '../components/TrBadge'
 import OyunRozeti from '../components/OyunRozeti'
@@ -356,7 +356,7 @@ function PlayerCard({ player }) {
 }
 
 // ── MatchCard ─────────────────────────────────────────────────────────────────
-function MatchCard({ match, teamId, navigate }) {
+function MatchCard({ match, teamId }) {
   const tid      = parseInt(teamId)
   const isTeamA  = match.team_a?.id === tid
   const myTeam   = isTeamA ? match.team_a : match.team_b
@@ -375,8 +375,8 @@ function MatchCard({ match, teamId, navigate }) {
 
   return (
     <div
-      {...clickableProps(() => navigate(`/match/${match.id}`), { label: `${match.team_a?.name ?? ''} - ${match.team_b?.name ?? ''} maç detayı` })}
       style={{
+        position: 'relative',
         background: 'var(--surface)', borderRadius: 14, padding: '14px 16px',
         border: isWin  ? '1.5px solid rgba(76,175,80,.5)'
               : isLoss ? '1.5px solid rgba(255,70,85,.35)'
@@ -392,6 +392,8 @@ function MatchCard({ match, teamId, navigate }) {
         e.currentTarget.style.borderColor = isWin ? 'rgba(76,175,80,.5)' : isLoss ? 'rgba(255,70,85,.35)' : isLive ? 'rgba(255,70,85,.6)' : 'var(--surface-2)'
       }}
     >
+      {/* Kartın tamamı maç linki; "Yayın" UST_KATMAN ile üstünde */}
+      <KartOrtusu to={`/match/${match.id}`} label={`${match.team_a?.name ?? ''} - ${match.team_b?.name ?? ''} maç detayı`} />
       {/* Top row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -497,8 +499,7 @@ function MatchCard({ match, teamId, navigate }) {
             href={match.stream_url}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={e => e.stopPropagation()}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: 'var(--ai)', background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.35)', borderRadius: 6, padding: '2px 7px', textDecoration: 'none', flexShrink: 0 }}
+            style={{ ...UST_KATMAN, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: 'var(--ai)', background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.35)', borderRadius: 6, padding: '2px 7px', textDecoration: 'none', flexShrink: 0 }}
             onMouseEnter={e => e.currentTarget.style.background = 'rgba(167,139,250,.22)'}
             onMouseLeave={e => e.currentTarget.style.background = 'rgba(167,139,250,.12)'}
           >
@@ -922,7 +923,7 @@ export default function TeamPage() {
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 }}>
-                  {list.map(m => <MatchCard key={m.id} match={m} teamId={teamId} navigate={navigate} />)}
+                  {list.map(m => <MatchCard key={m.id} match={m} teamId={teamId} />)}
                 </div>
               )}
             </>

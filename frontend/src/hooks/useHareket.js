@@ -122,6 +122,9 @@ export function useSiraGecisi(kapRef, imza, ilkSira = null) {
       const o = eski.get(el.dataset.flip)
       const n = yeni.get(el.dataset.flip)
       if (o == null || o === n) continue
+      // Satırın kendi position/z-index'i geri konacak (kart linki örtüsü position: relative ister)
+      // (yarıda kalan geçişte zaten saklı: üstüne yazma, geçişin değerlerini saklamış oluruz)
+      if (!el.dataset.flipStil) el.dataset.flipStil = JSON.stringify([el.style.position, el.style.zIndex])
       el.style.transition = 'none'
       el.style.transform = `translateY(${o - n}px)`
       el.style.position = 'relative'
@@ -132,8 +135,10 @@ export function useSiraGecisi(kapRef, imza, ilkSira = null) {
     if (!hareketli.length) return undefined
 
     const temizle = el => {
+      const [pos = '', z = ''] = JSON.parse(el.dataset.flipStil || '[]')
+      delete el.dataset.flipStil
       el.style.transition = ''; el.style.transform = ''
-      el.style.position = ''; el.style.zIndex = ''; el.style.backgroundColor = ''
+      el.style.position = pos; el.style.zIndex = z; el.style.backgroundColor = ''
     }
     void kap.offsetHeight // reflow: başlangıç konumu çizilsin
     let bitis = 0

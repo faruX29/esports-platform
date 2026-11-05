@@ -32,6 +32,7 @@ import { FlipNumber }                       from '../components/AnimatedNumber'
 import { Damga, SkorParlamasi }            from '../components/Animasyon'
 import { useAcilisGecisi, useDegisimSayaci } from '../hooks/useHareket'
 import InitialsImage                        from '../components/InitialsImage'
+import FextopusEtiketi                      from '../components/FextopusEtiketi'
 import {
   CalendarDays, Clock, Search, Star, Flame, Sparkles, Trophy, Play, Check,
   ChevronDown, TriangleAlert, Loader2, X as XIcon, SlidersHorizontal, ArrowUpDown,
@@ -697,10 +698,11 @@ function KartOlasilikCubugu({ match, belirsiz }) {
         <div style={{ width: `${pA}%`, height: '100%', background: belirsiz ? 'var(--track)' : 'linear-gradient(90deg,#667eea,#764ba2)' }} />
       </div>
       {belirsiz ? (
-        <div style={{ fontSize: 10, color: 'var(--text-4)', marginTop: 3, textAlign: 'center', fontWeight: 700 }}>Fextopus · Başa baş</div>
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}><FextopusEtiketi belirsiz /></div>
       ) : (
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-4)', marginTop: 3, fontVariantNumeric: 'tabular-nums' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10, color: 'var(--text-4)', marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
           <span style={{ color: match.prediction_team_a >= match.prediction_team_b ? '#818cf8' : undefined }}>%{a}</span>
+          <FextopusEtiketi />
           <span style={{ color: match.prediction_team_b > match.prediction_team_a ? '#818cf8' : undefined }}>%{100 - a}</span>
         </div>
       )}

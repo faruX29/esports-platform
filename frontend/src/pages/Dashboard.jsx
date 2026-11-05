@@ -13,7 +13,7 @@ import { isTurkishTeam, useTurkTakimlar }       from '../constants'
 import { useUser }                          from '../context/UserContext'
 import { useAuth }                          from '../context/AuthContext'
 import BRANDING                             from '../branding.config'
-import { Radio, Flag, CalendarDays, Sparkles, Zap, SlidersHorizontal, Clock, CircleCheck, Shield, Trophy, FlaskConical, Newspaper, Flame, Star, TriangleAlert, Play, ChevronRight } from 'lucide-react'
+import { Radio, Flag, CalendarDays, Sparkles, Zap, SlidersHorizontal, Clock, CircleCheck, Shield, Trophy, FlaskConical, Newspaper, Star, TriangleAlert, Play, ChevronRight } from 'lucide-react'
 import { buildNewsSlug }                   from '../utils/newsSlug'
 import { calculatePredictionAccuracy } from '../utils/accuracyTracker'
 import { memo }                             from 'react'
@@ -33,6 +33,8 @@ import { CountUp, FlipNumber }              from '../components/AnimatedNumber'
 import { Asansor, MobilAsansor, useAsansor, ASANSOR_SUTUN } from '../components/Asansor'
 import { izleEtiketi }                      from '../utils/yayin'
 import { Sirayla }                         from '../components/Animasyon'
+import FextopusEtiketi                      from '../components/FextopusEtiketi'
+import FextopusIcon                         from '../components/FextopusIcon'
 
 /** Satırlarda turnuva adı: yalnız aşama ("Regular Season") değil lig + etkinlik.
  *  Dar yerde aşamasız (withStage=false), tam ad title'da. */
@@ -932,14 +934,12 @@ function WinBar({ predA, predB, confidence }) {
         <div style={{ width: grown ? `${pctB}%` : 0, background: bFav ? 'var(--ai)' : 'var(--track)', transition: 'width .75s cubic-bezier(.2,.8,.3,1)' }} />
       </div>
 
-      {/* Yüzde + AI etiketi */}
+      {/* Yüzde + Fextopus etiketi */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: 8, color: aFav ? 'var(--ai)' : 'var(--text-5)', fontWeight: aFav ? 700 : 400 }}>
           {uncertain ? '' : `%${pctA}`}
         </span>
-        <span style={{ fontSize: 8, color: uncertain ? 'var(--text-4)' : (isHot ? '#ff8c42' : 'var(--line-2)'), fontWeight: uncertain || isHot ? 700 : 400, display: 'inline-flex', alignItems: 'center', gap: 2, letterSpacing: uncertain ? '.4px' : 0 }}>
-          {isHot && <Flame size={9} strokeWidth={2.5} />}{uncertain ? 'Fextopus · Başa baş' : 'Fextopus'}
-        </span>
+        <FextopusEtiketi belirsiz={uncertain} sicak={isHot} boyut={9} />
         <span style={{ fontSize: 8, color: bFav ? 'var(--ai)' : 'var(--text-5)', fontWeight: bFav ? 700 : 400 }}>
           {uncertain ? '' : `%${pctB}`}
         </span>
@@ -2906,7 +2906,8 @@ export default function Dashboard() {
       {/* ── Marka + Özet İstatistikler (Bento) — canlı içerik yukarıda, bu blok alta alındı ── */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr 1fr',
+        // Telefonda hero tam satır, 4 istatistik kartı alt alta değil 2×2 (rapor 5 Kas, Adım 3)
+        gridTemplateColumns: isMobile ? 'repeat(2,minmax(0,1fr))' : '2fr 1fr 1fr',
         gridTemplateRows: isMobile ? 'auto' : '1fr 1fr',
         gap: 10,
         marginBottom: 24,
@@ -2915,7 +2916,7 @@ export default function Dashboard() {
 
         {/* ── Hero tile — 2 satır boyunca sol ── */}
         <div style={{
-          gridColumn: '1 / 2',
+          gridColumn: isMobile ? '1 / -1' : '1 / 2',
           gridRow: isMobile ? 'auto' : '1 / 3',
           padding: isMobile ? '20px 16px' : '28px 24px',
           borderRadius: 20,
@@ -2957,7 +2958,7 @@ export default function Dashboard() {
         {/* ── 4 Stat tile — sağdaki 2 sütuna 2×2 grid ── */}
         {statTiles.map((s, i) => (
           <div key={s.label} style={{
-            gridColumn: isMobile ? '1 / 2' : ((i % 2 === 0) ? '2 / 3' : '3 / 4'),
+            gridColumn: isMobile ? 'auto' : ((i % 2 === 0) ? '2 / 3' : '3 / 4'),
             gridRow:    isMobile ? 'auto' : ((i < 2) ? '1 / 2' : '2 / 3'),
             padding: '14px 12px',
             borderRadius: 16,
@@ -2981,11 +2982,13 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* ── Hızlı Linkler — 4 Bento tile ────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,minmax(0,1fr))' : 'repeat(4,1fr)', gap: 10 }}>
+      {/* ── Hızlı Linkler — 6 Bento tile (telefonda 2×3, dar masaüstünde 3×2, genişte tek satır) ── */}
+      <div className="fx-hizli-linkler" style={{ display: 'grid', gap: 10 }}>
         {[
           { to: '/matches',  Icon: CalendarDays, label: 'Maç Takvimi', sub: 'Yaklaşan & Biten',  color: '#FF4655' },
           { to: '/tournaments', Icon: Trophy, label: 'Turnuvalar', sub: 'Aktif ve Geçmiş',  color: '#FFB800' },
+          { to: '/turk-takimlari', Icon: Flag, label: 'Türk Takımları', sub: 'Maçlar ve kadrolar', color: '#E30A17' },
+          { to: '/stats',    Icon: FextopusIcon, label: 'Fextopus', sub: 'Tahmin isabet sicili', color: '#8B5CF6' },
           { to: '/scout',    Icon: FlaskConical, label: 'Scout', sub: 'Oyuncu karşılaştırma', color: '#C25CD0' },
           { to: '/news',     Icon: Newspaper, label: 'Haberler',    sub: 'Son gelişmeler',     color: '#4CAF50' },
         ].map(l => (
@@ -3046,6 +3049,10 @@ export default function Dashboard() {
           from { opacity: 0; transform: translateY(12px) scale(.985); }
           to   { opacity: 1; transform: translateY(0) scale(1); }
         }
+        /* Hızlı Linkler: 6 kart 5+1 ya da 4+2 kırılmasın diye yalnız 2, 3 ya da 6 sütun */
+        .fx-hizli-linkler { grid-template-columns: repeat(3,minmax(0,1fr)); }
+        @media (max-width: 920px) { .fx-hizli-linkler { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+        @media (min-width: 1240px) { .fx-hizli-linkler { grid-template-columns: repeat(6,minmax(0,1fr)); } }
         /* FavoritesBar scroll — webkit için de gizle */
         .fav-scroll::-webkit-scrollbar { display: none }
       `}</style>

@@ -40,6 +40,7 @@ import KapsulSerit from '../components/KapsulSerit'
 import { kapsulStili, kapsulHover } from '../utils/kapsul'
 import { normalizeTurnuvaMaci } from '../utils/turnuvaMaci'
 import LiquipediaCredit from '../components/LiquipediaCredit'
+import FextopusEtiketi from '../components/FextopusEtiketi'
 import { ligPath, ligBaslik, turnuvaLigiGetir } from '../utils/ligler'
 import { buildBracketModel, detectFormat, layoutBracket, BRACKET_DIM, turEtiketi, ayaksizTurNo } from '../utils/bracketModel'
 
@@ -704,11 +705,11 @@ function TurnuvaOlasilikCubugu({ m }) {
         <div style={{ width: `${deger}%`, height: '100%', background: predUncertain ? 'var(--track)' : 'linear-gradient(90deg,#667eea,#764ba2)' }} />
       </div>
       {predUncertain ? (
-        <div style={{ fontSize: 9, color: 'var(--text-4)', marginTop: 3, textAlign: 'center', fontWeight: 700, letterSpacing: '.4px' }}>FEXTOPUS · BELİRSİZ</div>
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}><FextopusEtiketi belirsiz /></div>
       ) : (
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, marginTop: 3, fontWeight: 700 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 9, marginTop: 4, fontWeight: 700 }}>
           <span style={{ color: m.prediction_team_a >= m.prediction_team_b ? '#818cf8' : 'var(--text-5)' }}>%{pA}</span>
-          <span style={{ color: 'var(--text-6)' }}>Fextopus</span>
+          <FextopusEtiketi />
           <span style={{ color: m.prediction_team_b > m.prediction_team_a ? '#818cf8' : 'var(--text-5)' }}>%{100 - pA}</span>
         </div>
       )}

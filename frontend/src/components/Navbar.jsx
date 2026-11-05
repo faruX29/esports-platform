@@ -8,9 +8,16 @@ import ThemeToggle from './ThemeToggle'
 import { FEXT } from '../theme'
 
 /* Nav öğesi — lucide ikon + hover state (emoji "AI havası"nı kaldırır) */
-const NAV_HAMBURGER_PX = 1200
+// Genişlik eşikleri (6 Kas ölçümü, 8 öğe; arama yerleşimde 180 px, odakta üstüne biner):
+//   ikonlu satır  ~1360 px (çıkışta Giriş/Kayıt) · ~1410 px (girişte, kullanıcı adı ≤110 px)
+//   ikonsuz satır ~1184 px · ~1234 px (girişte)
+// Ölçülmeden eşik altına inilince lucide ikonları flex içinde eziliyordu.
+// Öğe eklersen üç eşiği de yeniden ölç: satırdaki linklerin genişlik toplamı
+// + sağ blok, `NavPill` satırının genişliğini geçmemeli.
+const NAV_HAMBURGER_PX = 1240
+const NAV_IKONLU_PX = 1440
 
-function NavItem({ link, mobile = false }) {
+function NavItem({ link, mobile = false, ikonsuz = false }) {
   const [hover, setHover] = useState(false)
   const Icon = link.icon
   return (
@@ -41,7 +48,7 @@ function NavItem({ link, mobile = false }) {
             display: 'inline-flex', alignItems: 'center', gap: 7, height: 34,
           })}
     >
-      {Icon && <Icon size={mobile ? 16 : 15} strokeWidth={2} />}
+      {Icon && !ikonsuz && <Icon size={mobile ? 16 : 15} strokeWidth={2} />}
       {link.label}
     </NavLink>
   )
@@ -55,7 +62,7 @@ function NavItem({ link, mobile = false }) {
  * tek bir kapsül var ve aktif linkin ölçülen konumuna kayıyor (transform →
  * GPU, layout tetiklemez).
  */
-function NavPill({ navLinks }) {
+function NavPill({ navLinks, ikonsuz }) {
   const rowRef = useRef(null)
   const location = useLocation()
   const [pill, setPill] = useState({ left: 0, width: 0, ready: false })
@@ -76,7 +83,7 @@ function NavPill({ navLinks }) {
       window.cancelAnimationFrame(raf)
       window.removeEventListener('resize', measure)
     }
-  }, [location.pathname, navLinks])
+  }, [location.pathname, navLinks, ikonsuz])
 
   return (
     <div ref={rowRef} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 2, flex: 1, height: 34 }}>
@@ -100,7 +107,7 @@ function NavPill({ navLinks }) {
         }}
       />
       {navLinks.map(l => (
-        <NavItem key={l.to} link={l} />
+        <NavItem key={l.to} link={l} ikonsuz={ikonsuz} />
       ))}
     </div>
   )
@@ -139,16 +146,17 @@ function AuthWidget() {
 }
 
 export default function Navbar({ navLinks, SearchComponent }) {
-  // 7 menü öğesi + arama + giriş düğmeleri ~1140px ister; altında satır taşıp
-  // ikonlar eziliyordu (Türk Takımları öğesi eklenince belirginleşti) → hamburger
+  // Eşikler dosya başında: dar ekranda hamburger, ara genişlikte ikonsuz satır.
   const location = useLocation()
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= NAV_HAMBURGER_PX)
+  const [ikonsuz, setIkonsuz] = useState(() => window.innerWidth < NAV_IKONLU_PX)
   const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     const onResize = () => {
       const mobile = window.innerWidth <= NAV_HAMBURGER_PX
       setIsMobile(mobile)
+      setIkonsuz(window.innerWidth < NAV_IKONLU_PX)
       if (!mobile) setMenuOpen(false)
     }
 
@@ -182,10 +190,10 @@ export default function Navbar({ navLinks, SearchComponent }) {
 
         {!isMobile && (
           <>
-            <NavPill navLinks={navLinks} />
+            <NavPill navLinks={navLinks} ikonsuz={ikonsuz} />
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 34 }}>
-              {SearchComponent ? <SearchComponent /> : null}
+              {SearchComponent ? <SearchComponent ustuneBin /> : null}
               <ThemeToggle />
               <AuthWidget />
             </div>
@@ -219,8 +227,11 @@ export default function Navbar({ navLinks, SearchComponent }) {
         <div style={{
           borderTop: '1px solid var(--line)',
           background: 'var(--bg)',
-          overflow: 'hidden',
-          maxHeight: menuOpen ? 420 : 0,
+          // Sabit 420 px 8 öğede Giriş/Kayıt'ı kesiyordu (içerik ~472 px): ekran
+          // boyu kadar açılır, kısa ekranda (yatay telefon) menü kendi içinde kayar.
+          overflowX: 'hidden',
+          overflowY: menuOpen ? 'auto' : 'hidden',
+          maxHeight: menuOpen ? 'calc(100dvh - 58px)' : 0,
           opacity: menuOpen ? 1 : 0,
           transform: menuOpen ? 'translateY(0)' : 'translateY(-6px)',
           transition: 'max-height .28s ease, opacity .2s ease, transform .24s ease',

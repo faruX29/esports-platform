@@ -28,6 +28,7 @@ import GameLogo, { GAME_ICON_PATHS } from './components/GameLogo'
 import { FEXT } from './theme'
 import { adDili } from './utils/dil'
 import OyunRozeti from './components/OyunRozeti'
+import FextopusIcon from './components/FextopusIcon'
 import { tournamentDisplayName } from './utils/tournamentDisplay'
 import { normalizeGameId } from './utils/gameUtils'
 import { Home, CalendarDays, Trophy, BarChart3, Newspaper, Radar, Flag, Search, X as XIcon, Shield, User, ArrowRight, CornerDownLeft } from 'lucide-react'
@@ -65,6 +66,9 @@ const NAV_LINKS = [
   { to: '/matches',  label: 'Maçlar',    end: false, icon: CalendarDays },
   { to: '/tournaments', label: 'Turnuvalar', end: false, icon: Trophy },
   { to: '/rankings', label: 'Sıralama',  end: false, icon: BarChart3 },
+  // Fextopus isabet sicili menüde görünsün (rapor 5 Kas, Adım 3). Alt gezinmede yok:
+  // 6 öğe 320-375 px'te sıkışıyor (en fazla 5); telefonda hamburger menüde.
+  { to: '/stats',    label: 'Fextopus',  end: false, icon: FextopusIcon },
   // NOT: '/players' listeleme sekmesi gizlendi — oyuncu istatistikleri seyrek olduğu
   // için sıralama/compare boş duruyordu. Oyuncu DETAY sayfaları (/player/:id) arama +
   // takım kadrosu + maç üzerinden erişilir kalır. İstatistik kapsamı büyüyünce geri açılır.
@@ -79,7 +83,7 @@ const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navig
 const KISAYOL_IPUCU = typeof window !== 'undefined' && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches
 
 /* ─── NavSearch ─────────────────────────────────────────────────────────────── */
-function NavSearch() {
+function NavSearch({ ustuneBin = false }) {
   const navigate                  = useNavigate()
   const location                  = useLocation()
   const [q,       setQ]           = useState('')
@@ -194,10 +198,14 @@ function NavSearch() {
   const hasResults = results.teams.length > 0 || results.players.length > 0 || results.tournaments.length > 0
   const showDrop   = focused && q.trim().length >= 2
 
+  // ustuneBin (masaüstü satırı): yerleşimde hep 180 px; odakta 260'a sola doğru menünün
+  // üstüne biner. Eskiden genişleyince menü satırını itiyor, ikonlar eziliyordu.
   return (
-    <div style={{ position: 'relative', flexShrink: 0 }}>
+    <div style={ustuneBin
+      ? { position: 'relative', flexShrink: 0, width: 180, height: 34 }
+      : { position: 'relative', flexShrink: 0 }}>
       {/* Input */}
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} style={ustuneBin ? { position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', zIndex: 2 } : undefined}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 6,
           background: focused ? 'var(--surface-2)' : 'var(--surface)',

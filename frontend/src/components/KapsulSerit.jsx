@@ -5,13 +5,14 @@
  * `utils/kapsul.js`'te.
  */
 import DragScroll from './DragScroll'
+import { yazi } from '../theme'
 
 export default function KapsulSerit({ Icon, baslik, ariaLabel, minHeight, children }) {
   return (
     <div>
       {baslik && (
         <div style={{
-          fontSize: 10, fontWeight: 800, letterSpacing: '.8px', textTransform: 'uppercase',
+          fontSize: yazi(10), fontWeight: 800, letterSpacing: '.8px', textTransform: 'uppercase',
           color: 'var(--text-4)', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 6,
         }}>
           {Icon && <Icon size={12} />} {baslik}

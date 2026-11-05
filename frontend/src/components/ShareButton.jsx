@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Check, Link2, MessageCircle, Share2 } from 'lucide-react'
 import { UYGULAMA, disariKok } from '../utils/platform'
+import { yazi } from '../theme'
 
 /**
  * Paylaşım butonu — WhatsApp + linki kopyala; telefonda tek "Paylaş" (sistem paylaşım
@@ -66,7 +67,7 @@ export default function ShareButton({ path, title = '', compact = false }) {
   const minH = compact ? undefined : 38
   const stil = {
     border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-2)',
-    borderRadius: 8, padding: pad, minHeight: minH, fontSize: fs, fontWeight: 700, cursor: 'pointer',
+    borderRadius: 8, padding: pad, minHeight: minH, fontSize: yazi(fs), fontWeight: 700, cursor: 'pointer',
     display: 'inline-flex', alignItems: 'center', gap: 5,
   }
 

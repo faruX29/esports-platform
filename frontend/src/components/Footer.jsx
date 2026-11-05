@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { yazi } from '../theme'
 
 function InstagramIcon() {
   return (
@@ -25,14 +26,15 @@ const WORDMARK = (
 
 function Col({ title, children }) {
   return (
-    <div style={{ display: 'grid', gap: 8, alignContent: 'start' }}>
-      <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-5)' }}>{title}</div>
+    <div style={{ display: 'grid', gap: 2, alignContent: 'start' }}>
+      <div style={{ fontSize: yazi(10), fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-5)' }}>{title}</div>
       {children}
     </div>
   )
 }
 
-const linkStyle = { fontSize: 13, color: 'var(--text-3)', textDecoration: 'none' }
+// padding: dokunma alanı 24 px (sütun aralığı 8 → 4 px, görünüm aynı)
+const linkStyle = { fontSize: 13, color: 'var(--text-3)', textDecoration: 'none', display: 'inline-block', padding: '3px 0' }
 
 function FLink({ to, children }) {
   return (
@@ -99,11 +101,11 @@ export default function Footer() {
         {/* Alt şerit: telif + veri atıfları */}
         <div style={{ marginTop: 28, paddingTop: 18, borderTop: '1px solid var(--surface-2)', display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 12, color: 'var(--text-5)' }}>© {year} feXt · Tüm hakları saklıdır.</span>
-          <span style={{ fontSize: 11, color: 'var(--text-5)' }}>
+          <span style={{ fontSize: yazi(11), color: 'var(--text-5)' }}>
             Veri kaynakları:{' '}
-            <a href="https://liquipedia.net" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-4)', textDecoration: 'underline' }}>Liquipedia</a>
+            <a href="https://liquipedia.net" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-4)', textDecoration: 'underline', display: 'inline-block', padding: '5px 0' }}>Liquipedia</a>
             {' · '}
-            <a href="https://pandascore.co" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-4)', textDecoration: 'underline' }}>PandaScore</a>
+            <a href="https://pandascore.co" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-4)', textDecoration: 'underline', display: 'inline-block', padding: '5px 0' }}>PandaScore</a>
           </span>
         </div>
       </div>

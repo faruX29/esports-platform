@@ -8,10 +8,10 @@ export default function TrBadge({ style }) {
     <span
       title="Türk takımı"
       style={{
-        fontSize: '0.7em',
+        fontSize: 'max(var(--yazi-taban), 0.7em)', // telefonda en az 12 px (index.css)
         fontWeight: 800,
         letterSpacing: '.4px',
-        color: '#E0455E',
+        color: 'var(--tr-fg)',
         margin: '0 3px',
         verticalAlign: 'baseline',
         whiteSpace: 'nowrap',

@@ -1,5 +1,6 @@
 import { Flame } from 'lucide-react'
 import FextopusIcon from './FextopusIcon'
+import { yazi } from '../theme'
 
 /**
  * FextopusEtiketi — maç kartlarında oran çubuğunun ortasındaki küçük
@@ -14,7 +15,7 @@ export default function FextopusEtiketi({ belirsiz = false, sicak = false, boyut
       title="Fextopus tahmini"
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 3,
-        fontSize: boyut, fontWeight: 700, color: renk, lineHeight: 1, whiteSpace: 'nowrap',
+        fontSize: yazi(boyut), fontWeight: 700, color: renk, lineHeight: 1, whiteSpace: 'nowrap',
       }}
     >
       <FextopusIcon size={boyut + 4} title="Fextopus tahmini" />

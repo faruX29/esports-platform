@@ -30,11 +30,12 @@ export const FEXT = {
   accentBorder: 'rgba(194,92,208,.40)',
   accentGlow:   'rgba(194,92,208,.15)',
 
-  // Maç durumu rozetleri
+  // Maç durumu rozetleri. `color` sabit hex (kenarlık/zemin için alfa eklenir); rozet YAZISI
+  // `fg` ile (tema-farkında: aydınlıkta koyulaşır, index.css --canli-fg/--yesil-fg).
   status: {
-    live:     { color: '#FF4655', bg: 'rgba(255,70,85,.16)' },   // canlı = kırmızı (evrensel)
-    upcoming: { color: '#94A3B8', bg: 'rgba(148,163,184,.12)' }, // yaklaşan = nötr slate
-    finished: { color: '#46B658', bg: 'rgba(70,182,88,.12)' },   // bitti = ölçülü yeşil
+    live:     { color: '#FF4655', fg: 'var(--canli-fg)', bg: 'rgba(255,70,85,.16)' },   // canlı = kırmızı (evrensel)
+    upcoming: { color: '#94A3B8', fg: 'var(--text-3)',   bg: 'rgba(148,163,184,.12)' }, // yaklaşan = nötr slate
+    finished: { color: '#46B658', fg: 'var(--yesil-fg)', bg: 'rgba(70,182,88,.12)' },   // bitti = ölçülü yeşil
   },
 
   // Olumlu/uyarı (gerekince)
@@ -42,6 +43,10 @@ export const FEXT = {
   warn:    '#E0A24D',
   danger:  '#FF4655',
 }
+
+/** 12 px'ten küçük yazı boyutu: masaüstünde verilen değer, telefonda (≤768 px) en az 12 px.
+ *  Taban `index.css` `--yazi-taban`'da. 12 ve üstü için düz sayı yaz. */
+export const yazi = px => `max(var(--yazi-taban), ${px}px)`
 
 /** Oyun kimlik renkleri (rafine/soft) — GameContext ve rozetler bunu kullanır. */
 export const GAME_COLORS = {
@@ -68,6 +73,6 @@ export function statusStyle(status, scheduledAt) {
   const s = String(status || '').toLowerCase()
   if (s === 'running' || s === 'live')  return { text: 'CANLI',    ...FEXT.status.live }
   if (s === 'finished')                 return { text: 'Bitti',    ...FEXT.status.finished }
-  if (saatiGecti(scheduledAt))          return { text: 'Sonuç bekleniyor', kisa: 'Bekleniyor', color: FEXT.warn, bg: 'rgba(224,162,77,.12)' }
+  if (saatiGecti(scheduledAt))          return { text: 'Sonuç bekleniyor', kisa: 'Bekleniyor', color: FEXT.warn, fg: 'var(--altin-fg)', bg: 'rgba(224,162,77,.12)' }
   return { text: 'Yaklaşan', ...FEXT.status.upcoming } // not_started / upcoming / diğer
 }

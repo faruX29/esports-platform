@@ -1,5 +1,6 @@
 import InitialsImage from './InitialsImage'
 import { ArrowRight, CalendarDays, Trophy } from 'lucide-react'
+import { yazi } from '../theme'
 
 /** heroScore string'inden ("Team A 13 - 8 Team B") salt skoru ("13 - 8") çıkarır. */
 export function scoreFromHero(heroScore) {
@@ -71,7 +72,7 @@ export default function NewsCover({ visuals, score = '', height = 180, compact =
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
       }}>
         <span style={{
-          fontSize: compact ? 9 : 10, fontWeight: 800, letterSpacing: '.6px',
+          fontSize: compact ? yazi(9) : yazi(10), fontWeight: 800, letterSpacing: '.6px',
           textTransform: 'uppercase', color: '#fff',
           padding: '3px 8px', borderRadius: 999,
           background: `${accent}33`, border: `1px solid ${accent}66`,
@@ -80,7 +81,7 @@ export default function NewsCover({ visuals, score = '', height = 180, compact =
         </span>
         {v.tier && (
           <span style={{
-            fontSize: compact ? 9 : 10, fontWeight: 700, color: '#e2e8f0',
+            fontSize: compact ? yazi(9) : yazi(10), fontWeight: 700, color: '#e2e8f0',
             padding: '3px 8px', borderRadius: 999,
             background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.14)',
           }}>
@@ -96,7 +97,7 @@ export default function NewsCover({ visuals, score = '', height = 180, compact =
             {v.weekly.baslik}
           </div>
           {v.weekly.alt && (
-            <div style={{ fontSize: compact ? 11 : 14, fontWeight: 700, color: '#cbd5e1' }}>{v.weekly.alt}</div>
+            <div style={{ fontSize: compact ? yazi(11) : 14, fontWeight: 700, color: '#cbd5e1' }}>{v.weekly.alt}</div>
           )}
         </div>
       ) : (
@@ -113,7 +114,7 @@ export default function NewsCover({ visuals, score = '', height = 180, compact =
             style={{ background: 'rgba(255,255,255,.04)', padding: 6, border: '1px solid rgba(255,255,255,.1)' }}
           />
           {!compact && (
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0', maxWidth: 120, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: yazi(11), fontWeight: 700, color: '#e2e8f0', maxWidth: 120, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {teamA.name}
             </span>
           )}
@@ -136,7 +137,7 @@ export default function NewsCover({ visuals, score = '', height = 180, compact =
             style={{ background: 'rgba(255,255,255,.04)', padding: 6, border: '1px solid rgba(255,255,255,.1)' }}
           />
           {!compact && (
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0', maxWidth: 120, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: yazi(11), fontWeight: 700, color: '#e2e8f0', maxWidth: 120, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {teamB.name}
             </span>
           )}
@@ -150,7 +151,7 @@ export default function NewsCover({ visuals, score = '', height = 180, compact =
           position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 2,
           padding: compact ? '5px 12px' : '7px 14px',
           background: 'linear-gradient(0deg, rgba(0,0,0,.7), transparent)',
-          fontSize: compact ? 9 : 10, color: '#cbd5e1', fontWeight: 600,
+          fontSize: compact ? yazi(9) : yazi(10), color: '#cbd5e1', fontWeight: 600,
           textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {v.tournamentName}
@@ -162,7 +163,7 @@ export default function NewsCover({ visuals, score = '', height = 180, compact =
         <div style={{
           position: 'absolute', top: compact ? 36 : 40, right: 0, zIndex: 2,
           background: 'linear-gradient(90deg,#C8102E,#a00d25)',
-          color: '#fff', fontSize: 8, fontWeight: 800, letterSpacing: '.8px',
+          color: '#fff', fontSize: yazi(8), fontWeight: 800, letterSpacing: '.8px',
           padding: '3px 8px', borderRadius: '6px 0 0 6px', textTransform: 'uppercase',
         }}>
           TR

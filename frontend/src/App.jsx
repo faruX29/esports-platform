@@ -25,7 +25,7 @@ import NavbarComponent from './components/Navbar'
 import Footer from './components/Footer'
 import AltGezinme, { useAltGezinme, ALT_GEZINME_YUKSEKLIK } from './components/AltGezinme'
 import GameLogo, { GAME_ICON_PATHS } from './components/GameLogo'
-import { FEXT } from './theme'
+import { FEXT, yazi } from './theme'
 import { adDili } from './utils/dil'
 import OyunRozeti from './components/OyunRozeti'
 import FextopusIcon from './components/FextopusIcon'
@@ -232,7 +232,7 @@ function NavSearch({ ustuneBin = false }) {
           {/* Kısayol rozeti — Mac'te ⌘K, diğerlerinde Ctrl K */}
           {!focused && KISAYOL_IPUCU && (
             <span style={{
-              fontSize: 9, padding: '2px 5px', borderRadius: 4,
+              fontSize: yazi(9), padding: '2px 5px', borderRadius: 4,
               background: 'var(--surface-2)', border: '1px solid var(--line)',
               color: 'var(--text-4)', flexShrink: 0, fontFamily: 'monospace', whiteSpace: 'nowrap',
             }}>{IS_MAC ? '⌘K' : 'Ctrl K'}</span>
@@ -280,7 +280,7 @@ function NavSearch({ ustuneBin = false }) {
           {/* Teams */}
           {results.teams.length > 0 && (
             <div>
-              <div style={{ padding: '8px 14px 4px', fontSize: 9, color: 'var(--text-5)',
+              <div style={{ padding: '8px 14px 4px', fontSize: yazi(9), color: 'var(--text-5)',
                 fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5 }}>
                 <Shield size={11} /> Takımlar
               </div>
@@ -309,7 +309,7 @@ function NavSearch({ ustuneBin = false }) {
                     {t.name}
                   </span>
                   {t.acronym && t.acronym !== t.name && (
-                    <span lang="en" style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-5)',
+                    <span lang="en" style={{ fontSize: yazi(10), fontWeight: 700, color: 'var(--text-5)',
                       flexShrink: 0 }}>{t.acronym}</span>
                   )}
                   {/* Aynı adlı takımlar (Eternal Fire CS2 / VALORANT) oyunla ayrılır */}
@@ -322,7 +322,7 @@ function NavSearch({ ustuneBin = false }) {
           {/* Players */}
           {results.players.length > 0 && (
             <div style={{ borderTop: results.teams.length > 0 ? '1px solid var(--line)' : 'none' }}>
-              <div style={{ padding: '8px 14px 4px', fontSize: 9, color: 'var(--text-5)',
+              <div style={{ padding: '8px 14px 4px', fontSize: yazi(9), color: 'var(--text-5)',
                 fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5 }}>
                 <User size={11} /> Oyuncular
               </div>
@@ -352,13 +352,13 @@ function NavSearch({ ustuneBin = false }) {
                     {p.nickname}
                   </span>
                   {p.real_name && (
-                    <span style={{ fontSize: 11, color: 'var(--text-5)', flexShrink: 1,
+                    <span style={{ fontSize: yazi(11), color: 'var(--text-5)', flexShrink: 1,
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {p.real_name}
                     </span>
                   )}
                   {p.role && (
-                    <span style={{ marginLeft: 'auto', fontSize: 9, padding: '2px 6px',
+                    <span style={{ marginLeft: 'auto', fontSize: yazi(9), padding: '2px 6px',
                       borderRadius: 4, background: 'var(--surface-2)', color: 'var(--text-4)',
                       flexShrink: 0 }}>{p.role}</span>
                   )}
@@ -370,7 +370,7 @@ function NavSearch({ ustuneBin = false }) {
           {/* Tournaments */}
           {results.tournaments.length > 0 && (
             <div style={{ borderTop: (results.teams.length > 0 || results.players.length > 0) ? '1px solid var(--line)' : 'none' }}>
-              <div style={{ padding: '8px 14px 4px', fontSize: 9, color: 'var(--text-5)',
+              <div style={{ padding: '8px 14px 4px', fontSize: yazi(9), color: 'var(--text-5)',
                 fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5 }}>
                 <Trophy size={11} /> Turnuvalar
               </div>
@@ -393,7 +393,7 @@ function NavSearch({ ustuneBin = false }) {
                   </span>
                   <OyunRozeti oyun={t.game} style={{ marginLeft: 'auto' }} />
                   {t.tier && (
-                    <span style={{ fontSize: 9, padding: '2px 6px',
+                    <span style={{ fontSize: yazi(9), padding: '2px 6px',
                       borderRadius: 4, background: 'var(--surface-2)', color: 'var(--text-4)', flexShrink: 0 }}>
                       {String(t.tier).toUpperCase()}
                     </span>
@@ -419,7 +419,7 @@ function NavSearch({ ustuneBin = false }) {
             <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
               "<span style={{ color: FEXT.accentText, fontWeight: 700 }}>{q}</span>" için tüm sonuçları gör
             </span>
-            {KISAYOL_IPUCU && <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-5)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>Enter <CornerDownLeft size={11} /></span>}
+            {KISAYOL_IPUCU && <span style={{ marginLeft: 'auto', fontSize: yazi(10), color: 'var(--text-5)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>Enter <CornerDownLeft size={11} /></span>}
           </div>
         </div>
       )}
@@ -506,7 +506,7 @@ function GameSelectorBar() {
                 display: 'flex', alignItems: 'center', gap: 7,
                 padding: '8px 12px', border: 'none', background: 'transparent',
                 color: active ? 'var(--text)' : g.soon ? 'var(--text-5)' : 'var(--text-3)',
-                fontSize: 11, fontWeight: active ? 800 : 600,
+                fontSize: yazi(11), fontWeight: active ? 800 : 600,
                 letterSpacing: '.5px', textTransform: 'uppercase',
                 cursor: g.soon ? 'default' : 'pointer',
                 transition: 'color .2s, transform .2s cubic-bezier(.2,.8,.3,1)',
@@ -530,7 +530,7 @@ function GameSelectorBar() {
               }
               <span lang={adDili(g.shortLabel ?? g.label)}>{g.shortLabel ?? g.label}</span>
               {g.soon && (
-                <span style={{ fontSize: 8, padding: '1px 4px', borderRadius: 4,
+                <span style={{ fontSize: yazi(8), padding: '1px 4px', borderRadius: 4,
                   background: 'var(--surface-2)', color: 'var(--text-4)', letterSpacing: 0 }}>soon</span>
               )}
             </button>
@@ -683,7 +683,7 @@ function RealtimeToastBridge() {
               border: '1px solid rgba(255,214,111,.35)',
               borderRadius: 999,
               padding: '7px 12px',
-              fontSize: 11,
+              fontSize: yazi(11),
               fontWeight: 700,
               cursor: 'pointer',
             }}
@@ -699,7 +699,7 @@ function RealtimeToastBridge() {
               border: '1px solid rgba(143,243,180,.35)',
               borderRadius: 999,
               padding: '7px 10px',
-              fontSize: 11,
+              fontSize: yazi(11),
               fontWeight: 700,
               cursor: 'pointer',
             }}

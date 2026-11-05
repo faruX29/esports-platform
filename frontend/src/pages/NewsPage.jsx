@@ -24,7 +24,7 @@ import { tournamentDisplayName } from '../utils/tournamentDisplay'
 import { buildNewsSlug } from '../utils/newsSlug'
 import { MessageSquare, Library } from 'lucide-react'
 import LikeButton from '../components/LikeButton'
-import { FEXT } from '../theme'
+import { FEXT, yazi } from '../theme'
 import { KartOrtusu, UST_KATMAN } from '../components/KartLink'
 
 const GAME_FILTERS = GAMES.filter(game => !game.soon && game.id !== 'all' && ['valorant', 'cs2', 'lol'].includes(game.id))
@@ -142,7 +142,7 @@ function articleRowToStory(row) {
 function NewsTrustLayer({ item, onReport }) {
   return (
     <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-      <span style={{ fontSize: 11, color: 'var(--text-3)' }}>PandaScore verileriyle otomatik üretilmiştir.</span>
+      <span style={{ fontSize: yazi(11), color: 'var(--text-3)' }}>PandaScore verileriyle otomatik üretilmiştir.</span>
       <div style={{ ...UST_KATMAN, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
         <ShareButton path={`/news/${buildNewsSlug(item)}`} title={item.title} compact />
         <button
@@ -153,7 +153,7 @@ function NewsTrustLayer({ item, onReport }) {
             color: 'var(--text-1)',
             borderRadius: 8,
             padding: '5px 8px',
-            fontSize: 11,
+            fontSize: yazi(11),
             cursor: 'pointer',
           }}
         >
@@ -220,23 +220,23 @@ function NewsCard({ item, likes, liked, comments, onLike, onReport, isForYou, is
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             {isForYou && (
-              <span style={{ fontSize: 10, color: '#ffe5ac', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.9px', padding: '4px 8px', borderRadius: 999, background: 'rgba(255,183,0,.16)', border: '1px solid rgba(255,183,0,.42)' }}>
+              <span style={{ fontSize: yazi(10), color: '#ffe5ac', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.9px', padding: '4px 8px', borderRadius: 999, background: 'rgba(255,183,0,.16)', border: '1px solid rgba(255,183,0,.42)' }}>
                 Senin için
               </span>
             )}
-            <span style={{ fontSize: 10, color: 'var(--text-1)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, padding: '4px 8px', borderRadius: 999, background: `${visuals.gameColor}22`, border: `1px solid ${visuals.gameColor}55` }}>
+            <span style={{ fontSize: yazi(10), color: 'var(--text-1)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, padding: '4px 8px', borderRadius: 999, background: `${visuals.gameColor}22`, border: `1px solid ${visuals.gameColor}55` }}>
               {item.tag}
             </span>
-            <span style={{ fontSize: 10, color: 'var(--text-1)', padding: '4px 8px', borderRadius: 999, background: 'rgba(255,255,255,.04)', border: '1px solid var(--line)' }}>
+            <span style={{ fontSize: yazi(10), color: 'var(--text-1)', padding: '4px 8px', borderRadius: 999, background: 'rgba(255,255,255,.04)', border: '1px solid var(--line)' }}>
               {visuals.gameLabel}
             </span>
             {visuals.tier && (
-              <span style={{ fontSize: 10, color: HERO_TIERS.has(visuals.tier) ? 'var(--ai)' : 'var(--text-2)', padding: '4px 8px', borderRadius: 999, background: HERO_TIERS.has(visuals.tier) ? 'rgba(194,92,208,.18)' : 'var(--hover)', border: HERO_TIERS.has(visuals.tier) ? '1px solid rgba(194,92,208,.35)' : '1px solid var(--line)' }}>
+              <span style={{ fontSize: yazi(10), color: HERO_TIERS.has(visuals.tier) ? 'var(--ai)' : 'var(--text-2)', padding: '4px 8px', borderRadius: 999, background: HERO_TIERS.has(visuals.tier) ? 'rgba(194,92,208,.18)' : 'var(--hover)', border: HERO_TIERS.has(visuals.tier) ? '1px solid rgba(194,92,208,.35)' : '1px solid var(--line)' }}>
                 Tier {visuals.tier}
               </span>
             )}
           </div>
-          <span style={{ fontSize: 10, color: 'var(--text-4)' }}>{fmtDate(item.publishedAt)}</span>
+          <span style={{ fontSize: yazi(10), color: 'var(--text-4)' }}>{fmtDate(item.publishedAt)}</span>
         </div>
 
         <div style={{ marginBottom: 12 }}>
@@ -257,7 +257,7 @@ function NewsCard({ item, likes, liked, comments, onLike, onReport, isForYou, is
           </span>
           {/* Düğme görünümlü etiket: tıklama kartın linkine düşer (haber sayfası, yorumlar orada) */}
           <span
-            style={{ fontSize: 11, color: comments.length > 0 ? '#a0c4ff' : 'var(--text-3)', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 8, background: comments.length > 0 ? 'rgba(100,160,255,.08)' : 'var(--surface)', border: comments.length > 0 ? '1px solid rgba(100,160,255,.2)' : '1px solid var(--line)', fontWeight: comments.length > 0 ? 700 : 400, cursor: 'pointer' }}
+            style={{ fontSize: yazi(11), color: comments.length > 0 ? '#a0c4ff' : 'var(--text-3)', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 8, background: comments.length > 0 ? 'rgba(100,160,255,.08)' : 'var(--surface)', border: comments.length > 0 ? '1px solid rgba(100,160,255,.2)' : '1px solid var(--line)', fontWeight: comments.length > 0 ? 700 : 400, cursor: 'pointer' }}
           >
             <MessageSquare size={12} /> {comments.length > 0 ? `${comments.length} yorum` : 'Yorum yap'} ›
           </span>
@@ -580,7 +580,7 @@ export default function NewsPage() {
       />
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: isMobile ? '14px 10px 34px' : '22px 16px 48px' }}>
         <div style={{ borderRadius: 18, border: '1px solid var(--surface-2)', overflow: 'hidden', marginBottom: 18, background: 'linear-gradient(180deg,var(--bg) 0%,var(--surface) 100%)' }}>
-          <div style={{ background: FEXT.accentGrad, color: '#fff', fontSize: 11, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase', textAlign: 'center', padding: 8 }}>
+          <div style={{ background: FEXT.accentGrad, color: '#fff', fontSize: yazi(11), fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase', textAlign: 'center', padding: 8 }}>
             feXt Haber Masası
           </div>
           <div style={{ padding: 18, background: 'radial-gradient(circle at 78% 20%, rgba(194,92,208,.18), transparent 36%), radial-gradient(circle at 10% 12%, var(--hover), transparent 24%), var(--surface)' }}>
@@ -637,7 +637,7 @@ export default function NewsPage() {
 
         {hero && (
           <section style={{ marginBottom: 18 }}>
-            <div style={{ marginBottom: 8, fontSize: 11, color: '#c61b33', textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 800 }}>
+            <div style={{ marginBottom: 8, fontSize: yazi(11), color: 'var(--danger-fg)', textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 800 }}>
               {hero.isForYou ? 'Manşet · Senin için' : 'Manşet'}
             </div>
             <article style={{ borderRadius: 18, padding: isMobile ? 14 : 20, border: '1px solid var(--line)', background: 'linear-gradient(145deg,var(--surface),var(--surface))', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
@@ -647,23 +647,23 @@ export default function NewsPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     {hero.isForYou && (
-                      <span style={{ fontSize: 10, color: '#ffe5ac', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.9px', padding: '5px 9px', borderRadius: 999, background: 'rgba(255,183,0,.16)', border: '1px solid rgba(255,183,0,.42)' }}>
+                      <span style={{ fontSize: yazi(10), color: '#ffe5ac', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.9px', padding: '5px 9px', borderRadius: 999, background: 'rgba(255,183,0,.16)', border: '1px solid rgba(255,183,0,.42)' }}>
                         Senin için
                       </span>
                     )}
-                    <span style={{ fontSize: 10, color: 'var(--ai)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.1, padding: '5px 9px', borderRadius: 999, background: 'rgba(194,92,208,.18)', border: '1px solid rgba(194,92,208,.38)' }}>
+                    <span style={{ fontSize: yazi(10), color: 'var(--ai)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.1, padding: '5px 9px', borderRadius: 999, background: 'rgba(194,92,208,.18)', border: '1px solid rgba(194,92,208,.38)' }}>
                       Manşet
                     </span>
-                    <span style={{ fontSize: 10, color: 'var(--text-1)', padding: '5px 9px', borderRadius: 999, background: `${hero.visuals.gameColor}22`, border: `1px solid ${hero.visuals.gameColor}55` }}>
+                    <span style={{ fontSize: yazi(10), color: 'var(--text-1)', padding: '5px 9px', borderRadius: 999, background: `${hero.visuals.gameColor}22`, border: `1px solid ${hero.visuals.gameColor}55` }}>
                       {hero.visuals.gameLabel}
                     </span>
                     {hero.visuals.tier && (
-                      <span style={{ fontSize: 10, color: 'var(--ai)', padding: '5px 9px', borderRadius: 999, background: 'rgba(194,92,208,.18)', border: '1px solid rgba(194,92,208,.34)' }}>
+                      <span style={{ fontSize: yazi(10), color: 'var(--ai)', padding: '5px 9px', borderRadius: 999, background: 'rgba(194,92,208,.18)', border: '1px solid rgba(194,92,208,.34)' }}>
                         Tier {hero.visuals.tier}
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{fmtDate(hero.publishedAt)}</div>
+                  <div style={{ fontSize: yazi(11), color: 'var(--text-3)' }}>{fmtDate(hero.publishedAt)}</div>
                 </div>
 
                 <div style={{ marginBottom: 14 }}>
@@ -691,7 +691,7 @@ export default function NewsPage() {
         )}
 
         <section>
-          <div style={{ marginBottom: 10, fontSize: 11, color: 'var(--text-1)', textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 800 }}>Gündem</div>
+          <div style={{ marginBottom: 10, fontSize: yazi(11), color: 'var(--text-1)', textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 800 }}>Gündem</div>
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit,minmax(320px,1fr))' }}>
             {pagedAgenda.map(item => (
               <NewsCard

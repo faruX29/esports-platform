@@ -24,7 +24,7 @@ import TurkishBadge                          from '../components/TurkishBadge'
 import { normalizeGameId }                  from '../utils/gameUtils'
 import { tournamentDisplayName }            from '../utils/tournamentDisplay'
 import { getBOFormat }                       from '../utils/matchFormat'
-import { FEXT, statusStyle, SAATI_GECTI_ESIGI_MS } from '../theme'
+import { FEXT, statusStyle, SAATI_GECTI_ESIGI_MS, yazi } from '../theme'
 import { correctedScores }                   from '../utils/matchResult'
 import { isUncertainPrediction }             from '../utils/prediction'
 import { KartLink, KartOrtusu, UST_KATMAN }  from '../components/KartLink'
@@ -60,6 +60,11 @@ const DASHBOARD_GLOBAL_ERROR_TEXT = 'Sunucuyla bağlantı kesildi, tekrar deneni
 const POPULAR_TEAM_SEARCH_TERMS = ['galatasaray', 'eternal fire', 'fut', 'bbl', 'fenerbahce', 'sangal', 'g2', 'fnatic', 'navi']
 const PREFERENCE_GAMES = GAMES.filter(game => ['valorant', 'cs2', 'lol'].includes(game.id))
 const UPCOMING_WINDOW_DAYS = 7
+// Bölüm başlığındaki "Tümü →": dokunma alanı ≥24 px, negatif kenar boşluğu satırı büyütmesin diye
+const TUMU_LINK = {
+  fontSize: yazi(10), color: 'var(--text-5)', textDecoration: 'none',
+  display: 'inline-flex', alignItems: 'center', minHeight: 24, padding: '0 6px', margin: '-6px -6px',
+}
 // Canlı bölümde en fazla bu kadar kart/satır; kalanı "Tüm canlı maçlar (N)" linkinde
 const CANLI_GOSTER = 4
 
@@ -74,7 +79,7 @@ function FormStrip({ form, className }) {
           width: 13, height: 13, borderRadius: 3, flexShrink: 0,
           background: r === 'W' ? 'rgba(76,175,80,.85)' : 'rgba(255,70,85,.75)',
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 7, fontWeight: 900, color: '#fff', letterSpacing: 0,
+          fontSize: yazi(7), fontWeight: 900, color: '#fff', letterSpacing: 0,
         }}>{r === 'W' ? 'G' : 'M'}</span>
       ))}
     </Sirayla>
@@ -440,7 +445,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
         animation: 'prefModalIn .26s cubic-bezier(.2,.8,.3,1)',
       }}>
         <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid var(--line)' }}>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.9px', color: 'var(--accent-fg)', textTransform: 'uppercase' }}>
+          <div style={{ fontSize: yazi(11), fontWeight: 800, letterSpacing: '.9px', color: 'var(--accent-fg)', textTransform: 'uppercase' }}>
             Takip Tercihleri
           </div>
           <h3 style={{ margin: '8px 0 0', fontSize: 22, color: 'var(--text-1)' }}>Akışını özelleştir</h3>
@@ -451,7 +456,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
         </div>
 
         <div style={{ padding: '14px 16px 18px' }}>
-          <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 8 }}>Oyunlar</div>
+          <div style={{ fontSize: yazi(10), color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 8 }}>Oyunlar</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 18 }}>
             {PREFERENCE_GAMES.map(game => {
               const active = selectedGames.includes(game.id)
@@ -477,7 +482,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
             })}
           </div>
 
-          <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 8 }}>
+          <div style={{ fontSize: yazi(10), color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 8 }}>
             {searchActive ? 'Arama Sonuçları' : 'Popüler Takımlar'}
           </div>
           <div style={{ marginBottom: 10 }}>
@@ -534,7 +539,7 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
                   />
                   <span style={{ minWidth: 0, display: 'grid', gap: 2 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.name}</span>
-                    <span style={{ fontSize: 10, color: active ? 'var(--accent-fg)' : 'var(--text-5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ fontSize: yazi(10), color: active ? 'var(--accent-fg)' : 'var(--text-5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                       <span style={{ width: 6, height: 6, borderRadius: '50%', background: gameMeta?.color || 'var(--text-4)', flexShrink: 0 }} /> {gameMeta?.label || team?.game?.name || 'Oyun bilinmiyor'}
                     </span>
                   </span>
@@ -620,10 +625,10 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
 
 // Şerit satır türleri: emoji yerine renkli kısa etiket.
 const TICKER_TUR = {
-  live:     { etiket: 'CANLI',    renk: '#ff4655' },
+  live:     { etiket: 'CANLI',    renk: 'var(--canli-fg)' },
   news:     { etiket: 'HABER',    renk: FEXT.accentText },
   result:   { etiket: 'SONUÇ',    renk: 'var(--text-3)' },
-  upcoming: { etiket: 'YAKLAŞAN', renk: '#60a5fa' },
+  upcoming: { etiket: 'YAKLAŞAN', renk: 'var(--mavi-fg)' },
 }
 
 const LiveTicker = memo(function LiveTicker({ items, loading }) {
@@ -725,7 +730,7 @@ const LiveTicker = memo(function LiveTicker({ items, loading }) {
               }}
             >
               {TICKER_TUR[line.kind] && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginRight: 8, fontSize: 10, fontWeight: 800, letterSpacing: '.6px', color: TICKER_TUR[line.kind].renk, verticalAlign: 1 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginRight: 8, fontSize: yazi(10), fontWeight: 800, letterSpacing: '.6px', color: TICKER_TUR[line.kind].renk, verticalAlign: 1 }}>
                   {line.kind === 'live' && <span style={{ width: 6, height: 6, borderRadius: '50%', background: TICKER_TUR.live.renk }} />}
                   {TICKER_TUR[line.kind].etiket}
                 </span>
@@ -854,7 +859,7 @@ const QuickAccessBar = memo(function QuickAccessBar({ entries, loading }) {
             }}>
               {entry.image
                 ? <img src={entry.image} alt="" style={{ width: '100%', height: '100%', objectFit: entry.type === 'player' ? 'cover' : 'contain' }} />
-                : <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-4)' }}>{entry.fallback || '?'}</span>}
+                : <span style={{ fontSize: yazi(11), fontWeight: 800, color: 'var(--text-4)' }}>{entry.fallback || '?'}</span>}
             </span>
 
             <span style={{ minWidth: 0, display: 'grid', gap: 2 }}>
@@ -865,7 +870,7 @@ const QuickAccessBar = memo(function QuickAccessBar({ entries, loading }) {
                 {entry.label}
               </span>
               <span style={{
-                fontSize: 10, fontWeight: 600, letterSpacing: '.2px',
+                fontSize: yazi(10), fontWeight: 600, letterSpacing: '.2px',
                 // --danger-fg: açık temada sabit pembe beyaz zeminde kayboluyordu.
                 color: entry.isLive ? 'var(--danger-fg)' : 'var(--text-5)',
                 display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -936,11 +941,11 @@ function WinBar({ predA, predB, confidence }) {
 
       {/* Yüzde + Fextopus etiketi */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 8, color: aFav ? 'var(--ai)' : 'var(--text-5)', fontWeight: aFav ? 700 : 400 }}>
+        <span style={{ fontSize: yazi(8), color: aFav ? 'var(--ai)' : 'var(--text-5)', fontWeight: aFav ? 700 : 400 }}>
           {uncertain ? '' : `%${pctA}`}
         </span>
         <FextopusEtiketi belirsiz={uncertain} sicak={isHot} boyut={9} />
-        <span style={{ fontSize: 8, color: bFav ? 'var(--ai)' : 'var(--text-5)', fontWeight: bFav ? 700 : 400 }}>
+        <span style={{ fontSize: yazi(8), color: bFav ? 'var(--ai)' : 'var(--text-5)', fontWeight: bFav ? 700 : 400 }}>
           {uncertain ? '' : `%${pctB}`}
         </span>
       </div>
@@ -1016,22 +1021,22 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, favs, onToggleFav,
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
           <span lang="en" style={{
-            padding: '2px 7px', borderRadius: 5, fontSize: 9, fontWeight: 700,
+            padding: '2px 7px', borderRadius: 5, fontSize: yazi(9), fontWeight: 700,
             letterSpacing: '.7px', textTransform: 'uppercase',
-            background: 'rgba(255,70,85,.15)', color: '#FF4655',
+            background: 'rgba(255,70,85,.15)', color: 'var(--canli-fg)',
             whiteSpace: 'nowrap',
           }}>
             {m.game?.name || '—'}
           </span>
           <MatchImpactPill match={m} />
           {getBOFormat(m.team_a_score, m.team_b_score, m.number_of_games) && (
-            <span style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-6)', background: 'var(--hover)', border: '1px solid var(--line-2)', borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: yazi(8), fontWeight: 700, color: 'var(--text-5)', background: 'var(--hover)', border: '1px solid var(--line-2)', borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap' }}>
               {getBOFormat(m.team_a_score, m.team_b_score, m.number_of_games)}
             </span>
           )}
           {hasTurkish && <TurkishBadge compact />}
         </div>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 800, color: '#ff7683' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: yazi(10), fontWeight: 800, color: 'var(--canli-fg)' }}>
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#FF4655', animation: 'liveNeonBlink 1.05s infinite' }} />
           CANLI
         </span>
@@ -1060,7 +1065,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, favs, onToggleFav,
             style={{ margin: '0 auto 4px' }}
           />
           <div style={{
-            fontSize: 10, fontWeight: 700, lineHeight: 1.2,
+            fontSize: yazi(10), fontWeight: 700, lineHeight: 1.2,
             color: aWon ? '#4CAF50' : favA ? '#FFD700' : 'var(--text-2)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
@@ -1105,7 +1110,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, favs, onToggleFav,
             <FlipNumber value={m.team_b_score ?? 0} />
           </div>
           <div style={{
-            fontSize: 8, color: 'var(--text-4)', marginTop: 3,
+            fontSize: yazi(8), color: 'var(--text-4)', marginTop: 3,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 72,
           }} title={turnuvaAdi(m)}>
             {turnuvaAdi(m, false)}
@@ -1127,7 +1132,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, favs, onToggleFav,
             style={{ margin: '0 auto 4px' }}
           />
           <div style={{
-            fontSize: 10, fontWeight: 700, lineHeight: 1.2,
+            fontSize: yazi(10), fontWeight: 700, lineHeight: 1.2,
             color: bWon ? '#4CAF50' : favB ? '#FFD700' : 'var(--text-2)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
@@ -1171,7 +1176,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, favs, onToggleFav,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 borderRadius: 8, minHeight: 40,
                 background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.3)',
-                color: 'var(--ai)', fontSize: 11.5, fontWeight: 800,
+                color: 'var(--ai)', fontSize: yazi(11.5), fontWeight: 800,
                 textDecoration: 'none', transition: 'background .15s',
               }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(167,139,250,.22)'}
@@ -1184,7 +1189,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, favs, onToggleFav,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
               borderRadius: 8, minHeight: 40, boxSizing: 'border-box',
               background: 'var(--hover)', border: '1px solid var(--line)',
-              color: 'var(--text-4)', fontSize: 11.5, fontWeight: 700,
+              color: 'var(--text-4)', fontSize: yazi(11.5), fontWeight: 700,
             }}>
               Maç detayı <ChevronRight size={13} />
             </div>
@@ -1227,12 +1232,12 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, teamForms, showDate })
       }}
     >
       {/* Saat (My Feed'de tarih de görünsün — grup başlığı yok) */}
-      <div style={{ fontSize: 10, color: 'var(--text-3)', flexShrink: 0, width: showDate ? 66 : 36, textAlign: 'center', fontVariantNumeric: 'tabular-nums', lineHeight: 1.25 }}>
+      <div style={{ fontSize: yazi(10), color: 'var(--text-3)', flexShrink: 0, width: showDate ? 66 : 36, textAlign: 'center', fontVariantNumeric: 'tabular-nums', lineHeight: 1.25 }}>
         {showDate ? fmtWhen(m.scheduled_at) : fmtTime(m.scheduled_at)}
       </div>
 
       {/* Oyun etiketi */}
-      <span lang="en" style={{ fontSize: 8, padding: '2px 0', width: 34, textAlign: 'center', borderRadius: 4, background: 'var(--line)', color: 'var(--text-4)', fontWeight: 700, letterSpacing: '.4px', flexShrink: 0 }}>
+      <span lang="en" style={{ fontSize: yazi(8), padding: '2px 0', width: 34, textAlign: 'center', borderRadius: 4, background: 'var(--line)', color: 'var(--text-3)', fontWeight: 700, letterSpacing: '.4px', flexShrink: 0 }}>
         {oyunKisa(m)}
       </span>
 
@@ -1261,13 +1266,13 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, teamForms, showDate })
             objectFit='contain'
           />
           <div className="matchup-name" style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: turkA ? '#ff6b7a' : 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: turkA ? 'var(--tr-fg)' : 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {m.team_a?.name || '?'}{turkA && <TrBadge />}
             </span>
             {formA.length > 0 && <FormStrip form={formA} className="hide-sm" />}
           </div>
         </div>
-        <span className="matchup-vs" style={{ fontSize: 9, color: 'var(--line-2)', flexShrink: 0, textAlign: 'center' }}>vs</span>
+        <span className="matchup-vs" style={{ fontSize: yazi(9), color: 'var(--text-5)', flexShrink: 0, textAlign: 'center' }}>vs</span>
         <div className="matchup-team" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
           <InitialsImage
             src={m.team_b?.logo_url}
@@ -1279,7 +1284,7 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, teamForms, showDate })
             objectFit='contain'
           />
           <div className="matchup-name" style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: turkB ? '#ff6b7a' : 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: turkB ? 'var(--tr-fg)' : 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {m.team_b?.name || '?'}{turkB && <TrBadge />}
             </span>
             {formB.length > 0 && <FormStrip form={formB} className="hide-sm" />}
@@ -1289,14 +1294,14 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, teamForms, showDate })
 
       {/* Turnuva — sabit genişlik: sağ blok her satırda aynı yer kaplasın ki
           ortadaki "vs" sütunu satırlar boyunca kaymasın. */}
-      <div className="row-tour" title={turnuvaAdi(m)} style={{ fontSize: 9, color: 'var(--line-2)', flexShrink: 0, width: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>
+      <div className="row-tour" title={turnuvaAdi(m)} style={{ fontSize: yazi(9), color: 'var(--text-4)', flexShrink: 0, width: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>
         {turnuvaAdi(m, false)}
       </div>
 
       <MatchImpactPill match={m} compact />
 
       {/* Badge — mobilde gizli (Maç Programı zaten "yaklaşan"; canlıyı kırmızı nokta belli eder) */}
-      <span className="hide-sm" style={{ padding: '2px 0', width: 58, textAlign: 'center', borderRadius: 6, fontSize: 8, fontWeight: 700, color: badge.color, background: badge.bg, flexShrink: 0 }}>
+      <span className="hide-sm" style={{ padding: '2px 0', width: 58, textAlign: 'center', borderRadius: 6, fontSize: yazi(8), fontWeight: 700, color: badge.color, background: badge.bg, flexShrink: 0 }}>
         {badge.kisa || badge.text}
       </span>
     </KartLink>
@@ -1330,16 +1335,16 @@ const SkorSatiri = memo(function SkorSatiri({ match: m, favs }) {
       <KartOrtusu to={`/match/${m.id}`} label={`${m.team_a?.name ?? ''} - ${m.team_b?.name ?? ''} maç detayı`} />
       <div style={{ width: 44, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
         {canli ? (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9, fontWeight: 800, color: '#ff7683' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: yazi(9), fontWeight: 800, color: 'var(--canli-fg)' }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF4655', animation: 'liveNeonBlink 1.05s infinite' }} />
             CANLI
           </span>
         ) : (
-          <span style={{ fontSize: 9.5, color: 'var(--text-4)', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2, textAlign: 'center' }}>
+          <span style={{ fontSize: yazi(9.5), color: 'var(--text-4)', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2, textAlign: 'center' }}>
             {fmtWhen(m.scheduled_at)}
           </span>
         )}
-        <span lang="en" style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-5)', letterSpacing: '.4px' }}>{oyunKisa(m)}</span>
+        <span lang="en" style={{ fontSize: yazi(8), fontWeight: 700, color: 'var(--text-5)', letterSpacing: '.4px' }}>{oyunKisa(m)}</span>
       </div>
 
       <div style={{ flex: 1, minWidth: 0, display: 'grid', gap: 4 }}>
@@ -1358,14 +1363,14 @@ const SkorSatiri = memo(function SkorSatiri({ match: m, favs }) {
               </span>
               <span style={{
                 fontSize: 14, fontWeight: 900, fontVariantNumeric: 'tabular-nums', minWidth: 14, textAlign: 'right',
-                color: kazandi ? '#4CAF50' : kaybetti ? 'var(--text-5)' : 'var(--text-1)',
+                color: kazandi ? 'var(--yesil-fg)' : kaybetti ? 'var(--text-5)' : 'var(--text-1)',
               }}>
                 {canli ? <FlipNumber value={skor ?? 0} /> : (skor ?? '–')}
               </span>
             </div>
           )
         })}
-        <div title={turnuvaAdi(m)} style={{ fontSize: 9.5, color: 'var(--text-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div title={turnuvaAdi(m)} style={{ fontSize: yazi(9.5), color: 'var(--text-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {turnuvaAdi(m, false)}
         </div>
       </div>
@@ -1414,11 +1419,11 @@ const ResultRow = memo(function ResultRow({ match: m }) {
       onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.borderColor = 'var(--line)' }}
     >
       {/* Tarih/saat — bugünse sadece saat, öncesi "13 Tem HH:MM" */}
-      <span style={{ fontSize: 9.5, color: 'var(--text-4)', flexShrink: 0, width: 62, textAlign: 'center', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>
+      <span style={{ fontSize: yazi(9.5), color: 'var(--text-4)', flexShrink: 0, width: 62, textAlign: 'center', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>
         {fmtWhen(m.scheduled_at)}
       </span>
 
-      <span lang="en" style={{ fontSize: 8, padding: '2px 0', width: 34, textAlign: 'center', borderRadius: 4, background: 'var(--line)', color: 'var(--text-4)', fontWeight: 700, letterSpacing: '.4px', flexShrink: 0 }}>
+      <span lang="en" style={{ fontSize: yazi(8), padding: '2px 0', width: 34, textAlign: 'center', borderRadius: 4, background: 'var(--line)', color: 'var(--text-3)', fontWeight: 700, letterSpacing: '.4px', flexShrink: 0 }}>
         {oyunKisa(m)}
       </span>
 
@@ -1432,9 +1437,9 @@ const ResultRow = memo(function ResultRow({ match: m }) {
 
       {/* Skor */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, fontVariantNumeric: 'tabular-nums', fontWeight: 900, fontSize: 15 }}>
-        <span style={{ color: aWon ? '#4CAF50' : 'var(--text-5)' }}>{cs.team_a_score ?? '–'}</span>
-        <span style={{ color: 'var(--track)', fontSize: 11 }}>:</span>
-        <span style={{ color: bWon ? '#4CAF50' : 'var(--text-5)' }}>{cs.team_b_score ?? '–'}</span>
+        <span style={{ color: aWon ? 'var(--yesil-fg)' : 'var(--text-5)' }}>{cs.team_a_score ?? '–'}</span>
+        <span style={{ color: 'var(--track)', fontSize: yazi(11) }}>:</span>
+        <span style={{ color: bWon ? 'var(--yesil-fg)' : 'var(--text-5)' }}>{cs.team_b_score ?? '–'}</span>
       </div>
 
       {/* Team B */}
@@ -1448,8 +1453,8 @@ const ResultRow = memo(function ResultRow({ match: m }) {
       {/* Tier rozeti (S/A vurgusu) */}
       {tierLetter && (
         <span style={{
-          flexShrink: 0, fontSize: 9, fontWeight: 800, borderRadius: 5, padding: '2px 6px',
-          color: isHero ? '#f0c040' : 'var(--text-6)',
+          flexShrink: 0, fontSize: yazi(9), fontWeight: 800, borderRadius: 5, padding: '2px 6px',
+          color: isHero ? 'var(--altin-fg)' : 'var(--text-5)',
           background: isHero ? 'rgba(240,192,64,.12)' : 'var(--surface-2)',
           border: isHero ? '1px solid rgba(240,192,64,.35)' : '1px solid #2b3a58',
         }}>{tierLetter}</span>
@@ -2279,7 +2284,7 @@ export default function Dashboard() {
         gap: 10, marginBottom: 10, minHeight: 38,
       }}>
         <span style={{
-          fontSize: 10, fontWeight: 800, color: 'var(--text-3)',
+          fontSize: yazi(10), fontWeight: 800, color: 'var(--text-3)',
           letterSpacing: '.9px', textTransform: 'uppercase',
         }}>
           {(quickLoading || quickAccess.length > 0) ? 'Hızlı Erişim' : ''}
@@ -2296,7 +2301,7 @@ export default function Dashboard() {
             border: `1px solid ${FEXT.accentBorder}`,
             background: FEXT.accentSoftBg,
             color: 'var(--accent-fg)',
-            fontSize: 11,
+            fontSize: yazi(11),
             fontWeight: 700,
             letterSpacing: '.2px',
             padding: '9px 14px',
@@ -2334,7 +2339,7 @@ export default function Dashboard() {
         flexWrap: 'wrap', marginBottom: 18,
       }}>
         <span style={{
-          fontSize: 10, fontWeight: 800, color: 'var(--text-4)',
+          fontSize: yazi(10), fontWeight: 800, color: 'var(--text-4)',
           letterSpacing: '.9px', textTransform: 'uppercase',
         }}>
           Turnuva seviyesi
@@ -2380,7 +2385,7 @@ export default function Dashboard() {
                   color: active ? 'var(--accent-fg)' : 'var(--text-4)',
                   borderRadius: 999,
                   padding: '6px 14px',
-                  fontSize: 11,
+                  fontSize: yazi(11),
                   fontWeight: 800,
                   letterSpacing: '.3px',
                   cursor: 'pointer',
@@ -2399,7 +2404,7 @@ export default function Dashboard() {
         <div id="takip" style={{ marginBottom: 24, scrollMarginTop: ustPay }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, ...baslikStil('takip') }}>
             <span style={{
-              fontSize: 11, fontWeight: 800, color: '#f0c040',
+              fontSize: yazi(11), fontWeight: 800, color: 'var(--altin-fg)',
               letterSpacing: '1.5px', textTransform: 'uppercase',
               display: 'inline-flex', alignItems: 'center', gap: 6,
             }}>
@@ -2407,8 +2412,8 @@ export default function Dashboard() {
             </span>
             <span style={{
               padding: '1px 8px', borderRadius: 8,
-              background: 'rgba(240,192,64,.12)', color: '#f0c040',
-              fontSize: 10, fontWeight: 700,
+              background: 'rgba(240,192,64,.12)', color: 'var(--altin-fg)',
+              fontSize: yazi(10), fontWeight: 700,
             }}>
               {myFeedMatches.length}
             </span>
@@ -2425,7 +2430,7 @@ export default function Dashboard() {
               display: 'flex', alignItems: 'center', gap: 8,
             }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#FF4655', animation: 'livePulse 1.2s infinite' }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#FF4655' }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--canli-fg)' }}>
                 {liveFavCount} takip edilen maç şu anda canlı!
               </span>
             </div>
@@ -2435,7 +2440,7 @@ export default function Dashboard() {
             <div style={{
               padding: '14px 16px', borderRadius: 12,
               background: 'var(--surface)', border: '1px solid var(--line)',
-              fontSize: 11, color: 'var(--text-6)', textAlign: 'center',
+              fontSize: yazi(11), color: 'var(--text-5)', textAlign: 'center',
             }}>
               Takip ettiğin takımlar/oyuncular için yakın tarihli maç yok.
             </div>
@@ -2452,17 +2457,17 @@ export default function Dashboard() {
       {/* ── Weekly Dream Team Leaderboard ── */}
       {!MVP_HIDE_DREAM_TEAM && <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: '#ff9aa9', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: yazi(11), fontWeight: 800, color: '#ff9aa9', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Sparkles size={13} /> Dream Team (Week)
           </span>
-          <span style={{ fontSize: 10, color: '#9e9e9e', padding: '2px 8px', borderRadius: 999, border: '1px solid #2c2c2c' }}>
+          <span style={{ fontSize: yazi(10), color: '#9e9e9e', padding: '2px 8px', borderRadius: 999, border: '1px solid #2c2c2c' }}>
             Son 7 Gun • {dreamGameLabel}
           </span>
           <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(255,154,169,.3),transparent)' }} />
         </div>
 
         <div style={{ border: '1px solid #2b3a58', borderRadius: 14, background: 'radial-gradient(circle at 8% 8%, rgba(200,16,46,.18), transparent 35%), var(--surface)', overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1fr .9fr .9fr .9fr', gap: 8, padding: '11px 14px', borderBottom: '1px solid var(--surface-2)', fontSize: 10, color: '#8b8b8b', textTransform: 'uppercase', letterSpacing: '.6px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1fr .9fr .9fr .9fr', gap: 8, padding: '11px 14px', borderBottom: '1px solid var(--surface-2)', fontSize: yazi(10), color: '#8b8b8b', textTransform: 'uppercase', letterSpacing: '.6px' }}>
             <div>Sıra</div><div>Oyuncu</div><div>Takım</div><div>Maç</div><div>Ort. Etki</div><div>Form</div>
           </div>
           {dreamLoading && <div style={{ padding: 14, color: 'var(--text-5)', fontSize: 12 }}>Dream Team hesaplanıyor...</div>}
@@ -2493,7 +2498,7 @@ export default function Dashboard() {
                   borderRadius={6}
                   objectFit='contain'
                 />
-                <span style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.team?.name || 'Free Agent'}</span>
+                <span style={{ fontSize: yazi(11), color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.team?.name || 'Free Agent'}</span>
               </div>
               <div style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{p.sampleMatches}</div>
               <div style={{ fontWeight: 800, color: '#ff9aa9', fontVariantNumeric: 'tabular-nums' }}>{ondalik(p.avgImpact, 2)}</div>
@@ -2515,19 +2520,19 @@ export default function Dashboard() {
       {canliBolumVar && (
       <div id="canli" style={{ marginBottom: 24, scrollMarginTop: ustPay }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, ...baslikStil('canli') }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: '#FF4655', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: yazi(11), fontWeight: 800, color: 'var(--canli-fg)', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
             <Radio size={13} color="#FF4655" style={{ animation: 'livePulse 1.2s infinite' }} />
             Şu An Canlı
           </span>
           {!loading && liveMatches.length > 0 && (
-            <span style={{ padding: '1px 7px', borderRadius: 8, background: 'rgba(255,70,85,.15)', color: '#FF4655', fontSize: 10, fontWeight: 700 }}>
+            <span style={{ padding: '1px 7px', borderRadius: 8, background: 'rgba(255,70,85,.15)', color: 'var(--canli-fg)', fontSize: yazi(10), fontWeight: 700 }}>
               {liveMatches.length}
             </span>
           )}
           <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(255,70,85,.3),transparent)' }} />
           <Link
             to="/matches?tab=live"
-            style={{ fontSize: 10, color: 'var(--text-5)', textDecoration: 'none', transition: 'color .15s' }}
+            style={{ ...TUMU_LINK, transition: 'color .15s' }}
             onMouseEnter={e => e.currentTarget.style.color = 'var(--text-4)'}
             onMouseLeave={e => e.currentTarget.style.color = 'var(--text-5)'}
           >Tümü →</Link>
@@ -2572,7 +2577,7 @@ export default function Dashboard() {
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 8,
               padding: '9px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--line)',
-              fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textDecoration: 'none', transition: 'border-color .15s',
+              fontSize: yazi(11), fontWeight: 700, color: 'var(--text-3)', textDecoration: 'none', transition: 'border-color .15s',
             }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--line-2)' }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line)' }}
@@ -2596,14 +2601,14 @@ export default function Dashboard() {
         return (
           <div id="turnuvalar" style={{ marginBottom: 24, scrollMarginTop: ustPay }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, ...baslikStil('turnuvalar') }}>
-              <span style={{ fontSize: 11, fontWeight: 800, color: '#a78bfa', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: yazi(11), fontWeight: 800, color: 'var(--ai)', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <Trophy size={13} /> Aktif Turnuvalar
               </span>
-              <span style={{ padding: '1px 7px', borderRadius: 8, background: 'rgba(167,139,250,.14)', color: '#a78bfa', fontSize: 10, fontWeight: 700 }}>
+              <span style={{ padding: '1px 7px', borderRadius: 8, background: 'rgba(167,139,250,.14)', color: 'var(--ai)', fontSize: yazi(10), fontWeight: 700 }}>
                 {activeTournaments.length}
               </span>
               <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(167,139,250,.3),transparent)' }} />
-              <Link to="/tournaments" style={{ fontSize: 10, color: 'var(--text-5)', textDecoration: 'none' }}>Tümü →</Link>
+              <Link to="/tournaments" style={TUMU_LINK}>Tümü →</Link>
             </div>
             <DragScroll className="scroll-fade-x" style={{ gap: 10, paddingBottom: 4 }} ariaLabel="Aktif turnuvalar">
               {orderedTournaments.map((t, ti) => {
@@ -2625,13 +2630,13 @@ export default function Dashboard() {
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       {isLiveT && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 8, fontWeight: 800, color: '#FF4655', letterSpacing: '.5px' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: yazi(8), fontWeight: 800, color: 'var(--canli-fg)', letterSpacing: '.5px' }}>
                           <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF4655', animation: 'livePulse 1.2s infinite' }} /> CANLI
                         </span>
                       )}
-                      <span lang="en" style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-5)', textTransform: 'uppercase', letterSpacing: '.4px' }}>{t.game?.name || ''}</span>
+                      <span lang="en" style={{ fontSize: yazi(8), fontWeight: 700, color: 'var(--text-5)', textTransform: 'uppercase', letterSpacing: '.4px' }}>{t.game?.name || ''}</span>
                       {(tierK === 'S' || tierK === 'A') && (
-                        <span style={{ marginLeft: 'auto', fontSize: 8, fontWeight: 900, color: '#f0c040', border: '1px solid rgba(240,192,64,.4)', borderRadius: 5, padding: '1px 5px' }}>Tier {tierK}</span>
+                        <span style={{ marginLeft: 'auto', fontSize: yazi(8), fontWeight: 900, color: 'var(--altin-fg)', border: '1px solid rgba(240,192,64,.4)', borderRadius: 5, padding: '1px 5px' }}>Tier {tierK}</span>
                       )}
                     </div>
                     <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', minHeight: 32 }}>
@@ -2647,7 +2652,7 @@ export default function Dashboard() {
                             style={{ marginLeft: i === 0 ? 0 : -4, border: '1px solid var(--surface)', background: 'var(--surface-2)' }}
                           />
                         ))}
-                        {t.teams.length > 6 && <span style={{ fontSize: 9, color: 'var(--text-5)', marginLeft: 6 }}>+{t.teams.length - 6}</span>}
+                        {t.teams.length > 6 && <span style={{ fontSize: yazi(9), color: 'var(--text-5)', marginLeft: 6 }}>+{t.teams.length - 6}</span>}
                       </div>
                     )}
                   </KartLink>
@@ -2662,16 +2667,16 @@ export default function Dashboard() {
       {recentResults.length > 0 && (
         <div id="sonuclar" style={{ marginBottom: 24, scrollMarginTop: ustPay }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, ...baslikStil('sonuclar') }}>
-            <span title="Takip ettiklerin, Türk takımları ve S/A turnuvalar" style={{ fontSize: 11, fontWeight: 800, color: '#f0c040', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span title="Takip ettiklerin, Türk takımları ve S/A turnuvalar" style={{ fontSize: yazi(11), fontWeight: 800, color: 'var(--altin-fg)', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <Flag size={13} /> Son Sonuçlar
             </span>
-            <span style={{ padding: '1px 7px', borderRadius: 8, background: 'rgba(240,192,64,.14)', color: '#f0c040', fontSize: 10, fontWeight: 700 }}>
+            <span style={{ padding: '1px 7px', borderRadius: 8, background: 'rgba(240,192,64,.14)', color: 'var(--altin-fg)', fontSize: yazi(10), fontWeight: 700 }}>
               {recentResults.length}
             </span>
             <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(240,192,64,.3),transparent)' }} />
             <Link
               to="/matches?tab=past"
-              style={{ fontSize: 10, color: 'var(--text-5)', textDecoration: 'none', transition: 'color .15s' }}
+              style={{ ...TUMU_LINK, transition: 'color .15s' }}
               onMouseEnter={e => e.currentTarget.style.color = 'var(--text-4)'}
               onMouseLeave={e => e.currentTarget.style.color = 'var(--text-5)'}
             >Tümü →</Link>
@@ -2687,11 +2692,11 @@ export default function Dashboard() {
                 onClick={() => setShowAllResults(v => !v)}
                 style={{
                   background: 'none', border: '1px solid var(--line)', borderRadius: 8,
-                  color: 'var(--text-6)', fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                  color: 'var(--text-5)', fontSize: yazi(10), fontWeight: 600, cursor: 'pointer',
                   padding: '7px 0', width: '100%', transition: 'all .15s', marginTop: 2,
                 }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--line-2)'; e.currentTarget.style.color = 'var(--text-4)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line)'; e.currentTarget.style.color = 'var(--text-6)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line)'; e.currentTarget.style.color = 'var(--text-5)' }}
               >
                 {showAllResults ? 'Daha az göster' : `+${recentResults.length - 6} sonuç daha göster`}
               </button>
@@ -2745,18 +2750,18 @@ export default function Dashboard() {
         return (
           <div id="program" style={{ marginBottom: 24, scrollMarginTop: ustPay }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, ...baslikStil('program') }}>
-              <span style={{ fontSize: 11, fontWeight: 800, color: '#4CAF50', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: yazi(11), fontWeight: 800, color: 'var(--yesil-fg)', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <CalendarDays size={13} /> Maç Programı
               </span>
               {!loading && scheduled.length > 0 && (
-                <span style={{ padding: '1px 7px', borderRadius: 8, background: 'rgba(76,175,80,.15)', color: '#4CAF50', fontSize: 10, fontWeight: 700 }}>
+                <span style={{ padding: '1px 7px', borderRadius: 8, background: 'rgba(76,175,80,.15)', color: 'var(--yesil-fg)', fontSize: yazi(10), fontWeight: 700 }}>
                   {scheduled.length}
                 </span>
               )}
               <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(76,175,80,.3),transparent)' }} />
               <Link
                 to="/matches"
-                style={{ fontSize: 10, color: 'var(--text-5)', textDecoration: 'none', transition: 'color .15s' }}
+                style={{ ...TUMU_LINK, transition: 'color .15s' }}
                 onMouseEnter={e => e.currentTarget.style.color = 'var(--text-4)'}
                 onMouseLeave={e => e.currentTarget.style.color = 'var(--text-5)'}
               >Tümü →</Link>
@@ -2768,7 +2773,7 @@ export default function Dashboard() {
                 {[1,2,3,4,5].map(i => <Sk key={i} h="54px" r="12px" />)}
               </div>
             ) : groups.length === 0 ? (
-              <div style={{ padding: '16px', borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--line)', textAlign: 'center', fontSize: 11, color: 'var(--line-2)' }}>
+              <div style={{ padding: '16px', borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--line)', textAlign: 'center', fontSize: yazi(11), color: 'var(--text-4)' }}>
                 Yaklaşan maç bulunamadı
               </div>
             ) : (
@@ -2781,8 +2786,8 @@ export default function Dashboard() {
                       marginTop: gi > 0 ? 14 : 0, marginBottom: 6,
                     }}>
                       <span style={{
-                        fontSize: 9, fontWeight: 900, letterSpacing: '.8px',
-                        textTransform: 'uppercase', color: g.key === todayStr ? '#4CAF50' : 'var(--track)',
+                        fontSize: yazi(9), fontWeight: 900, letterSpacing: '.8px',
+                        textTransform: 'uppercase', color: g.key === todayStr ? 'var(--yesil-fg)' : 'var(--text-4)',
                         background: g.key === todayStr ? 'rgba(76,175,80,.1)' : 'transparent',
                         border: g.key === todayStr ? '1px solid rgba(76,175,80,.25)' : '1px solid transparent',
                         padding: '2px 8px', borderRadius: 6, flexShrink: 0,
@@ -2790,7 +2795,7 @@ export default function Dashboard() {
                         {g.label}
                       </span>
                       <div style={{ flex: 1, height: 1, background: g.key === todayStr ? 'rgba(76,175,80,.15)' : 'var(--line)' }} />
-                      <span style={{ fontSize: 9, color: 'var(--line-2)', flexShrink: 0 }}>{g.matches.length} maç</span>
+                      <span style={{ fontSize: yazi(9), color: 'var(--text-5)', flexShrink: 0 }}>{g.matches.length} maç</span>
                     </div>
 
                     {(() => {
@@ -2808,11 +2813,11 @@ export default function Dashboard() {
                               onClick={() => setExpandedScheduleGroups(prev => new Set([...prev, g.key]))}
                               style={{
                                 background: 'none', border: '1px solid var(--line)', borderRadius: 8,
-                                color: 'var(--text-6)', fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                                color: 'var(--text-5)', fontSize: yazi(10), fontWeight: 600, cursor: 'pointer',
                                 padding: '7px 0', width: '100%', transition: 'all .15s',
                               }}
                               onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--line-2)'; e.currentTarget.style.color = 'var(--text-4)' }}
-                              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line)'; e.currentTarget.style.color = 'var(--text-6)' }}
+                              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line)'; e.currentTarget.style.color = 'var(--text-5)' }}
                             >
                               +{hidden} maç daha göster
                             </button>
@@ -2822,11 +2827,11 @@ export default function Dashboard() {
                               onClick={() => setExpandedScheduleGroups(prev => { const s = new Set(prev); s.delete(g.key); return s })}
                               style={{
                                 background: 'none', border: '1px solid var(--line)', borderRadius: 8,
-                                color: 'var(--text-6)', fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                                color: 'var(--text-5)', fontSize: yazi(10), fontWeight: 600, cursor: 'pointer',
                                 padding: '7px 0', width: '100%', transition: 'all .15s',
                               }}
                               onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--line-2)'; e.currentTarget.style.color = 'var(--text-4)' }}
-                              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line)'; e.currentTarget.style.color = 'var(--text-6)' }}
+                              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line)'; e.currentTarget.style.color = 'var(--text-5)' }}
                             >
                               Daralt ↑
                             </button>
@@ -2843,7 +2848,7 @@ export default function Dashboard() {
                     style={{
                       display: 'block', textAlign: 'center', padding: '9px',
                       borderRadius: 10, background: 'var(--bg)', border: '1px solid var(--line)',
-                      fontSize: 10, color: 'var(--text-5)', textDecoration: 'none',
+                      fontSize: yazi(10), color: 'var(--text-5)', textDecoration: 'none',
                       transition: 'all .15s', marginTop: 10,
                     }}
                     onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--line-2)'; e.currentTarget.style.color = 'var(--text-4)' }}
@@ -2858,16 +2863,16 @@ export default function Dashboard() {
                   <div style={{ marginTop: 16 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                       <span style={{
-                        fontSize: 9, fontWeight: 800, letterSpacing: '.6px', textTransform: 'uppercase',
+                        fontSize: yazi(9), fontWeight: 800, letterSpacing: '.6px', textTransform: 'uppercase',
                         color: 'var(--text-4)', padding: '2px 8px', borderRadius: 6,
                         border: '1px solid var(--line-2)',
                       }}>
                         ⟳ Sonuç Bekleniyor
                       </span>
                       <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
-                      <span style={{ fontSize: 9, color: 'var(--text-4)' }}>veri gecikmesi</span>
+                      <span style={{ fontSize: yazi(9), color: 'var(--text-4)' }}>veri gecikmesi</span>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, opacity: 0.45 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                       {stale.map(m => (
                         <UpcomingRow key={m.id} match={m} teamForms={teamFormMap} />
                       ))}
@@ -2889,7 +2894,7 @@ export default function Dashboard() {
         <PredictionAccuracyBadge variant="inline" />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 220, justifyContent: 'flex-end' }}>
           {/* Ana sayfa akışındaki son 30 biten maç (seçili oyun, tüm seviyeler); 50/50 tahminler sayılmaz */}
-          <span style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: yazi(11), color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
             {accuracySummary.evaluatedCount
               ? `Son ${accuracySummary.evaluatedCount} tahminde ${accuracySummary.correctCount} doğru`
               : 'Son tahminler'}
@@ -2933,7 +2938,7 @@ export default function Dashboard() {
               <span style={{ fontSize: '1.22em' }}>X</span>t
             </span>
           </h1>
-          <p style={{ margin: '0 0 16px', fontSize: 11, color: 'var(--text-6)', lineHeight: 1.6 }}>
+          <p style={{ margin: '0 0 16px', fontSize: yazi(11), color: 'var(--text-5)', lineHeight: 1.6 }}>
             Canlı sonuçlar · PandaScore verileri
           </p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -2943,7 +2948,7 @@ export default function Dashboard() {
             ].map(b => (
               <Link key={b.to} to={b.to} style={{ textDecoration: 'none' }}>
                 <div style={{
-                  padding: '6px 13px', borderRadius: 10, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                  padding: '6px 13px', borderRadius: 10, fontSize: yazi(11), fontWeight: 700, cursor: 'pointer',
                   background: `${b.color}18`, border: `1px solid ${b.color}44`, color: b.color,
                   transition: 'all .15s', display: 'inline-flex', alignItems: 'center', gap: 6,
                 }}
@@ -2975,7 +2980,7 @@ export default function Dashboard() {
             <div style={{ fontSize: 22, fontWeight: 900, color: s.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
               {loading ? '…' : <><CountUp value={s.value} />{s.arti ? '+' : ''}</>}
             </div>
-            <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.6px', marginTop: 4 }}>
+            <div style={{ fontSize: yazi(9), color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.6px', marginTop: 4 }}>
               {s.label}
             </div>
           </div>
@@ -3011,8 +3016,9 @@ export default function Dashboard() {
               }}
             >
               <l.Icon size={20} strokeWidth={2} color={l.color} style={{ marginBottom: 7 }} />
-              <div style={{ fontSize: 12, fontWeight: 700, color: l.color, marginBottom: 3 }}>{l.label}</div>
-              <div style={{ fontSize: 10, color: 'var(--line-2)' }}>{l.sub}</div>
+              {/* Başlık nötr: marka renkleri (sarı, yeşil, bayrak kırmızısı) iki temada da metin kontrastını tutmuyor; renk ikonda */}
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', marginBottom: 3 }}>{l.label}</div>
+              <div style={{ fontSize: yazi(10), color: 'var(--text-4)' }}>{l.sub}</div>
             </div>
           </Link>
         ))}

@@ -23,9 +23,11 @@
   --text-1:     #e2e8f0;
   --text-2:     #cbd5e1;
   --text-3:     #94a3b8;   /* ikincil slate */
-  --text-4:     #64748b;   /* soluk */
-  --text-5:     #475569;   /* daha soluk */
-  --text-6:     #334155;   /* en soluk */
+  /* --text-4/5 METİN içindir: kart zemininde (--surface-2 dahil) ≥4,5:1 (WCAG AA). Daha
+     solukları okunmuyordu (#475569 kartta 2,3:1). --text-6 yalnız süs/çizgi/ikon. */
+  --text-4:     #8190a6;   /* soluk — surface-2'de 5,0:1 */
+  --text-5:     #7a899f;   /* daha soluk — surface-2'de 4,6:1 */
+  --text-6:     #334155;   /* en soluk — METİNDE KULLANMA (1,6:1) */
   --hover:        rgba(255,255,255,.05);
   --hover-strong: rgba(255,255,255,.08);
   --shadow:       rgba(0,0,0,.5);
@@ -37,6 +39,14 @@
   --success-fg:   #4ade80;   /* başarı metni (koyu üstünde okunur açık yeşil) */
   --danger-fg:    #fb7185;   /* hata/kayıp metni (koyu üstünde okunur açık kırmızı) */
   --gold-fg:      #F0A500;   /* şampiyon/kupa metni (koyu üstünde) */
+  --tr-fg:        #f0677c;   /* Türk takımı adı/TR rozeti — surface-2'de 5,4:1 */
+  /* Anlam renkleri METİN olarak (≥4,5:1): koyuda marka hex'i ya da biraz açığı, aydınlıkta koyusu.
+     Zemin/kenarlık için sabit hex (FEXT) kalır; alfa eki var() ile çalışmaz. */
+  --canli-fg:     #ff6673;   /* #FF4655 kendi kırmızı zemininde 3,9:1 kalıyordu */
+  --altin-fg:     #f0c040;
+  --yesil-fg:     #4CAF50;
+  --mavi-fg:      #60a5fa;
+  --indigo-fg:    #8f99fa;
   color-scheme: dark;
 }
 
@@ -51,9 +61,9 @@
   --text-1:     #1e293b;
   --text-2:     #334155;
   --text-3:     #566579;   /* ikincil — biraz koyulaştı */
-  --text-4:     #6c7a90;   /* soluk — beyaza yakınlık giderildi */
-  --text-5:     #7f8da3;   /* daha soluk ama artık okunur */
-  --text-6:     #9aa7ba;   /* en soluk — eski #cbd5e1 fazla açıktı */
+  --text-4:     #5a687c;   /* soluk — surface-2'de 5,0:1 */
+  --text-5:     #616f84;   /* daha soluk — surface-2'de 4,5:1 */
+  --text-6:     #9aa7ba;   /* en soluk — METİNDE KULLANMA */
   --hover:        rgba(15,23,42,.05);
   --hover-strong: rgba(15,23,42,.08);
   --shadow:       rgba(15,23,42,.14);
@@ -64,9 +74,20 @@
   --accent-fg:    #9c2bb0;   /* marka moru METİN olarak — aydınlıkta okunur derin magenta */
   --success-fg:   #15803d;   /* başarı metni — aydınlıkta okunur koyu yeşil (açık yeşil beyazda kayboluyordu) */
   --danger-fg:    #dc2626;   /* hata/kayıp metni — aydınlıkta okunur koyu kırmızı (açık kırmızı beyazda kayboluyordu) */
+  --canli-fg:     #b91c28;
+  --altin-fg:     #92570a;
+  --yesil-fg:     #166534;
+  --mavi-fg:      #1d4ed8;
+  --indigo-fg:    #4f46e5;
+  --tr-fg:        #c8233f;   /* Türk takımı metni — aydınlıkta (#E0455E beyazda 4:1, #ff6b7a 2,7:1) */
   --gold-fg:      #a16207;   /* şampiyon/kupa metni — aydınlıkta okunur koyu altın (#F0A500 beyazda ~2:1 kalıyordu) */
   color-scheme: light;
 }
+
+/* Telefonda yazı tabanı: küçük yazılar (rozet, etiket, tarih) `fontSize: yazi(9)` ile
+   yazılır → masaüstünde 9 px, ≤768 px'te en az 12 px (theme.js `yazi`). */
+:root { --yazi-taban: 0px; }
+@media (max-width: 768px) { :root { --yazi-taban: 12px; } }
 
 /* Tailwind utility'leri de aynı token'lara bağlı (ileride bg-surface vb. kullanınca döner) */
 @theme {

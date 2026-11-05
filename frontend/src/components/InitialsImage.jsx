@@ -116,7 +116,10 @@ export default function InitialsImage({
   }
 
   return (
+    // Logo yerine geçer: ekran okuyucuya tek görsel (ad), baş harfler süs. Kutu sabit
+    // boyutlu olduğu için telefon yazı tabanı (yazi) burada uygulanmaz.
     <div
+      role="img"
       aria-label={alt || name || 'placeholder'}
       title={name || alt || ''}
       style={{
@@ -136,7 +139,7 @@ export default function InitialsImage({
         ...style,
       }}
     >
-      <span>{initials}</span>
+      <span aria-hidden="true">{initials}</span>
     </div>
   )
 }

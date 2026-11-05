@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Home, CalendarDays, Trophy, Newspaper, Flag } from 'lucide-react'
-import { FEXT } from '../theme'
+import { FEXT, yazi } from '../theme'
 
 /**
  * Telefonda alt gezinme çubuğu (skor uygulamalarında standart; Android uygulamasında da).
@@ -52,7 +52,7 @@ export default function AltGezinme() {
           end={o.end}
           style={({ isActive }) => ({
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
-            textDecoration: 'none', fontSize: 10, fontWeight: isActive ? 800 : 600,
+            textDecoration: 'none', fontSize: yazi(10), fontWeight: isActive ? 800 : 600,
             color: isActive ? FEXT.accentText : 'var(--text-4)',
             position: 'relative',
           })}

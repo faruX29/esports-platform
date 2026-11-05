@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import FextopusIcon from './FextopusIcon'
+import { yazi } from '../theme'
 
 /**
  * AI tahmin doğruluğu "trust signal" rozeti.
@@ -77,7 +78,7 @@ export default function PredictionAccuracyBadge({ variant = 'card' }) {
         title={`%70 ve üzeri şans verdiği ${sample} maçta ölçüldü · Genel isabet %${overall}`}
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
-          fontSize: 11, fontWeight: 700, color: 'var(--ai)', textDecoration: 'none',
+          fontSize: yazi(11), fontWeight: 700, color: 'var(--ai)', textDecoration: 'none',
           padding: '4px 9px', borderRadius: 999,
           background: 'rgba(194,92,208,.12)', border: '1px solid rgba(194,92,208,.28)',
         }}
@@ -99,7 +100,7 @@ export default function PredictionAccuracyBadge({ variant = 'card' }) {
       <FextopusIcon size={44} />
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <span style={{ fontSize: 32, fontWeight: 900, color: '#ddfffb', lineHeight: 1 }}>%{confPct}</span>
-        <span style={{ fontSize: 10, color: 'var(--ai)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginTop: 4 }}>
+        <span style={{ fontSize: yazi(10), color: 'var(--ai)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginTop: 4 }}>
           Net isabet
         </span>
       </div>
@@ -112,7 +113,7 @@ export default function PredictionAccuracyBadge({ variant = 'card' }) {
           Genel isabet %{overall}. <span style={{ color: '#8f8f8f' }}>Her maçı değil — en emin olduklarını.</span>
         </div>
         {/* Rakamin arkasindaki tam dagilim: iddiayi dogrulanabilir kilar */}
-        <Link to="/stats" style={{ display: 'inline-block', marginTop: 8, fontSize: 11.5,
+        <Link to="/stats" style={{ display: 'inline-block', marginTop: 8, fontSize: yazi(11.5),
           fontWeight: 700, color: 'var(--accent-fg)', textDecoration: 'none' }}>
           Tüm güven katmanlarını gör →
         </Link>

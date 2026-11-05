@@ -18,7 +18,7 @@ import { turkTakimlariYukle }               from '../utils/turkTakimlar'
 import { normalizeGameId }                  from '../utils/gameUtils'
 import { tournamentDisplayName }            from '../utils/tournamentDisplay'
 import { adDili }                           from '../utils/dil'
-import { FEXT, GAME_COLORS, statusStyle }   from '../theme'
+import { FEXT, GAME_COLORS, statusStyle, yazi } from '../theme'
 import Mascot                               from '../components/Mascot'
 import SeoHead                              from '../components/SeoHead'
 import GameLogo                             from '../components/GameLogo'
@@ -330,13 +330,13 @@ function Countdown({ target }) {
   const ts = target ? new Date(target).getTime() : 0
   if (!ts) return null
   const diff = ts - now
-  if (diff <= 0) return <span style={{ fontSize: 10, color: FEXT.good, fontWeight: 700 }}>Başlıyor</span>
+  if (diff <= 0) return <span style={{ fontSize: yazi(10), color: FEXT.good, fontWeight: 700 }}>Başlıyor</span>
   const d = Math.floor(diff / 86400000)
   const h = Math.floor((diff % 86400000) / 3600000)
   const m = Math.floor((diff % 3600000) / 60000)
   const label = d > 0 ? `${d}g ${h}s` : h > 0 ? `${h}s ${m}dk` : `${m}dk`
   return (
-    <span style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 700, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+    <span style={{ fontSize: yazi(10), color: 'var(--text-3)', fontWeight: 700, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
       <Clock size={10} /> {label}
     </span>
   )
@@ -376,7 +376,7 @@ function Sekmeler({ aktif, sayilar, onSec }) {
               minHeight: 38, padding: '8px 10px', cursor: 'pointer',
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
               fontSize: 13, fontWeight: 800, letterSpacing: '.2px',
-              color: secili ? (canli ? FEXT.status.live.color : 'var(--accent-fg)') : 'var(--text-3)',
+              color: secili ? (canli ? 'var(--canli-fg)' : 'var(--accent-fg)') : 'var(--text-3)',
               transition: 'color .2s',
             }}
           >
@@ -389,7 +389,7 @@ function Sekmeler({ aktif, sayilar, onSec }) {
             )}
             {s.label}
             {sayi != null && (
-              <span style={{ fontSize: 12, fontWeight: 700, opacity: secili ? 1 : 0.8, fontVariantNumeric: 'tabular-nums' }}>
+              <span style={{ fontSize: 12, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
                 {sayi.toLocaleString('tr-TR')}
               </span>
             )}
@@ -468,7 +468,7 @@ function TurnuvaListesi({ gruplar, yukleniyor, secili, onSec }) {
         </button>
         {suzulmus.map(g => (
           <div key={g.oyun} style={{ marginTop: 6 }}>
-            <div lang="en" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px 4px', fontSize: 10, fontWeight: 800, letterSpacing: '.6px', textTransform: 'uppercase', color: 'var(--text-4)' }}>
+            <div lang="en" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px 4px', fontSize: yazi(10), fontWeight: 800, letterSpacing: '.6px', textTransform: 'uppercase', color: 'var(--text-4)' }}>
               <GameLogo game={g.oyun} size={12} color={GAME_COLORS[g.oyun] || 'currentColor'} />
               {GAME_SHORT_NAMES[g.oyun] ?? 'Diğer'}
             </div>
@@ -483,7 +483,7 @@ function TurnuvaListesi({ gruplar, yukleniyor, secili, onSec }) {
                     style={secenekStil(eSecili)} {...hoverArkaPlan(eSecili)}
                   >
                     <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.ad}</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-4)', fontVariantNumeric: 'tabular-nums' }}>{e.sayi}</span>
+                    <span style={{ fontSize: yazi(11), color: 'var(--text-4)', fontVariantNumeric: 'tabular-nums' }}>{e.sayi}</span>
                   </button>
                   {asamaliMi && e.asamalar.map(a => {
                     const aAnahtar = `${e.anahtar}#${a.id}`
@@ -496,7 +496,7 @@ function TurnuvaListesi({ gruplar, yukleniyor, secili, onSec }) {
                         {...hoverArkaPlan(aSecili)}
                       >
                         <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.ad}</span>
-                        <span style={{ fontSize: 11, color: 'var(--text-5)', fontVariantNumeric: 'tabular-nums' }}>{a.sayi}</span>
+                        <span style={{ fontSize: yazi(11), color: 'var(--text-5)', fontVariantNumeric: 'tabular-nums' }}>{a.sayi}</span>
                       </button>
                     )
                   })}
@@ -523,7 +523,7 @@ function TarihSecici({ tab, tarih, onSec }) {
         return <button key={o.key} type="button" onClick={() => onSec({ key: o.key })} style={secenekStil(secili)} {...hoverArkaPlan(secili)}>{o.label}</button>
       })}
       <div style={{ borderTop: '1px solid var(--line)', margin: '6px 4px 0', padding: '10px 6px 4px' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-4)', marginBottom: 6 }}>Özel aralık</div>
+        <div style={{ fontSize: yazi(11), fontWeight: 700, color: 'var(--text-4)', marginBottom: 6 }}>Özel aralık</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <input type="date" aria-label="Başlangıç tarihi" value={from} max={to || undefined} onChange={e => setFrom(e.target.value)} style={girdiStil} />
           <span style={{ color: 'var(--text-4)', fontSize: 12 }}>–</span>
@@ -604,7 +604,7 @@ function FiltrePaneli({ acik, onKapat, sonucSayisi, yukleniyor, children }) {
 function PanelBolum({ baslik, children }) {
   return (
     <div style={{ padding: '10px 4px', borderBottom: '1px solid var(--line)' }}>
-      <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-4)', letterSpacing: '.4px', margin: '0 6px 6px' }}>{baslik}</div>
+      <div style={{ fontSize: yazi(11), fontWeight: 800, color: 'var(--text-4)', letterSpacing: '.4px', margin: '0 6px 6px' }}>{baslik}</div>
       {children}
     </div>
   )
@@ -674,7 +674,7 @@ function TakimTarafi({ match, taraf, takipte, onTakip }) {
         style={{ margin: '0 auto 8px' }}
         imgStyle={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.5))' }}
       />
-      <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.3, wordBreak: 'break-word', color: turk ? '#E0455E' : 'var(--text-1)' }}>
+      <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.3, wordBreak: 'break-word', color: turk ? 'var(--tr-fg)' : 'var(--text-1)' }}>
         {takim?.name}
       </div>
       {skor != null && (
@@ -700,10 +700,10 @@ function KartOlasilikCubugu({ match, belirsiz }) {
       {belirsiz ? (
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}><FextopusEtiketi belirsiz /></div>
       ) : (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10, color: 'var(--text-4)', marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
-          <span style={{ color: match.prediction_team_a >= match.prediction_team_b ? '#818cf8' : undefined }}>%{a}</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: yazi(10), color: 'var(--text-4)', marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ color: match.prediction_team_a >= match.prediction_team_b ? 'var(--indigo-fg)' : undefined }}>%{a}</span>
           <FextopusEtiketi />
-          <span style={{ color: match.prediction_team_b > match.prediction_team_a ? '#818cf8' : undefined }}>%{100 - a}</span>
+          <span style={{ color: match.prediction_team_b > match.prediction_team_a ? 'var(--indigo-fg)' : undefined }}>%{100 - a}</span>
         </div>
       )}
     </div>
@@ -728,7 +728,7 @@ function MacKarti({ match, gruplu, isTeamFollowed, onTakip }) {
 
   const kenar = isLive ? 'rgba(255,70,85,.6)' : isHotPick ? 'rgba(255,100,50,.5)' : hasTurkish ? 'rgba(224,69,94,.5)' : 'var(--line)'
   const golge = isLive ? '0 0 20px rgba(255,70,85,.2)' : isHotPick ? '0 0 14px rgba(255,100,50,.12)' : hasTurkish ? '0 0 14px rgba(224,69,94,.10)' : 'none'
-  const rozet = { padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }
+  const rozet = { padding: '2px 8px', borderRadius: 6, fontSize: yazi(10), fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }
 
   return (
     <div
@@ -775,12 +775,12 @@ function MacKarti({ match, gruplu, isTeamFollowed, onTakip }) {
                 <Sparkles size={11} /> Başa baş
               </span>
             ) : (
-              <span style={{ ...rozet, background: 'rgba(102,126,234,.2)', border: '1px solid rgba(102,126,234,.5)', color: '#818cf8' }}>
+              <span style={{ ...rozet, background: 'rgba(102,126,234,.2)', border: '1px solid rgba(102,126,234,.5)', color: 'var(--indigo-fg)' }}>
                 <Sparkles size={11} /> %{Math.round(Math.max(match.prediction_team_a, match.prediction_team_b) * 100)}
               </span>
             )
           )}
-          <span style={{ ...rozet, background: statusBadge.bg, border: `1px solid ${statusBadge.color}44`, color: statusBadge.color, animation: isLive ? 'pulse 1.5s infinite' : 'none' }}>
+          <span style={{ ...rozet, background: statusBadge.bg, border: `1px solid ${statusBadge.color}44`, color: statusBadge.fg, animation: isLive ? 'pulse 1.5s infinite' : 'none' }}>
             {statusBadge.text}
           </span>
         </div>
@@ -790,7 +790,7 @@ function MacKarti({ match, gruplu, isTeamFollowed, onTakip }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 14 }}>
         <TakimTarafi match={match} taraf="a" takipte={isTeamFollowed(match.team_a_id)} onTakip={onTakip} />
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: FEXT.accentText, letterSpacing: '2px' }}>VS</span>
+          <span style={{ fontSize: yazi(11), fontWeight: 800, color: FEXT.accentText, letterSpacing: '2px' }}>VS</span>
           <div style={{ width: 1, height: 24, background: 'var(--line)' }} />
           {match.status === 'not_started' && <Countdown target={matchTimeIso(match)} />}
         </div>
@@ -800,7 +800,7 @@ function MacKarti({ match, gruplu, isTeamFollowed, onTakip }) {
       {/* Fextopus: bitmemişte olasılık çubuğu, bitmişte "bildi / yanıldı" */}
       {tahminVar && !bitti && <KartOlasilikCubugu match={match} belirsiz={predUncertain} />}
       {sonuc && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10, padding: '6px 10px', borderRadius: 10, background: 'var(--surface-2)', fontSize: 11 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10, padding: '6px 10px', borderRadius: 10, background: 'var(--surface-2)', fontSize: yazi(11) }}>
           <span style={{ color: 'var(--text-3)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
             <Sparkles size={11} color="#818cf8" style={{ flexShrink: 0 }} />
             {sonuc.belirsiz ? 'Fextopus başa baş gördü' : <>Fextopus: <b style={{ color: 'var(--text-2)' }}>{sonuc.favoriAd}</b> %{sonuc.oran}</>}
@@ -823,23 +823,23 @@ function MacKarti({ match, gruplu, isTeamFollowed, onTakip }) {
       {/* Alt satır */}
       {/* Ad sığmazsa aşama/yayın çipleri alt satıra iner ("IEM Beijin…" kesilmesin); ad ancak tüm satırı aşarsa kısalır */}
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--surface-2)', paddingTop: 10, gap: '6px 8px' }}>
-        <div title={turnuvaAdi} style={{ fontSize: 11, color: 'var(--text-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: '1 1 auto', minWidth: 0, maxWidth: '100%', display: 'flex', alignItems: 'center', gap: 5 }}>
+        <div title={turnuvaAdi} style={{ fontSize: yazi(11), color: 'var(--text-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: '1 1 auto', minWidth: 0, maxWidth: '100%', display: 'flex', alignItems: 'center', gap: 5 }}>
           <Trophy size={12} style={{ flexShrink: 0 }} />
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{turnuvaAdi}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 'auto' }}>
           {tur && (
-            <span style={{ fontSize: 10, fontWeight: 700, color: FEXT.accentText, background: FEXT.accentSoftBg, border: `1px solid ${FEXT.accentBorder}`, borderRadius: 6, padding: '2px 7px', whiteSpace: 'nowrap' }}>{tur}</span>
+            <span style={{ fontSize: yazi(10), fontWeight: 700, color: FEXT.accentText, background: FEXT.accentSoftBg, border: `1px solid ${FEXT.accentBorder}`, borderRadius: 6, padding: '2px 7px', whiteSpace: 'nowrap' }}>{tur}</span>
           )}
           {match.stream_url && !bitti && (
             <a
               href={match.stream_url} target="_blank" rel="noopener noreferrer"
-              style={{ ...UST_KATMAN, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: 'var(--ai)', background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.35)', borderRadius: 6, padding: '2px 8px', textDecoration: 'none' }}
+              style={{ ...UST_KATMAN, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: yazi(10), fontWeight: 700, color: 'var(--ai)', background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.35)', borderRadius: 6, padding: '2px 8px', textDecoration: 'none' }}
             >
               <Play size={10} fill="currentColor" /> İzle
             </a>
           )}
-          <div style={{ fontSize: 11, fontWeight: 600, color: isLive ? FEXT.danger : FEXT.good, background: isLive ? 'rgba(255,70,85,.1)' : 'rgba(70,182,88,.1)', padding: '2px 8px', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 5, fontVariantNumeric: 'tabular-nums' }}>
+          <div style={{ fontSize: yazi(11), fontWeight: 600, color: isLive ? 'var(--canli-fg)' : 'var(--yesil-fg)', background: isLive ? 'rgba(255,70,85,.1)' : 'rgba(70,182,88,.1)', padding: '2px 8px', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 5, fontVariantNumeric: 'tabular-nums' }}>
             {isLive
               ? <><span style={{ width: 6, height: 6, borderRadius: '50%', background: FEXT.danger, animation: 'pulse 1.4s infinite' }} /> CANLI</>
               : gruplu
@@ -1152,7 +1152,7 @@ function Matches() {
     <button type="button" onClick={takipDegistir} aria-pressed={takipEtkin} style={kapsulStil(takipEtkin)}>
       <Star size={14} fill={takipEtkin ? '#FFD700' : 'none'} color={takipEtkin ? '#FFD700' : 'currentColor'} />
       Takip ettiklerim
-      {followedTeamIds.length > 0 && <span style={{ fontSize: 11, opacity: 0.75 }}>{followedTeamIds.length}</span>}
+      {followedTeamIds.length > 0 && <span style={{ fontSize: yazi(11), opacity: 0.75 }}>{followedTeamIds.length}</span>}
     </button>
   )
   const turkKapsulu = (
@@ -1312,7 +1312,7 @@ function Matches() {
                 {yukleniyor === 'daha' && <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} />}
                 Daha fazla yükle
               </button>
-              <span style={{ fontSize: 11, color: 'var(--text-5)' }}>
+              <span style={{ fontSize: yazi(11), color: 'var(--text-5)' }}>
                 {matches.length.toLocaleString('tr-TR')}{totalCount != null && ` / ${totalCount.toLocaleString('tr-TR')}`} maç gösteriliyor
               </span>
             </div>

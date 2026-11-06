@@ -103,7 +103,7 @@ python kadro.py --takim <id> [--gun 30]                   # Türk takımı kadro
 Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - **Veri:** psycopg ile doğrudan sorgu (ör. kazanan–skor çelişkisi sayımı); düzeltmeden önce ve sonra say.
 - **RLS/yetki:** anon anahtarla REST'e dışarıdan iste; yazma testi veri değiştirmesin diye `{"id":null}` gönder (42501 = RLS reddetti, 23502 = RLS geçti).
-- **SEO/bot HTML:** Googlebot UA ile iste, `?__og=1&cb=<rastgele>` ekleyip önbelleği atla. `<title>` middleware'deki varsayılan kabuk başlığıysa sayfa bozuktur.
+- **SEO/bot HTML:** Googlebot UA ile iste, `?__og=1&cb=<rastgele>` ekleyip önbelleği atla. `<title>` middleware'deki varsayılan kabuk başlığıysa sayfa bozuktur. `__og=1` değersiz bot kontrolünü de atlar: GPTBot gibi `DEGERSIZ_BOT_RE` botunu yalnız `?cb=` ile dene (kabuk dönmeli).
 - **Frontend:** `npm run build` + `npm run lint`, sonra canlıda ekran görüntüsü.
 - **Animasyon:** gizli tarayıcı panelinde IntersectionObserver tetiklenmez; ekrana girince başlayanı konsolda `window.IntersectionObserver = undefined` + SPA içi gezinmeyle (`pushState` + `popstate`) zorla.
 - **Yerel dev:** `index.html` SW'yi dev'de de kaydeder, `/src/` modüllerini önbelleğe alır; "does not provide an export named" görürsen SW'yi kaldır + `caches.delete('fext-static-v1')`.

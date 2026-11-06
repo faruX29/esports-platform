@@ -781,7 +781,7 @@ function CommunityPredictionPool({ matchId, teamAName, teamBName, aiWin, isFinis
 
       {fallbackLocal && (
         <div style={{ marginTop: 6, fontSize: yazi(10), color: 'var(--text-3)' }}>
-          Community tablosu ulasilamaz durumda. Local fallback aktif.
+          Oyun şu an kaydedilemiyor; yalnız bu cihazda tutuluyor.
         </div>
       )}
       {isFinished && (

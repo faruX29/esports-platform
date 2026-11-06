@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { KullaniciHatasi } from '../utils/hataMetni'
 import { gorunmezCaptchaTokeni } from '../utils/gorunmezCaptcha'
 import { UYGULAMA, disariKok } from '../utils/platform'
 
@@ -212,7 +213,7 @@ export function AuthProvider({ children }) {
 			const { data: available, error: availError } = await supabase.rpc('username_available', { name: cleanUsername })
 			if (availError) console.warn('username_available:', availError.message)
 			else if (available === false) {
-				throw new Error('Bu kullanıcı adı zaten alınmış. Başka bir tane dene.')
+				throw new KullaniciHatasi('Bu kullanıcı adı zaten alınmış. Başka bir tane dene.')
 			}
 		}
 
@@ -349,14 +350,15 @@ export function AuthProvider({ children }) {
 	// Edge Function `delete-account` sunucuda siler; burada yalnız yerel oturum
 	// kapatılır (sunucudaki oturum hesapla birlikte gitti, global signOut 403 verir).
 	async function deleteAccount() {
-		if (!user?.id) throw new Error('Giriş yapmadan hesap silinemez.')
+		if (!user?.id) throw new KullaniciHatasi('Giriş yapmadan hesap silinemez.')
 		const { data, error } = await supabase.functions.invoke('delete-account', {
 			body: { onay: 'HESABIMI SIL' },
 		})
 		if (error || !data?.ok) {
 			let kod = ''
 			try { kod = (await error?.context?.json?.())?.hata || '' } catch { /* gövde yok */ }
-			throw new Error(kod ? `Hesap silinemedi (${kod}).` : 'Hesap silinemedi. Lütfen tekrar dene.')
+			console.error('delete-account:', kod || error?.message || data)
+			throw new KullaniciHatasi('Hesap silinemedi. Lütfen tekrar dene.')
 		}
 		await supabase.auth.signOut({ scope: 'local' }).catch(() => { /* oturum zaten geçersiz */ })
 		setProfileLoading(false)
@@ -366,7 +368,7 @@ export function AuthProvider({ children }) {
 	}
 
 	async function updateProfile(partial) {
-		if (!user?.id) throw new Error('Giriş yapmadan profil güncellenemez.')
+		if (!user?.id) throw new KullaniciHatasi('Giriş yapmadan profil güncellenemez.')
 		const payload = {
 			id: user.id,
 			...(partial?.username !== undefined ? { username: partial.username || buildUsername(user) } : {}),

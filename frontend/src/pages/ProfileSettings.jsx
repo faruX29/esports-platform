@@ -8,7 +8,8 @@ import InitialsImage from '../components/InitialsImage'
 import PasswordInput from '../components/PasswordInput'
 import Anahtar from '../components/Anahtar'
 import { UYGULAMA } from '../utils/platform'
-import { SIFRE_EN_AZ, SIFRE_KISA_MESAJ } from '../utils/authError'
+import { SIFRE_EN_AZ, SIFRE_KISA_MESAJ, authErrorMessage } from '../utils/authError'
+import { hataMetni } from '../utils/hataMetni'
 
 // Takip ettiğim takımlar — listele, çıkar, ara & ekle. (Takipler follows tablosuna
 // UserContext üzerinden yazılır; oyun ataması bir sonraki yüklemede takımdan türetilir.)
@@ -214,7 +215,7 @@ function DeleteAccountSection() {
       // Oturum kapandı; ProtectedRoute zaten ana sayfaya yönlendirir.
       navigate('/', { replace: true })
     } catch (err) {
-      setError(err.message || 'Hesap silinemedi. Lütfen tekrar dene.')
+      setError(hataMetni(err, 'Hesap silinemedi. Lütfen tekrar dene.'))
       setBusy(false)
     }
   }
@@ -304,7 +305,7 @@ export default function ProfileSettings() {
       })
       setMsg('Profil kaydedildi.')
     } catch (err) {
-      setMsg(`Hata: ${err.message}`)
+      setMsg(`Hata: ${authErrorMessage(err, 'Profil kaydedilemedi.')}`)
     } finally {
       setSaving(false)
     }
@@ -334,7 +335,7 @@ export default function ProfileSettings() {
       setNewPass(''); setConfirmPass('')
       setPwMsg('Şifren güncellendi.')
     } catch (err) {
-      setPwMsg(`Hata: ${err.message}`)
+      setPwMsg(`Hata: ${authErrorMessage(err, 'Şifre güncellenemedi.')}`)
     } finally {
       setPwSaving(false)
     }
@@ -359,7 +360,7 @@ export default function ProfileSettings() {
       await updateProfile({ avatar_url: url }) // fotoğrafı anında kaydet (Kaydet'e basmaya gerek yok)
       setMsg('Profil fotoğrafı güncellendi.')
     } catch (err) {
-      setMsg(`Hata: ${err.message || 'Yükleme başarısız.'}`)
+      setMsg(`Hata: ${authErrorMessage(err, 'Yükleme başarısız.')}`)
     } finally {
       setUploading(false)
     }
@@ -368,7 +369,7 @@ export default function ProfileSettings() {
   async function removeAvatar() {
     setAvatarUrl('')
     setMsg('')
-    try { await updateProfile({ avatar_url: null }) } catch (err) { setMsg(`Hata: ${err.message}`) }
+    try { await updateProfile({ avatar_url: null }) } catch (err) { setMsg(`Hata: ${authErrorMessage(err, 'Fotoğraf kaldırılamadı.')}`) }
   }
 
   // Not: dolgu yerine kenarlıkla tanımlı input → aydınlık modda gri dolgu (surface-2)

@@ -130,6 +130,9 @@
 }
 
 /* Görünmez ama ekran okuyucu/arama motoru okur (ör. maç sayfasının h1'i). Tailwind'in sr-only'si yerine. */
+/* Küçük baş harf kutusu (InitialsImage, <22 px): telefonda 12 px'te tek harf sığar */
+@media (max-width: 768px) { .bas-harf-2 { display: none; } }
+
 .gorsel-gizli {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;

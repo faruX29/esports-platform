@@ -1013,7 +1013,7 @@ function Matches() {
     } catch (err) {
       if (no !== istekNo.current) return
       console.error('Maçlar alınamadı:', err)
-      if (mod !== 'sessiz') setError(err?.message || 'Maçlar alınamadı')
+      if (mod !== 'sessiz') setError('Maçlar alınamadı')
     } finally {
       if (no === istekNo.current && mod !== 'sessiz') setYukleniyor(null)
     }

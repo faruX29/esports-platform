@@ -561,14 +561,14 @@ export default function NewsPage() {
       })
 
       if (error) throw error
-      window.alert('Geri bildirimin alindi. Tesekkurler!')
+      window.alert('Geri bildirimin alındı. Teşekkürler!')
     } catch {
       try {
         await navigator.clipboard.writeText(JSON.stringify(payload))
       } catch {
         // no-op
       }
-      window.alert('Geri bildirim altyapısı hazır değil. Haber özeti panoya kopyalandı.')
+      window.alert('Geri bildirim şu an gönderilemedi. Haber özeti panoya kopyalandı.')
     }
   }
 

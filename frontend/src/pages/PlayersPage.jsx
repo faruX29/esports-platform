@@ -354,7 +354,8 @@ export default function PlayersPage() {
         setPlayers(enriched)
       } catch (e) {
         if (!cancelled) {
-          setError(e?.message || 'Oyuncu verileri yuklenemedi.')
+          console.error('Oyuncu listesi:', e?.message || e)
+          setError('Oyuncu verileri yüklenemedi. Birazdan tekrar dene.')
           setPlayers([])
         }
       } finally {

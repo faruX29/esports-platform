@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { kucukGorsel, yedekGorsel, THUMB_AZAMI_PX } from '../utils/gorsel'
+import { yazi } from '../theme'
 
 function buildInitials(name, max = 2) {
   const cleaned = String(name || '')
@@ -116,8 +117,10 @@ export default function InitialsImage({
   }
 
   return (
-    // Logo yerine geçer: ekran okuyucuya tek görsel (ad), baş harfler süs. Kutu sabit
-    // boyutlu olduğu için telefon yazı tabanı (yazi) burada uygulanmaz.
+    // Logo yerine geçer: ekran okuyucuya tek görsel (ad), baş harfler süs. Küçük
+    // kutuda (16-24 px) baş harf telefonda 10 px kalıyordu → yazi(): ≤768 px'te en az 12.
+    // 22 px'ten küçük kutuya iki harf 12 px'te sığmıyor ("AA" ~19 px): telefonda ikinci
+    // harf gizlenir (index.css `.bas-harf-2`), masaüstü iki harfle aynı.
     <div
       role="img"
       aria-label={alt || name || 'placeholder'}
@@ -133,13 +136,17 @@ export default function InitialsImage({
         display: 'grid',
         placeItems: 'center',
         fontWeight: 800,
-        fontSize: textSize,
+        fontSize: textSize < 12 ? yazi(textSize) : textSize,
         lineHeight: 1,
         userSelect: 'none',
         ...style,
       }}
     >
-      <span aria-hidden="true">{initials}</span>
+      <span aria-hidden="true">
+        {baseSize < 22 && initials.length > 1
+          ? <>{initials[0]}<span className="bas-harf-2">{initials.slice(1)}</span></>
+          : initials}
+      </span>
     </div>
   )
 }

@@ -9,6 +9,8 @@
 
 /** Şifre asgari uzunluğu: kayıt, şifre sıfırlama ve Ayarlar aynı kuralı kullanır.
  *  Supabase Auth panelindeki "Minimum password length" de bununla aynı tutulmalı. */
+import { KullaniciHatasi } from './hataMetni'
+
 export const SIFRE_EN_AZ = 8
 export const SIFRE_KISA_MESAJ = `Şifre en az ${SIFRE_EN_AZ} karakter olmalı.`
 export function authErrorMessage(err, fallback = 'İşlem başarısız. Lütfen tekrar dene.') {
@@ -46,6 +48,9 @@ export function authErrorMessage(err, fallback = 'İşlem başarısız. Lütfen 
   if (low.includes('password') && (low.includes('at least') || low.includes('weak') || low.includes('6 characters') || low.includes('too short')))
     return SIFRE_KISA_MESAJ
 
+  if (low.includes('duplicate key') && low.includes('username'))
+    return 'Bu kullanıcı adı zaten alınmış. Başka bir tane dene.'
+
   if (low.includes('invalid') && low.includes('email'))
     return 'Geçerli bir e-posta adresi gir.'
 
@@ -59,6 +64,9 @@ export function authErrorMessage(err, fallback = 'İşlem başarısız. Lütfen 
   if (status >= 500 || empty)
     return 'Sunucuya ulaşırken bir hata oluştu. Birazdan tekrar dener misin?'
 
-  // Elde anlamlı bir metin varsa onu göster, yoksa fallback
-  return raw || fallback
+  // Ham sunucu metni (İngilizce, teknik) ekrana çıkmaz; yalnız kendi Türkçe
+  // mesajımız (KullaniciHatasi) olduğu gibi gösterilir.
+  if (err instanceof KullaniciHatasi && raw) return raw
+  console.warn('Tanınmayan hata, kullanıcıya genel mesaj gösterildi:', raw)
+  return fallback
 }

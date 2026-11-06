@@ -293,7 +293,8 @@ export default function RankingsPage() {
         setRows(computed)
       } catch (e) {
         if (!cancelled) {
-          setError(e?.message || 'Güç sıralaması yüklenemedi.')
+          console.error('Güç sıralaması:', e?.message || e)
+          setError('Güç sıralaması yüklenemedi. Birazdan tekrar dene.')
           setRows([])
         }
       } finally {

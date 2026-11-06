@@ -163,7 +163,8 @@ export default function TournamentsListPage() {
         setTournaments(prev => (page === 0 ? (data || []) : [...prev, ...(data || [])]))
       } catch (loadError) {
         if (!cancelled) {
-          setError(loadError?.message || 'Turnuvalar yuklenemedi.')
+          console.error('Turnuva listesi:', loadError?.message || loadError)
+          setError('Turnuvalar yüklenemedi. Birazdan tekrar dene.')
           if (page === 0) setTournaments([])
         }
       } finally {

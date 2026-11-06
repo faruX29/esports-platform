@@ -1288,11 +1288,11 @@ export default function SearchPage() {
                 border: '1px dashed var(--surface-2)' }}>
                 <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><Trophy size={38} color="var(--text-6)" /></div>
                 <div style={{ fontSize: 15, color: 'var(--text-5)', marginBottom: 6 }}>Sonuç bulunamadı</div>
-                <div style={{ fontSize: 12, color: 'var(--line)', marginBottom: 20 }}>
-                  {hasActiveFilters
-                    ? 'Filtreler sonuçları daraltıyor olabilir'
-                    : 'Veritabanında tournaments tablosu boş olabilir'}
-                </div>
+                {hasActiveFilters && (
+                  <div style={{ fontSize: 12, color: 'var(--text-4)', marginBottom: 20 }}>
+                    Filtreler sonuçları daraltıyor olabilir
+                  </div>
+                )}
                 {hasActiveFilters && (
                   <button
                     onClick={clearAllFilters}

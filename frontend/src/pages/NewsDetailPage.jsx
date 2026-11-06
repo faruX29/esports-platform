@@ -40,6 +40,7 @@ import { FEXT, yazi } from '../theme'
 import { isUncertainPrediction, fextopusSonucu } from '../utils/prediction'
 import { Damga } from '../components/Animasyon'
 import { useAcilisGecisi } from '../hooks/useHareket'
+import { KullaniciHatasi, hataMetni } from '../utils/hataMetni'
 
 function isMissingTableError(error, tableName) {
   const code = error?.code || ''
@@ -81,6 +82,10 @@ function classifyCommentInsertIssue(error) {
 }
 
 const TABLE_EXISTS_CACHE = new Map()
+
+// Cümle içindeki küçük link: dokunma alanı 44 px, dolgu kadar negatif kenar boşluğu
+// satırın yerleşimini değiştirmez.
+const DOKUNMA_LINKI = { color: FEXT.accentText, textDecoration: 'none', fontWeight: 600, display: 'inline-block', padding: '13px 0', margin: '-13px 0' }
 const COMMENT_CONTENT_COLUMN = 'content'
 
 // Tablo var sayılır; asıl sorgu "tablo yok" hatası verirse (isMissingTableError)
@@ -816,7 +821,7 @@ export default function NewsDetailPage() {
       setMyVotes(mine)
     } catch (forumErr) {
       console.error('forum load error:', forumErr?.message || forumErr)
-      setCommentWarning('Forum verileri yuklenemedi.')
+      setCommentWarning('Yorumlar yüklenemedi.')
       setComments([])
       setVotesByComment({})
       setMyVotes({})
@@ -842,7 +847,7 @@ export default function NewsDetailPage() {
             .eq('id', ref.id)
             .maybeSingle()
           if (artErr) throw artErr
-          if (!art) throw new Error('Haber bulunamadı.')
+          if (!art) throw new KullaniciHatasi('Haber bulunamadı.')
           await turkTakimlariYukle()
           const transferStory = mapTransferRowToStory(art)
           if (!cancelled) {
@@ -850,7 +855,8 @@ export default function NewsDetailPage() {
             await loadForum(transferStory.id)
           }
         } catch (err) {
-          if (!cancelled) setError(err.message || 'Transfer haberi yuklenemedi.')
+          console.error('Transfer haberi:', err?.message || err)
+          if (!cancelled) setError(hataMetni(err, 'Transfer haberi yüklenemedi.'))
         } finally {
           if (!cancelled) setLoading(false)
         }
@@ -868,14 +874,15 @@ export default function NewsDetailPage() {
             .eq('id', ref.id)
             .maybeSingle()
           if (artErr) throw artErr
-          if (!art) throw new Error('Haftalık özet bulunamadı.')
+          if (!art) throw new KullaniciHatasi('Haftalık özet bulunamadı.')
           const weeklyStory = mapWeeklyRowToStory(art)
           if (!cancelled) {
             setStory(weeklyStory)
             await loadForum(weeklyStory.id)
           }
         } catch (err) {
-          if (!cancelled) setError(err.message || 'Haftalık özet yuklenemedi.')
+          console.error('Haftalık özet:', err?.message || err)
+          if (!cancelled) setError(hataMetni(err, 'Haftalık özet yüklenemedi.'))
         } finally {
           if (!cancelled) setLoading(false)
         }
@@ -896,14 +903,15 @@ export default function NewsDetailPage() {
             .limit(1)
             .maybeSingle()
           if (artErr) throw artErr
-          if (!art) throw new Error('Turnuva özeti bulunamadı.')
+          if (!art) throw new KullaniciHatasi('Turnuva özeti bulunamadı.')
           const tournamentStory = mapTournamentRowToStory(art)
           if (!cancelled) {
             setStory(tournamentStory)
             await loadForum(tournamentStory.id)
           }
         } catch (err) {
-          if (!cancelled) setError(err.message || 'Turnuva özeti yuklenemedi.')
+          console.error('Turnuva özeti:', err?.message || err)
+          if (!cancelled) setError(hataMetni(err, 'Turnuva özeti yüklenemedi.'))
         } finally {
           if (!cancelled) setLoading(false)
         }
@@ -938,7 +946,7 @@ export default function NewsDetailPage() {
           .maybeSingle()
 
         if (matchErr) throw matchErr
-        if (!match) throw new Error('Haber bulunamadı.')
+        if (!match) throw new KullaniciHatasi('Haber bulunamadı.')
 
         // Bitmiş maçta sonuç haberi önizlemeden önce gelir; ikisi de yoksa haber yok.
         const { data: articleRows, error: articleErr } = await supabase
@@ -1003,8 +1011,9 @@ export default function NewsDetailPage() {
           await loadForum(storyWithRealtimeTier.id)
         }
       } catch (err) {
+        console.error('Haber detayı:', err?.message || err)
         if (!cancelled) {
-          setError(err.message || 'Haber detayları yüklenemedi.')
+          setError(hataMetni(err, 'Haber detayları yüklenemedi.'))
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -1176,11 +1185,6 @@ export default function NewsDetailPage() {
         hint: commentErr?.hint || null,
       }
       console.error('submitComment error details:', details)
-      if (issueType === 'RLS') {
-        window.alert('Yorum kaydedilemedi: yetki hatası. Giriş yapıp tekrar dene.')
-      } else if (issueType === 'SCHEMA') {
-        window.alert('Yorum kaydedilemedi: veri yapısı uyuşmazlığı tespit edildi.')
-      }
       setCommentWarning(explainCommentInsertError(commentErr))
       setCommentSuccess('')
     } finally {
@@ -1325,14 +1329,14 @@ export default function NewsDetailPage() {
       })
 
       if (insertErr) throw insertErr
-      window.alert('Geri bildirimin alindi. Tesekkurler!')
+      window.alert('Geri bildirimin alındı. Teşekkürler!')
     } catch {
       try {
         await navigator.clipboard.writeText(JSON.stringify(payload))
       } catch {
         // no-op
       }
-      window.alert('Geri bildirim altyapısı hazır değil. Haber özeti panoya kopyalandı.')
+      window.alert('Geri bildirim şu an gönderilemedi. Haber özeti panoya kopyalandı.')
     }
   }
 
@@ -1393,7 +1397,7 @@ export default function NewsDetailPage() {
           }
         `}</style>
 
-        <Link to='/news' style={{ color: 'var(--accent-fg)', fontSize: 13, textDecoration: 'none' }}>← Haber akışına dön</Link>
+        <Link to='/news' style={{ color: 'var(--accent-fg)', fontSize: 13, textDecoration: 'none', display: 'inline-block', padding: '12px 0', margin: '-12px 0' }}>← Haber akışına dön</Link>
 
         <section style={{ marginTop: 14, borderRadius: 20, border: '1px solid var(--line)', background: 'linear-gradient(145deg,var(--surface),var(--surface))', padding: 22 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
@@ -1450,18 +1454,27 @@ export default function NewsDetailPage() {
             </div>
             <div style={{ display: 'flex', gap: 4 }}>
               {[{ key: 'best', label: 'En İyi' }, { key: 'newest', label: 'En Yeni' }].map(({ key, label }) => (
+                // Düğme 44 px yükseklikte dokunma alanı, görünen kapsül içteki span;
+                // negatif kenar boşluğu satır yüksekliğini değiştirmez.
                 <button
                   key={key}
                   type="button"
+                  aria-pressed={sortMode === key}
                   onClick={() => setSortMode(key)}
                   style={{
+                    padding: '10px 0', margin: '-10px 0', minHeight: 44,
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    display: 'inline-flex', alignItems: 'center',
+                  }}
+                >
+                  <span style={{
                     fontSize: yazi(10), fontWeight: 700, padding: '3px 10px', borderRadius: 999,
                     border: sortMode === key ? `1px solid ${FEXT.accent}` : '1px solid var(--line)',
                     background: sortMode === key ? FEXT.accentSoftBg : 'transparent',
                     color: sortMode === key ? FEXT.accentText : 'var(--text-4)',
-                    cursor: 'pointer', letterSpacing: '.3px',
-                  }}
-                >{label}</button>
+                    letterSpacing: '.3px',
+                  }}>{label}</span>
+                </button>
               ))}
             </div>
           </div>
@@ -1510,9 +1523,9 @@ export default function NewsDetailPage() {
                 ? <div style={{ fontSize: yazi(11), color: 'var(--text-3)' }}>Yorumun hesabınla paylaşılır.</div>
                 : <div style={{ fontSize: yazi(11), color: 'var(--text-3)' }}>
                     Yorum yazmak için{' '}
-                    <Link to="/login" style={{ color: FEXT.accentText, textDecoration: 'none', fontWeight: 600 }}>giriş yap</Link>
+                    <Link to="/login" style={DOKUNMA_LINKI}>giriş yap</Link>
                     {' '}veya{' '}
-                    <Link to="/register" style={{ color: FEXT.accentText, textDecoration: 'none', fontWeight: 600 }}>kayıt ol</Link>.
+                    <Link to="/register" style={DOKUNMA_LINKI}>kayıt ol</Link>.
                   </div>
               }
             </form>

@@ -1662,18 +1662,36 @@ export default function Dashboard() {
     })
   }, [liveMatches, upcomingMatches, yaklasanHam, bitenHam, oyunVeSeviye])
 
-  // Aktif üst-tier turnuvalar: bugün begin_at–end_at arasında olan S/A turnuvalar
-  // + katılan takım logoları (akışta hazır gelir). Canlı maçların altında gösterilir.
+  // Aktif turnuvalar: canlı bölümle aynı mantık — süren S/A turnuvalar (akışta hazır, takım
+  // logolarıyla) + canlı bölümde görünen maçların turnuvaları. "Tümü"de canlı CCT/ESEA maçı
+  // varken bölüm yalnız S/A gösteriyordu; "Sadece S/A"da liveMatches zaten S/A.
+  // Sıra: canlı maçı olanlar önem sırasıyla (liveSirali), sonra canlısı olmayan S/A.
   const activeTournaments = useMemo(() => {
-    let list = turnuvaHam.filter(t => {
-      const k = normalizeTierKey(t.tier)
-      return k === 'S' || k === 'A'
-    })
-    if (activeGame && activeGame !== 'all') {
-      list = list.filter(t => normalizeGameId(t.game?.slug ?? t.game?.name) === activeGame)
+    const oyunUyar = t => !activeGame || activeGame === 'all'
+      || normalizeGameId(t.game?.slug ?? t.game?.name) === activeGame
+    const sa = turnuvaHam
+      .filter(t => { const k = normalizeTierKey(t.tier); return k === 'S' || k === 'A' })
+      .filter(oyunUyar)
+      .map(t => ({ ...t, teams: Array.isArray(t.teams) ? t.teams : [] }))
+    const saById = new Map(sa.map(t => [t.id, t]))
+    const canliSira = []
+    const gorulen = new Set()
+    for (const m of liveSirali) {
+      const id = m.tournament?.id ?? m.tournament_id
+      if (id == null || gorulen.has(id)) continue
+      gorulen.add(id)
+      if (saById.has(id)) { canliSira.push(saById.get(id)); continue }
+      if (!m.tournament) continue
+      // Akışta olmayan turnuva: kart bilgisi maç satırından, logolar açık maçlarından (≤7)
+      const takimlar = new Map()
+      for (const x of acikMaclar) {
+        if ((x.tournament?.id ?? x.tournament_id) !== id) continue
+        for (const tm of [x.team_a, x.team_b]) if (tm?.id && takimlar.size < 7) takimlar.set(tm.id, tm)
+      }
+      canliSira.push({ ...m.tournament, game: m.game, teams: [...takimlar.values()] })
     }
-    return list.slice(0, 12).map(t => ({ ...t, teams: Array.isArray(t.teams) ? t.teams : [] }))
-  }, [turnuvaHam, activeGame])
+    return [...canliSira, ...sa.filter(t => !gorulen.has(t.id))].slice(0, 12)
+  }, [turnuvaHam, activeGame, liveSirali, acikMaclar])
 
   // Fextopus isabet paneli: son 30 sonuçlanmış maç (eskiden 45 sn'de bir ayrı istek).
   const accuracyRows = useMemo(
@@ -2557,13 +2575,9 @@ export default function Dashboard() {
       {/* ── Aktif Turnuvalar (süregelen üst-tier — canlı maçların altında) ─── */}
       {activeTournaments.length > 0 && (() => {
         const liveTournIds = new Set((liveMatches || []).map(m => m.tournament?.id ?? m.tournament_id).filter(Boolean))
-        // Canlı maçı olan turnuvalar en solda (şeritte ilk görünen) — kullanıcı
-        // kaydırmadan "şu an oynanan" turnuvayı görsün. Sıralama kararlı:
-        // canlılar kendi aralarındaki mevcut sırayı korur.
-        const orderedTournaments = [
-          ...activeTournaments.filter(t => liveTournIds.has(t.id)),
-          ...activeTournaments.filter(t => !liveTournIds.has(t.id)),
-        ]
+        // Canlı maçı olan turnuvalar en solda (activeTournaments bu sırayla kurulur) —
+        // kullanıcı kaydırmadan "şu an oynanan" turnuvayı görsün.
+        const orderedTournaments = activeTournaments
         return (
           <div id="turnuvalar" style={{ marginBottom: 24, scrollMarginTop: ustPay }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, ...baslikStil('turnuvalar') }}>

@@ -1510,7 +1510,7 @@ export default function MatchDetail() {
   const favB  = isTeamFollowed(bId)
   const boFormat = getBOFormat(match.team_a_score, match.team_b_score, match.number_of_games)
 
-  // Yayınlar: Türkçe önce, sonra resmi/ana. Gömülen tek oynatıcı Twitch (YouTube/Kick
+  // Yayınlar: Türkçe → İngilizce → diğer diller, aynı dilde resmi/ana önce. Gömülen tek oynatıcı Twitch (YouTube/Kick
   // gömmesi kanal kimliği ister, PandaScore vermiyor); diğerleri aşağıda dış link.
   const yayinlar = yayinlariSirala(streams)
   const twitchCh = (() => {

@@ -6,7 +6,7 @@ import PasswordInput from '../components/PasswordInput'
 import GoogleIcon from '../components/GoogleIcon'
 import { MessageCircle, MailCheck } from 'lucide-react'
 import { DISCORD_ENABLED, GOOGLE_ENABLED, TURNSTILE_ENABLED } from '../features'
-import { authErrorMessage } from '../utils/authError'
+import { authErrorMessage, SIFRE_EN_AZ, SIFRE_KISA_MESAJ } from '../utils/authError'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
@@ -24,6 +24,7 @@ export default function RegisterPage() {
 
   async function onSubmit(e) {
     e.preventDefault()
+    if (password.length < SIFRE_EN_AZ) { setError(SIFRE_KISA_MESAJ); return }
     if (TURNSTILE_ENABLED && !captchaToken) {
       setError('Lütfen "robot değilim" doğrulamasını tamamla.')
       return
@@ -117,7 +118,7 @@ export default function RegisterPage() {
           <form onSubmit={onSubmit} style={{ display: 'grid', gap: 10 }}>
             <input required value={username} onChange={e => setUsername(e.target.value)} placeholder="Kullanıcı adı" autoComplete="username" style={inputStyle} />
             <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="E-posta" autoComplete="email" style={inputStyle} />
-            <PasswordInput required minLength={6} value={password} onChange={e => setPassword(e.target.value)} placeholder="Şifre (min 6)" autoComplete="new-password" style={inputStyle} />
+            <PasswordInput required minLength={SIFRE_EN_AZ} value={password} onChange={e => setPassword(e.target.value)} placeholder={`Şifre (en az ${SIFRE_EN_AZ} karakter)`} autoComplete="new-password" style={inputStyle} />
             <Turnstile ref={captchaRef} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken('')} />
             <button disabled={loading} style={{ marginTop: 4, border: 'none', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#fff', fontWeight: 800, background: 'linear-gradient(135deg,#DF4888,#8B3AA0 55%,#6A297F)', opacity: loading ? 0.6 : 1 }}>{loading ? 'Kaydediliyor...' : 'Kayıt Ol'}</button>
             {error && <div style={{ fontSize: 12, color: '#FF4655' }}>{error}</div>}
@@ -127,6 +128,8 @@ export default function RegisterPage() {
               Kayıt olarak{' '}
               <Link to="/kullanim-kosullari" style={{ color: 'var(--text-4)' }}>Kullanım Koşulları</Link>'nı ve{' '}
               <Link to="/gizlilik" style={{ color: 'var(--text-4)' }}>Gizlilik Politikası</Link>'nı kabul etmiş olursun.
+              {' '}Kişisel verilerinin nasıl işlendiği:{' '}
+              <Link to="/kvkk" style={{ color: 'var(--text-4)' }}>KVKK Aydınlatma Metni</Link>.
             </p>
           </form>
 

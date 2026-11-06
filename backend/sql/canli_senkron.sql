@@ -11,8 +11,9 @@
 -- GitHub Actions dakikası yemez, gerçekten dakikada bir koşar.
 --
 -- KAPSAM: yalnız DELTA — var olan maçın durumu, skoru, kazananı, saati,
--- raw_data'sı. /running'den düşen (biten) maçın son hâlini de kendi
--- kaydından alır (29 Ekim). Yeni maç/takım oluşturmaz; onlar Python ETL'in
+-- raw_data'sı. /running'den düşen (biten) maçın son hâlini (29 Ekim) ve
+-- saati geçip hiç başlamayan (iptal/ertelenen) maçı (6 Kasım) kendi
+-- kaydından alır. Yeni maç/takım oluşturmaz; onlar Python ETL'in
 -- işi. Takımları satırdakiyle eşleşmeyen maça DOKUNMAZ (30 Eylül skor
 -- karışması dersi).
 --
@@ -50,7 +51,9 @@ $$;
 -- Pencere: şu an oynanan ya da son 2 saatte başlamış/5 dakika içinde
 -- başlayacak maçı olan oyun. Maç yoksa hiç istek atılmaz (kota korunur).
 -- Maç başlayınca durumu 'running' olur ve bitene kadar pencerede kalır.
--- Kota: PandaScore saatte 1000 istek. En kötü hâl 3 oyun x 60 = 180/saat.
+-- Kota: PandaScore saatte 1000 istek. En kötü hâl 3 oyun x 60 = 180/saat
+-- + tek maç istekleri (takılı canlı ≤5/tur, maç başına 10 dk'da bir; saati
+-- geçmiş başlamamış ≤3/tur, maç başına 30 dk'da bir).
 CREATE OR REPLACE FUNCTION canli.iste() RETURNS integer
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, net AS $$
 DECLARE
@@ -121,6 +124,51 @@ BEGIN
         INSERT INTO canli.istek (oyun, request_id, mac_id) VALUES (slug, rid, mid);
         sayi := sayi + 1;
     END LOOP;
+
+    -- Saati geçmiş ama hiç başlamamış maç (6 Kasım): iptal (çoğu hükmen) ya da
+    -- ertelenen maç /running'e hiç girmez, yukarıdaki iki istek onu görmez.
+    -- Python ETL (`resolve_stale_upcoming`) ancak saat 6 saat geçince ve iş
+    -- akışı koşunca (fiilen 4-8 saatte bir) bakıyordu → site 6-14 saat "Sonuç
+    -- bekleniyor" gösteriyordu (5 Kasım: 12 CS2 maçı, 6'sı iptal, 6'sı 9-17
+    -- Kasım'a ertelenmiş). Saat 30 dakika geçince maçın kendi kaydı sorulur;
+    -- oyunun son /running yanıtında olan maç atlanır (onu o yanıt yazar).
+    -- Kota: turda en çok 3, aynı maç 30 dakikada bir, yalnız son 2 gün.
+    FOR mid, slug IN
+        WITH son AS (
+            SELECT DISTINCT ON (i.oyun) i.oyun, r.content::jsonb AS icerik
+            FROM canli.istek i
+            JOIN net._http_response r ON r.id = i.request_id
+            WHERE i.mac_id IS NULL AND r.status_code = 200
+              AND i.olusma > now() - interval '5 minutes'
+            ORDER BY i.oyun, i.id DESC
+        )
+        SELECT m.id, g.slug
+        FROM matches m
+        JOIN games g ON g.id = m.game_id
+        LEFT JOIN son s ON s.oyun = g.slug
+        WHERE m.status = 'not_started'
+          AND m.scheduled_at BETWEEN now() - interval '2 days'
+                                 AND now() - interval '30 minutes'
+          -- son yanıt yoksa (oyunda başka maç yok) NULL → boş dizi: maç sorulur
+          AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(
+                              CASE WHEN jsonb_typeof(s.icerik) = 'array'
+                                   THEN s.icerik ELSE '[]'::jsonb END) j
+                          WHERE (j->>'id')::bigint = m.id)
+          AND NOT EXISTS (SELECT 1 FROM canli.istek t
+                          WHERE t.mac_id = m.id
+                            AND t.olusma > now() - interval '30 minutes')
+        ORDER BY m.scheduled_at
+        LIMIT 3
+    LOOP
+        SELECT net.http_get(
+            url     := 'https://api.pandascore.co/matches/' || mid,
+            headers := jsonb_build_object('Authorization', 'Bearer ' || tok,
+                                          'Accept', 'application/json'),
+            timeout_milliseconds := 8000
+        ) INTO rid;
+        INSERT INTO canli.istek (oyun, request_id, mac_id) VALUES (slug, rid, mid);
+        sayi := sayi + 1;
+    END LOOP;
     RETURN sayi;
 END;
 $$;
@@ -179,7 +227,9 @@ BEGIN
                   AND EXISTS (SELECT 1 FROM jsonb_array_elements(gelen.ham->'results') x
                               WHERE (x->>'team_id')::bigint = m.team_b_id)
                   AND (m.status IS DISTINCT FROM gelen.durum
-                       OR m.raw_data->'results' IS DISTINCT FROM gelen.ham->'results')
+                       OR m.raw_data->'results' IS DISTINCT FROM gelen.ham->'results'
+                       -- ertelenen maç: durum aynı (not_started), yalnız saat değişir
+                       OR m.scheduled_at IS DISTINCT FROM COALESCE(gelen.saat, m.scheduled_at))
                 RETURNING 1
             )
             SELECT count(*) INTO adet FROM yazim;

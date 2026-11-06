@@ -23,3 +23,11 @@ export function yuzde(n, basamak = 0) {
   const s = ondalik(n, basamak)
   return s === '—' ? s : `%${s}`
 }
+
+/** Biçimlenmiş iki tarihten aralık: aynı güne düşerse tek tarih ("28 Ağu – 28 Ağu" değil), biri boşsa öteki. */
+export function tarihAraligi(bas, bit, ayrac = ' – ') {
+  const a = bas || ''
+  const b = bit || ''
+  if (!a || !b || a === b) return a || b
+  return `${a}${ayrac}${b}`
+}

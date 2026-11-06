@@ -6,6 +6,11 @@
  * şey görüyor. Bu yardımcı; boş gövde, İngilizce mesaj ve HTTP durum kodunu
  * ayıklayıp net bir Türkçe karşılık verir. Auth sayfalarının hepsi bunu kullanır.
  */
+
+/** Şifre asgari uzunluğu: kayıt, şifre sıfırlama ve Ayarlar aynı kuralı kullanır.
+ *  Supabase Auth panelindeki "Minimum password length" de bununla aynı tutulmalı. */
+export const SIFRE_EN_AZ = 8
+export const SIFRE_KISA_MESAJ = `Şifre en az ${SIFRE_EN_AZ} karakter olmalı.`
 export function authErrorMessage(err, fallback = 'İşlem başarısız. Lütfen tekrar dene.') {
   const raw = String(
     err?.message ?? err?.error_description ?? err?.msg ?? err?.error ?? ''
@@ -39,7 +44,7 @@ export function authErrorMessage(err, fallback = 'İşlem başarısız. Lütfen 
     return 'Yeni şifren eskisinden farklı olmalı.'
 
   if (low.includes('password') && (low.includes('at least') || low.includes('weak') || low.includes('6 characters') || low.includes('too short')))
-    return 'Şifre en az 6 karakter olmalı.'
+    return SIFRE_KISA_MESAJ
 
   if (low.includes('invalid') && low.includes('email'))
     return 'Geçerli bir e-posta adresi gir.'

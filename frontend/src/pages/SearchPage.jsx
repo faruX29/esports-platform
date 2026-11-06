@@ -354,7 +354,7 @@ function TournamentCard({ t, highlighted }) {
               ? new Date(t.begin_at).toLocaleDateString('tr-TR',
                   { day: '2-digit', month: 'short', year: 'numeric' })
               : '?'}
-            {t.end_at &&
+            {t.end_at && (!t.begin_at || new Date(t.end_at).toDateString() !== new Date(t.begin_at).toDateString()) &&
               ` — ${new Date(t.end_at).toLocaleDateString('tr-TR',
                   { day: '2-digit', month: 'short' })}`}
           </div>

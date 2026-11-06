@@ -73,6 +73,9 @@ export function statusStyle(status, scheduledAt) {
   const s = String(status || '').toLowerCase()
   if (s === 'running' || s === 'live')  return { text: 'CANLI',    ...FEXT.status.live }
   if (s === 'finished')                 return { text: 'Bitti',    ...FEXT.status.finished }
+  // İptal (çoğu hükmen) ve ertelenen maç "Sonuç bekleniyor" sayılmaz
+  if (s === 'canceled' || s === 'cancelled') return { text: 'İptal', ...FEXT.status.upcoming }
+  if (s === 'postponed')                return { text: 'Ertelendi', ...FEXT.status.upcoming }
   if (saatiGecti(scheduledAt))          return { text: 'Sonuç bekleniyor', kisa: 'Bekleniyor', color: FEXT.warn, fg: 'var(--altin-fg)', bg: 'rgba(224,162,77,.12)' }
   return { text: 'Yaklaşan', ...FEXT.status.upcoming } // not_started / upcoming / diğer
 }

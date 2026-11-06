@@ -36,6 +36,7 @@ import { isTurkishTeam, useTurkTakimlar } from '../utils/turkTakimlar'
 import { normalizeTurnuvaMaci, TURNUVA_MAC_SECIMI } from '../utils/turnuvaMaci'
 import { ligSayfasiGetir, ligBaslik } from '../utils/ligler'
 import { Konfeti } from '../components/Animasyon'
+import { tarihAraligi } from '../utils/dil'
 
 const AYLAR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
   'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
@@ -166,7 +167,7 @@ export default function LigPage() {
   const gc = oyun?.color || '#818cf8'
   const baslik = ligBaslik(lig)
   const etkinlikAdi = lig ? tournamentDisplayName({ league_name: lig.league_name, event_name: lig.etkinlik }, { withStage: false }) : ''
-  const tarihler = lig ? [trTarih(lig.baslangic), trTarih(lig.bitis)].filter(Boolean).join(' – ') : ''
+  const tarihler = lig ? tarihAraligi(trTarih(lig.baslangic), trTarih(lig.bitis)) : ''
   const canliSayisi = maclar.filter(m => m.status === 'running').length
   const yaklasanSayisi = maclar.filter(m => m.status === 'not_started').length
   const bitenSayisi = maclar.filter(m => m.status === 'finished').length
@@ -396,7 +397,7 @@ export default function LigPage() {
               {turnuvalar.length > 1 ? (
                 <h2 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-3)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <CalendarDays size={13} />
-                  {[trTarih(asama.begin_at), trTarih(asama.end_at)].filter(Boolean).join(' – ') || 'Tarih açıklanmadı'}
+                  {tarihAraligi(trTarih(asama.begin_at), trTarih(asama.end_at)) || 'Tarih açıklanmadı'}
                 </h2>
               ) : (
                 <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text-1)' }}>

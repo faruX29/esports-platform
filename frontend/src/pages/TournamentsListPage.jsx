@@ -12,6 +12,7 @@ import TrBadge from '../components/TrBadge'
 import { tournamentDisplayName, isGenericStageName, displayRegion } from '../utils/tournamentDisplay'
 import { FEXT } from '../theme'
 import { ligListesiGetir } from '../utils/ligler'
+import { tarihAraligi } from '../utils/dil'
 
 // Kanonik oyuna ait TÜM game_id'ler (mükerrer kayıtlar dahil: CS2 2/8, LoL 3/9).
 function resolveGameIds(activeGame, games) {
@@ -276,8 +277,10 @@ export default function TournamentsListPage() {
         )}
 
         <div style={{ marginTop: 9, fontSize: 11.5, color: 'var(--text-3)' }}>
-          {fmtDate(item.begin_at || item.start_date)}
-          {(item.end_at || item.end_date) ? ` – ${fmtDate(item.end_at || item.end_date)}` : ''}
+          {tarihAraligi(
+            (item.begin_at || item.start_date) && fmtDate(item.begin_at || item.start_date),
+            (item.end_at || item.end_date) && fmtDate(item.end_at || item.end_date),
+          ) || 'Tarih yok'}
         </div>
       </KartLink>
     )

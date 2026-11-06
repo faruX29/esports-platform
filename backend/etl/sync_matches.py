@@ -15,19 +15,21 @@ logger = logging.getLogger(__name__)
 
 
 def _extract_stream_url(streams_list):
-    """Pick best stream URL from PandaScore streams_list (official → main → any)."""
-    if not streams_list:
-        return None
-    for priority in ('official', 'main', None):
-        for s in streams_list:
-            if not isinstance(s, dict):
-                continue
-            url = (s.get('raw_url') or '').strip()
-            if not url:
-                continue
-            if priority is None or s.get(priority):
-                return url
-    return None
+    """PandaScore streams_list'ten varsayılan yayın. Sıra frontend `utils/yayin.js`
+    `yayinlariSirala` ile aynı: dil Türkçe → İngilizce → bilinmeyen → diğer, aynı dilde
+    resmi → ana. (Eskiden dile bakmadan resmi yayın seçiliyordu: Türkçe yokken Rusça açılıyordu.)"""
+    adaylar = []
+    for i, s in enumerate(streams_list or []):
+        if not isinstance(s, dict):
+            continue
+        url = (s.get('raw_url') or '').strip()
+        if not url.lower().startswith(('http://', 'https://')):
+            continue
+        dil = str(s.get('language') or '').lower().replace('_', '-').split('-')[0]
+        dil_sira = 0 if dil == 'tr' else 1 if dil == 'en' else 2 if not dil else 3
+        puan = dil_sira * 4 + (0 if s.get('official') else 2) + (0 if s.get('main') else 1)
+        adaylar.append((puan, i, url))
+    return min(adaylar)[2] if adaylar else None
 
 
 class MatchSyncer:

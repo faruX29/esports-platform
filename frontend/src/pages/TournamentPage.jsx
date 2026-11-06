@@ -9,7 +9,7 @@
  * • Turkish Pride efekti
  */
 import { useState, useEffect, useCallback, useMemo, memo } from 'react'
-import { ondalik } from '../utils/dil'
+import { ondalik, tarihAraligi } from '../utils/dil'
 import { useParams, useNavigate, Link }               from 'react-router-dom'
 import { supabase }                                   from '../supabaseClient'
 import { isTurkishTeam, useTurkTakimlar }                              from '../constants'
@@ -1544,8 +1544,8 @@ export default function TournamentPage() {
           <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginBottom: 14,
             fontSize: 12, color: 'var(--text-4)' }}>
             {(tournament.begin_at || tournament.end_at) && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><CalendarDays size={12} /> {fmtDate(tournament.begin_at)}
-                {tournament.end_at && ` — ${fmtDate(tournament.end_at)}`}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><CalendarDays size={12} />{' '}
+                {tarihAraligi(tournament.begin_at && fmtDate(tournament.begin_at), tournament.end_at && fmtDate(tournament.end_at), ' — ')}
               </span>
             )}
             {tournament.region && !isGenericStageName(tournament?.name) && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><MapPin size={12} /> {regionLabel}</span>}

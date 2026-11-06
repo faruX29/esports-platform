@@ -224,8 +224,9 @@ function NavSearch({ ustuneBin = false }) {
               color: 'var(--text)', fontSize: 13, minWidth: 0,
             }}
           />
-          {/* Kısayol rozeti — Mac'te ⌘K, diğerlerinde Ctrl K */}
-          {!focused && KISAYOL_IPUCU && (
+          {/* Kısayol rozeti — Mac'te ⌘K, diğerlerinde Ctrl K. Yalnız masaüstü satırında:
+              hamburger menüsü dar pencerede (fareli cihazda da) telefon görünümüdür */}
+          {!focused && KISAYOL_IPUCU && ustuneBin && (
             <span style={{
               fontSize: yazi(9), padding: '2px 5px', borderRadius: 4,
               background: 'var(--surface-2)', border: '1px solid var(--line)',
@@ -526,7 +527,7 @@ function GameSelectorBar() {
               <span lang={adDili(g.shortLabel ?? g.label)}>{g.shortLabel ?? g.label}</span>
               {g.soon && (
                 <span style={{ fontSize: yazi(8), padding: '1px 4px', borderRadius: 4,
-                  background: 'var(--surface-2)', color: 'var(--text-4)', letterSpacing: 0 }}>soon</span>
+                  background: 'var(--surface-2)', color: 'var(--text-4)', letterSpacing: 0 }}>Yakında</span>
               )}
             </button>
           )

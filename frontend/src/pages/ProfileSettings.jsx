@@ -8,6 +8,7 @@ import InitialsImage from '../components/InitialsImage'
 import PasswordInput from '../components/PasswordInput'
 import Anahtar from '../components/Anahtar'
 import { UYGULAMA } from '../utils/platform'
+import { SIFRE_EN_AZ, SIFRE_KISA_MESAJ } from '../utils/authError'
 
 // Takip ettiğim takımlar — listele, çıkar, ara & ekle. (Takipler follows tablosuna
 // UserContext üzerinden yazılır; oyun ataması bir sonraki yüklemede takımdan türetilir.)
@@ -325,7 +326,7 @@ export default function ProfileSettings() {
   async function onChangePassword(e) {
     e.preventDefault()
     setPwMsg('')
-    if (newPass.length < 6) { setPwMsg('Hata: Şifre en az 6 karakter olmalı.'); return }
+    if (newPass.length < SIFRE_EN_AZ) { setPwMsg(`Hata: ${SIFRE_KISA_MESAJ}`); return }
     if (newPass !== confirmPass) { setPwMsg('Hata: Şifreler eşleşmiyor.'); return }
     setPwSaving(true)
     try {
@@ -440,7 +441,7 @@ export default function ProfileSettings() {
         <form onSubmit={onChangePassword} style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--line)', display: 'grid', gap: 10 }}>
           <div style={{ fontSize: 14, fontWeight: 800 }}>Şifre Değiştir</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <PasswordInput value={newPass} onChange={e => setNewPass(e.target.value)} placeholder="Yeni şifre (min 6)" autoComplete="new-password" style={inputStyle} />
+            <PasswordInput value={newPass} onChange={e => setNewPass(e.target.value)} placeholder={`Yeni şifre (en az ${SIFRE_EN_AZ} karakter)`} autoComplete="new-password" style={inputStyle} />
             <PasswordInput value={confirmPass} onChange={e => setConfirmPass(e.target.value)} placeholder="Yeni şifre (tekrar)" autoComplete="new-password" style={inputStyle} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

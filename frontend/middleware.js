@@ -825,7 +825,7 @@ async function buildForLig(slug, origin, url) {
     const am = maclar.filter(m => m.tournament_id === t.id)
     const fikstur = am.filter(m => m.status === 'not_started' || m.status === 'running')
     const sonuc = am.filter(m => m.status === 'finished').reverse()
-    const tarih = [trTarih(t.begin_at), trTarih(t.end_at)].filter(Boolean).join(' – ')
+    const tarih = [...new Set([trTarih(t.begin_at), trTarih(t.end_at)].filter(Boolean))].join(' – ')
     return `<section><h2><a href="${origin}/tournament/${t.id}">${esc(t.name || 'Aşama')}</a></h2>` +
       (tarih ? `<p>${esc(tarih)}</p>` : '') +
       (ELEME_ASAMA_RE.test(t.name || '') ? '' : puanDurumuHtml(am)) +

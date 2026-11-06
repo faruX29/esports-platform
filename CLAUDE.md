@@ -72,7 +72,7 @@ python kadro.py --takim <id> [--gun 30]                   # Türk takımı kadro
 - **Vercel CDN Requests** (Hobby: ayda 1M) bot dahil her isteği sayar; kotayı yiyen botu Firewall → Top User Agents'ta bul, custom rule'u UA **Contains** ile kur ("Matches expression" eşleşmedi) ve bot UA'lı curl'de 403 gör. Değersiz bot listesi `middleware.js` `DEGERSIZ_BOT_RE` ile `public/robots.txt`'te eş tutulur.
 - **Gözler:** `saglik.yml` her sabah kontrol eder (eşik aşılırsa "SORUN" e-postası, yoksa yalnız Pazartesi). Tarayıcı hataları ve CSP ihlalleri `client_errors`'a yazılır (`utils/hataBildir.js`, yalnız üretim build'i, oturum başına 5). Eşikler `isletim/saglik.py` başında.
 - **Yedek:** `yedek.yml` Pazar gecesi `pg_dump` + hesap kimlikleri (şifre hash'i yok) → `age` ile şifreli → ayrı private repoya Release; aynı koşuda boş Postgres 17'ye geri yükleyip satır sayısını doğrular.
-- `sync-live.yml` (adı "5-min", fiilen 2-6 saatte bir) pg_cron'un yapmadığı işleri yapar: hayalet yaklaşan maç, canlı maç istatistiği, 404 force-finish. Takılı "canlı" maçı (`/running`'den düşen) artık pg_cron da `/matches/{id}` ile bitirir (`canli_senkron.sql`). pg_cron var diye silme.
+- `sync-live.yml` (adı "5-min", fiilen 2-6 saatte bir) pg_cron'un yapmadığı işleri yapar: hayalet yaklaşan maç, canlı maç istatistiği, 404 force-finish. Takılı "canlı" maçı (`/running`'den düşen) ve saati 30 dk geçmiş başlamamış maçı (iptal/ertelenen `/running`'e hiç girmez) artık pg_cron da `/matches/{id}` ile sorar (`canli_senkron.sql`). pg_cron var diye silme.
 - `sync-liquipedia.yml` adı yanıltıcı: Liquipedia senkronu kapalı, iş akışı artık içerik (önizleme, turnuva özeti, transfer haberi) üretiyor.
 - **Takım logosu yedeği:** PandaScore'u kesen ağlar ("Güvenli İnternet" filtresi) için logolar Supabase Storage `gorsel-yedek`'te; pg_cron `gorsel-yedek` → Edge Function `gorsel-yedek` kopyalar, site PandaScore açılmazsa yedeğe düşer (`utils/gorsel.js` `yedekGorsel`, `InitialsImage`, `imageGuard`). Yol kuralı (`/images/` sonrası, dosya adı `thumb_`) fonksiyonda ve `gorsel.js`'te aynı kalmalı.
 
@@ -104,6 +104,7 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - **SEO/bot HTML:** Googlebot UA ile iste, `?__og=1&cb=<rastgele>` ekleyip önbelleği atla. `<title>` middleware'deki varsayılan kabuk başlığıysa sayfa bozuktur.
 - **Frontend:** `npm run build` + `npm run lint`, sonra canlıda ekran görüntüsü.
 - **Animasyon:** gizli tarayıcı panelinde IntersectionObserver tetiklenmez; ekrana girince başlayanı konsolda `window.IntersectionObserver = undefined` + SPA içi gezinmeyle (`pushState` + `popstate`) zorla.
+- **Yerel dev:** `index.html` SW'yi dev'de de kaydeder, `/src/` modüllerini önbelleğe alır; "does not provide an export named" görürsen SW'yi kaldır + `caches.delete('fext-static-v1')`.
 - **Video:** ffmpeg ile kare çıkarıp bak.
 - **Uygulama:** USB'li telefona `adb install -r`, ekran `adb exec-out screencap -p`; web görünümüne
   `adb forward tcp:9222 localabstract:webview_devtools_remote_<pid>` ile bağlanıp CDP'den durum oku (debug build).

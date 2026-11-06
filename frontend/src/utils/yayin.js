@@ -46,7 +46,10 @@ export function dilAdi(kod) {
   return DILLER[k] || k.toUpperCase()
 }
 
-/** Tekrarsız, sıralı yayın listesi: Türkçe önce, sonra resmi/ana yayın, sonra diğerleri. */
+/**
+ * Tekrarsız, sıralı yayın listesi. Önce dil: Türkçe → İngilizce → dili bilinmeyen → diğer diller
+ * (Türkçe yokken resmi Rusça yayın İngilizceden önce açılıyordu); aynı dilde resmi, sonra ana yayın.
+ */
 export function yayinlariSirala(liste) {
   const gorulen = new Set()
   const temiz = []
@@ -56,6 +59,10 @@ export function yayinlariSirala(liste) {
     gorulen.add(url)
     temiz.push({ ...s, raw_url: url })
   }
-  const puan = s => (String(s.language || '').toLowerCase().startsWith('tr') ? 0 : 4) + (s.official ? 0 : 2) + (s.main ? 0 : 1)
+  const dilSirasi = s => {
+    const k = String(s.language || '').toLowerCase().split(/[-_]/)[0]
+    return k === 'tr' ? 0 : k === 'en' ? 1 : !k ? 2 : 3
+  }
+  const puan = s => dilSirasi(s) * 4 + (s.official ? 0 : 2) + (s.main ? 0 : 1)
   return temiz.sort((a, b) => puan(a) - puan(b))
 }

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../supabaseClient'
 import PasswordInput from '../components/PasswordInput'
-import { authErrorMessage } from '../utils/authError'
+import { authErrorMessage, SIFRE_EN_AZ, SIFRE_KISA_MESAJ } from '../utils/authError'
 import { CircleCheck } from 'lucide-react'
 
 /**
@@ -36,7 +36,7 @@ export default function ResetPasswordPage() {
 
   async function onSubmit(e) {
     e.preventDefault()
-    if (password.length < 6) { setError('Şifre en az 6 karakter olmalı.'); return }
+    if (password.length < SIFRE_EN_AZ) { setError(SIFRE_KISA_MESAJ); return }
     if (password !== confirm) { setError('Şifreler eşleşmiyor.'); return }
     setLoading(true)
     setError('')
@@ -78,8 +78,8 @@ export default function ResetPasswordPage() {
                   : 'Bağlantı doğrulanıyor... (e-postadaki linkten geldiysen birkaç saniye sürebilir)'}
               </p>
               <form onSubmit={onSubmit} style={{ display: 'grid', gap: 10 }}>
-                <PasswordInput required minLength={6} value={password} onChange={e => setPassword(e.target.value)} placeholder="Yeni şifre (min 6)" autoComplete="new-password" style={inputStyle} />
-                <PasswordInput required minLength={6} value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Yeni şifre (tekrar)" autoComplete="new-password" style={inputStyle} />
+                <PasswordInput required minLength={SIFRE_EN_AZ} value={password} onChange={e => setPassword(e.target.value)} placeholder={`Yeni şifre (en az ${SIFRE_EN_AZ} karakter)`} autoComplete="new-password" style={inputStyle} />
+                <PasswordInput required minLength={SIFRE_EN_AZ} value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Yeni şifre (tekrar)" autoComplete="new-password" style={inputStyle} />
                 <button disabled={loading} style={{ marginTop: 4, border: 'none', borderRadius: 11, padding: '11px 12px', cursor: 'pointer', color: '#fff', fontWeight: 800, background: 'linear-gradient(135deg,#DF4888,#8B3AA0 55%,#6A297F)', opacity: loading ? 0.6 : 1 }}>{loading ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}</button>
                 {error && <div style={{ fontSize: 12, color: '#FF4655' }}>{error}</div>}
               </form>

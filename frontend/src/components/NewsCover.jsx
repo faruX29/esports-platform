@@ -1,5 +1,5 @@
 import InitialsImage from './InitialsImage'
-import { ArrowRight, CalendarDays, Trophy } from 'lucide-react'
+import { ArrowRight, CalendarDays, Trophy, UserRound } from 'lucide-react'
 import { yazi } from '../theme'
 
 /** heroScore string'inden ("Team A 13 - 8 Team B") salt skoru ("13 - 8") çıkarır. */
@@ -25,6 +25,32 @@ export function scoreFromHero(heroScore) {
  *   visuals.weekly — { baslik, alt }: haftalık özetin kapağı. Takım yok → iki boş
  *                logo kutusu yerine ortada başlık + hafta aralığı.
  */
+// Transfer haberinde bilinmeyen taraf: ETL eski takım yoksa "Serbest", yeni takım yoksa
+// "Kadro dışı" yazar (backend/etl/news_generator.py _save_transfer). Takım değil; baş harf
+// ("SE", "KD") takım logosu sanılıyordu → nötr kişi ikonu.
+const YER_TUTUCU_TARAF = new Set(['Serbest', 'Kadro dışı'])
+
+function TakimGorseli({ takim, boyut }) {
+  const kutu = { background: 'rgba(255,255,255,.04)', padding: 6, border: '1px solid rgba(255,255,255,.1)' }
+  if (!takim.logo_url && YER_TUTUCU_TARAF.has(takim.name)) {
+    return (
+      <div role="img" aria-label={takim.name} style={{
+        ...kutu, width: boyut, height: boyut, boxSizing: 'border-box', borderRadius: 14,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <UserRound size={Math.round(boyut * 0.45)} color="#94a3b8" />
+      </div>
+    )
+  }
+  return (
+    <InitialsImage
+      src={takim.logo_url} alt={takim.name || ''} name={takim.name}
+      width={boyut} height={boyut} borderRadius={14} objectFit="contain"
+      style={kutu}
+    />
+  )
+}
+
 export default function NewsCover({ visuals, score = '', height = 180, compact = false }) {
   const v = visuals || {}
   // Kapak aksanı = feXt moru (glow + orta dikey çizgi). Eskiden oyun rengiydi →
@@ -108,11 +134,7 @@ export default function NewsCover({ visuals, score = '', height = 180, compact =
         gap: compact ? 12 : 22, width: '100%', padding: '0 16px',
       }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minWidth: 0 }}>
-          <InitialsImage
-            src={teamA.logo_url} alt={teamA.name || ''} name={teamA.name}
-            width={logoSize} height={logoSize} borderRadius={14} objectFit="contain"
-            style={{ background: 'rgba(255,255,255,.04)', padding: 6, border: '1px solid rgba(255,255,255,.1)' }}
-          />
+          <TakimGorseli takim={teamA} boyut={logoSize} />
           {!compact && (
             <span style={{ fontSize: yazi(11), fontWeight: 700, color: '#e2e8f0', maxWidth: 120, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {teamA.name}
@@ -131,11 +153,7 @@ export default function NewsCover({ visuals, score = '', height = 180, compact =
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minWidth: 0 }}>
-          <InitialsImage
-            src={teamB.logo_url} alt={teamB.name || ''} name={teamB.name}
-            width={logoSize} height={logoSize} borderRadius={14} objectFit="contain"
-            style={{ background: 'rgba(255,255,255,.04)', padding: 6, border: '1px solid rgba(255,255,255,.1)' }}
-          />
+          <TakimGorseli takim={teamB} boyut={logoSize} />
           {!compact && (
             <span style={{ fontSize: yazi(11), fontWeight: 700, color: '#e2e8f0', maxWidth: 120, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {teamB.name}

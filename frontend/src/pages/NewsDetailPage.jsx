@@ -137,7 +137,8 @@ function mapTransferRowToStory(row) {
       gameId: row.game_slug || null,
       gameLabel: oyunEtiketi(row.game_slug),
       gameColor: FEXT.accent,
-      tier: normalizeTier(row.tier),
+      // Transferin seviyesi yok (ETL sabit 'C' yazar) → kapakta "Tier C" gösterme
+      tier: null,
       tournamentName: row.tournament_name || 'Transfer Haberi',
       // Takım ID'si varsa ona, yoksa tam ada bakılır (turk_takimlar)
       turkish: Boolean(

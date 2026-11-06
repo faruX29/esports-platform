@@ -76,7 +76,8 @@ function rowToVisuals(row) {
     gameColor: game?.color || '#C8102E',
     gameIcon: game?.icon || null,
     tournamentName: row.tournament_name || 'Ana Sahne',
-    tier: normalizeTier(row.tier),
+    // Transferin seviyesi yok (ETL sabit 'C' yazar) → kapakta "Tier C" gösterme
+    tier: row.content_type === 'transfer' ? null : normalizeTier(row.tier),
     turkish: row.variant === 'turk_haftasi' || Boolean(isTurkishTeam(row.team_a_name) || isTurkishTeam(row.team_b_name)),
     teamA: { name: row.team_a_name, logo_url: row.team_a_logo },
     teamB: { name: row.team_b_name, logo_url: row.team_b_logo },

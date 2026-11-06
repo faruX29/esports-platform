@@ -79,14 +79,14 @@ const PLAYER_MIN_MATCHES = 3     // oyuncu sayfası için asgari istatistikli ma
 // Hata sessizce yutulmaz: eskiden `!res.ok`'ta döngü kırılıp boş ya da yarım urlset
 // 200 ile dönüyor ve bir gün önbellekte kalıyordu (maç sitemap'i Google'a 0 URL gitti).
 // Şimdi fırlatır → handler 503 + no-store döner, önbellek ve Google eski iyi kopyayı tutar.
-async function fetchAll(table, select, filter) {
+async function fetchAll(table, select, filter, sira = 'id') {
   if (!SB || !KEY) throw new Error('Supabase ortam değişkenleri yok')
   const rows = []
   const size = 1000
   for (let i = 0; i < 40; i++) {
     const url = `${SB}/rest/v1/${table}?select=${encodeURIComponent(select)}` +
       (filter ? `&${filter}` : '') +
-      `&order=id.asc&limit=${size}&offset=${i * size}`
+      `&order=${sira}.asc&limit=${size}&offset=${i * size}`
     const istek = () => fetch(url, { headers: { apikey: KEY, Authorization: `Bearer ${KEY}` } })
     let res = await istek().catch(() => null)
     if (!res?.ok) res = await istek()   // geçici hataya bir şans daha
@@ -97,6 +97,22 @@ async function fetchAll(table, select, filter) {
     if (batch.length < size) break
   }
   return rows
+}
+
+// Dizin dışı haberler (6 Kas, kurucu kararı): Türk takımı olmayan C/D/bilinmeyen seviye
+// maç haberi. Bota noindex döner (middleware.js `haberDizinDisi`, aynı kural); haritaya girmez.
+async function haberDizinDisiIdleri(rows) {
+  const dusuk = rows.filter(r => r.content_type === 'match' && r.match_id != null
+    && !['S', 'A', 'B'].includes(String(r.tier || '').trim().toUpperCase().charAt(0)))
+  if (!dusuk.length) return new Set()
+  const turk = new Set((await fetchAll('turk_takimlar', 'team_id', '', 'team_id')).map(t => t.team_id))
+  const ids = [...new Set(dusuk.map(r => r.match_id))]
+  const turkMac = new Set()
+  for (let i = 0; i < ids.length; i += 150) {
+    const maclar = await fetchAll('matches', 'id,team_a_id,team_b_id', `id=in.(${ids.slice(i, i + 150).join(',')})`)
+    for (const m of maclar) if (turk.has(m.team_a_id) || turk.has(m.team_b_id)) turkMac.add(m.id)
+  }
+  return new Set(dusuk.filter(r => !turkMac.has(r.match_id)).map(r => r.id))
 }
 
 function urlset(urls) {
@@ -155,7 +171,9 @@ async function buildChild(type, base) {
     }))
   }
   if (type === 'news') {
-    const rows = await fetchAll('news_articles', 'id,match_id,tournament_id,title,content_type,created_at')
+    const tum = await fetchAll('news_articles', 'id,match_id,tournament_id,title,content_type,created_at,tier')
+    const disarida = await haberDizinDisiIdleri(tum)
+    const rows = tum.filter(r => !disarida.has(r.id))
     return urlset(rows.map(r => ({ loc: `${base}/news/${newsSlug(r)}`, lastmod: lastmod(r), changefreq: 'weekly', priority: '0.8' })))
   }
   if (type === 'matches') {

@@ -80,8 +80,9 @@ SYSTEM_PROMPT = (
     "'büyük bir mücadeleye sahne oldu'.\n"
     "- Veri sınırlıysa KISA yaz (2 kısa paragraf). Boş/klişe cümlelerle DOLDURMA.\n\n"
     "İÇERİK KURALLARI:\n"
-    "- 'Fextopus' bizim AI tahmin motorumuzun adıdır; tahmin/favoriden bahsederken "
-    "'model' DEĞİL 'Fextopus' de (örn. 'Fextopus favorisi', 'Fextopus tahmini').\n"
+    "- 'Fextopus' tahmin motorumuzun adıdır; tahmin/favoriden bahsederken yalnız "
+    "'Fextopus' de (örn. 'Fextopus favorisi', 'Fextopus tahmini'). 'Yapay zeka', 'AI', "
+    "'model', 'tahmin motoru' YAZMA.\n"
     "- Yalnızca fact sheet'teki verileri kullan; oyuncu/istatistik/skor UYDURMA.\n"
     "- Espor jargonuna hakimsin (ACS, clutch, eco, veto, opening duel) ama yalnızca "
     "fact sheet destekliyorsa kullan.\n"
@@ -106,8 +107,9 @@ PREVIEW_SYSTEM_PROMPT = (
     "- Veri sınırlıysa KISA yaz (2 paragraf); klişeyle DOLDURMA.\n\n"
     "İÇERİK KURALLARI:\n"
     "- Maç henüz OYNANMADI; sonuç/skor uydurma. Form ve favori analizi yaz.\n"
-    "- 'Fextopus' bizim AI tahmin motorumuzun adıdır; tahmin/favoriden bahsederken "
-    "'model' DEĞİL 'Fextopus' de (örn. 'Fextopus favorisi', 'Fextopus tahmini').\n"
+    "- 'Fextopus' tahmin motorumuzun adıdır; tahmin/favoriden bahsederken yalnız "
+    "'Fextopus' de (örn. 'Fextopus favorisi', 'Fextopus tahmini'). 'Yapay zeka', 'AI', "
+    "'model', 'tahmin motoru' YAZMA.\n"
     "- Fextopus favorisi verildiyse 'kağıt üstünde favori' tonuyla değin; kesin sonuç verme.\n"
     "- Form verisi (son W/L) verildiyse habere doğal işle; UYDURMA yapma.\n"
     "- Başlık (title) en fazla 12 kelime, özet (summary) 2-3 cümle.\n"
@@ -162,10 +164,106 @@ _AD_KURALI = (
     "\n\nOYUN ADI: Oyunu yalnız rapordaki 'Oyun:' satırının yazımıyla an (CS2, VALORANT, LoL). "
     "'CSGO', 'CS:GO', 'CS-GO' ASLA yazma; oyun Counter-Strike 2'dir."
 )
-SYSTEM_PROMPT += _AD_KURALI
-PREVIEW_SYSTEM_PROMPT += _AD_KURALI
-TRANSFER_SYSTEM_PROMPT += _AD_KURALI
-TOURNAMENT_SYSTEM_PROMPT += _AD_KURALI
+# Dolgu ve kaynaksız çıkarım (5 Kas kullanıcı raporu): 30 günde 231 haberin 35'inde
+# "yapay zeka tahmin motoru", önizlemelerde "merak konusu", "potansiyel", "moral
+# depolaması", turnuva özetinde "her maçın potansiyel bir beklenmedik duruma gebe olduğunu
+# gözler önüne serdi". Bilgi taşımaz, toplu üretilmiş metin gibi okunur. Üretim sonrası
+# kontrol: dolgu_bul() + NewsGenerator._uret_makale().
+_DOLGU_KURALI = (
+    "\n\nDOLGU YOK: Her cümle rapordaki bir olguyu (skor, sıra, oran, form, kayıt) söylesin. "
+    "Raporda olmayan duygu, beklenti ya da çıkarım YAZMA: moral, motivasyon, özgüven, "
+    "momentum, umut, kader, izleyici/taraftar tepkisi; 'merak konusu', 'gözler önüne serdi', "
+    "'gözler ... çevrildi', 'potansiyel', '... bekleniyor', '... olabilir', 'dönüm noktası', "
+    "'her maçın önemi büyük', 'unutmamak gerekir', 'kıyasıya', 'diken üstünde', 'gebe'. "
+    "Söyleyecek olgu bitince yazmayı bırak; kısa haber, dolgulu haberden iyidir."
+)
+_AD_KURALI_TUM = _AD_KURALI + _DOLGU_KURALI
+SYSTEM_PROMPT += _AD_KURALI_TUM
+PREVIEW_SYSTEM_PROMPT += _AD_KURALI_TUM
+TRANSFER_SYSTEM_PROMPT += _AD_KURALI_TUM
+TOURNAMENT_SYSTEM_PROMPT += _AD_KURALI_TUM
+
+# Üretim sonrası dolgu kontrolü. İstemdeki listeden dar: yalnız neredeyse her zaman dolgu
+# olan kalıplar (yanlış alarm cümle sildirir). Metin Türkçe küçük harfe çevrilip aranır.
+_DOLGU_KALIPLARI = [
+    (re.compile(p), ad) for p, ad in (
+        (r"yapay zek", "yapay zeka"),
+        (r"\bmodel(?:imiz|in|i|e|de|den)?\b", "model"),
+        (r"tahmin motoru", "tahmin motoru"),
+        (r"\bgebe\b", "gebe"),
+        (r"potansiyel", "potansiyel"),
+        (r"merak (?:konusu|ediliyor|uyandır)|merakla", "merak konusu"),
+        (r"gözler önüne", "gözler önüne serdi"),
+        (r"gözler(?:i|in)?\s+(?:\S+\s+){0,4}?çevril", "gözler çevrildi"),
+        (r"izleyici", "izleyici"),
+        (r"taraftar", "taraftar"),
+        (r"\bmoral", "moral"),
+        (r"özgüven", "özgüven"),
+        (r"motivasyon", "motivasyon"),
+        (r"momentum", "momentum"),
+        (r"umutlar", "umut"),
+        (r"\bkader", "kader"),
+        (r"bekleniyor", "bekleniyor"),
+        (r"\bolabilir\b", "olabilir"),
+        (r"dönüm noktası", "dönüm noktası"),
+        (r"her maçın", "her maçın"),
+        (r"unutmamak gerek", "unutmamak gerekir"),
+        (r"kıyasıya", "kıyasıya"),
+        (r"diken üstünde", "diken üstünde"),
+        (r"nefes kesen|heyecan dolu", "heyecan dolu"),
+    )
+]
+_AI_RE = re.compile(r"\bAI\b")
+_CUMLE_RE = re.compile(r"(?<=[.!?])\s+")
+
+
+def _tr_kucuk(metin) -> str:
+    return str(metin or "").replace("İ", "i").replace("I", "ı").lower()
+
+
+def dolgu_bul(metin, haric: frozenset = frozenset()) -> list[str]:
+    """Metindeki dolgu kalıplarının adları. `haric`: raporun kendisinde geçenler (takım/
+    turnuva adı kalıba denk gelirse cümle silinmesin)."""
+    s = _tr_kucuk(metin)
+    bulunan = [ad for rx, ad in _DOLGU_KALIPLARI if ad not in haric and rx.search(s)]
+    if "AI" not in haric and _AI_RE.search(str(metin or "")):
+        bulunan.append("AI")
+    return bulunan
+
+
+def _makale_parcalari(article: dict) -> list[str]:
+    paragraflar = article.get("paragraphs")
+    if not isinstance(paragraflar, list):
+        paragraflar = [article.get("content", "")]
+    return [article.get("title", ""), article.get("summary", ""), *paragraflar]
+
+
+def makale_dolgusu(article: dict, haric: frozenset = frozenset()) -> list[str]:
+    return sorted({ad for p in _makale_parcalari(article) for ad in dolgu_bul(p, haric)})
+
+
+def dolgu_ayikla(article: dict, haric: frozenset = frozenset()) -> tuple[dict, int]:
+    """Özet ve paragraflardan dolgu içeren cümleleri çıkarır (başlık kalır). Bir bölüm
+    tümüyle boşalacaksa o bölüm olduğu gibi bırakılır. Döner: (yeni makale, atılan cümle)."""
+    def temizle(metin: str) -> tuple[str, int]:
+        """(temiz metin — tümü dolguysa boş, atılan cümle sayısı)"""
+        cumleler = [c for c in _CUMLE_RE.split(str(metin or "").strip()) if c]
+        kalan = [c for c in cumleler if not dolgu_bul(c, haric)]
+        return " ".join(kalan), len(cumleler) - len(kalan)
+
+    yeni = dict(article)
+    atilan = 0
+    ozet, n = temizle(article.get("summary", ""))
+    if ozet:
+        yeni["summary"], atilan = ozet, n
+    paragraflar = article.get("paragraphs")
+    if isinstance(paragraflar, list):
+        sonuc = [temizle(p) for p in paragraflar]
+        temiz = [p for p, _ in sonuc if p]
+        if temiz:
+            yeni["paragraphs"] = temiz
+            atilan += sum(n for _, n in sonuc)
+    return yeni, atilan
 
 # Türk takımı başlıkta başa: okur takımı adıyla arar ("BBL Esports'ta ..." kalıbı).
 # Satırı FactSheetBuilder yalnız turk_takimlar'daki takım için yazar.
@@ -320,8 +418,13 @@ class FactSheetBuilder:
         pred_a = match.get("prediction_team_a")
         pred_b = match.get("prediction_team_b")
         if pred_a is not None and pred_b is not None:
-            fav = a_name if float(pred_a) >= float(pred_b) else b_name
-            lines.append(f"Fextopus favorisi: {fav} (tahmin {float(pred_a):.2f} / {float(pred_b):.2f})")
+            # Yüzdeyle ver: ondalık (0.62) "yüzde 0.62'lik oran" diye habere giriyordu (6 Kas)
+            pa, pb = round(float(pred_a) * 100), round(float(pred_b) * 100)
+            if pa == pb:
+                lines.append(f"Fextopus tahmini: {a_name} %{pa}, {b_name} %{pb} (başa baş; favori yok)")
+            else:
+                fav = a_name if pa > pb else b_name
+                lines.append(f"Fextopus favorisi: {fav} (tahmin {a_name} %{pa}, {b_name} %{pb})")
         else:
             lines.append("Fextopus tahmini: henüz yok (dengeli beklenti)")
         return "\n".join(lines)
@@ -546,7 +649,8 @@ class FactSheetBuilder:
             lines.append(f"Turnuva içi kayıt: {rec_line}")
         if pred_a is not None and pred_b is not None:
             lines.append(
-                f"Fextopus tahmini: {a_name}={float(pred_a):.2f} / {b_name}={float(pred_b):.2f}"
+                f"Fextopus tahmini: {a_name} %{round(float(pred_a) * 100)}, "
+                f"{b_name} %{round(float(pred_b) * 100)}"
             )
         if upset:
             lines.append(
@@ -556,7 +660,7 @@ class FactSheetBuilder:
             if predicted_winner and winner_name != "Bilinmiyor" and predicted_winner != winner_name:
                 lines.append(
                     f"Not: Fextopus {predicted_winner} için yalnız %{round(fav_p * 100)} vermişti; başa baş "
-                    "sayılır, 'sürpriz' ya da 'şok' deme."
+                    "sayılır, 'sürpriz', 'şok' ya da 'beklenmedik' deme."
                 )
             if margin >= 2:
                 lines.append(f"Maç tipi: Dominant galibiyet (fark {margin})")
@@ -908,12 +1012,7 @@ class NewsGenerator:
                 + fact_sheet
             )
 
-            raw = self._generate_with_backoff(user_prompt, match["id"])
-            if raw is None:
-                stats["failed"] += 1
-                continue
-
-            article = self._parse_llm_json(raw)
+            article = self._uret_makale(user_prompt, match["id"])
             if article is None:
                 stats["failed"] += 1
                 continue
@@ -1034,11 +1133,7 @@ class NewsGenerator:
                 + fact_sheet
             )
 
-            raw = self._generate_with_backoff(user_prompt, match["id"], system_prompt=PREVIEW_SYSTEM_PROMPT)
-            if raw is None:
-                stats["failed"] += 1
-                continue
-            article = self._parse_llm_json(raw)
+            article = self._uret_makale(user_prompt, match["id"], system_prompt=PREVIEW_SYSTEM_PROMPT)
             if article is None:
                 stats["failed"] += 1
                 continue
@@ -1065,6 +1160,7 @@ class NewsGenerator:
                            rc.source_team_id, rc.target_team_id, rc.data_source,
                            COALESCE(st.name, rc.raw_payload->>'old_team') AS old_team,
                            COALESCE(tt.name, rc.raw_payload->>'new_team') AS new_team,
+                           st.logo_url AS old_logo, tt.logo_url AS new_logo,
                            rc.raw_payload->>'role' AS role,
                            rc.raw_payload->>'game' AS game,
                            rc.transfer_date, rc.transfer_type,
@@ -1149,16 +1245,18 @@ class NewsGenerator:
                     """
                     INSERT INTO news_articles (
                         match_id, content_type, title, summary, content, variant,
-                        game_slug, tier, tournament_name, team_a_name, team_b_name, hero_score,
-                        ekler
+                        game_slug, tier, tournament_name, team_a_name, team_b_name,
+                        team_a_logo, team_b_logo, hero_score, ekler
                     )
-                    VALUES (NULL, 'transfer', %s, %s, %s, 'transfer', %s, 'C', %s, %s, %s, %s, %s)
+                    VALUES (NULL, 'transfer', %s, %s, %s, 'transfer', %s, 'C', %s, %s, %s, %s, %s, %s, %s)
                     """,
                     (
                         article.get("title", ""), article.get("summary", ""), content,
                         transfer.get("game"),
                         "Transfer Haberi",
                         old_team, new_team,
+                        # Kapak logoları: eskiden yazılmıyordu, kapakta baş harf çıkıyordu (5 Kas raporu)
+                        transfer.get("old_logo"), transfer.get("new_logo"),
                         transfer.get("player") or "",
                         # Detay sayfası takım/oyuncu bağlantısını ve atfı buradan kurar
                         # (backend/sql/news_ekler.sql).
@@ -1189,11 +1287,7 @@ class NewsGenerator:
                 "Aşağıdaki transfer raporunu kullanarak Türkçe transfer haberi üret:\n\n"
                 + fact_sheet
             )
-            raw = self._generate_with_backoff(user_prompt, tr["rc_id"], system_prompt=TRANSFER_SYSTEM_PROMPT)
-            if raw is None:
-                stats["failed"] += 1
-                continue
-            article = self._parse_llm_json(raw)
+            article = self._uret_makale(user_prompt, tr["rc_id"], system_prompt=TRANSFER_SYSTEM_PROMPT)
             if article is None:
                 stats["failed"] += 1
                 continue
@@ -1265,7 +1359,8 @@ class NewsGenerator:
                     SELECT ta.name AS a_name, tb.name AS b_name,
                            m.team_a_id, m.team_b_id, m.winner_id,
                            COALESCE(m.team_a_score,0), COALESCE(m.team_b_score,0),
-                           m.prediction_team_a, m.prediction_team_b, COALESCE(m.round_info, '')
+                           m.prediction_team_a, m.prediction_team_b, COALESCE(m.round_info, ''),
+                           ta.logo_url, tb.logo_url
                     FROM matches m
                     LEFT JOIN teams ta ON ta.id = m.team_a_id
                     LEFT JOIN teams tb ON tb.id = m.team_b_id
@@ -1280,8 +1375,11 @@ class NewsGenerator:
         wl = defaultdict(lambda: [0, 0])  # name -> [w, l]
         upset_count = 0
         notable: list[str] = []
-        for a, b, aid, bid, wid, sa, sb, pa, pb, _ri in rows:
+        logos: dict[str, str] = {}  # ad -> logo (kapak için; ad aşamada tekil)
+        for a, b, aid, bid, wid, sa, sb, pa, pb, _ri, la, lb in rows:
             a = a or "Bilinmeyen"; b = b or "Bilinmeyen"
+            if la: logos[a] = la
+            if lb: logos[b] = lb
             a_won = str(wid) == str(aid)
             win_name, lose_name = (a, b) if a_won else (b, a)
             wl[win_name][0] += 1
@@ -1304,7 +1402,7 @@ class NewsGenerator:
                 "runner_up": standings[1]["team"] if len(standings) > 1 else None,
                 "final_score": None, "final_found": False,
                 "standings": standings, "total_matches": len(rows),
-                "notable": notable, "upset_count": upset_count,
+                "notable": notable, "upset_count": upset_count, "logos": logos,
             }
         fa, fb, faid, _fbid, fwid, fsa, fsb = (final_row[0] or "Bilinmeyen", final_row[1] or "Bilinmeyen",
                                                 final_row[2], final_row[3], final_row[4], final_row[5], final_row[6])
@@ -1313,7 +1411,7 @@ class NewsGenerator:
             "champion": champ, "runner_up": fb if champ == fa else fa,
             "final_score": f"{max(fsa, fsb)}-{min(fsa, fsb)}", "final_found": True,
             "standings": standings, "total_matches": len(rows),
-            "notable": notable, "upset_count": upset_count,
+            "notable": notable, "upset_count": upset_count, "logos": logos,
         }
 
     def _save_tournament_recap(self, tournament: dict, ctx: dict, article: dict) -> None:
@@ -1327,15 +1425,17 @@ class NewsGenerator:
                     INSERT INTO news_articles (
                         match_id, content_type, title, summary, content, variant,
                         game_slug, tier, tournament_name, tournament_id,
-                        team_a_name, team_b_name, hero_score
+                        team_a_name, team_b_name, team_a_logo, team_b_logo, hero_score
                     )
-                    VALUES (NULL, 'tournament', %s, %s, %s, 'tournament', %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (NULL, 'tournament', %s, %s, %s, 'tournament', %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """,
                     (
                         article.get("title", ""), article.get("summary", ""), content,
                         tournament.get("game_slug"), str(tournament.get("tier") or "A").upper(),
                         tournament.get("name") or "Turnuva", tournament["id"],
-                        champ, runner, f"🏆 {champ}",
+                        champ, runner,
+                        (ctx.get("logos") or {}).get(champ), (ctx.get("logos") or {}).get(runner),
+                        f"🏆 {champ}",
                     ),
                 )
             conn.commit()
@@ -1352,11 +1452,7 @@ class NewsGenerator:
                 continue
             fact_sheet = FactSheetBuilder.build_tournament(t, ctx)
             user_prompt = "Aşağıdaki turnuva sonuç raporunu kullanarak Türkçe recap üret:\n\n" + fact_sheet
-            raw = self._generate_with_backoff(user_prompt, t["id"], system_prompt=TOURNAMENT_SYSTEM_PROMPT)
-            if raw is None:
-                stats["failed"] += 1
-                continue
-            article = self._parse_llm_json(raw)
+            article = self._uret_makale(user_prompt, t["id"], system_prompt=TOURNAMENT_SYSTEM_PROMPT)
             if article is None:
                 stats["failed"] += 1
                 continue
@@ -1369,6 +1465,37 @@ class NewsGenerator:
                 stats["failed"] += 1
             time.sleep(4)
         return stats
+
+    def _uret_makale(self, user_prompt: str, ref_id, system_prompt: str = SYSTEM_PROMPT) -> Optional[dict]:
+        """LLM çağrısı + JSON + dolgu kontrolü. Dolgu varsa bir kez, bulunan ifadeler
+        söylenerek yeniden yazdırılır; yine varsa o cümleler çıkarılır. Raporun kendisinde
+        geçen kalıp (takım/turnuva adı) sayılmaz."""
+        raw = self._generate_with_backoff(user_prompt, ref_id, system_prompt=system_prompt)
+        article = self._parse_llm_json(raw) if raw else None
+        if article is None:
+            return None
+        haric = frozenset(dolgu_bul(user_prompt))
+        bulunan = makale_dolgusu(article, haric)
+        if not bulunan:
+            return article
+        logger.info("✍️  %s: dolgu var (%s), yeniden yazdırılıyor", ref_id, ", ".join(bulunan))
+        duzeltme = (
+            user_prompt
+            + "\n\nÖNCEKİ YANITINDA YASAK İFADELER VARDI: "
+            + ", ".join(f"'{b}'" for b in bulunan)
+            + ". Bunları ve benzeri dolgu cümlelerini kullanmadan, yalnız rapordaki olgularla yeniden yaz."
+        )
+        raw2 = self._generate_with_backoff(duzeltme, ref_id, system_prompt=system_prompt)
+        article2 = self._parse_llm_json(raw2) if raw2 else None
+        if article2 is not None:
+            article = article2
+        kalan = makale_dolgusu(article, haric)
+        if kalan:
+            article, atilan = dolgu_ayikla(article, haric)
+            logger.warning("✂️  %s: ikinci yanıtta da dolgu (%s), %d cümle çıkarıldı%s", ref_id,
+                           ", ".join(kalan), atilan,
+                           "; başlıkta kaldı" if dolgu_bul(article.get("title", ""), haric) else "")
+        return article
 
     # "Please retry in 47 seconds." veya "retry in 47.3s" gibi API mesajlarını yakalar
     _RETRY_AFTER_RE = re.compile(r"retry\s+in\s+([\d.]+)\s*s", re.IGNORECASE)

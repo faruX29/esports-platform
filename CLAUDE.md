@@ -122,6 +122,7 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - LLM'e anlamı/sırası yazılmamış dizi verme (ör. "LLWWW") → ters okur, yanlış haber üretir.
 - LLM'e turnuva durumu vermeden elenme/tur atlama yazmasına izin verme → tek maç sonucundan "elendi" uydurur; prompt'ta yasakla (`weekly_news.py`).
 - Özel adları çevirtme ("VCT Champions" → "Şampiyonlar Ligi") → prompt'larda `_AD_KURALI` var.
+- Yeni LLM haber türünü `_generate_with_backoff` + `_parse_llm_json` ile doğrudan çağırma → `_uret_makale` kullan (dolgu kontrolü: bulursa bir kez yeniden yazdırır, yine varsa cümleyi atar; kalıplar `_DOLGU_KALIPLARI`, istem kuralı `_DOLGU_KURALI`). İsteme olasılığı ondalık verme ("0.62" → "yüzde 0.62'lik"), `%62` yaz. Haber satırını `team_a_logo`/`team_b_logo`'suz yazma → kapakta ve paylaşım kartında baş harf çıkar.
 - Haber metnini şablonla üretme, "son oynanan maçın galibi"ni şampiyon sayma, sürprizi eşiksiz yazma → yalnız `news_articles` gösterilir; şampiyon final maçından; eşik `SURPRIZ_ESIK` (`news_generator.py`).
 - Doğrulanmamış tarih, saat veya sayı yazma → maç saatleri değişir, üretmeden önce DB'den tazele.
 - Turnuva adı olarak `tournaments.name`'i tek başına gösterme → çoğu yalnız aşama ("Group Stage"); `league_name,event_name` de çek, `tournamentDisplayName` (middleware'de `turnuvaAdi`) kullan. Türk takımını da ad listesiyle değil `isTurkishTeam` (`turk_takimlar`) ile bul.

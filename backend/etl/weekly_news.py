@@ -22,7 +22,7 @@ from typing import Optional
 from psycopg.types.json import Jsonb
 
 from database import Database
-from etl.news_generator import NewsGenerator, SURPRIZ_ESIK, _AD_KURALI, tam_turnuva_adi
+from etl.news_generator import NewsGenerator, SURPRIZ_ESIK, _AD_KURALI_TUM, tam_turnuva_adi
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ TURK_HAFTASI_PROMPT = (
     "- Klişe dolgu yok ('nefes kesen', 'heyecan dolu', 'zafere ulaştı').\n"
     "- Başlık (title) 'Türk takımları' ifadesini içersin, en fazla 12 kelime. "
     "Özet (summary) 2 cümle. Gövde 2-3 paragraf.\n" + _JSON_KURALI
-) + _AD_KURALI
+) + _AD_KURALI_TUM
 
 SURPRIZ_PROMPT = (
     "Sen profesyonel bir espor editörüsün. Fextopus'un (bizim tahmin motorumuz) geçen hafta "
@@ -76,7 +76,7 @@ SURPRIZ_PROMPT = (
     "- Yalnızca rapordaki veriyi kullan; skor, takım UYDURMA. 'model' deme, 'Fextopus' de.\n"
     "- Başlık (title) 'Fextopus' kelimesini içersin, en fazla 12 kelime. Özet (summary) 2 cümle. "
     "Gövde 2-3 paragraf.\n" + _JSON_KURALI
-) + _AD_KURALI
+) + _AD_KURALI_TUM
 
 
 def hafta_baslangici(bugun: Optional[date] = None) -> date:
@@ -170,7 +170,7 @@ def _one_cikanlar(rows: list[dict]) -> list[dict]:
 
 
 class HaftalikUretici(NewsGenerator):
-    """NewsGenerator'ın LLM yardımcılarını (_generate_with_backoff, _parse_llm_json) kullanır."""
+    """NewsGenerator'ın LLM yardımcısını (_uret_makale: çağrı + JSON + dolgu kontrolü) kullanır."""
 
     # ── Veri ──────────────────────────────────────────────────────────────
     def turk_sonuclari(self, pzt: date) -> list[dict]:
@@ -309,10 +309,10 @@ class HaftalikUretici(NewsGenerator):
 
     def _uret(self, variant: str, rapor: str, prompt: str) -> Optional[dict]:
         logger.info("📄 %s raporu:\n%s", variant, rapor)
-        raw = self._generate_with_backoff(
+        # Dolgu kontrolü + gerekirse bir kez yeniden yazdırma (news_generator._uret_makale)
+        return self._uret_makale(
             "Aşağıdaki haftalık raporu kullanarak Türkçe haber üret:\n\n" + rapor,
             variant, system_prompt=prompt)
-        return self._parse_llm_json(raw) if raw else None
 
     # ── Giriş noktası ─────────────────────────────────────────────────────
     def generate_weekly(self, pzt: Optional[date] = None, yaz: bool = True) -> dict:

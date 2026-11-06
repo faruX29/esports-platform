@@ -127,7 +127,8 @@ function articleRowToStory(row) {
       gameColor: game?.color || FEXT.accent,
       gameIcon: game?.icon || null,
       tournamentName: row.tournament_name || 'Ana Sahne',
-      tier: isWeekly ? null : tier,
+      // Transferin seviyesi yok (ETL sabit 'C' yazar) → kapakta "Tier C" gösterme
+      tier: (isWeekly || isTransfer) ? null : tier,
       turkish: row.variant === 'turk_haftasi' || Boolean(isTurkishTeam?.(row.team_a_name) || isTurkishTeam?.(row.team_b_name)),
       weekly: isWeekly ? weeklyCover(row) : null,
       teamA: { name: row.team_a_name, logo_url: row.team_a_logo },

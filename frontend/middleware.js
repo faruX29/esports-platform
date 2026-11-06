@@ -499,7 +499,9 @@ async function buildForNews(ref, origin, url) {
   const img = ref.type !== 'haftalik' && isShareableMatch(row.created_at)
     ? await ogImageUrl(origin, {
         a: row.team_a_name, b: row.team_b_name, la: row.team_a_logo, lb: row.team_b_logo,
-        s: scoreFromHero(row.hero_score), g: gm.label, t: row.tier, tn: row.tournament_name, c: gm.accent,
+        // Transferin seviyesi yok (ETL sabit 'C' yazar) → kartta "Tier C" rozeti çıkmasın
+        s: scoreFromHero(row.hero_score), g: gm.label, t: ref.type === 'transfer' ? '' : row.tier,
+        tn: row.tournament_name, c: gm.accent,
       })
     : `${origin}${STATIC_OG}`
   const jsonLd = {
@@ -541,12 +543,25 @@ async function buildForNews(ref, origin, url) {
     }
   }
   // Türk takımı haberi → /turk-takimlari (merkez sayfa her haberden link alarak büyür)
-  if (await turkHaberiMi(ref, row)) {
+  const turk = await turkHaberiMi(ref, row)
+  if (turk) {
     linkItems.push(`<a href="${origin}/turk-takimlari">Türk takımları: maçlar, sonuçlar ve haberler</a>`)
   }
   const body = `<h1>${esc(row.title || 'feXt')}</h1><p>${esc(row.summary || '')}</p>` +
     (linkItems.length ? `<h2>İlgili Sayfalar</h2><ul>${linkItems.map(l => `<li>${l}</li>`).join('')}</ul>` : '')
-  return htmlDoc({ title: row.title || 'feXt', desc: row.summary || '', url, img, jsonLd, body })
+  return htmlDoc({ title: row.title || 'feXt', desc: row.summary || '', url, img, jsonLd, body,
+    robots: haberDizinDisi(ref, row, turk) ? 'noindex, follow' : '' })
+}
+
+// Hangi haberler Google dizinine GİRMESİN (6 Kas, kurucu kararı): Türk takımı olmayan
+// C/D/bilinmeyen seviye maç haberi. Haziran–Eylül'de ~490 tane üretildi (ince, birbirine
+// benzer metin → toplu üretim riski); 24 Eki'den beri bu tür hiç üretilmiyor. Sayfa açık
+// kalır, `follow` ile linkler izlenir. Kural `macDizinDisi` ile aynı mantık; site haritası
+// da aynısını uygular (api/sitemap.js `haberDizinDisiIdleri`).
+function haberDizinDisi(ref, row, turk) {
+  if (ref.type !== 'match' || turk) return false
+  const tier = String(row.tier || '').trim().toUpperCase().charAt(0)
+  return !['S', 'A', 'B'].includes(tier)
 }
 
 const ENC = encodeURIComponent

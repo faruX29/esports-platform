@@ -1,0 +1,6 @@
+/* Fontlar kendi alan adımızdan (@fontsource, Vite hash'li /assets/). main.jsx bu dosyayı
+   DİNAMİK içe aktarır: ana CSS'te olsaydı woff2'ler (~170 KB) ilk boyamadan önce kritik
+   JS ile aynı anda inip FCP'yi ~400 ms geciktiriyordu (eskiden Google CSS'i de asenkrondu).
+   Dosyalar unicode-range'li; Türkçe metin için yalnız latin + latin-ext iner. */
+@import '@fontsource-variable/inter/wght.css';
+@import '@fontsource-variable/baloo-2/wght.css';

@@ -60,7 +60,7 @@ export default function FextopusLogo({ height = 30, wordmark = true, interactive
       {wordmark && (
         <span style={{
           fontSize: Math.round(height * 1.06), fontWeight: 700, letterSpacing: '-0.01em',
-          fontFamily: "'Baloo 2','Fredoka',system-ui,-apple-system,'Segoe UI',sans-serif",
+          fontFamily: "'Baloo 2 Variable','Baloo 2','Fredoka',system-ui,-apple-system,'Segoe UI',sans-serif",
         }}>
           <span style={{ color: 'var(--text)' }}>fe</span>
           <span style={{

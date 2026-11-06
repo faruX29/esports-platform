@@ -893,14 +893,15 @@ export default function PlayerPage() {
         .from('players')
         .select('id, nickname, real_name, role, image_url, nationality, team_pandascore_id, extra_metadata')
         .eq('id', id)
-        .single()
+        .maybeSingle()  // single() olmayan oyuncuda 406 + konsol hatası veriyordu
       if (pErr) throw pErr
+      if (!p) { setError('Oyuncu bulunamadı.'); return }
       setPlayer(p)
 
       // Paralel: takım + harita-detay istatistikleri + takım maçları (W/L kaynağı) + oyuncu KDA
       const [teamRes, statsRes, teamMatchesRes, playerStatsRes] = await Promise.all([
         p.team_pandascore_id
-          ? supabase.from('teams').select('id, name, logo_url, acronym, location, game:games(id,name,slug)').eq('id', p.team_pandascore_id).single()
+          ? supabase.from('teams').select('id, name, logo_url, acronym, location, game:games(id,name,slug)').eq('id', p.team_pandascore_id).maybeSingle()
           : { data: null, error: null },
 
         // match_stats: SADECE harita-bazlı detaylar (mapWinRates, süre) için — W/L kaynağı DEĞİL

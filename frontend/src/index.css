@@ -104,7 +104,7 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 :root {
-  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Inter Variable', 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   font-feature-settings: 'cv11', 'ss01';  /* Inter: daha net rakam/karakter formları */

@@ -25,6 +25,9 @@ createRoot(document.getElementById('root')).render(
   </StrictMode>,
 )
 
+// Fontlar ilk boyamayı ve kritik JS'i beklemesin diye ayrı parçada (fontlar.css'teki not).
+import('./fontlar.css').catch((err) => console.error('Font CSS yüklenemedi:', err))
+
 if (UYGULAMA) {
   import('./utils/uygulamaKurulum')
     .then((m) => m.uygulamayiKur())

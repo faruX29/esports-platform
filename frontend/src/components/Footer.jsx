@@ -16,7 +16,7 @@ function InstagramIcon() {
  * Liquipedia atıf backlink'i burada da bulunur (kullanım şartı gereği görünür atıf).
  */
 const WORDMARK = (
-  <span style={{ fontFamily: "'Baloo 2','Fredoka',system-ui,sans-serif", fontWeight: 800, fontSize: 22, letterSpacing: '-.01em' }}>
+  <span style={{ fontFamily: "'Baloo 2 Variable','Baloo 2','Fredoka',system-ui,sans-serif", fontWeight: 800, fontSize: 22, letterSpacing: '-.01em' }}>
     <span style={{ color: 'var(--text)' }}>fe</span>
     <span style={{ background: 'linear-gradient(135deg,#DF4888 0%,#8B3AA0 55%,#6A297F 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
       <span style={{ fontSize: '1.22em' }}>X</span>t

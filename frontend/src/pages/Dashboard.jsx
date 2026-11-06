@@ -60,6 +60,8 @@ const AKIS_BITEN_SINIRI = 100
 const DASHBOARD_GLOBAL_ERROR_TEXT = 'Sunucuyla bağlantı kesildi, tekrar deneniyor...'
 const PREFERENCE_GAMES = GAMES.filter(game => ['valorant', 'cs2', 'lol'].includes(game.id))
 const UPCOMING_WINDOW_DAYS = 7
+// Canlı noktasının sabit parıltısı (liveNeonBlink yalnız opaklığı canlandırır)
+const CANLI_PARILTI = '0 0 4px rgba(255,70,85,.55)'
 // Bölüm başlığındaki "Tümü →": dokunma alanı ≥24 px, negatif kenar boşluğu satırı büyütmesin diye
 const TUMU_LINK = {
   fontSize: yazi(10), color: 'var(--text-5)', textDecoration: 'none',
@@ -671,7 +673,7 @@ const LiveTicker = memo(function LiveTicker({ items, loading }) {
   return (
     <div style={{ marginBottom: 18, borderRadius: 12, border: '1px solid var(--line)', background: 'var(--surface)', overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 16px', borderBottom: '1px solid var(--line)', background: 'rgba(255,255,255,.02)' }}>
-        <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ff4655', animation: 'liveNeonBlink 1.05s infinite' }} />
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ff4655', boxShadow: CANLI_PARILTI, animation: 'liveNeonBlink 1.05s infinite' }} />
         <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '1px' }}>
           Son Haberler &amp; Canlı Akış {loading ? '· senkronize ediliyor' : ''}
         </span>
@@ -876,6 +878,7 @@ const QuickAccessBar = memo(function QuickAccessBar({ entries, loading }) {
                 <span style={{
                   width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
                   background: entry.isLive ? '#ff4655' : (entry.gameColor || 'var(--text-5)'),
+                  boxShadow: entry.isLive ? CANLI_PARILTI : 'none',
                   animation: entry.isLive ? 'liveNeonBlink 1.05s infinite' : 'none',
                 }} />
                 {entry.isLive ? 'Canlı maç' : (entry.gameLabel || (entry.type === 'player' ? 'Oyuncu' : 'Takım'))}
@@ -1008,9 +1011,8 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, favs, onToggleFav,
 
       {/* Üst ince kırmızı vurgu — yavaş süzülen soft hareket (glow yok) */}
       <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, height: 2,
+        position: 'absolute', top: 0, left: 0, width: '220%', height: 2,
         background: 'linear-gradient(90deg, transparent, rgba(255,70,85,.85) 30%, rgba(255,70,85,.35) 55%, transparent)',
-        backgroundSize: '220% 100%',
         animation: 'liveAccentDrift 5.5s ease-in-out infinite alternate',
       }} />
 
@@ -1034,7 +1036,7 @@ const LiveMatchCard = memo(function LiveMatchCard({ match: m, favs, onToggleFav,
           {hasTurkish && <TurkishBadge compact />}
         </div>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: yazi(10), fontWeight: 800, color: 'var(--canli-fg)' }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#FF4655', animation: 'liveNeonBlink 1.05s infinite' }} />
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#FF4655', boxShadow: CANLI_PARILTI, animation: 'liveNeonBlink 1.05s infinite' }} />
           CANLI
         </span>
       </div>
@@ -1244,6 +1246,7 @@ const UpcomingRow = memo(function UpcomingRow({ match: m, teamForms, showDate })
         height: 7,
         borderRadius: '50%',
         background: '#ff4655',
+        boxShadow: CANLI_PARILTI,
         animation: 'liveNeonBlink 1.05s infinite',
         flexShrink: 0,
         visibility: isLive ? 'visible' : 'hidden',
@@ -1333,7 +1336,7 @@ const SkorSatiri = memo(function SkorSatiri({ match: m, favs }) {
       <div style={{ width: 44, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
         {canli ? (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: yazi(9), fontWeight: 800, color: 'var(--canli-fg)' }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF4655', animation: 'liveNeonBlink 1.05s infinite' }} />
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF4655', boxShadow: CANLI_PARILTI, animation: 'liveNeonBlink 1.05s infinite' }} />
             CANLI
           </span>
         ) : (
@@ -2527,7 +2530,7 @@ export default function Dashboard() {
         {loading ? (
           isMobile ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {[1,2,3].map(i => <Sk key={i} h="74px" r="12px" />)}
+              {[1,2,3].map(i => <Sk key={i} h="87px" r="12px" />)}
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(max(230px,calc((100% - 36px) / 4)),1fr))', gap: 12 }}>
@@ -2570,6 +2573,27 @@ export default function Dashboard() {
           </Link>
         )}
       </div>
+      )}
+
+      {/* Yüklenirken Aktif Turnuvalar + Son Sonuçlar için gerçek boyda yer tutucu.
+          Eskiden bu iki bölüm veriyle sıfırdan beliriyor, ilk ekrandaki şerit ve Maç
+          Programı ~600 px aşağı itiliyordu (yavaş telefonda CLS 0,26). Yükseklikler
+          ölçüldü: turnuva kartı 134/110 px, sonuç satırı 87/42 px (telefon/masaüstü). */}
+      {loading && (
+        <div aria-hidden="true">
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ height: 20, marginBottom: 12 }}><Sk w="150px" h="14px" r="6px" /></div>
+            <div style={{ display: 'flex', gap: 10, overflow: 'hidden', paddingBottom: 4 }}>
+              {[1,2,3,4,5,6].map(i => <Sk key={i} w="210px" h={isMobile ? '134px' : '110px'} r="14px" />)}
+            </div>
+          </div>
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ height: 20, marginBottom: 14 }}><Sk w="130px" h="14px" r="6px" /></div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {[1,2,3,4,5,6].map(i => <Sk key={i} h={isMobile ? '87px' : '42px'} r={isMobile ? '12px' : '10px'} />)}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Aktif Turnuvalar (süregelen üst-tier — canlı maçların altında) ─── */}
@@ -2911,7 +2935,7 @@ export default function Dashboard() {
         }}>
           <h1 style={{
             margin: '2px 0 8px', fontSize: 34, fontWeight: 800, letterSpacing: '-.02em',
-            fontFamily: "'Baloo 2','Fredoka',system-ui,sans-serif",
+            fontFamily: "'Baloo 2 Variable','Baloo 2','Fredoka',system-ui,sans-serif",
           }}>
             <span style={{ color: 'var(--text)' }}>fe</span>
             <span style={{ background: 'linear-gradient(135deg,#DF4888,#8B3AA0 55%,#6A297F)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
@@ -3007,15 +3031,18 @@ export default function Dashboard() {
       <style>{`
         @keyframes shimmer   { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
         @keyframes livePulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+        /* Yalnız opacity/transform: box-shadow ya da background-position canlandırmak
+           her karede yeniden boyatıyordu (ana sayfada ~13 canlı nokta, sürekli). Parıltı
+           noktanın sabit gölgesi (CANLI_PARILTI), yanıp sönme opaklıkla. */
         @keyframes liveNeonBlink {
-          0%, 100% { opacity: 1; box-shadow: 0 0 4px rgba(255,70,85,.55); }
-          50% { opacity: .5; box-shadow: 0 0 1px rgba(255,70,85,.4); }
+          0%, 100% { opacity: 1; }
+          50% { opacity: .5; }
         }
-        /* Canlı kart üst vurgusu — kırmızı yavaş & soft sağa-sola süzülür */
+        /* Canlı kart üst vurgusu — kırmızı yavaş & soft sağa-sola süzülür (220% geniş şerit kayar) */
         @keyframes liveAccentDrift {
-          0%   { background-position: 0% 0;   opacity: .8; }
+          0%   { transform: translateX(0);      opacity: .8; }
           50%  { opacity: 1; }
-          100% { background-position: 100% 0; opacity: .8; }
+          100% { transform: translateX(-54.5%); opacity: .8; }
         }
         @keyframes tickerScroll {
           from { transform: translateX(0); }

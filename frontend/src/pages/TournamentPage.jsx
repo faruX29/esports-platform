@@ -1229,12 +1229,13 @@ export default function TournamentPage() {
           .from('tournaments')
           .select('*, game:games(id, name, slug)')
           .eq('id', tournamentId)
-          .single(),
+          .maybeSingle(),  // single() olmayan turnuvada 406 + konsol hatası veriyordu
         fetchMatchesWithRoundHints(),
       ])
 
       if (tourRes.error)  throw tourRes.error
       if (matchRes.error) throw matchRes.error
+      if (!tourRes.data) { setError('Turnuva bulunamadı.'); return }
 
       if (TOURNAMENT_DEBUG) {
         console.log('[TournamentPage][Fetch]', {

@@ -7,6 +7,13 @@
 -- 0.65'ti: rozet "%73", /stats "%75" diyordu, ikisi de "en güvendiği maçlarda".
 --
 -- days_back: 0 veya negatif → tüm zamanlar; >0 → son N gün.
+--
+-- 6 Kasım: tüm zamanlar (sitedeki tek kullanım) fextopus_isabet_ozet'ten okunur
+-- (fextopus_isabet_view.sql; pg_cron 10 dk'da bir tazeler). Eskiden her çağrı matches'ı
+-- tam tarıyordu; önbellek soğukken anon'un 3 sn sınırını aşıp 500 dönüyordu. Özetin
+-- filtresi aynı, ek olarak takım/tahmin B boş satırları dışlar (6 Kas'ta fark 0 maç).
+-- days_back > 0 hâlâ canlı hesaplanır.
+-- ÖNCE fextopus_isabet_view.sql çalışmış olmalı.
 
 CREATE OR REPLACE FUNCTION public.get_prediction_accuracy(days_back int DEFAULT 0)
 RETURNS json
@@ -14,6 +21,19 @@ LANGUAGE sql
 STABLE
 SET search_path = public
 AS $$
+  SELECT CASE WHEN days_back <= 0 THEN (
+    SELECT json_build_object(
+      'total',             SUM(mac),
+      'correct',           SUM(dogru),
+      'accuracy_pct',      ROUND(100.0 * SUM(dogru) / NULLIF(SUM(mac), 0), 1),
+      'confident_total',   COALESCE(SUM(mac) FILTER (WHERE katman = 'zirve'), 0),
+      'confident_correct', COALESCE(SUM(dogru) FILTER (WHERE katman = 'zirve'), 0),
+      'confident_pct',     ROUND(100.0 * SUM(dogru) FILTER (WHERE katman = 'zirve')
+                                 / NULLIF(SUM(mac) FILTER (WHERE katman = 'zirve'), 0), 1)
+    )
+    FROM public.fextopus_isabet_ozet
+    WHERE donem = 'tum'
+  ) ELSE (
   SELECT json_build_object(
     'total',             COUNT(*),
     'correct',           COUNT(*) FILTER (WHERE correct),
@@ -36,8 +56,9 @@ AS $$
       AND winner_id IS NOT NULL
       AND prediction_team_a IS NOT NULL
       AND prediction_team_a <> prediction_team_b
-      AND (days_back <= 0 OR scheduled_at > NOW() - (days_back * INTERVAL '1 day'))
-  ) x;
+      AND scheduled_at > NOW() - (days_back * INTERVAL '1 day')
+  ) x
+  ) END;
 $$;
 
 -- Frontend (anon) + giriş yapmış kullanıcılar çağırabilsin

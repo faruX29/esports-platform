@@ -536,7 +536,8 @@ export default function TeamPage() {
     setError(null)
     try {
       const [teamRes, matchRes, playerRes, rosterChangesRes] = await Promise.all([
-        supabase.from('teams').select('*, game:games(id, name, slug)').eq('id', teamId).single(),
+        // single() olmayan takımda 406 + konsol hatası veriyordu
+        supabase.from('teams').select('*, game:games(id, name, slug)').eq('id', teamId).maybeSingle(),
 
         supabase.from('matches').select(`
           id, status, scheduled_at,
@@ -567,6 +568,7 @@ export default function TeamPage() {
 
       if (teamRes.error)   throw teamRes.error
       if (matchRes.error)  throw matchRes.error
+      if (!teamRes.data) { setError('Takım bulunamadı.'); return }
 
       setTeam(teamRes.data)
       setMatches(matchRes.data || [])

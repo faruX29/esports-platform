@@ -1308,8 +1308,9 @@ export default function MatchDetail() {
         team_b:teams!matches_team_b_id_fkey(id,name,logo_url,acronym),
         tournament:tournaments(id,name,tier,league_name,event_name,display_name,region),
         game:games(id,name,slug)
-      `).eq('id', id).single()
+      `).eq('id', id).maybeSingle()  // single() olmayan maçta 406 + konsol hatası veriyordu
       if (e) throw e
+      if (!data) { if (!sessiz) setError('Maç bulunamadı.'); return }
       setMatch(data)
       setStreams((data?.raw_data?.streams_list||[]).filter(s=>s?.embed_url||s?.raw_url))
     } catch (e) {

@@ -1,3 +1,5 @@
+import { metinTonu } from '../theme'
+
 const ROLE_STYLES = {
   igl:        { bg: 'rgba(139,92,246,0.2)',    border: 'rgba(139,92,246,0.55)',  color: '#a78bfa', label: 'IGL' },
   sniper:     { bg: 'rgba(56,189,248,0.15)',   border: 'rgba(56,189,248,0.5)',   color: '#38bdf8', label: 'Sniper' },
@@ -90,5 +92,7 @@ export function getRoleBadge(role) {
   const key = String(role).toLowerCase()
   // Bilinmeyen rol → null DÖNDÜRME (tüketiciler badge.bg okuyunca çöküyordu, örn.
   // TeamPage bir standart-dışı rolde tüm sayfayı beyaz-ekran ediyordu). Nötr fallback:
-  return ROLE_STYLES[key] ?? { bg: 'rgba(148,163,184,.12)', border: '#3a4a63', color: '#9fb0c9', label: role }
+  const s = ROLE_STYLES[key] ?? { bg: 'rgba(148,163,184,.12)', border: '#3a4a63', color: '#9fb0c9', label: role }
+  // color yalnız metin rengi olarak kullanılıyor → tema-farkında ton (aydınlıkta pastel okunmuyordu)
+  return { ...s, color: metinTonu(s.color) }
 }

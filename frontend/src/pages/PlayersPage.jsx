@@ -11,7 +11,7 @@ import { normalizeGameId } from '../utils/gameUtils'
 import { KartLink } from '../components/KartLink'
 import { DeepScoutBadge } from '../components/ScoutSignals'
 import { X as XIcon, SearchX, Star } from 'lucide-react'
-import { FEXT } from '../theme'
+import { FEXT, yazi, oyunMetni } from '../theme'
 
 function toNum(v) {
   const n = Number(v)
@@ -108,7 +108,7 @@ function GameFilterTabs({ activeGame, setActiveGame }) {
               borderRadius: 999,
               border: active ? `1px solid ${game.color}` : '1px solid var(--line)',
               background: active ? `${game.color}22` : 'var(--surface)',
-              color: active ? game.color : 'var(--text-3)',
+              color: active ? oyunMetni(game.color) : 'var(--text-3)',
               fontSize: 12,
               fontWeight: 700,
               letterSpacing: '.2px',
@@ -151,23 +151,23 @@ function CompareCard({ player, onClear }) {
           />
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 800, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.nickname || '—'}</div>
-            <div style={{ color: 'var(--text-3)', fontSize: 11 }}>{player.team?.name || 'Free Agent'}</div>
+            <div style={{ color: 'var(--text-3)', fontSize: yazi(11) }}>{player.team?.name || 'Free Agent'}</div>
           </div>
         </div>
-        <button onClick={onClear} style={{ border: '1px solid var(--text-6)', background: 'var(--surface)', color: 'var(--text-3)', borderRadius: 7, padding: '4px 7px', cursor: 'pointer', fontSize: 11 }}>Temizle</button>
+        <button onClick={onClear} style={{ border: '1px solid var(--text-6)', background: 'var(--surface)', color: 'var(--text-3)', borderRadius: 7, padding: '4px 7px', cursor: 'pointer', fontSize: yazi(11) }}>Temizle</button>
       </div>
 
       <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
-        <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>K/D</div><div style={{ fontSize: 15, fontWeight: 800 }}>{fmt(player.kd)}</div></div>
-        <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>HS%</div><div style={{ fontSize: 15, fontWeight: 800 }}>%{Math.round(player.hsPct)}</div></div>
-        <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>Kaz.%</div><div style={{ fontSize: 15, fontWeight: 800 }}>%{Math.round(player.winRate)}</div></div>
-        <div><div style={{ fontSize: 10, color: 'var(--text-4)' }}>Etki</div><div style={{ fontSize: 15, fontWeight: 800, color: '#ff9aa9' }}>{Math.round(player.impact)}</div></div>
+        <div><div style={{ fontSize: yazi(10), color: 'var(--text-4)' }}>K/D</div><div style={{ fontSize: 15, fontWeight: 800 }}>{fmt(player.kd)}</div></div>
+        <div><div style={{ fontSize: yazi(10), color: 'var(--text-4)' }}>HS%</div><div style={{ fontSize: 15, fontWeight: 800 }}>%{Math.round(player.hsPct)}</div></div>
+        <div><div style={{ fontSize: yazi(10), color: 'var(--text-4)' }}>Kaz.%</div><div style={{ fontSize: 15, fontWeight: 800 }}>%{Math.round(player.winRate)}</div></div>
+        <div><div style={{ fontSize: yazi(10), color: 'var(--text-4)' }}>Etki</div><div style={{ fontSize: 15, fontWeight: 800, color: 'var(--danger-fg)' }}>{Math.round(player.impact)}</div></div>
       </div>
 
       <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
-        {[{ label: 'K/D', value: bars.kdBar, color: '#ff6a7f' }, { label: 'HS', value: bars.hsBar, color: 'var(--text-1)' }, { label: 'Gal', value: bars.winBar, color: '#7cd97f' }, { label: 'Etki', value: bars.impactBar, color: '#ff9aa9' }].map(row => (
+        {[{ label: 'K/D', value: bars.kdBar, color: 'var(--danger-fg)' }, { label: 'HS', value: bars.hsBar, color: 'var(--text-1)' }, { label: 'Gal', value: bars.winBar, color: 'var(--success-fg)' }, { label: 'Etki', value: bars.impactBar, color: 'var(--danger-fg)' }].map(row => (
           <div key={row.label}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-3)', marginBottom: 3 }}><span>{row.label}</span><span>{Math.round(row.value)}</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: yazi(10), color: 'var(--text-3)', marginBottom: 3 }}><span>{row.label}</span><span>{Math.round(row.value)}</span></div>
             <div style={{ height: 5, borderRadius: 4, background: 'var(--surface-2)', overflow: 'hidden' }}>
               <div style={{ width: `${row.value}%`, height: '100%', background: row.color }} />
             </div>
@@ -581,7 +581,7 @@ export default function PlayersPage() {
         <p style={{ margin: '8px 0 16px', color: 'var(--text-2)', fontSize: 13 }}>
           Seçili oyuna göre oyuncuları K/D, ACS ve Impact'e göre sıralayın.
           {metricsSource === 'player_match_stats'
-            ? <span style={{ color: '#C25CD0' }}> · Gerçek maç istatistikleri</span>
+            ? <span style={{ color: 'var(--accent-fg)' }}> · Gerçek maç istatistikleri</span>
             : <span style={{ color: 'var(--text-4)' }}> · Takım bazlı tahmin</span>}
         </p>
 
@@ -606,7 +606,7 @@ export default function PlayersPage() {
             padding: 14,
             marginBottom: 14,
           }}>
-            <div style={{ fontSize: 11, color: '#ff9aa9', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.9px', marginBottom: 10 }}>
+            <div style={{ fontSize: yazi(11), color: 'var(--danger-fg)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.9px', marginBottom: 10 }}>
               Compare
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 10, marginBottom: 10 }}>
@@ -688,7 +688,7 @@ export default function PlayersPage() {
             gap: 8,
             padding: '12px 14px',
             borderBottom: '1px solid var(--line)',
-            fontSize: 11,
+            fontSize: yazi(11),
             color: 'var(--text-3)',
             textTransform: 'uppercase',
             letterSpacing: '.5px',
@@ -704,7 +704,7 @@ export default function PlayersPage() {
           </div>
 
             {loading && <div style={{ padding: 18, color: 'var(--text-3)', fontSize: 13 }}>Oyuncular yükleniyor...</div>}
-            {!loading && error && <div style={{ padding: 18, color: '#ff6a7f', fontSize: 13 }}>{error}</div>}
+            {!loading && error && <div style={{ padding: 18, color: 'var(--danger-fg)', fontSize: 13 }}>{error}</div>}
             {!loading && !error && visiblePlayers.length === 0 && (
               <div style={{ padding: 26, textAlign: 'center' }}>
                 <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}><SearchX size={26} color="var(--text-5)" /></div>
@@ -750,7 +750,7 @@ export default function PlayersPage() {
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.nickname || '—'}</div>
                     {showRoleBadge && (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', marginTop: 3, padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700, background: roleBadge.bg, color: roleBadge.color, border: `1px solid ${roleBadge.border}` }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', marginTop: 3, padding: '2px 8px', borderRadius: 999, fontSize: yazi(10), fontWeight: 700, background: roleBadge.bg, color: roleBadge.color, border: `1px solid ${roleBadge.border}` }}>
                       {roleBadge.label}
                     </div>
                   )}
@@ -774,10 +774,10 @@ export default function PlayersPage() {
                 </TakimHucresi>
 
                 <div style={{ fontWeight: 700 }}>{fmt(player.kd)}</div>
-                <div style={{ fontWeight: 700, color: player.acs != null ? '#C25CD0' : 'var(--text-5)' }}>{player.acs != null ? player.acs : '—'}</div>
+                <div style={{ fontWeight: 700, color: player.acs != null ? 'var(--accent-fg)' : 'var(--text-5)' }}>{player.acs != null ? player.acs : '—'}</div>
                 <div style={{ fontWeight: 700, color: player.hsPct > 0 ? 'var(--text-1)' : 'var(--text-5)' }}>{player.hsPct > 0 ? yuzde(player.hsPct) : '—'}</div>
                 <div style={{ fontWeight: 700 }}>%{Math.round(player.winRate)}</div>
-                <div style={{ color: '#ff9aa9', fontWeight: 800 }}>{Math.round(player.impact)}</div>
+                <div style={{ color: 'var(--danger-fg)', fontWeight: 800 }}>{Math.round(player.impact)}</div>
 
                 <div>
                   <button
@@ -802,7 +802,7 @@ export default function PlayersPage() {
           </div>
         </div>
 
-        <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-4)' }}>
+        <div style={{ marginTop: 10, fontSize: yazi(11), color: 'var(--text-4)' }}>
           Not: Oyuncular istatistikleri olmasa bile arama sonuçlarında listelenir. Faker/Caps gibi isimler doğrudan bulunabilir.
         </div>
       </div>

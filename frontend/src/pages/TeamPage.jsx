@@ -20,7 +20,7 @@ import {
   Handshake, CalendarDays, ClipboardList, TriangleAlert, Video, AtSign,
   Globe, Music, Gamepad2, Link as LinkIcon, Clock, Info,
 } from 'lucide-react'
-import { FEXT } from '../theme'
+import { FEXT, yazi, metinTonu } from '../theme'
 import { LIQUIPEDIA_SON_TARIH } from '../components/LiquipediaCredit'
 import Mascot from '../components/Mascot'
 import TakipYildizi from '../components/TakipYildizi'
@@ -37,8 +37,8 @@ function Sk({ w = '100%', h = '16px', r = '8px' }) {
 // ── Form pill ─────────────────────────────────────────────────────────────────
 function FormPill({ result }) {
   const cfg = {
-    W: { bg: 'rgba(76,175,80,.25)',  border: '#4CAF50', color: '#4CAF50', label: 'G', ad: 'Galibiyet' },
-    L: { bg: 'rgba(255,70,85,.2)',   border: '#FF4655', color: '#FF4655', label: 'M', ad: 'Mağlubiyet' },
+    W: { bg: 'rgba(76,175,80,.25)',  border: '#4CAF50', color: 'var(--yesil-fg)', label: 'G', ad: 'Galibiyet' },
+    L: { bg: 'rgba(255,70,85,.2)',   border: '#FF4655', color: 'var(--canli-fg)', label: 'M', ad: 'Mağlubiyet' },
     D: { bg: 'rgba(150,150,150,.15)',border: 'var(--text-4)',    color: 'var(--text-4)',    label: 'B', ad: 'Beraberlik' },
   }[result] ?? { bg: 'var(--surface)', border: 'var(--text-6)', color: 'var(--text-4)', label: '?', ad: 'Bilinmiyor' }
 
@@ -62,8 +62,8 @@ function StatBox({ Icon, value, label, color = '#fff' }) {
       border: '1px solid var(--surface-2)',
     }}>
       <div style={{ marginBottom: 4, display: 'flex', justifyContent: 'center' }}>{Icon && <Icon size={20} color={color} />}</div>
-      <div style={{ fontSize: 26, fontWeight: 900, color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
-      <div style={{ fontSize: 11, color: 'var(--text-5)', marginTop: 4 }}>{label}</div>
+      <div style={{ fontSize: 26, fontWeight: 900, color: metinTonu(color), lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+      <div style={{ fontSize: yazi(11), color: 'var(--text-5)', marginTop: 4 }}>{label}</div>
     </div>
   )
 }
@@ -74,9 +74,9 @@ function WinRateBar({ wins, total }) {
   const color = pct >= 60 ? '#4CAF50' : pct >= 45 ? '#FFB800' : '#FF4655'
   return (
     <div style={{ marginTop: 10 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 5 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: yazi(11), marginBottom: 5 }}>
         <span style={{ color: 'var(--text-4)' }}>Kazanma Oranı</span>
-        <span style={{ color, fontWeight: 800 }}>%{pct}</span>
+        <span style={{ color: metinTonu(color), fontWeight: 800 }}>%{pct}</span>
       </div>
       <div style={{ height: 6, borderRadius: 3, background: 'var(--surface)', overflow: 'hidden' }}>
         <div style={{
@@ -212,7 +212,7 @@ function TransferTimeline({ transfers }) {
   return (
     <div style={{ marginTop: 18, background: 'linear-gradient(160deg, rgba(200,16,46,.14), rgba(0,0,0,0) 48%)', border: '1px solid rgba(200,16,46,.28)', borderRadius: 14, padding: '16px 14px 6px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
-        <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: '.8px', color: '#ffd9de', textTransform: 'uppercase' }}>Son Transferler</div>
+        <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: '.8px', color: metinTonu('#ffd9de'), textTransform: 'uppercase' }}>Son Transferler</div>
       </div>
 
       <div style={{ display: 'grid', gap: 10 }}>
@@ -234,13 +234,13 @@ function TransferTimeline({ transfers }) {
               <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderLeft: `3px solid ${accent}`, borderRadius: 10, padding: '9px 11px', display: 'grid', gap: 5 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                   <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>{item.player}</div>
-                  <span style={{ fontSize: 10, fontWeight: 800, color: accent, border: `1px solid ${accent}77`, borderRadius: 999, padding: '2px 7px', background: `${accent}1A` }}>{label}</span>
+                  <span style={{ fontSize: yazi(10), fontWeight: 800, color: accent, border: `1px solid ${accent}77`, borderRadius: 999, padding: '2px 7px', background: `${accent}1A` }}>{label}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                  {item.oldTeam && <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Eski: {item.oldTeam}</span>}
-                  {item.newTeam && <span style={{ fontSize: 11, color: 'var(--text-1)' }}>Yeni: {item.newTeam}</span>}
-                  {item.role && <span style={{ fontSize: 10, color: '#ffadb8', border: '1px solid rgba(200,16,46,.35)', borderRadius: 7, padding: '1px 6px' }}>{item.role}</span>}
-                  <span style={{ fontSize: 10, color: 'var(--text-4)', marginLeft: 'auto' }}>{dateLabel}</span>
+                  {item.oldTeam && <span style={{ fontSize: yazi(11), color: 'var(--text-3)' }}>Eski: {item.oldTeam}</span>}
+                  {item.newTeam && <span style={{ fontSize: yazi(11), color: 'var(--text-1)' }}>Yeni: {item.newTeam}</span>}
+                  {item.role && <span style={{ fontSize: yazi(10), color: metinTonu('#ffadb8'), border: '1px solid rgba(200,16,46,.35)', borderRadius: 7, padding: '1px 6px' }}>{item.role}</span>}
+                  <span style={{ fontSize: yazi(10), color: 'var(--text-4)', marginLeft: 'auto' }}>{dateLabel}</span>
                 </div>
               </div>
             </div>
@@ -268,39 +268,39 @@ function PlayerCard({ player }) {
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', lineHeight: 1.3 }}>{player.nickname}</div>
         {player.real_name && (
-          <div style={{ fontSize: 11, color: 'var(--text-4)', marginTop: 2 }}>{player.real_name}</div>
+          <div style={{ fontSize: yazi(11), color: 'var(--text-4)', marginTop: 2 }}>{player.real_name}</div>
         )}
         {/* Bayrak emojisi Windows'ta "TR" harfi olarak çıkıyordu → yalnız ülke kodu */}
         {/^[A-Z]{2}$/.test(natCode) && (
-          <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4, fontWeight: 700 }}>
-            {natCode === 'TR' ? <TrBadge style={{ fontSize: 11, margin: 0 }} /> : natCode}
+          <div style={{ fontSize: yazi(11), color: 'var(--text-3)', marginTop: 4, fontWeight: 700 }}>
+            {natCode === 'TR' ? <TrBadge style={{ fontSize: yazi(11), margin: 0 }} /> : natCode}
           </div>
         )}
       </div>
 
       {player.role ? (
         <div style={{
-          padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+          padding: '4px 12px', borderRadius: 20, fontSize: yazi(11), fontWeight: 700,
           background: badge.bg, border: `1px solid ${badge.border}`,
           color: badge.color, letterSpacing: '.5px', textTransform: 'capitalize',
         }}>{badge.label}</div>
       ) : (
-        <div style={{ fontSize: 11, color: 'var(--text-6)' }}>—</div>
+        <div style={{ fontSize: yazi(11), color: 'var(--text-5)' }}>—</div>
       )}
 
       {/* K/D — hybrid v3 verisi (varsa) */}
       {player.kd != null && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: -2 }}>
-          <span style={{ fontSize: 10, color: 'var(--text-4)' }}>K/D</span>
-          <span style={{ fontSize: 13, fontWeight: 800, color: player.kd >= 1 ? '#4ade80' : '#ff6a7f', fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ fontSize: yazi(10), color: 'var(--text-4)' }}>K/D</span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: player.kd >= 1 ? 'var(--success-fg)' : 'var(--danger-fg)', fontVariantNumeric: 'tabular-nums' }}>
             {ondalik(player.kd, 2)}
           </span>
-          <span style={{ fontSize: 9, color: 'var(--text-5)' }}>({player.statMatches} maç)</span>
+          <span style={{ fontSize: yazi(9), color: 'var(--text-5)' }}>({player.statMatches} maç)</span>
         </div>
       )}
 
       {player.id && (
-        <div style={{ fontSize: 9, color: 'var(--text-6)', marginTop: -4 }}>profili gör →</div>
+        <div style={{ fontSize: yazi(9), color: 'var(--text-5)', marginTop: -4 }}>profili gör →</div>
       )}
     </>
   )
@@ -342,7 +342,7 @@ function PlayerCard({ player }) {
                   textDecoration: 'none',
                   border: '1px solid rgba(200,16,46,.45)',
                   background: 'radial-gradient(circle at 30% 30%, rgba(200,16,46,.45), rgba(0,0,0,.86))',
-                  color: '#fff', fontSize: 11, fontWeight: 800,
+                  color: '#fff', fontSize: yazi(11), fontWeight: 800,
                 }}
               >
                 {meta.Icon && <meta.Icon size={12} />}
@@ -399,7 +399,7 @@ function MatchCard({ match, teamId }) {
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <OyunRozeti oyun={match.game} />
           {getBOFormat(match.team_a_score, match.team_b_score, match.number_of_games) && (
-            <span style={{ fontSize: 9, fontWeight: 700, color: '#60a5fa', background: 'rgba(96,165,250,.12)', border: '1px solid rgba(96,165,250,.3)', borderRadius: 5, padding: '1px 6px' }}>
+            <span style={{ fontSize: yazi(9), fontWeight: 700, color: 'var(--mavi-fg)', background: 'rgba(96,165,250,.12)', border: '1px solid rgba(96,165,250,.3)', borderRadius: 5, padding: '1px 6px' }}>
               {getBOFormat(match.team_a_score, match.team_b_score, match.number_of_games)}
             </span>
           )}
@@ -407,13 +407,13 @@ function MatchCard({ match, teamId }) {
 
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           {isLive && (
-            <span style={{ fontSize: 10, fontWeight: 800, color: '#FF4655', animation: 'pulse 1.5s infinite', display: 'inline-flex', alignItems: 'center', gap: 4 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF4655' }} /> CANLI</span>
+            <span style={{ fontSize: yazi(10), fontWeight: 800, color: 'var(--canli-fg)', animation: 'pulse 1.5s infinite', display: 'inline-flex', alignItems: 'center', gap: 4 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF4655' }} /> CANLI</span>
           )}
           {isFin && (
             <span style={{
-              fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 6,
+              fontSize: yazi(10), fontWeight: 800, padding: '2px 8px', borderRadius: 6,
               background: isWin ? 'rgba(76,175,80,.2)' : isLoss ? 'rgba(255,70,85,.2)' : 'rgba(100,100,100,.15)',
-              color: isWin ? '#4CAF50' : isLoss ? '#FF4655' : 'var(--text-3)',
+              color: isWin ? 'var(--yesil-fg)' : isLoss ? 'var(--canli-fg)' : 'var(--text-3)',
               border: `1px solid ${isWin ? 'rgba(76,175,80,.4)' : isLoss ? 'rgba(255,70,85,.4)' : 'var(--text-6)'}`,
               display: 'inline-flex', alignItems: 'center', gap: 4,
             }}>
@@ -431,7 +431,7 @@ function MatchCard({ match, teamId }) {
             ? <img src={myTeam.logo_url} alt="" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }} />
             : <div style={{ width: 32, height: 32, background: 'var(--surface-2)', borderRadius: 6, flexShrink: 0 }} />
           }
-          <span style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: isWin ? '#4CAF50' : 'var(--text-1)' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: isWin ? 'var(--yesil-fg)' : 'var(--text-1)' }}>
             {myTeam?.name}
           </span>
         </div>
@@ -440,12 +440,12 @@ function MatchCard({ match, teamId }) {
         <div style={{ textAlign: 'center', flexShrink: 0 }}>
           {isFin ? (
             <div style={{ fontSize: 18, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: 'var(--text-1)' }}>
-              <span style={{ color: isWin ? '#4CAF50' : isLoss ? '#FF4655' : 'var(--text-3)' }}>{myScore ?? 0}</span>
-              <span style={{ color: 'var(--line)', margin: '0 4px' }}>:</span>
-              <span style={{ color: isLoss ? '#4CAF50' : isWin ? 'var(--text-3)' : 'var(--text-3)' }}>{oppScore ?? 0}</span>
+              <span style={{ color: isWin ? 'var(--yesil-fg)' : isLoss ? 'var(--canli-fg)' : 'var(--text-3)' }}>{myScore ?? 0}</span>
+              <span style={{ color: 'var(--text-5)', margin: '0 4px' }}>:</span>
+              <span style={{ color: isLoss ? 'var(--yesil-fg)' : isWin ? 'var(--text-3)' : 'var(--text-3)' }}>{oppScore ?? 0}</span>
             </div>
           ) : (
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-6)' }}>VS</span>
+            <span style={{ fontSize: yazi(11), fontWeight: 700, color: 'var(--text-5)' }}>VS</span>
           )}
         </div>
 
@@ -469,17 +469,17 @@ function MatchCard({ match, teamId }) {
               <div style={{ height: 4, borderRadius: 2, background: 'var(--surface)', overflow: 'hidden' }}>
                 <div style={{ width: '50%', height: '100%', background: 'var(--track)' }} />
               </div>
-              <div style={{ fontSize: 10, marginTop: 3, color: 'var(--text-4)', textAlign: 'center', fontWeight: 700 }}>{isFin ? 'Fextopus başa baş gördü' : 'Fextopus · Başa baş'}</div>
+              <div style={{ fontSize: yazi(10), marginTop: 3, color: 'var(--text-4)', textAlign: 'center', fontWeight: 700 }}>{isFin ? 'Fextopus başa baş gördü' : 'Fextopus · Başa baş'}</div>
             </>
           ) : (
             <>
               <div style={{ height: 4, borderRadius: 2, background: 'var(--surface)', overflow: 'hidden' }}>
                 <div style={{ width: `${Math.round(myPred * 100)}%`, height: '100%', background: 'linear-gradient(90deg,#667eea,#764ba2)' }} />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginTop: 3, color: 'var(--text-5)' }}>
-                <span style={{ color: myPred >= oppPred ? '#818cf8' : 'var(--text-5)' }}>%{Math.round(myPred * 100)}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: yazi(10), marginTop: 3, color: 'var(--text-5)' }}>
+                <span style={{ color: myPred >= oppPred ? 'var(--indigo-fg)' : 'var(--text-5)' }}>%{Math.round(myPred * 100)}</span>
                 <span style={{ color: 'var(--text-5)' }}>Fextopus</span>
-                <span style={{ color: oppPred > myPred ? '#818cf8' : 'var(--text-5)' }}>%{Math.round(oppPred * 100)}</span>
+                <span style={{ color: oppPred > myPred ? 'var(--indigo-fg)' : 'var(--text-5)' }}>%{Math.round(oppPred * 100)}</span>
               </div>
             </>
           )}
@@ -488,7 +488,7 @@ function MatchCard({ match, teamId }) {
 
       {/* Bottom */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--surface-2)', paddingTop: 8, gap: 8 }}>
-        <div style={{ fontSize: 10, color: 'var(--text-6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
+        <div style={{ fontSize: yazi(10), color: 'var(--text-5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
           <Trophy size={11} style={{ flexShrink: 0 }} />
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {match.tournament ? tournamentDisplayName(match.tournament, { game: normalizeGameId(match.game?.slug ?? match.game?.name) }) : '—'}
@@ -499,14 +499,14 @@ function MatchCard({ match, teamId }) {
             href={match.stream_url}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ ...UST_KATMAN, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: 'var(--ai)', background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.35)', borderRadius: 6, padding: '2px 7px', textDecoration: 'none', flexShrink: 0 }}
+            style={{ ...UST_KATMAN, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: yazi(10), fontWeight: 700, color: 'var(--ai)', background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.35)', borderRadius: 6, padding: '2px 7px', textDecoration: 'none', flexShrink: 0 }}
             onMouseEnter={e => e.currentTarget.style.background = 'rgba(167,139,250,.22)'}
             onMouseLeave={e => e.currentTarget.style.background = 'rgba(167,139,250,.12)'}
           >
             <Video size={11} /> Yayın
           </a>
         )}
-        <div style={{ fontSize: 10, color: 'var(--text-5)', flexShrink: 0 }}>
+        <div style={{ fontSize: yazi(10), color: 'var(--text-5)', flexShrink: 0 }}>
           {new Date(match.scheduled_at).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
         </div>
       </div>
@@ -653,7 +653,7 @@ export default function TeamPage() {
   )
 
   if (error || !team) return (
-    <div style={{ textAlign: 'center', padding: '60px', color: '#FF4655' }}>
+    <div style={{ textAlign: 'center', padding: '60px', color: 'var(--canli-fg)' }}>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={86} dim /></div>
       <div style={{ fontSize: 16, marginBottom: 20 }}>{error ?? 'Takım bulunamadı'}</div>
       <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', background: FEXT.accentGrad, border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
@@ -722,7 +722,7 @@ export default function TeamPage() {
             position: 'absolute', top: 16, right: 20,
             background: isFav ? 'rgba(255,215,0,.15)' : 'rgba(255,255,255,.06)',
             border: isFav ? '1px solid rgba(255,215,0,.5)' : '1px solid var(--line)',
-            borderRadius: 8, color: isFav ? '#FFD700' : 'var(--text-4)',
+            borderRadius: 8, color: isFav ? 'var(--altin-fg)' : 'var(--text-4)',
             padding: '6px 14px', fontSize: 13, cursor: 'pointer',
             transition: 'all .15s', fontWeight: isFav ? 700 : 400,
             display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -767,7 +767,7 @@ export default function TeamPage() {
             {/* Badges */}
             <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
               {team.location && (
-                <span style={{ padding: '3px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700, background: 'var(--surface-2)', border: '1px solid var(--line)', color: 'var(--text-3)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ padding: '3px 10px', borderRadius: 8, fontSize: yazi(11), fontWeight: 700, background: 'var(--surface-2)', border: '1px solid var(--line)', color: 'var(--text-3)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                   <MapPin size={12} /> {team.location}
                 </span>
               )}
@@ -780,12 +780,12 @@ export default function TeamPage() {
             {/* Form strip */}
             {form.length > 0 && (
               <div style={{ marginTop: 14 }}>
-                <div style={{ fontSize: 10, color: 'var(--text-5)', marginBottom: 6, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
+                <div style={{ fontSize: yazi(10), color: 'var(--text-5)', marginBottom: 6, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
                   Son Form ({form.length} maç)
                   {streak && streak.count >= 3 && (
                     <span style={{
-                      marginLeft: 10, fontSize: 10, fontWeight: 800,
-                      color: streak.type === 'W' ? '#4CAF50' : '#FF4655',
+                      marginLeft: 10, fontSize: yazi(10), fontWeight: 800,
+                      color: streak.type === 'W' ? 'var(--yesil-fg)' : 'var(--canli-fg)',
                       padding: '2px 8px', borderRadius: 6,
                       background: streak.type === 'W' ? 'rgba(76,175,80,.15)' : 'rgba(255,70,85,.15)',
                       display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -839,7 +839,7 @@ export default function TeamPage() {
               }}>
                 {t.Icon && <t.Icon size={14} />}
                 {t.label}
-                <span style={{ fontSize: 11, padding: '1px 6px', borderRadius: 6, background: active ? FEXT.accentSoftBg : 'var(--surface-2)', color: active ? FEXT.accentText : 'var(--text-4)' }}>
+                <span style={{ fontSize: yazi(11), padding: '1px 6px', borderRadius: 6, background: active ? FEXT.accentSoftBg : 'var(--surface-2)', color: active ? FEXT.accentText : 'var(--text-4)' }}>
                   {t.count}
                 </span>
               </button>
@@ -863,7 +863,7 @@ export default function TeamPage() {
               {players.length > 7 && (
                 <div style={{ marginBottom: 14, padding: '10px 14px', borderRadius: 10, background: 'rgba(255,184,0,.06)', border: '1px solid rgba(255,184,0,.2)', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <TriangleAlert size={14} color="#FFB800" />
-                  <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                  <span style={{ fontSize: yazi(11), color: 'var(--text-3)' }}>
                     Bu kadroda {players.length} oyuncu görünüyor. Bazıları transfer olmuş olabilir; güncel kadro yakında yansıyacak.
                   </span>
                 </div>
@@ -899,7 +899,7 @@ export default function TeamPage() {
                     const active = gameFilter === g
                     return (
                       <button key={g} onClick={() => setGameFilter(g)} style={{
-                        padding: '6px 12px', borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                        padding: '6px 12px', borderRadius: 999, fontSize: yazi(11), fontWeight: 700, cursor: 'pointer',
                         border: active ? `1px solid ${FEXT.accent}` : '1px solid var(--line)',
                         background: active ? FEXT.accentSoftBg : 'var(--surface)',
                         color: active ? FEXT.accentText : 'var(--text-3)',
@@ -913,7 +913,7 @@ export default function TeamPage() {
               {activeTab === 'past' && team?.name && (
                 <div style={{ marginBottom: 12, fontSize: 12, color: 'var(--text-4)' }}>
                   Son {source.length} maç gösteriliyor.{' '}
-                  <Link to={`/matches?q=${encodeURIComponent(team.name)}&tab=past`} style={{ color: '#9db4ff', textDecoration: 'none', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <Link to={`/matches?q=${encodeURIComponent(team.name)}&tab=past`} style={{ color: 'var(--mavi-fg)', textDecoration: 'none', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                     <CalendarDays size={12} /> Tüm geçmişi (yıla göre) ara →
                   </Link>
                 </div>

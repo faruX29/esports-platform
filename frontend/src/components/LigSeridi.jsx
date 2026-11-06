@@ -13,6 +13,7 @@ import TrBadge from './TrBadge'
 import { GAMES } from '../context/GameContext'
 import { normalizeGameId } from '../utils/gameUtils'
 import { ligPath, ligBaslik } from '../utils/ligler'
+import { yazi } from '../theme'
 
 const OYUN_SIRASI = ['lol', 'valorant', 'cs2']
 
@@ -63,7 +64,7 @@ export default function LigSeridi({ ligler, aktifSlug = null }) {
                 >
                   <GameLogo game={g.oyun} size={13} color={renk} />
                   {ligBaslik(l)}
-                  {l.turk && <TrBadge style={{ margin: 0, fontSize: 9 }} />}
+                  {l.turk && <TrBadge style={{ margin: 0, fontSize: yazi(9) }} />}
                 </Link>
               )
             }),

@@ -11,7 +11,7 @@ import { Medal, ChevronUp, ChevronDown } from 'lucide-react'
 import { useSiraGecisi } from '../hooks/useHareket'
 import TakipYildizi from '../components/TakipYildizi'
 import { takipEdildiBildir } from '../utils/takipBildir'
-import { FEXT } from '../theme'
+import { FEXT, yazi, oyunMetni } from '../theme'
 
 function toNum(v) {
   const n = Number(v)
@@ -136,17 +136,17 @@ const HAFTA_MS = 7 * 24 * 60 * 60 * 1000
 // Geçen haftaya göre sıra değişimi (yalnız Güç sıralamasında anlamlı)
 function SiraDegisimi({ row }) {
   if (row.oncekiSira == null) {
-    return <span title="Geçen hafta listede yoktu" style={{ fontSize: 9, fontWeight: 800, color: 'var(--accent-fg)', letterSpacing: '.3px' }}>YENİ</span>
+    return <span title="Geçen hafta listede yoktu" style={{ fontSize: yazi(9), fontWeight: 800, color: 'var(--accent-fg)', letterSpacing: '.3px' }}>YENİ</span>
   }
   const d = row.oncekiSira - row.sira
-  if (d === 0) return <span title="Geçen haftayla aynı" style={{ fontSize: 11, color: 'var(--text-6)' }}>–</span>
+  if (d === 0) return <span title="Geçen haftayla aynı" style={{ fontSize: yazi(11), color: 'var(--text-5)' }}>–</span>
   const yukari = d > 0
   const Ikon = yukari ? ChevronUp : ChevronDown
   return (
     <span
       title={`Geçen hafta #${row.oncekiSira + 1}`}
       style={{
-        display: 'inline-flex', alignItems: 'center', fontSize: 11, fontWeight: 800,
+        display: 'inline-flex', alignItems: 'center', fontSize: yazi(11), fontWeight: 800,
         color: yukari ? 'var(--success-fg)' : 'var(--danger-fg)', fontVariantNumeric: 'tabular-nums',
       }}
     >
@@ -171,7 +171,7 @@ function GameFilterTabs({ activeGame, setActiveGame }) {
               borderRadius: 999,
               border: active ? `1.5px solid ${game.color}` : '1px solid var(--line)',
               background: active ? `${game.color}30` : 'var(--surface)',
-              color: active ? game.color : 'var(--text-3)',
+              color: active ? oyunMetni(game.color) : 'var(--text-3)',
               boxShadow: active ? `inset 0 0 0 1px ${game.color}40` : 'none',
               fontSize: 12,
               fontWeight: active ? 800 : 700,
@@ -367,17 +367,17 @@ export default function RankingsPage() {
           marginBottom: 16,
         }}>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14, padding: 14 }}>
-            <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Lider</div>
+            <div style={{ fontSize: yazi(11), color: 'var(--text-3)' }}>Lider</div>
             <div style={{ marginTop: 4, fontWeight: 800, fontSize: 18 }}>{top?.team?.name || '—'}</div>
             <div style={{ marginTop: 2, fontSize: 12, color: 'var(--accent-fg)' }}>{top ? `${top.rating} Puan` : 'Veri bekleniyor'}</div>
           </div>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14, padding: 14 }}>
-            <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Listelenen Takım</div>
+            <div style={{ fontSize: yazi(11), color: 'var(--text-3)' }}>Listelenen Takım</div>
             <div style={{ marginTop: 4, fontWeight: 800, fontSize: 22 }}>{filtered.length}</div>
             <div style={{ marginTop: 2, fontSize: 12, color: 'var(--text-1)' }}>Min. 6 maç · gerçek turnuva</div>
           </div>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14, padding: 14 }}>
-            <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Fextopus</div>
+            <div style={{ fontSize: yazi(11), color: 'var(--text-3)' }}>Fextopus</div>
             <div style={{ marginTop: 4, fontWeight: 800, fontSize: 16 }}>Güç = Form × Tier × Güncellik</div>
             <div style={{ marginTop: 2, fontSize: 12, color: 'var(--text-1)' }}>Kalite: karşılaşılan tier (güncellik ağırlıklı)</div>
           </div>
@@ -454,7 +454,7 @@ export default function RankingsPage() {
             gap: 8,
             padding: '12px 14px',
             borderBottom: '1px solid var(--line)',
-            fontSize: 11,
+            fontSize: yazi(11),
             color: 'var(--text-3)',
             textTransform: 'uppercase',
             letterSpacing: '.5px',
@@ -517,7 +517,7 @@ export default function RankingsPage() {
                   )}
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.team?.name || 'Bilinmeyen takım'}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{row.gameName || 'Tüm oyunlar'}</div>
+                    <div style={{ fontSize: yazi(11), color: 'var(--text-3)' }}>{row.gameName || 'Tüm oyunlar'}</div>
                   </div>
                 </div>
 

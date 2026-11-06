@@ -36,7 +36,7 @@ import { cleanDisplayName } from '../utils/nameCleaner'
 import { buildNewsSlug, parseNewsRef } from '../utils/newsSlug'
 import { getEsportsName } from '../utils/esportsName'
 import { X as XIcon, MessageSquare, Swords, Trophy, UserRound, Flag, Check } from 'lucide-react'
-import { FEXT } from '../theme'
+import { FEXT, yazi } from '../theme'
 import { isUncertainPrediction, fextopusSonucu } from '../utils/prediction'
 import { Damga } from '../components/Animasyon'
 import { useAcilisGecisi } from '../hooks/useHareket'
@@ -83,30 +83,11 @@ function classifyCommentInsertIssue(error) {
 const TABLE_EXISTS_CACHE = new Map()
 const COMMENT_CONTENT_COLUMN = 'content'
 
-async function checkTable(tableName) {
-  if (TABLE_EXISTS_CACHE.has(tableName)) {
-    return TABLE_EXISTS_CACHE.get(tableName)
-  }
-
-  try {
-    const { data, error } = await supabase
-      .schema('information_schema')
-      .from('tables')
-      .select('table_name')
-      .eq('table_schema', 'public')
-      .eq('table_name', tableName)
-      .maybeSingle()
-
-    if (error) {
-      return true
-    }
-
-    const exists = Boolean(data?.table_name)
-    TABLE_EXISTS_CACHE.set(tableName, exists)
-    return exists
-  } catch {
-    return true
-  }
+// Tablo var sayılır; asıl sorgu "tablo yok" hatası verirse (isMissingTableError)
+// önbelleğe false yazılır. information_schema'ya sormuyoruz: şema API'de açık
+// değil, her haber açılışında 406 dönüyordu.
+function checkTable(tableName) {
+  return TABLE_EXISTS_CACHE.get(tableName) ?? true
 }
 
 function fmtDate(iso) {
@@ -262,7 +243,7 @@ function ScoutRankBadge({ score }) {
         background: rank.background,
         boxShadow: `0 0 14px ${rank.glow}`,
         color: rank.accent,
-        fontSize: 9,
+        fontSize: yazi(9),
         fontWeight: 800,
         letterSpacing: '.35px',
         textTransform: 'uppercase',
@@ -277,7 +258,7 @@ function ScoutRankBadge({ score }) {
         background: 'rgba(0,0,0,.34)',
         border: `1px solid ${rank.border}`,
         color: '#fff',
-        fontSize: 9,
+        fontSize: yazi(9),
         lineHeight: 1,
       }}>
         {emblem}
@@ -305,8 +286,8 @@ function AIProbabilityBar({ story }) {
   const bFavored = !uncertain && predB > predA
 
   return (
-    <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid #1a2a3a', background: 'linear-gradient(145deg,#0a1520,var(--surface))', padding: 16 }}>
-      <div style={{ fontSize: 11, color: '#7dd3fc', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+    <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid var(--line)', background: 'linear-gradient(145deg,var(--surface-2),var(--surface))', padding: 16 }}>
+      <div style={{ fontSize: yazi(11), color: 'var(--mavi-fg)', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
         <FextopusIcon size={16} /> Fextopus Güç Dengesi
       </div>
 
@@ -329,9 +310,9 @@ function AIProbabilityBar({ story }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          <span style={{ fontSize: 15, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: aFavored ? '#86efac' : '#9ca3af' }}>{yuzde(pctA, 1)}</span>
-          <span style={{ fontSize: 11, color: 'var(--text-6)' }}>:</span>
-          <span style={{ fontSize: 15, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: bFavored ? '#86efac' : '#9ca3af' }}>{yuzde(pctB, 1)}</span>
+          <span style={{ fontSize: 15, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: aFavored ? 'var(--success-fg)' : 'var(--text-3)' }}>{yuzde(pctA, 1)}</span>
+          <span style={{ fontSize: yazi(11), color: 'var(--text-5)' }}>:</span>
+          <span style={{ fontSize: 15, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: bFavored ? 'var(--success-fg)' : 'var(--text-3)' }}>{yuzde(pctB, 1)}</span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flex: '1 1 0', justifyContent: 'flex-end' }}>
@@ -357,7 +338,7 @@ function AIProbabilityBar({ story }) {
         <div style={{ flex: 1, background: bFavored ? 'linear-gradient(270deg,#1d4ed8,#60a5fa)' : 'linear-gradient(270deg,var(--line),var(--text-6))' }} />
       </div>
 
-      <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-5)', textAlign: 'center' }}>
+      <div style={{ marginTop: 6, fontSize: yazi(11), color: 'var(--text-5)', textAlign: 'center' }}>
         {uncertain ? 'Fextopus iki takımı başa baş görüyor' : 'Fextopus öngörüsü: favori tarafın rengi vurgulanır'}
       </div>
 
@@ -458,7 +439,7 @@ function WeeklyMatchList({ story }) {
     <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid var(--surface-2)', background: 'var(--surface)', padding: 16 }}>
       {bolumler.map(b => (
         <div key={b.baslik} style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 11, color: 'var(--accent-fg)', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800, marginBottom: 10 }}>
+          <div style={{ fontSize: yazi(11), color: 'var(--accent-fg)', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800, marginBottom: 10 }}>
             {b.baslik}
           </div>
           {maclar === null
@@ -499,7 +480,7 @@ function WeeklyMatchRow({ m, turk, surpriz }) {
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0, fontWeight: kazandi ? 800 : 600, color: kazandi || !bitti ? 'var(--text-1)' : 'var(--text-3)' }}>
       <InitialsImage src={tm?.logo_url} name={tm?.name} width={20} height={20} borderRadius={5} objectFit='contain' />
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tm?.name}</span>
-      {tr && <span style={{ fontSize: 9, fontWeight: 800, color: '#ff8c9a' }}>TR</span>}
+      {tr && <span style={{ fontSize: yazi(9), fontWeight: 800, color: 'var(--danger-fg)' }}>TR</span>}
     </span>
   )
   return (
@@ -514,10 +495,10 @@ function WeeklyMatchRow({ m, turk, surpriz }) {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>{takim(m.team_b, trB, bitti && m.winner_id === m.team_b_id)}</div>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 11, color: 'var(--text-3)', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: yazi(11), color: 'var(--text-3)', flexWrap: 'wrap' }}>
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{turnuva}</span>
         {fav && (
-          <span style={{ color: dogru === false ? '#ff8c9a' : dogru ? 'var(--accent-fg)' : 'var(--text-3)', whiteSpace: 'nowrap' }}>
+          <span style={{ color: dogru === false ? 'var(--danger-fg)' : dogru ? 'var(--accent-fg)' : 'var(--text-3)', whiteSpace: 'nowrap' }}>
             {favP === 50 && !bitti
               ? 'Fextopus: başa baş'
               : `Fextopus: ${fav.acronym || fav.name} %${favP}${dogru === true ? ' · bildi' : dogru === false ? ' · yanıldı' : ''}`}
@@ -544,7 +525,7 @@ function RelatedLinks({ story }) {
 
   return (
     <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid var(--surface-2)', background: 'var(--surface)', padding: 16 }}>
-      <div style={{ fontSize: 11, color: 'var(--accent-fg)', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800, marginBottom: 10 }}>
+      <div style={{ fontSize: yazi(11), color: 'var(--accent-fg)', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800, marginBottom: 10 }}>
         Bağlantılı Sayfalar
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -1367,8 +1348,8 @@ export default function NewsDetailPage() {
   if (error || !story) {
     return (
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px', color: 'var(--text-1)' }}>
-        <div style={{ marginBottom: 14, color: '#ff8c9a' }}>{error || 'Haber bulunamadı.'}</div>
-        <Link to='/news' style={{ color: '#ffb3bd' }}>Haber akışına dön</Link>
+        <div style={{ marginBottom: 14, color: 'var(--danger-fg)' }}>{error || 'Haber bulunamadı.'}</div>
+        <Link to='/news' style={{ color: 'var(--danger-fg)' }}>Haber akışına dön</Link>
       </div>
     )
   }
@@ -1416,18 +1397,18 @@ export default function NewsDetailPage() {
 
         <section style={{ marginTop: 14, borderRadius: 20, border: '1px solid var(--line)', background: 'linear-gradient(145deg,var(--surface),var(--surface))', padding: 22 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
-            <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-1)', padding: '4px 8px', borderRadius: 999, background: 'rgba(200,16,46,.18)', border: '1px solid rgba(200,16,46,.34)', textTransform: 'uppercase', letterSpacing: 1 }}>
+            <span style={{ fontSize: yazi(10), fontWeight: 800, color: 'var(--text-1)', padding: '4px 8px', borderRadius: 999, background: 'rgba(200,16,46,.18)', border: '1px solid rgba(200,16,46,.34)', textTransform: 'uppercase', letterSpacing: 1 }}>
               {story.status === 'haftalik' ? 'Haftalık Özet' : explain.classification}
             </span>
-            <span style={{ fontSize: 10, color: 'var(--text-1)', padding: '4px 8px', borderRadius: 999, background: `${story.visuals.gameColor}22`, border: `1px solid ${story.visuals.gameColor}55` }}>
+            <span style={{ fontSize: yazi(10), color: 'var(--text-1)', padding: '4px 8px', borderRadius: 999, background: `${story.visuals.gameColor}22`, border: `1px solid ${story.visuals.gameColor}55` }}>
               {story.visuals.gameLabel}
             </span>
             {story.visuals.tier && (
-              <span style={{ fontSize: 10, color: 'var(--text-3)', padding: '4px 8px', borderRadius: 999, border: '1px solid var(--line)' }}>
+              <span style={{ fontSize: yazi(10), color: 'var(--text-3)', padding: '4px 8px', borderRadius: 999, border: '1px solid var(--line)' }}>
                 Tier {story.visuals.tier}
               </span>
             )}
-            <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-3)' }}>{fmtDate(story.publishedAt)}</span>
+            <span style={{ marginLeft: 'auto', fontSize: yazi(11), color: 'var(--text-3)' }}>{fmtDate(story.publishedAt)}</span>
           </div>
 
           <div style={{ marginBottom: 14 }}>
@@ -1438,12 +1419,12 @@ export default function NewsDetailPage() {
             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-2)' }}>{story.heroScore}</div>
           </div>
 
-          <p style={{ margin: 0, color: '#9fa3af', lineHeight: 1.85, textAlign: 'left', fontSize: 15 }}>{story.summary}</p>
+          <p style={{ margin: 0, color: 'var(--text-3)', lineHeight: 1.85, textAlign: 'left', fontSize: 15 }}>{story.summary}</p>
 
           {story.content && story.content !== story.summary && (
             <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--surface-2)' }}>
               {story.content.split('\n\n').filter(para => para.trim()).map((para, idx) => (
-                <p key={idx} style={{ margin: idx === 0 ? 0 : '14px 0 0', color: '#9fa3af', lineHeight: 1.85, textAlign: 'left', fontSize: 15 }}>
+                <p key={idx} style={{ margin: idx === 0 ? 0 : '14px 0 0', color: 'var(--text-3)', lineHeight: 1.85, textAlign: 'left', fontSize: 15 }}>
                   {para.trim()}
                 </p>
               ))}
@@ -1462,7 +1443,7 @@ export default function NewsDetailPage() {
         <section style={{ marginTop: 16, borderRadius: 16, border: '1px solid var(--surface-2)', background: 'var(--surface)', padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ fontSize: 11, color: 'var(--text-1)', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800 }}>
+              <div style={{ fontSize: yazi(11), color: 'var(--text-1)', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 800 }}>
                 Forum
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{comments.length} yorum</div>
@@ -1474,7 +1455,7 @@ export default function NewsDetailPage() {
                   type="button"
                   onClick={() => setSortMode(key)}
                   style={{
-                    fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 999,
+                    fontSize: yazi(10), fontWeight: 700, padding: '3px 10px', borderRadius: 999,
                     border: sortMode === key ? `1px solid ${FEXT.accent}` : '1px solid var(--line)',
                     background: sortMode === key ? FEXT.accentSoftBg : 'transparent',
                     color: sortMode === key ? FEXT.accentText : 'var(--text-4)',
@@ -1486,13 +1467,13 @@ export default function NewsDetailPage() {
           </div>
 
           {commentWarning && !forumComingSoon && (
-            <div style={{ marginBottom: 10, borderRadius: 10, border: '1px solid rgba(221,182,109,.4)', background: 'rgba(221,182,109,.12)', color: '#b6893b', padding: '8px 10px', fontSize: 12 }}>
+            <div style={{ marginBottom: 10, borderRadius: 10, border: '1px solid rgba(221,182,109,.4)', background: 'rgba(221,182,109,.12)', color: 'var(--altin-fg)', padding: '8px 10px', fontSize: 12 }}>
               {commentWarning}
             </div>
           )}
 
           {commentSuccess && !forumComingSoon && (
-            <div style={{ marginBottom: 10, borderRadius: 10, border: '1px solid rgba(70,182,88,.4)', background: 'rgba(70,182,88,.12)', color: '#3d9950', padding: '8px 10px', fontSize: 12 }}>
+            <div style={{ marginBottom: 10, borderRadius: 10, border: '1px solid rgba(70,182,88,.4)', background: 'rgba(70,182,88,.12)', color: 'var(--success-fg)', padding: '8px 10px', fontSize: 12 }}>
               {commentSuccess}
             </div>
           )}
@@ -1515,7 +1496,7 @@ export default function NewsDetailPage() {
                 style={{ resize: 'vertical', minHeight: 86, borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-1)', padding: '10px 12px', fontSize: 13 }}
               />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 10, color: commentInput.length > 900 ? '#ff6b6b' : 'var(--text-5)' }}>
+                <span style={{ fontSize: yazi(10), color: commentInput.length > 900 ? 'var(--danger-fg)' : 'var(--text-5)' }}>
                   {commentInput.length}/1000
                 </span>
                 <button
@@ -1526,8 +1507,8 @@ export default function NewsDetailPage() {
                 </button>
               </div>
               {canInteract
-                ? <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Yorumun hesabınla paylaşılır.</div>
-                : <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                ? <div style={{ fontSize: yazi(11), color: 'var(--text-3)' }}>Yorumun hesabınla paylaşılır.</div>
+                : <div style={{ fontSize: yazi(11), color: 'var(--text-3)' }}>
                     Yorum yazmak için{' '}
                     <Link to="/login" style={{ color: FEXT.accentText, textDecoration: 'none', fontWeight: 600 }}>giriş yap</Link>
                     {' '}veya{' '}
@@ -1572,13 +1553,13 @@ export default function NewsDetailPage() {
                         )}
                         <ScoutRankBadge score={comment.authorScoutScore} />
                         {isTopComment && (
-                          <span style={{ fontSize: 10, fontWeight: 800, color: '#c86fd8', border: '1px solid rgba(194,92,208,.45)', background: 'rgba(194,92,208,.14)', borderRadius: 999, padding: '2px 8px', letterSpacing: '.4px' }}>
+                          <span style={{ fontSize: yazi(10), fontWeight: 800, color: 'var(--accent-fg)', border: '1px solid rgba(194,92,208,.45)', background: 'rgba(194,92,208,.14)', borderRadius: 999, padding: '2px 8px', letterSpacing: '.4px' }}>
                             En İyi Yorum
                           </span>
                         )}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                        <div style={{ fontSize: 11, color: 'var(--text-4)' }}>{fmtDate(comment.created_at)}</div>
+                        <div style={{ fontSize: yazi(11), color: 'var(--text-4)' }}>{fmtDate(comment.created_at)}</div>
                         {user?.id && comment.user_id === user.id && (
                           <button
                             type="button"
@@ -1620,7 +1601,7 @@ export default function NewsDetailPage() {
                         <button
                           type="button"
                           onClick={() => { setReplyTo(replyTo === comment.id ? null : comment.id); setReplyText('') }}
-                          style={{ marginLeft: 'auto', border: 'none', background: 'none', color: '#7dd3fc', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          style={{ marginLeft: 'auto', border: 'none', background: 'none', color: 'var(--mavi-fg)', fontSize: yazi(11), fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                         ><MessageSquare size={12} /> Yanıtla</button>
                       )}
                     </div>
@@ -1636,7 +1617,7 @@ export default function NewsDetailPage() {
                           autoFocus
                           style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, color: 'var(--text-1)', padding: '7px 10px', fontSize: 12 }}
                         />
-                        <button type="button" onClick={() => submitReply(comment.id)} disabled={!replyText.trim()} style={{ border: '1px solid rgba(70,182,88,.45)', background: 'rgba(70,182,88,.15)', color: '#3d9950', borderRadius: 8, padding: '0 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Gönder</button>
+                        <button type="button" onClick={() => submitReply(comment.id)} disabled={!replyText.trim()} style={{ border: '1px solid rgba(70,182,88,.45)', background: 'rgba(70,182,88,.15)', color: 'var(--success-fg)', borderRadius: 8, padding: '0 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Gönder</button>
                       </div>
                     )}
 
@@ -1646,13 +1627,13 @@ export default function NewsDetailPage() {
                         {(repliesByParent[comment.id] || []).map(reply => (
                           <div key={reply.id} style={{ background: 'var(--surface)', border: '1px solid var(--surface-2)', borderRadius: 9, padding: '7px 9px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-2)' }}>{reply.author || 'Topluluk'}</span>
+                              <span style={{ fontSize: yazi(11), fontWeight: 700, color: 'var(--text-2)' }}>{reply.author || 'Topluluk'}</span>
                               {reply.authorTeamLogo && (
                                 <img src={reply.authorTeamLogo} alt={reply.authorTeamName || ''} title={reply.authorTeamName || ''}
                                   style={{ width: 14, height: 14, borderRadius: 3, objectFit: 'contain', flexShrink: 0 }} />
                               )}
                               <ScoutRankBadge score={reply.authorScoutScore} />
-                              <span style={{ fontSize: 10, color: 'var(--text-4)', marginLeft: 'auto' }}>{fmtDate(reply.created_at)}</span>
+                              <span style={{ fontSize: yazi(10), color: 'var(--text-4)', marginLeft: 'auto' }}>{fmtDate(reply.created_at)}</span>
                               {user?.id && reply.user_id === user.id && (
                                 <button type="button" onClick={() => deleteComment(reply.id)} title="Yanıtı sil" style={{ background: 'none', border: 'none', color: 'var(--text-4)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}><XIcon size={12} /></button>
                               )}

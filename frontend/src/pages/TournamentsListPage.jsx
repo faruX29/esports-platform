@@ -10,7 +10,7 @@ import GameLogo, { GAME_ICON_PATHS } from '../components/GameLogo'
 import LigSeridi from '../components/LigSeridi'
 import TrBadge from '../components/TrBadge'
 import { tournamentDisplayName, isGenericStageName, displayRegion } from '../utils/tournamentDisplay'
-import { FEXT } from '../theme'
+import { FEXT, yazi, oyunFg } from '../theme'
 import { ligListesiGetir } from '../utils/ligler'
 import { tarihAraligi } from '../utils/dil'
 
@@ -251,17 +251,17 @@ export default function TournamentsListPage() {
             {tournamentDisplayName(item, { game: gm.id })}
           </div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-            {item.turk_ligi && <TrBadge style={{ margin: 0, fontSize: 10 }} />}
+            {item.turk_ligi && <TrBadge style={{ margin: 0, fontSize: yazi(10) }} />}
             {tierKey && (
-              <span style={{ fontSize: 10, fontWeight: 900, color: '#0b0f19', background: tierColor, borderRadius: 5, padding: '2px 6px', letterSpacing: '.3px' }}>
+              <span style={{ fontSize: yazi(10), fontWeight: 900, color: '#0b0f19', background: tierColor, borderRadius: 5, padding: '2px 6px', letterSpacing: '.3px' }}>
                 {tierKey}
               </span>
             )}
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontSize: 11, color: 'var(--text-3)' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: gm.color, fontWeight: 700 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontSize: yazi(11), color: 'var(--text-3)' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: oyunFg(gm.id), fontWeight: 700 }}>
             {GAME_ICON_PATHS[gm.id] ? <GameLogo game={gm.id} size={13} color={gm.color} /> : <span style={{ width: 6, height: 6, borderRadius: '50%', background: gm.color }} />} {gm.label}
           </span>
           {item.region && !isGenericStageName(item.name) && <span>· {displayRegion(item.region, gm.id)}</span>}
@@ -272,11 +272,11 @@ export default function TournamentsListPage() {
             {logos.slice(0, 5).map(t => (
               <InitialsImage key={t.id} src={t.logo_url} name={t.name} width={20} height={20} borderRadius={5} objectFit='contain' />
             ))}
-            {logos.length > 5 && <span style={{ fontSize: 10, color: 'var(--text-4)', marginLeft: 2 }}>+{logos.length - 5}</span>}
+            {logos.length > 5 && <span style={{ fontSize: yazi(10), color: 'var(--text-4)', marginLeft: 2 }}>+{logos.length - 5}</span>}
           </div>
         )}
 
-        <div style={{ marginTop: 9, fontSize: 11.5, color: 'var(--text-3)' }}>
+        <div style={{ marginTop: 9, fontSize: yazi(11.5), color: 'var(--text-3)' }}>
           {tarihAraligi(
             (item.begin_at || item.start_date) && fmtDate(item.begin_at || item.start_date),
             (item.end_at || item.end_date) && fmtDate(item.end_at || item.end_date),
@@ -356,7 +356,7 @@ export default function TournamentsListPage() {
                   background: 'transparent',
                   color: active ? 'var(--accent-fg)' : 'var(--text-4)',
                   borderRadius: 999,
-                  fontSize: 11,
+                  fontSize: yazi(11),
                   fontWeight: 800,
                   letterSpacing: '.2px',
                   padding: '8px 14px',
@@ -370,7 +370,7 @@ export default function TournamentsListPage() {
             )
           })}
         </div>
-        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
+        <span style={{ fontSize: yazi(11), color: 'var(--text-3)' }}>
           {showAllTiers ? 'Küçük turnuvalar ve elemeler dahil' : 'S ve A seviyesi turnuvalar + Türk ligleri'}
         </span>
       </div>
@@ -411,7 +411,7 @@ export default function TournamentsListPage() {
               <g.Icon size={14} color={g.renk} />
               {g.baslik}
               {liste.length > 0 && (
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-4)', fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ fontSize: yazi(11), fontWeight: 700, color: 'var(--text-4)', fontVariantNumeric: 'tabular-nums' }}>
                   {liste.length}{g.key === 'bitti' && hasMore ? '+' : ''}
                 </span>
               )}

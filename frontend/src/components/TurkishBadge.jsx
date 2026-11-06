@@ -1,5 +1,6 @@
 // Küçük "Türk takımı" göstergesi — sade "TR" rozeti.
 // Çerçeve/renk: markanın moruyla (magenta) aynı ton ailesinde bir rose-kırmızı.
+import { yazi } from '../theme'
 
 const ROSE = '#E0455E'
 
@@ -13,8 +14,8 @@ export default function TurkishBadge({ compact = false, style = {} }) {
         borderRadius: 999,
         border: `1px solid ${ROSE}`,
         background: `${ROSE}1a`,
-        color: ROSE,
-        fontSize: compact ? 9 : 10,
+        color: 'var(--tr-fg)', // metin tema-farkında; çerçeve/zemin marka tonunda
+        fontSize: yazi(compact ? 9 : 10),
         fontWeight: 800,
         letterSpacing: '.6px',
         lineHeight: 1,

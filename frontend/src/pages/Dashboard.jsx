@@ -21,11 +21,12 @@ import { memo }                             from 'react'
 import InitialsImage                        from '../components/InitialsImage'
 import DragScroll                          from '../components/DragScroll'
 import TrBadge                              from '../components/TrBadge'
+import GameLogo                             from '../components/GameLogo'
 import TurkishBadge                          from '../components/TurkishBadge'
 import { normalizeGameId }                  from '../utils/gameUtils'
 import { tournamentDisplayName }            from '../utils/tournamentDisplay'
 import { getBOFormat }                       from '../utils/matchFormat'
-import { FEXT, statusStyle, SAATI_GECTI_ESIGI_MS, yazi } from '../theme'
+import { FEXT, statusStyle, SAATI_GECTI_ESIGI_MS, yazi, oyunMetni } from '../theme'
 import { correctedScores }                   from '../utils/matchResult'
 import { isUncertainPrediction }             from '../utils/prediction'
 import { KartLink, KartOrtusu, UST_KATMAN }  from '../components/KartLink'
@@ -467,14 +468,17 @@ const PreferencePickerModal = memo(function PreferencePickerModal({
                     borderRadius: 999,
                     border: `1px solid ${active ? game.color : 'var(--line-2)'}`,
                     background: active ? `${game.color}2b` : 'var(--surface-2)',
-                    color: active ? game.color : 'var(--text-3)',
+                    color: active ? oyunMetni(game.color) : 'var(--text-3)',
                     fontSize: 12,
                     fontWeight: 700,
                     padding: '7px 11px',
                     cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
                   }}
                 >
-                  <span style={{ marginRight: 5 }}>{game.icon}</span>
+                  <GameLogo game={game.id} size={13} />
                   {game.shortLabel}
                 </button>
               )
@@ -2640,7 +2644,7 @@ export default function Dashboard() {
                       )}
                       <span lang="en" style={{ fontSize: yazi(8), fontWeight: 700, color: 'var(--text-5)', textTransform: 'uppercase', letterSpacing: '.4px' }}>{t.game?.name || ''}</span>
                       {(tierK === 'S' || tierK === 'A') && (
-                        <span style={{ marginLeft: 'auto', fontSize: yazi(8), fontWeight: 900, color: 'var(--altin-fg)', border: '1px solid rgba(240,192,64,.4)', borderRadius: 5, padding: '1px 5px' }}>Tier {tierK}</span>
+                        <span style={{ marginLeft: 'auto', fontSize: yazi(8), fontWeight: 900, color: 'var(--altin-fg)', border: '1px solid rgba(240,192,64,.4)', borderRadius: 5, padding: '1px 5px', whiteSpace: 'nowrap', flexShrink: 0 }}>Tier {tierK}</span>
                       )}
                     </div>
                     <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', minHeight: 32 }}>

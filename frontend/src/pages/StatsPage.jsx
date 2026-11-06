@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import SeoHead from '../components/SeoHead'
 import FextopusIcon from '../components/FextopusIcon'
-import { FEXT } from '../theme'
+import { FEXT, yazi, metinTonu } from '../theme'
 
 /**
  * /stats — Fextopus isabet matrisi (Gemini kararı #65).
@@ -132,10 +132,10 @@ export default function StatsPage() {
             background: 'var(--surface)', border: `1px solid ${FEXT.accentBorder}`,
           }}>
             <div>
-              <div style={{ fontSize: 34, fontWeight: 800, color: FEXT.good, lineHeight: 1 }}>
+              <div style={{ fontSize: 34, fontWeight: 800, color: 'var(--yesil-fg)', lineHeight: 1 }}>
                 {yuzde(Number(zirve?.isabet || 0), 0)}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-5)', marginTop: 6 }}>
+              <div style={{ fontSize: yazi(11), color: 'var(--text-5)', marginTop: 6 }}>
                 en güvendiği maçlarda
               </div>
             </div>
@@ -155,9 +155,9 @@ export default function StatsPage() {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
                     <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-2)' }}>{k.ad}</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-5)' }}>{k.aralik}</span>
+                    <span style={{ fontSize: yazi(11), color: 'var(--text-5)' }}>{k.aralik}</span>
                     <span style={{
-                      marginLeft: 'auto', fontSize: 20, fontWeight: 800, color: k.renk,
+                      marginLeft: 'auto', fontSize: 20, fontWeight: 800, color: metinTonu(k.renk),
                       fontVariantNumeric: 'tabular-nums',
                     }}>{yuzde(oran, 1)}</span>
                   </div>
@@ -168,7 +168,7 @@ export default function StatsPage() {
                     }} />
                   </div>
                   <div style={{
-                    marginTop: 8, fontSize: 11, color: 'var(--text-5)',
+                    marginTop: 8, fontSize: yazi(11), color: 'var(--text-5)',
                     fontVariantNumeric: 'tabular-nums',
                   }}>
                     {sayi(k.mac)} maç · {sayi(k.dogru)} doğru
@@ -190,7 +190,7 @@ export default function StatsPage() {
               marginLeft: 'auto', fontSize: 18, fontWeight: 800, color: 'var(--text-2)',
               fontVariantNumeric: 'tabular-nums',
             }}>{yuzde(toplam.isabet, 1)}</span>
-            <span style={{ width: '100%', fontSize: 11, color: 'var(--text-5)' }}>
+            <span style={{ width: '100%', fontSize: yazi(11), color: 'var(--text-5)' }}>
               {sayi(toplam.mac)} sonuçlanmış maç · {sayi(toplam.dogru)} doğru tahmin
             </span>
           </div>

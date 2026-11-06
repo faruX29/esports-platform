@@ -28,7 +28,7 @@ import { useAcilisGecisi, useDegisimSayaci }       from '../hooks/useHareket'
 import { roundLabel }                               from '../utils/roundLabel'
 import { KartLink }                                 from '../components/KartLink'
 import TurkishBadge                                 from '../components/TurkishBadge'
-import { FEXT, saatiGecti }                         from '../theme'
+import { FEXT, saatiGecti, yazi, oyunMetni, metinTonu }                         from '../theme'
 import { adDili, ondalik }                          from '../utils/dil'
 import { tournamentDisplayName }                    from '../utils/tournamentDisplay'
 import { normalizeGameId }                          from '../utils/gameUtils'
@@ -475,7 +475,7 @@ function TacticalScoutReport({ report }) {
   return (
     <div style={{ marginTop: 14, background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--surface-2)', padding: 14 }}>
       <ST Icon={Brain} label="Scout Analiz" />
-      <div style={{ marginBottom: 10, fontSize: 11, color: 'var(--text-3)' }}>
+      <div style={{ marginBottom: 10, fontSize: yazi(11), color: 'var(--text-3)' }}>
         Aralarındaki maç: {report.formSample}{report.mapsUsed > 0 && ` · Harita: ${report.mapsUsed}`}
       </div>
 
@@ -485,29 +485,29 @@ function TacticalScoutReport({ report }) {
             <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)', marginBottom: 8 }}>{team.name}</div>
 
             {team.strengths.length > 0 && <div style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: '#2f9e57', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
+              <div style={{ fontSize: yazi(10), fontWeight: 800, color: 'var(--success-fg)', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
                 Güçlü Yönler
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {team.strengths.map((item, idx) => (
-                  <div key={`s_${idx}`} style={{ fontSize: 11, color: 'var(--text-2)' }}><span style={{ color: '#2f9e57', fontWeight: 700 }}>+</span> {item}</div>
+                  <div key={`s_${idx}`} style={{ fontSize: yazi(11), color: 'var(--text-2)' }}><span style={{ color: 'var(--success-fg)', fontWeight: 700 }}>+</span> {item}</div>
                 ))}
               </div>
             </div>}
 
             {team.weaknesses.length > 0 && <div>
-              <div style={{ fontSize: 10, fontWeight: 800, color: '#d6394a', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
+              <div style={{ fontSize: yazi(10), fontWeight: 800, color: 'var(--danger-fg)', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
                 Zayıf Yönler
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {team.weaknesses.map((item, idx) => (
-                  <div key={`w_${idx}`} style={{ fontSize: 11, color: 'var(--text-2)' }}><span style={{ color: '#d6394a', fontWeight: 700 }}>−</span> {item}</div>
+                  <div key={`w_${idx}`} style={{ fontSize: yazi(11), color: 'var(--text-2)' }}><span style={{ color: 'var(--danger-fg)', fontWeight: 700 }}>−</span> {item}</div>
                 ))}
               </div>
             </div>}
 
             {team.strengths.length + team.weaknesses.length === 0 && (
-              <div style={{ fontSize: 11, color: 'var(--text-4)' }}>Belirgin sinyal yok</div>
+              <div style={{ fontSize: yazi(11), color: 'var(--text-4)' }}>Belirgin sinyal yok</div>
             )}
           </div>
         ))}
@@ -526,7 +526,7 @@ function ST({ Icon, label, lang }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
       {Icon && <Icon size={15} color="var(--text-3)" />}
-      <span lang={lang} style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1.5px', color: 'var(--text-5)', textTransform: 'uppercase' }}>{label}</span>
+      <h2 lang={lang} style={{ margin: 0, fontSize: yazi(11), fontWeight: 800, letterSpacing: '1.5px', color: 'var(--text-5)', textTransform: 'uppercase' }}>{label}</h2>
       <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,var(--surface-2),transparent)' }} />
     </div>
   )
@@ -537,7 +537,7 @@ function KdaColumn({ rows, teamName, gc }) {
   const sorted = [...rows].sort((a, b) => (b.kills || 0) - (a.kills || 0))
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ fontSize: 11, fontWeight: 800, color: gc, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} lang={adDili(teamName)}>{teamName}</div>
+      <div style={{ fontSize: yazi(11), fontWeight: 800, color: oyunMetni(gc), marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} lang={adDili(teamName)}>{teamName}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {sorted.map((r, i) => {
           const acs = r.stats?.acs_avg
@@ -545,11 +545,11 @@ function KdaColumn({ rows, teamName, gc }) {
           return (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface)', border: '1px solid var(--surface-2)', borderRadius: 8, padding: '6px 9px' }}>
               <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.player?.nickname || '?'}</span>
-              {acs != null && <span title="ACS" style={{ fontSize: 10, color: '#C25CD0', fontWeight: 700, minWidth: 30, textAlign: 'right' }}>{acs}</span>}
+              {acs != null && <span title="ACS" style={{ fontSize: yazi(10), color: 'var(--accent-fg)', fontWeight: 700, minWidth: 30, textAlign: 'right' }}>{acs}</span>}
               <span style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums', color: 'var(--text-2)', minWidth: 62, textAlign: 'right' }}>
                 {r.kills}<span style={{ color: 'var(--text-5)' }}>/</span>{r.deaths}<span style={{ color: 'var(--text-5)' }}>/</span>{r.assists}
               </span>
-              <span style={{ fontSize: 11, fontWeight: 800, color: kd >= 1 ? '#4ade80' : '#ff6a7f', minWidth: 32, textAlign: 'right' }}>{ondalik(kd, 2)}</span>
+              <span style={{ fontSize: yazi(11), fontWeight: 800, color: kd >= 1 ? 'var(--success-fg)' : 'var(--danger-fg)', minWidth: 32, textAlign: 'right' }}>{ondalik(kd, 2)}</span>
             </div>
           )
         })}
@@ -727,14 +727,14 @@ function CommunityPredictionPool({ matchId, teamAName, teamBName, aiWin, isFinis
                 borderRadius: 10,
                 border: `1px solid ${selected ? 'rgba(124,58,237,.65)' : 'var(--line)'}`,
                 background: selected ? 'linear-gradient(130deg, rgba(124,58,237,.2), rgba(17,17,17,.95))' : 'var(--surface)',
-                color: selected ? '#e8d9ff' : 'var(--text-1)',
+                color: selected ? metinTonu('#e8d9ff') : 'var(--text-1)',
                 padding: '9px 10px',
                 cursor: isFinished ? 'default' : 'pointer',
                 textAlign: 'left',
               }}
             >
               <div style={{ fontSize: 12, fontWeight: 800 }}>{team.name}</div>
-              <div style={{ marginTop: 3, fontSize: 10, color: selected ? '#c8b4ff' : 'var(--text-4)' }}>
+              <div style={{ marginTop: 3, fontSize: yazi(10), color: selected ? metinTonu('#c8b4ff') : 'var(--text-4)' }}>
                 {selected ? 'Seçimin bu takım' : 'Tahminini seç'}
               </div>
             </button>
@@ -744,53 +744,53 @@ function CommunityPredictionPool({ matchId, teamAName, teamBName, aiWin, isFinis
 
       <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
         <div>
-          <div style={{ fontSize: 10, fontWeight: 800, color: '#8be9dd', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
+          <div style={{ fontSize: yazi(10), fontWeight: 800, color: metinTonu('#8be9dd'), textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
             Topluluk Fav.
           </div>
           <div style={{ height: 8, borderRadius: 999, overflow: 'hidden', background: 'var(--bg)', border: '1px solid var(--surface-2)', display: 'flex' }}>
             <div style={{ width: `${communityTeamAPct}%`, background: 'linear-gradient(90deg,#4ade80,#22c55e)' }} />
             <div style={{ width: `${communityTeamBPct}%`, background: 'linear-gradient(90deg,#fb7185,#FF4655)' }} />
           </div>
-          <div style={{ marginTop: 3, display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
-            <span style={{ color: '#86efac' }}>{teamAName} %{communityTeamAPct}</span>
-            <span style={{ color: '#fda4af' }}>%{communityTeamBPct} {teamBName}</span>
+          <div style={{ marginTop: 3, display: 'flex', justifyContent: 'space-between', fontSize: yazi(10) }}>
+            <span style={{ color: 'var(--success-fg)' }}>{teamAName} %{communityTeamAPct}</span>
+            <span style={{ color: 'var(--danger-fg)' }}>%{communityTeamBPct} {teamBName}</span>
           </div>
         </div>
 
         <div>
-          <div style={{ fontSize: 10, fontWeight: 800, color: '#c8b4ff', textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
+          <div style={{ fontSize: yazi(10), fontWeight: 800, color: metinTonu('#c8b4ff'), textTransform: 'uppercase', letterSpacing: '.7px', marginBottom: 4 }}>
             Fextopus
           </div>
           <div style={{ height: 8, borderRadius: 999, overflow: 'hidden', background: 'var(--bg)', border: '1px solid var(--surface-2)', display: 'flex' }}>
             <div style={{ width: `${aiTeamAPct}%`, background: 'linear-gradient(90deg,#4ade80,#22c55e)' }} />
             <div style={{ width: `${aiTeamBPct}%`, background: 'linear-gradient(90deg,#fb7185,#FF4655)' }} />
           </div>
-          <div style={{ marginTop: 3, display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
-            <span style={{ color: '#86efac' }}>{teamAName} %{aiTeamAPct}</span>
-            <span style={{ color: '#fda4af' }}>%{aiTeamBPct} {teamBName}</span>
+          <div style={{ marginTop: 3, display: 'flex', justifyContent: 'space-between', fontSize: yazi(10) }}>
+            <span style={{ color: 'var(--success-fg)' }}>{teamAName} %{aiTeamAPct}</span>
+            <span style={{ color: 'var(--danger-fg)' }}>%{aiTeamBPct} {teamBName}</span>
           </div>
         </div>
       </div>
 
-      <div style={{ marginTop: 9, display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', fontSize: 10 }}>
-        <span style={{ color: '#9ba7b4' }}>Toplam oy: {totalVotes}</span>
-        <span style={{ color: sameDirection ? '#86efac' : '#ffd39a' }}>
+      <div style={{ marginTop: 9, display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', fontSize: yazi(10) }}>
+        <span style={{ color: 'var(--text-3)' }}>Toplam oy: {totalVotes}</span>
+        <span style={{ color: sameDirection ? 'var(--success-fg)' : metinTonu('#ffd39a') }}>
           {sameDirection ? `Topluluk ve Fextopus aynı tarafta (${aiFavorite})` : `Topluluk: ${communityFavorite} · Fextopus: ${aiFavorite}`}
         </span>
       </div>
 
       {fallbackLocal && (
-        <div style={{ marginTop: 6, fontSize: 10, color: 'var(--text-3)' }}>
+        <div style={{ marginTop: 6, fontSize: yazi(10), color: 'var(--text-3)' }}>
           Community tablosu ulasilamaz durumda. Local fallback aktif.
         </div>
       )}
       {isFinished && (
-        <div style={{ marginTop: 6, fontSize: 10, color: 'var(--text-3)' }}>
+        <div style={{ marginTop: 6, fontSize: yazi(10), color: 'var(--text-3)' }}>
           Mac tamamlandi. Yeni community oy kabul edilmiyor.
         </div>
       )}
       {voteError && (
-        <div style={{ marginTop: 6, fontSize: 10, color: '#ff9aa5' }}>
+        <div style={{ marginTop: 6, fontSize: yazi(10), color: 'var(--danger-fg)' }}>
           {voteError}
         </div>
       )}
@@ -815,7 +815,7 @@ const ROLES = {
 function RoleBadge({ role }) {
   if (!role) return null
   const s = ROLES[role.toLowerCase()] || { c: 'var(--text-4)', bg: 'rgba(80,80,80,.2)', l: role }
-  return <span lang="en" style={{ padding: '2px 6px', borderRadius: 4, fontSize: 9, fontWeight: 700, flexShrink: 0, color: s.c, background: s.bg, border: `1px solid ${s.c}44`, textTransform: 'uppercase', letterSpacing: '.5px' }}>{s.l}</span>
+  return <span lang="en" style={{ padding: '2px 6px', borderRadius: 4, fontSize: yazi(9), fontWeight: 700, flexShrink: 0, color: metinTonu(s.c), background: s.bg, border: `1px solid ${s.c}44`, textTransform: 'uppercase', letterSpacing: '.5px' }}>{s.l}</span>
 }
 
 /* ─── FavButton ─────────────────────────────────────────────────────────────── */
@@ -830,12 +830,12 @@ function FavButton({ teamId, ad, active, onToggle }) {
       style={{
         background: 'none',
         border: `1px solid ${active ? 'rgba(255,215,0,.5)' : 'var(--surface-2)'}`,
-        borderRadius: 7, color: active ? '#FFD700' : 'var(--text-6)',
-        fontSize: 11, padding: '4px 10px', cursor: 'pointer',
+        borderRadius: 7, color: active ? 'var(--altin-fg)' : 'var(--text-4)',
+        fontSize: yazi(11), padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
         transition: 'all .18s', display: 'flex', alignItems: 'center', gap: 4,
       }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = active ? '#FFD700' : 'var(--text-6)'; e.currentTarget.style.color = active ? '#FFD700' : 'var(--text-3)' }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = active ? 'rgba(255,215,0,.5)' : 'var(--surface-2)'; e.currentTarget.style.color = active ? '#FFD700' : 'var(--text-6)' }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = active ? '#FFD700' : 'var(--text-6)'; e.currentTarget.style.color = active ? 'var(--altin-fg)' : 'var(--text-3)' }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = active ? 'rgba(255,215,0,.5)' : 'var(--surface-2)'; e.currentTarget.style.color = active ? 'var(--altin-fg)' : 'var(--text-4)' }}
     >
       <TakipYildizi aktif={active} size={13} />
       <span>{active ? 'Takip Ediliyor' : 'Takip Et'}</span>
@@ -848,7 +848,7 @@ function TwitchEmbed({ channel }) {
   const parent = window.location.hostname || 'localhost'
   return (
     <div style={{ borderRadius: 16, overflow: 'hidden', border: '2px solid rgba(145,70,255,.5)', boxShadow: '0 0 32px rgba(145,70,255,.15)', marginBottom: 24, position: 'relative' }}>
-      <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 10, display: 'flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 16, background: 'rgba(145,70,255,.9)', fontSize: 10, fontWeight: 800, color: '#fff' }}>
+      <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 10, display: 'flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 16, background: 'rgba(145,70,255,.9)', fontSize: yazi(10), fontWeight: 800, color: '#fff' }}>
         <span style={{ animation: 'pulse 1.2s infinite' }}>●</span> CANLI
       </div>
       <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
@@ -862,7 +862,7 @@ function TwitchEmbed({ channel }) {
 function YayinListesi({ yayinlar, canli }) {
   return (
     <div style={{ marginTop: canli ? 0 : 20, marginBottom: 24, padding: '12px 14px', borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--surface-2)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, fontSize: 11, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '.6px', textTransform: 'uppercase' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, fontSize: yazi(11), fontWeight: 800, color: 'var(--text-3)', letterSpacing: '.6px', textTransform: 'uppercase' }}>
         <Tv size={13} /> {canli ? 'Canlı yayınlar' : 'Yayınlar'}
         {!canli && <span style={{ fontWeight: 600, textTransform: 'none', letterSpacing: 0, color: 'var(--text-5)' }}>· maç başlayınca açılır</span>}
       </div>
@@ -886,7 +886,7 @@ function YayinListesi({ yayinlar, canli }) {
             >
               <span lang="en">{ad}</span>
               {dil && <span style={{ fontWeight: 600, color: 'var(--text-4)' }}>· {dil}</span>}
-              {s.official && <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--accent-fg)', background: FEXT.accentSoftBg, borderRadius: 5, padding: '1px 5px' }}>Resmi</span>}
+              {s.official && <span style={{ fontSize: yazi(9), fontWeight: 800, color: 'var(--accent-fg)', background: FEXT.accentSoftBg, borderRadius: 5, padding: '1px 5px' }}>Resmi</span>}
               <ExternalLink size={12} color="var(--text-4)" />
             </a>
           )
@@ -916,7 +916,7 @@ function PlayerCard({ player, side = 'left' }) {
       }
       <div style={{ minWidth: 0, flex: 1, textAlign: r ? 'right' : 'left' }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.nickname}</div>
-        {player.real_name && <div style={{ fontSize: 10, color: 'var(--text-5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.real_name}</div>}
+        {player.real_name && <div style={{ fontSize: yazi(10), color: 'var(--text-5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.real_name}</div>}
       </div>
       <RoleBadge role={player.role} />
     </Kok>
@@ -930,17 +930,17 @@ function MapRow({ map, index, teamAId }) {
   // Ücretsiz katmanda raund skoru yok, yalnız kazanan: skor yerine kazanan tarafa işaret.
   const skorYok = map.team_a_score == null && map.team_b_score == null
   const yan = (won, score) => skorYok
-    ? (won ? <CircleCheck size={18} color="#4CAF50" aria-label="Kazandı" /> : <span style={{ color: 'var(--text-6)' }}>—</span>)
+    ? (won ? <CircleCheck size={18} color="#4CAF50" aria-label="Kazandı" /> : <span style={{ color: 'var(--text-5)' }}>—</span>)
     : (score ?? '—')
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 10, padding: '9px 14px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--surface-2)' }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 20, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: aWon ? '#4CAF50' : bWon ? 'var(--text-6)' : 'var(--text-2)' }}>{yan(aWon, map.team_a_score)}</div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 20, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: aWon ? 'var(--yesil-fg)' : bWon ? 'var(--text-5)' : 'var(--text-2)' }}>{yan(aWon, map.team_a_score)}</div>
       <div style={{ textAlign: 'center', minWidth: 80 }}>
-        <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-5)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 2 }}>Harita {index + 1}</div>
-        {map.map_name && <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-4)' }}>{map.map_name}</div>}
-        {map.length_seconds && <div style={{ fontSize: 9, color: 'var(--text-5)', marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 3 }}><Clock size={9} /> {fmtDur(map.length_seconds)}</div>}
+        <div style={{ fontSize: yazi(9), fontWeight: 700, color: 'var(--text-5)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 2 }}>Harita {index + 1}</div>
+        {map.map_name && <div style={{ fontSize: yazi(11), fontWeight: 600, color: 'var(--text-4)' }}>{map.map_name}</div>}
+        {map.length_seconds && <div style={{ fontSize: yazi(9), color: 'var(--text-5)', marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 3 }}><Clock size={9} /> {fmtDur(map.length_seconds)}</div>}
       </div>
-      <div style={{ display: 'flex', justifyContent: 'flex-start', fontSize: 20, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: bWon ? '#4CAF50' : aWon ? 'var(--text-6)' : 'var(--text-2)' }}>{yan(bWon, map.team_b_score)}</div>
+      <div style={{ display: 'flex', justifyContent: 'flex-start', fontSize: 20, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: bWon ? 'var(--yesil-fg)' : aWon ? 'var(--text-5)' : 'var(--text-2)' }}>{yan(bWon, map.team_b_score)}</div>
     </div>
   )
 }
@@ -957,11 +957,11 @@ function HeroOlasilik({ pctA, aName, bName, belirsiz }) {
         <div style={{ flex: 100 - deger, background: belirsiz ? 'var(--text-5)' : 'linear-gradient(90deg,#60a5fa,#3b82f6)', borderRadius: '0 5px 5px 0' }} />
       </div>
       {belirsiz ? (
-        <div style={{ marginTop: 4, fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textAlign: 'center' }}>Fextopus başa baş görüyor</div>
+        <div style={{ marginTop: 4, fontSize: yazi(10), fontWeight: 700, color: 'var(--text-3)', textAlign: 'center' }}>Fextopus başa baş görüyor</div>
       ) : (
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginTop: 4, fontSize: 10.5, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-          <span style={{ color: '#4ade80', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{aName} %{a}</span>
-          <span style={{ color: '#60a5fa', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>%{100 - a} {bName}</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginTop: 4, fontSize: yazi(10.5), fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ color: 'var(--success-fg)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{aName} %{a}</span>
+          <span style={{ color: 'var(--mavi-fg)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>%{100 - a} {bName}</span>
         </div>
       )}
     </div>
@@ -1009,11 +1009,11 @@ function WinProbabilityBar({ teamAName, teamBName, teamAPct, teamBPct }) {
   return (
     <div style={{ border: '1px solid rgba(194,92,208,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(194,92,208,.12), var(--surface))', padding: '10px 11px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <div style={{ fontSize: 10, color: '#8be9dd', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', display: 'flex', alignItems: 'center', gap: 5 }}>
+        <div style={{ fontSize: yazi(10), color: metinTonu('#8be9dd'), fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', display: 'flex', alignItems: 'center', gap: 5 }}>
           <FextopusIcon size={15} /> Kazanma Olasılığı
         </div>
         {uncertain && (
-          <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', background: 'var(--hover)', border: '1px solid var(--line-2)', borderRadius: 6, padding: '1px 6px', letterSpacing: '.4px' }}>BELİRSİZ</span>
+          <span style={{ fontSize: yazi(9), fontWeight: 800, color: 'var(--text-3)', background: 'var(--hover)', border: '1px solid var(--line-2)', borderRadius: 6, padding: '1px 6px', letterSpacing: '.4px' }}>BELİRSİZ</span>
         )}
       </div>
 
@@ -1026,13 +1026,13 @@ function WinProbabilityBar({ teamAName, teamBName, teamAPct, teamBPct }) {
       </div>
 
       {uncertain ? (
-        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textAlign: 'center' }}>
+        <div style={{ fontSize: yazi(11), fontWeight: 700, color: 'var(--text-3)', textAlign: 'center' }}>
           Fextopus iki takımı başa baş görüyor
         </div>
       ) : (
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 11, fontWeight: 800 }}>
-          <span style={{ color: '#86efac', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{teamAName} %{animatedA}</span>
-          <span style={{ color: '#fda4af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{teamBName} %{safeB}</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: yazi(11), fontWeight: 800 }}>
+          <span style={{ color: 'var(--success-fg)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{teamAName} %{animatedA}</span>
+          <span style={{ color: 'var(--danger-fg)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{teamBName} %{safeB}</span>
         </div>
       )}
     </div>
@@ -1064,7 +1064,7 @@ function getH2HBadge(match, refTeamAId) {
   const solKazandi = idEq(match.winner_id, refTeamAId)
   return {
     text: kisaAd(kazanan),
-    color: solKazandi ? '#b3ffd4' : '#ffd2d8',
+    color: metinTonu(solKazandi ? '#4ade80' : '#fb7185'), // renkli zeminde iki temada ≥5:1
     bg: solKazandi ? 'rgba(76,175,80,.22)' : 'rgba(255,70,85,.22)',
     border: solKazandi ? 'rgba(76,175,80,.55)' : 'rgba(255,70,85,.55)',
     label: `${kazanan?.name || '?'} kazandı${tarih ? ` · ${tarih}` : ''}`,
@@ -1081,17 +1081,17 @@ function H2HRow({ match, refTeamAId }) {
   const rightWon = !isDraw && !leftWon
   // W/L rozeti kaldırıldı (referans takıma göreydi, hangi taraftan girdiğine göre
   // kafa karıştırıyordu). Bunun yerine kazananın adı yeşil, kaybedenin kırmızı.
-  const WIN = '#4CAF50', LOSE = '#ff6b72', DRAW = 'var(--text-3)'
+  const WIN = 'var(--yesil-fg)', LOSE = 'var(--danger-fg)', DRAW = 'var(--text-3)'
   const leftColor  = isDraw ? DRAW : (leftWon ? WIN : LOSE)
   const rightColor = isDraw ? DRAW : (rightWon ? WIN : LOSE)
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: 'var(--bg)', border: '1px solid var(--surface)', fontSize: 11 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: 'var(--bg)', border: '1px solid var(--surface)', fontSize: yazi(11) }}>
       <div style={{ textAlign: 'right', fontWeight: leftWon ? 800 : 600, color: leftColor, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {isALeft ? (match.team_a?.name || '?') : (match.team_b?.name || '?')}
       </div>
       <div style={{ textAlign: 'center', minWidth: 52, fontWeight: 800, color: 'var(--text-4)', fontVariantNumeric: 'tabular-nums' }}>
         {aScore ?? '?'}:{bScore ?? '?'}
-        <div style={{ fontSize: 8, color: 'var(--line)', marginTop: 1 }}>
+        <div style={{ fontSize: yazi(8), color: 'var(--text-5)', marginTop: 1 }}>
           {new Date(match.scheduled_at).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: '2-digit' })}
         </div>
       </div>
@@ -1200,21 +1200,21 @@ function MVPVoting({ matchId, players, isFinished }) {
           <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,var(--ai),#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Award size={16} color="#fff" /></div>
           <div>
             <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>Maçın Adamı</div>
-            <div style={{ fontSize: 9, color: '#3a3a5a' }}>Her maç için 1 oy hakkı</div>
+            <div style={{ fontSize: yazi(9), color: '#3a3a5a' }}>Her maç için 1 oy hakkı</div>
           </div>
         </div>
         {loadingV ? <Sk w="50px" h="20px" r="6px" /> : (
-          <div style={{ textAlign: 'right' }}><div style={{ fontSize: 18, fontWeight: 900, color: 'var(--ai)' }}>{totalVotes}</div><div style={{ fontSize: 8, color: 'var(--line)', textTransform: 'uppercase', letterSpacing: '.5px' }}>oy</div></div>
+          <div style={{ textAlign: 'right' }}><div style={{ fontSize: 18, fontWeight: 900, color: 'var(--ai)' }}>{totalVotes}</div><div style={{ fontSize: yazi(8), color: 'var(--text-5)', textTransform: 'uppercase', letterSpacing: '.5px' }}>oy</div></div>
         )}
       </div>
-      {justVoted && <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 9, background: 'rgba(74,222,128,.1)', border: '1px solid rgba(74,222,128,.3)', display: 'flex', alignItems: 'center', gap: 8 }}><PartyPopper size={14} color="#4ade80" /><span style={{ fontSize: 12, fontWeight: 700, color: '#4ade80' }}>Oyun kaydedildi!</span></div>}
-      {voteError && <div style={{ marginBottom: 10, padding: '7px 10px', borderRadius: 8, background: 'rgba(255,70,85,.08)', border: '1px solid rgba(255,70,85,.2)', fontSize: 11, color: '#FF4655', display: 'flex', alignItems: 'center', gap: 6 }}><TriangleAlert size={12} /> {voteError}</div>}
+      {justVoted && <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 9, background: 'rgba(74,222,128,.1)', border: '1px solid rgba(74,222,128,.3)', display: 'flex', alignItems: 'center', gap: 8 }}><PartyPopper size={14} color="#4ade80" /><span style={{ fontSize: 12, fontWeight: 700, color: 'var(--success-fg)' }}>Oyun kaydedildi!</span></div>}
+      {voteError && <div style={{ marginBottom: 10, padding: '7px 10px', borderRadius: 8, background: 'rgba(255,70,85,.08)', border: '1px solid rgba(255,70,85,.2)', fontSize: yazi(11), color: 'var(--canli-fg)', display: 'flex', alignItems: 'center', gap: 6 }}><TriangleAlert size={12} /> {voteError}</div>}
       {!loadingV && topV > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, marginBottom: 14, background: 'rgba(167,139,250,.08)', border: '1px solid rgba(167,139,250,.2)' }}>
           {top.image_url ? <img src={top.image_url} alt={top.nickname} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(167,139,250,.4)', flexShrink: 0 }} /> : <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--surface-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><User size={18} color="var(--text-4)" /></div>}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--ai)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}><Crown size={12} color="#FFD700" /> {top.nickname}</div>
-            <div style={{ fontSize: 9, color: 'var(--text-5)' }}>Şu an lider · {topV} oy</div>
+            <div style={{ fontSize: yazi(11), fontWeight: 800, color: 'var(--ai)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}><Crown size={12} color="#FFD700" /> {top.nickname}</div>
+            <div style={{ fontSize: yazi(9), color: 'var(--text-5)' }}>Şu an lider · {topV} oy</div>
           </div>
           <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--ai)' }}>%{totalVotes > 0 ? Math.round(topV / totalVotes * 100) : 0}</div>
         </div>
@@ -1235,29 +1235,29 @@ function MVPVoting({ matchId, players, isFinished }) {
                 >
                   {hasVoted && pct > 0 && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${pct}%`, background: my ? 'linear-gradient(90deg,rgba(167,139,250,.2),transparent)' : 'linear-gradient(90deg,var(--hover),transparent)', borderRadius: 11, transition: 'width .8s cubic-bezier(.4,0,.2,1)', pointerEvents: 'none' }} />}
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: idx === 0 && totalVotes > 0 ? 'rgba(167,139,250,.2)' : 'var(--surface-2)', fontSize: 10, fontWeight: 800, color: idx === 0 && totalVotes > 0 ? 'var(--ai)' : 'var(--text-6)', border: `1px solid ${idx === 0 && totalVotes > 0 ? 'rgba(167,139,250,.3)' : 'var(--line)'}` }}>{idx === 0 && totalVotes > 0 ? <Crown size={11} color="var(--ai)" /> : idx + 1}</div>
+                    <div style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: idx === 0 && totalVotes > 0 ? 'rgba(167,139,250,.2)' : 'var(--surface-2)', fontSize: yazi(10), fontWeight: 800, color: idx === 0 && totalVotes > 0 ? 'var(--ai)' : 'var(--text-5)', border: `1px solid ${idx === 0 && totalVotes > 0 ? 'rgba(167,139,250,.3)' : 'var(--line)'}` }}>{idx === 0 && totalVotes > 0 ? <Crown size={11} color="var(--ai)" /> : idx + 1}</div>
                     {player.image_url ? <img src={player.image_url} alt={player.nickname} style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: my ? '2px solid rgba(167,139,250,.4)' : '2px solid var(--surface-2)' }} /> : <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--surface-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--line)' }}><User size={15} color="var(--text-4)" /></div>}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 11, fontWeight: my ? 800 : 600, color: my ? '#c4b5fd' : 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 100 }}>{player.nickname}</span>
-                        {my && <span style={{ fontSize: 8, padding: '1px 5px', borderRadius: 4, background: 'rgba(167,139,250,.2)', color: 'var(--ai)', fontWeight: 700 }}>senin oyun</span>}
+                        <span style={{ fontSize: yazi(11), fontWeight: my ? 800 : 600, color: my ? metinTonu('#c4b5fd') : 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 100 }}>{player.nickname}</span>
+                        {my && <span style={{ fontSize: yazi(8), padding: '1px 5px', borderRadius: 4, background: 'rgba(167,139,250,.2)', color: 'var(--ai)', fontWeight: 700 }}>senin oyun</span>}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
                         <RoleBadge role={player.role} />
-                        <span style={{ fontSize: 8, fontWeight: 800, color: isA ? '#60a5fa' : '#FF4655' }}>{isA ? 'A' : 'B'}</span>
+                        <span style={{ fontSize: yazi(8), fontWeight: 800, color: isA ? 'var(--mavi-fg)' : 'var(--canli-fg)' }}>{isA ? 'A' : 'B'}</span>
                       </div>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 60 }}>
                       {hasVoted ? (
                         <div>
                           <div style={{ fontSize: 13, fontWeight: 900, color: pct > 0 ? 'var(--ai)' : 'var(--line)', fontVariantNumeric: 'tabular-nums' }}>%{pct}</div>
-                          <div style={{ fontSize: 8, color: 'var(--line)' }}>{pV} oy</div>
+                          <div style={{ fontSize: yazi(8), color: 'var(--text-5)' }}>{pV} oy</div>
                           <div style={{ height: 3, borderRadius: 2, background: 'var(--surface-2)', marginTop: 3, width: 50, overflow: 'hidden' }}>
                             <div style={{ height: '100%', borderRadius: 2, width: `${pct}%`, background: my ? 'linear-gradient(90deg,var(--ai),#7c3aed)' : '#2d2d4e', transition: 'width .8s cubic-bezier(.4,0,.2,1)' }} />
                           </div>
                         </div>
                       ) : (
-                        <div style={{ padding: '4px 8px', borderRadius: 7, fontSize: 10, fontWeight: 700, background: 'rgba(167,139,250,.1)', color: 'var(--ai)', border: '1px solid rgba(167,139,250,.2)', opacity: voting ? 0.5 : 1, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        <div style={{ padding: '4px 8px', borderRadius: 7, fontSize: yazi(10), fontWeight: 700, background: 'rgba(167,139,250,.1)', color: 'var(--ai)', border: '1px solid rgba(167,139,250,.2)', opacity: voting ? 0.5 : 1, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                           {voting ? <Clock size={11} /> : <Vote size={11} />} Oy Ver
                         </div>
                       )}
@@ -1269,7 +1269,7 @@ function MVPVoting({ matchId, players, isFinished }) {
           </div>
         )
       }
-      <div style={{ marginTop: 10, fontSize: 9, color: 'var(--text-4)', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+      <div style={{ marginTop: 10, fontSize: yazi(9), color: 'var(--text-4)', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
         {hasVoted ? <><CircleCheck size={11} color="#4ade80" /> Oy kullandın · {totalVotes} toplam oy</> : <><MousePointerClick size={11} /> Bir oyuncuya tıklayarak oy ver</>}
       </div>
     </div>
@@ -1521,17 +1521,20 @@ export default function MatchDetail() {
     return kanal || null
   })()
 
+  // Bot HTML'iyle aynı kalıp (middleware.js): biten maçta skor, "Canlı Skor" yalnız canlıda.
+  // Sekme başlığı ve sayfanın (görünmez) h1'i aynı metin.
+  const sayfaBasligi = (() => {
+    const sk = correctedScores(match)
+    const tur = turnuvaAdi ? ` · ${turnuvaAdi}` : (gName ? ` — ${gName}` : '')
+    if (isFin && sk.team_a_score != null && sk.team_b_score != null) return `${aName} ${sk.team_a_score}-${sk.team_b_score} ${bName}${tur}`
+    return `${aName} vs ${bName}${isLive ? ' Canlı Skor' : ''}${tur}`
+  })()
+
   return (
     // UX P2 A8: iskeletten içeriğe süzülerek geçiş
     <div className="content-in" style={{ color: 'var(--text-1)', minHeight: '100vh', background: 'var(--bg)' }}>
       <SeoHead
-        title={(() => {
-          // Bot HTML'iyle aynı kalıp (middleware.js): biten maçta skor, "Canlı Skor" yalnız canlıda
-          const sk = correctedScores(match)
-          const tur = turnuvaAdi ? ` · ${turnuvaAdi}` : (gName ? ` — ${gName}` : '')
-          if (isFin && sk.team_a_score != null && sk.team_b_score != null) return `${aName} ${sk.team_a_score}-${sk.team_b_score} ${bName}${tur}`
-          return `${aName} vs ${bName}${isLive ? ' Canlı Skor' : ''}${tur}`
-        })()}
+        title={sayfaBasligi}
         description={`${aName} vs ${bName}${turnuvaAdi ? ` · ${turnuvaAdi}` : ''} — canlı skor, Fextopus tahmini, kadro ve maç istatistikleri. feXt.`}
         image={aLogo || bLogo || ''}
         type="article"
@@ -1572,17 +1575,19 @@ export default function MatchDetail() {
         <div style={{ background: 'linear-gradient(135deg,var(--surface),var(--surface))', borderRadius: '20px', border: `2px solid ${isLive ? '#FF4655' : gc + '33'}`, padding: '28px 24px 20px', marginBottom: 8, position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: 0, left: '25%', right: '25%', height: 1, background: `linear-gradient(90deg,transparent,${gc}44,transparent)` }} />
           <SkorParlamasi n={skorParlama} radius={18} />
+          {/* Görünür başlık takım kutuları + skor (ızgara, h1'e sığmaz); ekran okuyucu ve arama motoru için tek h1 */}
+          <h1 className="gorsel-gizli">{sayfaBasligi}</h1>
 
           {/* Badges */}
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
-            <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: `${gc}22`, color: gc, border: `1px solid ${gc}44` }}>{gameShort(gName)} · {gName}</span>
-            {match.tournament && <Link to={`/tournament/${match.tournament.id}`} style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 600, background: 'rgba(255,184,0,.1)', color: '#FFB800', border: '1px solid rgba(255,184,0,.3)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Trophy size={11} /> <span lang={adDili(turnuvaAdi)}>{turnuvaAdi}</span></Link>}
-            {roundLabel(match) && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: FEXT.accentSoftBg, color: FEXT.accentText, border: `1px solid ${FEXT.accentBorder}` }}>{roundLabel(match)}</span>}
+            <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: yazi(10), fontWeight: 700, background: `${gc}22`, color: oyunMetni(gc), border: `1px solid ${gc}44` }}>{gameShort(gName)} · {gName}</span>
+            {match.tournament && <Link to={`/tournament/${match.tournament.id}`} style={{ padding: '3px 10px', borderRadius: 16, fontSize: yazi(10), fontWeight: 600, background: 'rgba(255,184,0,.1)', color: 'var(--altin-fg)', border: '1px solid rgba(255,184,0,.3)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Trophy size={11} /> <span lang={adDili(turnuvaAdi)}>{turnuvaAdi}</span></Link>}
+            {roundLabel(match) && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: yazi(10), fontWeight: 700, background: FEXT.accentSoftBg, color: FEXT.accentText, border: `1px solid ${FEXT.accentBorder}` }}>{roundLabel(match)}</span>}
             {hasTR && <TurkishBadge />}
-            {boFormat && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: 'rgba(96,165,250,.12)', color: '#60a5fa', border: '1px solid rgba(96,165,250,.3)' }}>{boFormat}</span>}
-            {isLive && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 800, background: 'rgba(255,70,85,.2)', color: '#FF4655', border: '1px solid rgba(255,70,85,.4)', animation: 'pulse 1.2s infinite' }}>● CANLI</span>}
-            {isFin  && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: 'rgba(76,175,80,.1)', color: '#4CAF50', border: '1px solid rgba(76,175,80,.3)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><CircleCheck size={11} /> Bitti</span>}
-            {!isFin && !isLive && saatiGecti(match.scheduled_at) && <span title="Başlama saati geçti; skor henüz gelmedi" style={{ padding: '3px 10px', borderRadius: 16, fontSize: 10, fontWeight: 700, background: 'rgba(224,162,77,.12)', color: FEXT.warn, border: '1px solid rgba(224,162,77,.35)' }}>Sonuç bekleniyor</span>}
+            {boFormat && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: yazi(10), fontWeight: 700, background: 'rgba(96,165,250,.12)', color: 'var(--mavi-fg)', border: '1px solid rgba(96,165,250,.3)' }}>{boFormat}</span>}
+            {isLive && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: yazi(10), fontWeight: 800, background: 'rgba(255,70,85,.2)', color: 'var(--canli-fg)', border: '1px solid rgba(255,70,85,.4)', animation: 'pulse 1.2s infinite' }}>● CANLI</span>}
+            {isFin  && <span style={{ padding: '3px 10px', borderRadius: 16, fontSize: yazi(10), fontWeight: 700, background: 'rgba(76,175,80,.1)', color: 'var(--yesil-fg)', border: '1px solid rgba(76,175,80,.3)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><CircleCheck size={11} /> Bitti</span>}
+            {!isFin && !isLive && saatiGecti(match.scheduled_at) && <span title="Başlama saati geçti; skor henüz gelmedi" style={{ padding: '3px 10px', borderRadius: 16, fontSize: yazi(10), fontWeight: 700, background: 'rgba(224,162,77,.12)', color: 'var(--altin-fg)', border: '1px solid rgba(224,162,77,.35)' }}>Sonuç bekleniyor</span>}
           </div>
 
           {/* Teams + Score */}
@@ -1598,7 +1603,7 @@ export default function MatchDetail() {
                   borderRadius={12}
                   imgStyle={{ objectFit: 'contain', filter: isFin && bWon ? 'grayscale(80%)' : 'none' }}
                 />
-                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (aWon ? '#4CAF50' : 'var(--text-3)') : 'var(--text-1)', minWidth: 0, overflowWrap: 'break-word', textAlign: 'right', lineHeight: 1.2 }}>{aName}{isTurkishTeam(match.team_a) && <TrBadge />}</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (aWon ? 'var(--yesil-fg)' : 'var(--text-3)') : 'var(--text-1)', minWidth: 0, overflowWrap: 'break-word', textAlign: 'right', lineHeight: 1.2 }}>{aName}{isTurkishTeam(match.team_a) && <TrBadge />}</div>
               </KartLink>
               <FavButton teamId={aId} ad={aName} active={favA} onToggle={toggleTeamFollow} />
             </div>
@@ -1606,13 +1611,13 @@ export default function MatchDetail() {
             {/* Skor */}
             <div style={{ textAlign: 'center', minWidth: 100, flexShrink: 0 }}>
               {(isLive || isFin)
-                ? <div style={{ fontSize: 36, fontWeight: 900, color: isLive ? '#FF4655' : 'var(--text-2)', letterSpacing: 4, fontVariantNumeric: 'tabular-nums', textShadow: isLive ? '0 0 20px rgba(255,70,85,.4)' : 'none', perspective: 400 }}>
+                ? <div style={{ fontSize: 36, fontWeight: 900, color: isLive ? 'var(--canli-fg)' : 'var(--text-2)', letterSpacing: 4, fontVariantNumeric: 'tabular-nums', textShadow: isLive ? '0 0 20px rgba(255,70,85,.4)' : 'none', perspective: 400 }}>
                     <FlipNumber key={`a${match.id}`} value={dispScores.team_a_score ?? 0} />:<FlipNumber key={`b${match.id}`} value={dispScores.team_b_score ?? 0} />
                   </div>
                 : <div style={{ fontSize: 26, fontWeight: 900, color: FEXT.accentText, letterSpacing: 3 }}>VS</div>
               }
-              <div style={{ fontSize: 12, fontWeight: 700, color: isLive ? '#FF4655' : '#4CAF50', marginTop: 4 }}>{isLive ? '● Canlı' : fmtTime(match.scheduled_at)}</div>
-              <div style={{ fontSize: 10, color: 'var(--text-6)', marginTop: 2 }}>{fmtDate(match.scheduled_at)}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: isLive ? 'var(--canli-fg)' : 'var(--yesil-fg)', marginTop: 4 }}>{isLive ? '● Canlı' : fmtTime(match.scheduled_at)}</div>
+              <div style={{ fontSize: yazi(10), color: 'var(--text-5)', marginTop: 2 }}>{fmtDate(match.scheduled_at)}</div>
             </div>
 
             {/* Team B */}
@@ -1625,7 +1630,7 @@ export default function MatchDetail() {
                   borderRadius={12}
                   imgStyle={{ objectFit: 'contain', filter: isFin && aWon ? 'grayscale(80%)' : 'none' }}
                 />
-                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (bWon ? '#4CAF50' : 'var(--text-3)') : 'var(--text-1)', minWidth: 0, overflowWrap: 'break-word', textAlign: 'left', lineHeight: 1.2 }}>{isTurkishTeam(match.team_b) && <TrBadge />}{bName}</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: isFin ? (bWon ? 'var(--yesil-fg)' : 'var(--text-3)') : 'var(--text-1)', minWidth: 0, overflowWrap: 'break-word', textAlign: 'left', lineHeight: 1.2 }}>{isTurkishTeam(match.team_b) && <TrBadge />}{bName}</div>
               </KartLink>
               <FavButton teamId={bId} ad={bName} active={favB} onToggle={toggleTeamFollow} />
             </div>
@@ -1633,7 +1638,7 @@ export default function MatchDetail() {
 
           {/* ── Fextopus Kazanma Olasılığı — tam genişlik (mobilde takım isimleriyle çakışmasın) ── */}
           {tahminVar && <div style={{ marginTop: 18, maxWidth: 440, marginLeft: 'auto', marginRight: 'auto' }}>
-            <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--ai)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><FextopusIcon size={14} /> Fextopus Kazanma Olasılığı{predUncertain && <span style={{ color: 'var(--text-3)', fontWeight: 800 }}>· Başa baş</span>}</div>
+            <div style={{ fontSize: yazi(9), fontWeight: 800, color: 'var(--ai)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><FextopusIcon size={14} /> Fextopus Kazanma Olasılığı{predUncertain && <span style={{ color: 'var(--text-3)', fontWeight: 800 }}>· Başa baş</span>}</div>
             <HeroOlasilik pctA={pctA} aName={aName} bName={bName} belirsiz={predUncertain} />
             {isFin && <FextopusHukmu match={match} />}
             <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center' }}>
@@ -1666,12 +1671,12 @@ export default function MatchDetail() {
           >
             <Trophy size={22} color="#f0c040" style={{ flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: '#f0e0b0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: metinTonu('#f0e0b0'), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {turnuvaAdi}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Bracket, puan durumu &amp; turnuvanın tüm maçları</div>
+              <div style={{ fontSize: yazi(11), color: 'var(--text-3)' }}>Bracket, puan durumu &amp; turnuvanın tüm maçları</div>
             </div>
-            <span style={{ fontSize: 13, color: '#FFB800', fontWeight: 700, flexShrink: 0 }}>Git →</span>
+            <span style={{ fontSize: 13, color: 'var(--altin-fg)', fontWeight: 700, flexShrink: 0 }}>Git →</span>
           </Link>
         )}
 
@@ -1690,25 +1695,25 @@ export default function MatchDetail() {
                 : (
                   <div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 10, marginBottom: 6, padding: '0 14px' }}>
-                      <div style={{ textAlign: 'right', fontSize: 9, fontWeight: 700, color: 'var(--text-4)' }}>{aName}</div>
+                      <div style={{ textAlign: 'right', fontSize: yazi(9), fontWeight: 700, color: 'var(--text-4)' }}>{aName}</div>
                       <div style={{ minWidth: 80 }} />
-                      <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-4)' }}>{bName}</div>
+                      <div style={{ fontSize: yazi(9), fontWeight: 700, color: 'var(--text-4)' }}>{bName}</div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                       {scoredMaps.map((map, i) => <MapRow key={i} map={map} index={i} teamAId={aId} />)}
                     </div>
                     <div style={{ marginTop: 8, padding: '8px 14px', borderRadius: 9, background: 'var(--bg)', border: '1px solid var(--surface-2)', display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 10 }}>
-                      <div style={{ textAlign: 'right', fontSize: 20, fontWeight: 900, color: aWon ? '#4CAF50' : 'var(--text-2)', fontVariantNumeric: 'tabular-nums' }}>{dispScores.team_a_score ?? '—'}</div>
-                      <div style={{ textAlign: 'center', fontSize: 10, color: 'var(--text-4)', minWidth: 50 }}>TOPLAM</div>
-                      <div style={{ fontSize: 20, fontWeight: 900, color: bWon ? '#4CAF50' : 'var(--text-2)', fontVariantNumeric: 'tabular-nums' }}>{dispScores.team_b_score ?? '—'}</div>
+                      <div style={{ textAlign: 'right', fontSize: 20, fontWeight: 900, color: aWon ? 'var(--yesil-fg)' : 'var(--text-2)', fontVariantNumeric: 'tabular-nums' }}>{dispScores.team_a_score ?? '—'}</div>
+                      <div style={{ textAlign: 'center', fontSize: yazi(10), color: 'var(--text-4)', minWidth: 50 }}>TOPLAM</div>
+                      <div style={{ fontSize: 20, fontWeight: 900, color: bWon ? 'var(--yesil-fg)' : 'var(--text-2)', fontVariantNumeric: 'tabular-nums' }}>{dispScores.team_b_score ?? '—'}</div>
                     </div>
                     {namedMapStats.length > 0 && (
                       <div style={{ marginTop: 12, background: 'var(--bg)', borderRadius: 10, border: '1px solid var(--surface-2)', padding: 10 }}>
-                        <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-5)', marginBottom: 8, textTransform: 'uppercase' }}>Harita Kazanma Oranları</div>
+                        <div style={{ fontSize: yazi(10), fontWeight: 800, color: 'var(--text-5)', marginBottom: 8, textTransform: 'uppercase' }}>Harita Kazanma Oranları</div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                           {namedMapStats.map(m => (
                             <div key={m.map} style={{ background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--surface-2)', padding: '7px 8px' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 10 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: yazi(10) }}>
                                 <span style={{ color: 'var(--text-2)', fontWeight: 700 }}>{m.map}</span>
                                 <span style={{ color: 'var(--text-5)' }}>{m.total} harita</span>
                               </div>
@@ -1716,9 +1721,9 @@ export default function MatchDetail() {
                                 <div style={{ width: `${m.teamAWinRate}%`, background: '#4ade80' }} />
                                 <div style={{ width: `${m.teamBWinRate}%`, background: '#60a5fa' }} />
                               </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3, fontSize: 9, fontWeight: 700 }}>
-                                <span style={{ color: '#4ade80' }}>{aName} %{m.teamAWinRate}</span>
-                                <span style={{ color: '#60a5fa' }}>%{m.teamBWinRate} {bName}</span>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3, fontSize: yazi(9), fontWeight: 700 }}>
+                                <span style={{ color: 'var(--success-fg)' }}>{aName} %{m.teamAWinRate}</span>
+                                <span style={{ color: 'var(--mavi-fg)' }}>%{m.teamBWinRate} {bName}</span>
                               </div>
                             </div>
                           ))}
@@ -1750,7 +1755,7 @@ export default function MatchDetail() {
               <ST Icon={Swords} label="Rekabet Geçmişi (H2H)" />
               {/* Liste bu maçtan ÖNCEKİ karşılaşmalar; bu maçın skoru burada sayılmaz */}
               {!loadingDetails && h2h.total > 0 && (
-                <div style={{ marginTop: -4, marginBottom: 10, fontSize: 10, color: 'var(--text-4)' }}>
+                <div style={{ marginTop: -4, marginBottom: 10, fontSize: yazi(10), color: 'var(--text-4)' }}>
                   Bu maçtan önceki son {h2h.total} karşılaşma; bu maç sayılmaz.
                 </div>
               )}
@@ -1763,16 +1768,16 @@ export default function MatchDetail() {
                       {h2h.draws > 0 && <div style={{ flex: h2h.draws, background: 'var(--text-4)' }} />}
                       <div style={{ flex: h2h.teamBWins, background: '#FF4655', minWidth: h2h.teamBWins > 0 ? 4 : 0 }} />
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginBottom: 10, fontSize: 10 }}>
-                      <span style={{ color: h2h.teamAWins >= h2h.teamBWins ? '#4CAF50' : 'var(--text-5)', fontWeight: 700, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{aName} · {h2h.teamAWins}G</span>
-                      <span style={{ color: h2h.teamBWins > h2h.teamAWins ? '#4CAF50' : 'var(--text-5)', fontWeight: 700, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>{h2h.teamBWins}G · {bName}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginBottom: 10, fontSize: yazi(10) }}>
+                      <span style={{ color: h2h.teamAWins >= h2h.teamBWins ? 'var(--yesil-fg)' : 'var(--text-5)', fontWeight: 700, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{aName} · {h2h.teamAWins}G</span>
+                      <span style={{ color: h2h.teamBWins > h2h.teamAWins ? 'var(--yesil-fg)' : 'var(--text-5)', fontWeight: 700, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>{h2h.teamBWins}G · {bName}</span>
                     </div>
-                    <div style={{ marginBottom: 10, background: 'var(--bg)', border: '1px solid var(--surface-2)', borderRadius: 8, padding: '7px 9px', display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 10 }}>
+                    <div style={{ marginBottom: 10, background: 'var(--bg)', border: '1px solid var(--surface-2)', borderRadius: 8, padding: '7px 9px', display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: yazi(10) }}>
                       <span style={{ color: 'var(--text-4)', flexShrink: 0 }}>Rekabet Skoru</span>
                       <span style={{ color: 'var(--text-1)', fontWeight: 800, minWidth: 0, textAlign: 'right' }}>{aName} {h2h.teamAWins} - {h2h.teamBWins} {bName}</span>
                     </div>
                     <div style={{ marginBottom: 10, background: 'var(--bg)', border: '1px solid var(--surface-2)', borderRadius: 8, padding: '7px 9px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <span style={{ color: 'var(--text-4)', fontSize: 10, flexShrink: 0 }}>Son kazananlar <span style={{ color: 'var(--text-5)' }}>(yeniden eskiye)</span></span>
+                      <span style={{ color: 'var(--text-4)', fontSize: yazi(10), flexShrink: 0 }}>Son kazananlar <span style={{ color: 'var(--text-5)' }}>(yeniden eskiye)</span></span>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                         {h2hRecentForm.map((badge, idx) => (
                           <span
@@ -1785,7 +1790,7 @@ export default function MatchDetail() {
                               border: `1px solid ${badge.border}`,
                               background: badge.bg,
                               color: badge.color,
-                              fontSize: 10,
+                              fontSize: yazi(10),
                               fontWeight: 900,
                               padding: '2px 6px',
                               letterSpacing: '.6px',
@@ -1820,8 +1825,8 @@ export default function MatchDetail() {
                 ...(boFormat ? [[Hash, 'Format', boFormat]] : []),
               ].map(([Icon, label, value]) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--surface)' }}>
-                  <span style={{ fontSize: 10, color: 'var(--text-6)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon size={11} /> {label}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-4)', textAlign: 'right', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', }}>{value}</span>
+                  <span style={{ fontSize: yazi(10), color: 'var(--text-5)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon size={11} /> {label}</span>
+                  <span style={{ fontSize: yazi(11), color: 'var(--text-4)', textAlign: 'right', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', }}>{value}</span>
                 </div>
               ))}
             </div>
@@ -1881,18 +1886,18 @@ export default function MatchDetail() {
             {/* Harita Profili: yalnız adı belli harita geçmişi varsa (yoksa "nötr mod" dolgusu basıyordu) */}
             {mapStats.length > 0 && (
               <div style={{ border: '1px solid rgba(196,181,253,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(124,58,237,.12), var(--surface))', padding: '10px 11px' }}>
-                <div style={{ fontSize: 10, color: 'var(--ai)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5 }}>Harita Profili</div>
+                <div style={{ fontSize: yazi(10), color: 'var(--ai)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5 }}>Harita Profili</div>
                 <div style={{ fontSize: 12, color: 'var(--text-1)' }}>{`${mapStats[0].map} en fazla oynanan harita`}</div>
-                <div style={{ marginTop: 4, fontSize: 11, color: 'var(--text-3)' }}>{`${mapStats[0].total} örnek üzerinden ${aName} %${mapStats[0].teamAWinRate} - %${mapStats[0].teamBWinRate} ${bName}`}</div>
+                <div style={{ marginTop: 4, fontSize: yazi(11), color: 'var(--text-3)' }}>{`${mapStats[0].total} örnek üzerinden ${aName} %${mapStats[0].teamAWinRate} - %${mapStats[0].teamBWinRate} ${bName}`}</div>
               </div>
             )}
 
             {/* MVP Tahmini: istatistikler seyrek → yalnız gerçek veri varken göster (kurucu isteği) */}
             {scoutMvp && (
               <div style={{ border: '1px solid rgba(255,184,0,.24)', borderRadius: 10, background: 'linear-gradient(130deg, rgba(255,184,0,.12), var(--surface))', padding: '10px 11px' }}>
-                <div style={{ fontSize: 10, color: 'var(--warn, #c0821f)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5 }}>MVP Tahmini</div>
+                <div style={{ fontSize: yazi(10), color: 'var(--warn, #c0821f)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 5 }}>MVP Tahmini</div>
                 <div style={{ fontSize: 12, color: 'var(--text-1)' }}>{`${scoutMvp.nickname} (${scoutMvp.teamName})`}</div>
-                <div style={{ marginTop: 4, fontSize: 11, color: 'var(--text-3)' }}>{`K/D/A: ${scoutMvp.kills || 0}/${scoutMvp.deaths || 0}/${scoutMvp.assists || 0}`}</div>
+                <div style={{ marginTop: 4, fontSize: yazi(11), color: 'var(--text-3)' }}>{`K/D/A: ${scoutMvp.kills || 0}/${scoutMvp.deaths || 0}/${scoutMvp.assists || 0}`}</div>
               </div>
             )}
           </div>
@@ -1934,17 +1939,17 @@ function LiveScoreboard({ teamAName, teamBName, teamABoard, teamBBoard, isLive }
 
   const table = (title, rows, accent) => (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--surface-2)', borderRadius: 12, padding: 10 }}>
-      <div lang={adDili(title)} style={{ fontSize: 11, fontWeight: 800, color: accent, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.8px' }}>{title}</div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 40px 40px 40px', gap: 6, fontSize: 9, color: 'var(--text-5)', marginBottom: 6, padding: '0 4px' }}>
+      <div lang={adDili(title)} style={{ fontSize: yazi(11), fontWeight: 800, color: accent, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.8px' }}>{title}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 40px 40px 40px', gap: 6, fontSize: yazi(9), color: 'var(--text-5)', marginBottom: 6, padding: '0 4px' }}>
         <span>Oyuncu</span><span style={{ textAlign: 'right' }}>K</span><span style={{ textAlign: 'right' }}>D</span><span style={{ textAlign: 'right' }}>A</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {(rows || []).slice(0, 6).map(p => (
           <div key={`${title}_${p.player_id}`} style={{ display: 'grid', gridTemplateColumns: '1fr 40px 40px 40px', gap: 6, alignItems: 'center', background: 'var(--surface)', border: '1px solid var(--surface-2)', borderRadius: 8, padding: '6px 8px' }}>
-            <span style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nickname}</span>
-            <span style={{ textAlign: 'right', fontSize: 11, color: '#4ade80', fontVariantNumeric: 'tabular-nums' }}>{p.kills ?? 0}</span>
-            <span style={{ textAlign: 'right', fontSize: 11, color: '#fb7185', fontVariantNumeric: 'tabular-nums' }}>{p.deaths ?? 0}</span>
-            <span style={{ textAlign: 'right', fontSize: 11, color: '#93c5fd', fontVariantNumeric: 'tabular-nums' }}>{p.assists ?? 0}</span>
+            <span style={{ fontSize: yazi(11), color: 'var(--text-2)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nickname}</span>
+            <span style={{ textAlign: 'right', fontSize: yazi(11), color: 'var(--success-fg)', fontVariantNumeric: 'tabular-nums' }}>{p.kills ?? 0}</span>
+            <span style={{ textAlign: 'right', fontSize: yazi(11), color: 'var(--danger-fg)', fontVariantNumeric: 'tabular-nums' }}>{p.deaths ?? 0}</span>
+            <span style={{ textAlign: 'right', fontSize: yazi(11), color: 'var(--mavi-fg)', fontVariantNumeric: 'tabular-nums' }}>{p.assists ?? 0}</span>
           </div>
         ))}
       </div>
@@ -1954,8 +1959,8 @@ function LiveScoreboard({ teamAName, teamBName, teamABoard, teamBBoard, isLive }
   return (
     <div style={{ marginTop: 16, marginBottom: 4, background: 'linear-gradient(160deg,var(--surface),var(--surface))', borderRadius: 16, border: '1px solid rgba(255,70,85,.25)', padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ fontSize: 12, fontWeight: 900, color: '#FF4655', textTransform: 'uppercase', letterSpacing: '1px' }}>Canlı Skor Tablosu</div>
-        <div style={{ fontSize: 10, color: '#7a3038' }}>K/D/A anlık performans</div>
+        <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--canli-fg)', textTransform: 'uppercase', letterSpacing: '1px' }}>Canlı Skor Tablosu</div>
+        <div style={{ fontSize: yazi(10), color: '#7a3038' }}>K/D/A anlık performans</div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {table(teamAName, teamABoard, '#4ade80')}

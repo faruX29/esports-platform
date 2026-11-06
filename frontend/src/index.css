@@ -47,6 +47,15 @@
   --yesil-fg:     #4CAF50;
   --mavi-fg:      #60a5fa;
   --indigo-fg:    #8f99fa;
+  /* Oyun rengi METİN olarak (theme.js GAME_FG): kart + kendi %8-13 rozet zemininde ≥4,5:1 */
+  --oyun-val-fg:  #ef7684;
+  --oyun-cs2-fg:  #E0A24D;
+  --oyun-lol-fg:  #C6A24A;
+  --oyun-dota-fg: #d97b85;
+  /* metinTonu(renk) (theme.js): token'ı olmayan süs rengini (rol rozeti vb.) metne çevirir.
+     Koyuda %85 renk + beyaz, aydınlıkta %45 renk + siyah → 17 rol renginde ≥4,6:1 */
+  --ton-oran:     85%;
+  --ton-hedef:    #fff;
   color-scheme: dark;
 }
 
@@ -81,6 +90,12 @@
   --indigo-fg:    #4f46e5;
   --tr-fg:        #c8233f;   /* Türk takımı metni — aydınlıkta (#E0455E beyazda 4:1, #ff6b7a 2,7:1) */
   --gold-fg:      #a16207;   /* şampiyon/kupa metni — aydınlıkta okunur koyu altın (#F0A500 beyazda ~2:1 kalıyordu) */
+  --oyun-val-fg:  #b4233a;   /* oyun renkleri beyazda 2-3:1 kalıyordu */
+  --oyun-cs2-fg:  #8f530a;
+  --oyun-lol-fg:  #7a5d16;
+  --oyun-dota-fg: #9b3540;
+  --ton-oran:     45%;
+  --ton-hedef:    #000;
   color-scheme: light;
 }
 
@@ -112,6 +127,12 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Görünmez ama ekran okuyucu/arama motoru okur (ör. maç sayfasının h1'i). Tailwind'in sr-only'si yerine. */
+.gorsel-gizli {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
 
 html, body {

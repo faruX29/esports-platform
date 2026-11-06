@@ -57,6 +57,34 @@ export const GAME_COLORS = {
   dota2:    '#B24A55',
 }
 
+// Oyun rengi METİN olarak (tema-farkında, ≥4,5:1). GAME_COLORS zemin/kenarlık/ikon içindir;
+// alfa eki (`${renk}22`) var() ile çalışmaz, o yüzden ikisi ayrı.
+export const GAME_FG = {
+  all:      'var(--text-3)',
+  valorant: 'var(--oyun-val-fg)',
+  cs2:      'var(--oyun-cs2-fg)',
+  lol:      'var(--oyun-lol-fg)',
+  dota2:    'var(--oyun-dota-fg)',
+}
+/** Oyun kimliğinden metin rengi; tanınmazsa ikincil metin. */
+export const oyunFg = id => GAME_FG[id] || 'var(--text-3)'
+// Sayfaların oyun rengini hex olarak taşıdığı yerler için (`gc`; eski sayfa içi gameColor
+// paletleri dahil): hex → metin token'ı. Tanınmayan renk aynen döner.
+const OYUN_HEX_FG = {
+  '#E8586A': GAME_FG.valorant, '#FF4655': GAME_FG.valorant,
+  '#E0A24D': GAME_FG.cs2,      '#F0A500': GAME_FG.cs2,
+  '#C6A24A': GAME_FG.lol,      '#C89B3C': GAME_FG.lol,
+  '#B24A55': GAME_FG.dota2,    '#9D2226': GAME_FG.dota2,
+  '#818CF8': 'var(--indigo-fg)', '#6366F1': 'var(--indigo-fg)',
+  '#94A3B8': GAME_FG.all,
+}
+/** Token'ı olmayan renk METİN olarak (rol rozeti gibi çok renkli süsler): temaya göre açar/koyulaştırır
+ *  (index.css --ton-oran/--ton-hedef). Zemin/kenarlıkta hex'i kullanmaya devam et. */
+export const metinTonu = renk => `color-mix(in srgb, ${renk} var(--ton-oran), var(--ton-hedef))`
+
+/** Oyun rengi (hex) METİN olarak: `color: oyunMetni(gc)`. Zemin/kenarlıkta hex'i kullanmaya devam et. */
+export const oyunMetni = hex => OYUN_HEX_FG[String(hex || '').toUpperCase()] || hex
+
 // Başlama saatinden bu kadar sonra hâlâ "başlamadı" görünen maç: veri gecikmesi (maç
 // senkronu saatlerce geç koşabiliyor). Maç büyük olasılıkla oynandı ya da oynanıyor.
 export const SAATI_GECTI_ESIGI_MS = 20 * 60 * 1000

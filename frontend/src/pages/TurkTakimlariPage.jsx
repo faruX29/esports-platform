@@ -21,7 +21,7 @@ import { normalizeGameId, getGameMeta } from '../utils/newsStories'
 import { tournamentDisplayName } from '../utils/tournamentDisplay'
 import { deriveWinnerTeamId, correctedScores } from '../utils/matchResult'
 import { buildNewsSlug } from '../utils/newsSlug'
-import { FEXT, saatiGecti } from '../theme'
+import { FEXT, saatiGecti, yazi } from '../theme'
 import { Asansor, MobilAsansor, useAsansor, ASANSOR_SUTUN } from '../components/Asansor'
 import OyunRozeti from '../components/OyunRozeti'
 
@@ -137,12 +137,12 @@ function MacSatiri({ m }) {
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>{takim(m.team_a, trA, true)}</div>
-        <div style={{ fontWeight: 900, fontVariantNumeric: 'tabular-nums', minWidth: 58, textAlign: 'center', color: canli ? FEXT.status.live.color : 'var(--text-1)', fontSize: bitti || canli ? 13 : 11 }}>
+        <div style={{ fontWeight: 900, fontVariantNumeric: 'tabular-nums', minWidth: 58, textAlign: 'center', color: canli ? 'var(--canli-fg)' : 'var(--text-1)', fontSize: bitti || canli ? 13 : yazi(11) }}>
           {bitti || canli ? `${skor.team_a_score ?? '-'} - ${skor.team_b_score ?? '-'}` : fmtSaat(m.scheduled_at)}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>{takim(m.team_b, trB, false)}</div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 11, color: 'var(--text-3)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: yazi(11), color: 'var(--text-3)' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
           {gameId && <GameLogo game={gameId} size={12} color={getGameMeta(gameId).color} />}
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -150,7 +150,7 @@ function MacSatiri({ m }) {
           </span>
         </span>
         {/* Saati geçmiş ama "başlamadı" görünen maç: sonuç henüz gelmedi (senkron gecikmesi) */}
-        <span style={{ whiteSpace: 'nowrap', color: !canli && !bitti && saatiGecti(m.scheduled_at) ? FEXT.warn : undefined }}>
+        <span style={{ whiteSpace: 'nowrap', color: !canli && !bitti && saatiGecti(m.scheduled_at) ? 'var(--altin-fg)' : undefined }}>
           {canli ? 'Canlı' : bitti ? fmtGun(m.scheduled_at) : saatiGecti(m.scheduled_at) ? 'Sonuç bekleniyor' : ''}
         </span>
       </div>
@@ -174,7 +174,7 @@ function TakimKarti({ t, sonraki, son }) {
     const canliMi = sonraki.status === 'running'
     const bekliyor = !canliMi && saatiGecti(sonraki.scheduled_at)
     satir = (
-      <span style={{ color: canliMi ? FEXT.status.live.color : bekliyor ? FEXT.warn : 'var(--text-2)' }}>
+      <span style={{ color: canliMi ? 'var(--canli-fg)' : bekliyor ? 'var(--altin-fg)' : 'var(--text-2)' }}>
         {canliMi ? 'Şu an canlı' : bekliyor ? 'Sonuç bekleniyor' : fmtSaat(sonraki.scheduled_at)} · {rakipAdi(rakip)}
       </span>
     )
@@ -186,7 +186,7 @@ function TakimKarti({ t, sonraki, son }) {
     const sonuc = kazanan == null ? 'B' : kazanan === Number(t.id) ? 'G' : 'M'
     satir = (
       <span style={{ color: 'var(--text-3)' }}>
-        Son: <b style={{ color: sonuc === 'G' ? FEXT.good : sonuc === 'M' ? FEXT.danger : 'var(--text-2)' }}>{sonuc}</b>{' '}
+        Son: <b style={{ color: sonuc === 'G' ? 'var(--yesil-fg)' : sonuc === 'M' ? 'var(--canli-fg)' : 'var(--text-2)' }}>{sonuc}</b>{' '}
         {bizA ? `${sk.team_a_score ?? '-'}-${sk.team_b_score ?? '-'}` : `${sk.team_b_score ?? '-'}-${sk.team_a_score ?? '-'}`} · {rakipAdi(rakip)}
       </span>
     )
@@ -204,7 +204,7 @@ function TakimKarti({ t, sonraki, son }) {
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name?.trim()}</span>
           <OyunRozeti oyun={oyun} />
         </div>
-        <div style={{ fontSize: 11, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{satir}</div>
+        <div style={{ fontSize: yazi(11), marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{satir}</div>
       </div>
     </Link>
   )
@@ -216,7 +216,7 @@ function HaberSatiri({ row }) {
       to={`/news/${buildNewsSlug({ id: haberStoryId(row), title: row.title, matchId: row.match_id })}`}
       style={{ display: 'grid', gap: 4, padding: '10px 12px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--text-1)', textDecoration: 'none' }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-3)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: yazi(11), color: 'var(--text-3)' }}>
         <span style={{ fontWeight: 800, color: 'var(--accent-fg)', textTransform: 'uppercase', letterSpacing: '.6px' }}>{haberEtiketi(row)}</span>
         <span>{fmtGun(row.created_at)}</span>
       </div>

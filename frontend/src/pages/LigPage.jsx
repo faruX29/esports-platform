@@ -17,7 +17,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { CalendarDays, Layers, Radio, History, ChevronRight, Gamepad2, CircleCheck, Trophy, CalendarClock } from 'lucide-react'
 import { supabase } from '../supabaseClient'
-import { FEXT } from '../theme'
+import { FEXT, yazi, oyunMetni } from '../theme'
 import SeoHead from '../components/SeoHead'
 import Mascot from '../components/Mascot'
 import TrBadge from '../components/TrBadge'
@@ -191,7 +191,7 @@ export default function LigPage() {
   if (durum === 'hata') return (
     <div style={{ maxWidth: 600, margin: '60px auto', textAlign: 'center', color: 'var(--text-1)', padding: '0 16px' }}>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={86} dim /></div>
-      <div style={{ fontSize: 18, color: '#FF4655', marginBottom: 8 }}>Lig yüklenemedi.</div>
+      <div style={{ fontSize: 18, color: 'var(--canli-fg)', marginBottom: 8 }}>Lig yüklenemedi.</div>
       <button
         onClick={() => window.location.reload()}
         style={{ padding: '10px 24px', background: FEXT.accentGrad, border: 'none',
@@ -243,20 +243,20 @@ export default function LigPage() {
         <div style={{ position: 'relative' }}>
           <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{
-              padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700,
-              background: `${gc}18`, border: `1px solid ${gc}44`, color: gc,
+              padding: '3px 10px', borderRadius: 20, fontSize: yazi(10), fontWeight: 700,
+              background: `${gc}18`, border: `1px solid ${gc}44`, color: oyunMetni(gc),
               display: 'inline-flex', alignItems: 'center', gap: 6,
             }}>{gameId ? <GameLogo game={gameId} size={11} color={gc} /> : null} {oyun?.label || 'Espor'}</span>
             {lig?.turk && (
               <span style={{
-                padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700,
-                background: 'rgba(224,69,94,.10)', border: '1px solid rgba(224,69,94,.35)', color: '#E0455E',
+                padding: '3px 10px', borderRadius: 20, fontSize: yazi(10), fontWeight: 700,
+                background: 'rgba(224,69,94,.10)', border: '1px solid rgba(224,69,94,.35)', color: 'var(--tr-fg)',
               }}>Türk ligi</span>
             )}
             {canliSayisi > 0 && (
               <span style={{
-                padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 800,
-                background: 'rgba(255,70,85,.15)', border: '1px solid rgba(255,70,85,.5)', color: '#FF4655',
+                padding: '3px 10px', borderRadius: 20, fontSize: yazi(10), fontWeight: 800,
+                background: 'rgba(255,70,85,.15)', border: '1px solid rgba(255,70,85,.5)', color: 'var(--canli-fg)',
                 display: 'inline-flex', alignItems: 'center', gap: 5,
               }}><span style={{ width: 7, height: 7, borderRadius: '50%', background: '#FF4655' }} /> CANLI</span>
             )}
@@ -284,7 +284,7 @@ export default function LigPage() {
               </span>
               <InitialsImage src={sampiyon.logo_url} name={sampiyon.name} width={26} height={26} borderRadius={6} objectFit="contain" />
               <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
-                <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.6px', color: 'var(--gold-fg)' }}>ŞAMPİYON</span>
+                <span style={{ fontSize: yazi(10), fontWeight: 800, letterSpacing: '.6px', color: 'var(--gold-fg)' }}>ŞAMPİYON</span>
                 <span style={{ fontSize: 15, fontWeight: 800 }}>
                   {sampiyon.name}{isTurkishTeam(sampiyon) && <TrBadge />}
                 </span>
@@ -299,18 +299,18 @@ export default function LigPage() {
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {[
-              { Icon: Gamepad2, label: 'Maç', value: maclar.length, color: '#818cf8' },
-              { Icon: CircleCheck, label: 'Yaklaşan', value: yaklasanSayisi, color: '#4CAF50' },
-              { Icon: CircleCheck, label: 'Bitti', value: bitenSayisi, color: '#FF8C00' },
-              { Icon: Radio, label: 'Canlı', value: canliSayisi, color: '#FF4655' },
+              { Icon: Gamepad2, label: 'Maç', value: maclar.length, color: '#818cf8', fg: 'var(--indigo-fg)' },
+              { Icon: CircleCheck, label: 'Yaklaşan', value: yaklasanSayisi, color: '#4CAF50', fg: 'var(--yesil-fg)' },
+              { Icon: CircleCheck, label: 'Bitti', value: bitenSayisi, color: '#FF8C00', fg: 'var(--altin-fg)' },
+              { Icon: Radio, label: 'Canlı', value: canliSayisi, color: '#FF4655', fg: 'var(--canli-fg)' },
             ].filter(s => s.value > 0).map(s => (
               <div key={s.label} style={{
                 display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 20,
                 background: `${s.color}10`, border: `1px solid ${s.color}25`,
               }}>
                 <s.Icon size={13} color={s.color} />
-                <span style={{ fontSize: 14, fontWeight: 900, color: s.color, fontVariantNumeric: 'tabular-nums' }}>{s.value}</span>
-                <span style={{ fontSize: 10, color: 'var(--text-4)' }}>{s.label}</span>
+                <span style={{ fontSize: 14, fontWeight: 900, color: s.fg, fontVariantNumeric: 'tabular-nums' }}>{s.value}</span>
+                <span style={{ fontSize: yazi(10), color: 'var(--text-4)' }}>{s.label}</span>
               </div>
             ))}
           </div>

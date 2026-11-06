@@ -22,7 +22,7 @@ import { summarizePlayerMatchStats, metricBars } from '../utils/playerMetrics'
 import { deriveWinnerTeamId, correctedScores } from '../utils/matchResult'
 import { KartLink } from '../components/KartLink'
 import TurkishBadge from '../components/TurkishBadge'
-import { FEXT } from '../theme'
+import { FEXT, yazi, metinTonu } from '../theme'
 import Mascot from '../components/Mascot'
 import TrBadge from '../components/TrBadge'
 import SeoHead from '../components/SeoHead'
@@ -70,11 +70,11 @@ function StatBox({ Icon, value, label, color = '#fff', sub }) {
     }}>
       <div style={{ marginBottom: 4, display: 'flex', justifyContent: 'center' }}>{Icon && <Icon size={18} color={color} />}</div>
       <div style={{
-        fontSize: 24, fontWeight: 900, color, lineHeight: 1,
+        fontSize: 24, fontWeight: 900, color: metinTonu(color), lineHeight: 1,
         fontVariantNumeric: 'tabular-nums',
       }}>{value}</div>
-      <div style={{ fontSize: 10, color: 'var(--text-5)', marginTop: 4 }}>{label}</div>
-      {sub && <div style={{ fontSize: 10, color: 'var(--text-6)', marginTop: 2 }}>{sub}</div>}
+      <div style={{ fontSize: yazi(10), color: 'var(--text-5)', marginTop: 4 }}>{label}</div>
+      {sub && <div style={{ fontSize: yazi(10), color: 'var(--text-5)', marginTop: 2 }}>{sub}</div>}
     </div>
   )
 }
@@ -83,9 +83,9 @@ function StatBox({ Icon, value, label, color = '#fff', sub }) {
 function ProgressBar({ pct, color = FEXT.accent, label, value }) {
   return (
     <div style={{ marginBottom: 10 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: yazi(11), marginBottom: 4 }}>
         <span style={{ color: 'var(--text-4)' }}>{label}</span>
-        <span style={{ color, fontWeight: 800 }}>{value}</span>
+        <span style={{ color: metinTonu(color), fontWeight: 800 }}>{value}</span>
       </div>
       <div style={{ height: 5, borderRadius: 3, background: 'var(--surface)', overflow: 'hidden' }}>
         <div style={{
@@ -179,9 +179,9 @@ function ProMetricCard({ label, value, sub, accent = '#ff6a7f' }) {
       background: 'linear-gradient(160deg, var(--hover), rgba(255,255,255,.01))',
       padding: '11px 12px',
     }}>
-      <div style={{ fontSize: 10, color: 'var(--text-3)', letterSpacing: '.8px', textTransform: 'uppercase' }}>{label}</div>
-      <div style={{ marginTop: 5, fontSize: 22, fontWeight: 900, color: accent, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
-      {sub ? <div style={{ marginTop: 4, fontSize: 11, color: 'var(--text-2)' }}>{sub}</div> : null}
+      <div style={{ fontSize: yazi(10), color: 'var(--text-3)', letterSpacing: '.8px', textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ marginTop: 5, fontSize: 22, fontWeight: 900, color: metinTonu(accent), lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+      {sub ? <div style={{ marginTop: 4, fontSize: yazi(11), color: 'var(--text-2)' }}>{sub}</div> : null}
     </div>
   )
 }
@@ -221,7 +221,7 @@ function ProfessionalStatsPanel({ stats, isMobile = false }) {
           background: 'rgba(0,0,0,.32)',
           padding: '10px 10px 8px',
         }}>
-          <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 10 }}>Tur bazında verimlilik göstergesi</div>
+          <div style={{ fontSize: yazi(10), color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 10 }}>Tur bazında verimlilik göstergesi</div>
           <ProgressBar pct={Math.min(100, stats.kda * 42)} color={kdaColor} label="KDA baskısı" value={ondalik(stats.kda, 2)} />
           <ProgressBar pct={stats.winRate} color={wrColor} label="Kazanma Oranı" value={yuzde(stats.winRate)} />
           {useAcs
@@ -257,7 +257,7 @@ function PlayerHeroAvatar({ src, name, size = 120, isTR }) {
           }}
         />
         {isTR && (
-          <span style={{ position: 'absolute', bottom: -3, right: -3, fontSize: 13, lineHeight: 1, width: 24, height: 24, borderRadius: '50%', background: 'var(--surface)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,.3)' }}><TrBadge style={{ fontSize: 9, margin: 0 }} /></span>
+          <span style={{ position: 'absolute', bottom: -3, right: -3, fontSize: 13, lineHeight: 1, width: 24, height: 24, borderRadius: '50%', background: 'var(--surface)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,.3)' }}><TrBadge style={{ fontSize: yazi(9), margin: 0 }} /></span>
         )}
       </div>
     )
@@ -276,7 +276,7 @@ function PlayerHeroAvatar({ src, name, size = 120, isTR }) {
         {initials}
       </div>
       {isTR && (
-        <span style={{ position: 'absolute', bottom: 2, right: 2, width: 24, height: 24, borderRadius: '50%', background: 'var(--surface)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><TrBadge style={{ fontSize: 9, margin: 0 }} /></span>
+        <span style={{ position: 'absolute', bottom: 2, right: 2, width: 24, height: 24, borderRadius: '50%', background: 'var(--surface)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><TrBadge style={{ fontSize: yazi(9), margin: 0 }} /></span>
       )}
     </div>
   )
@@ -327,10 +327,10 @@ function MatchRow({ match, teamId, isMobile = false }) {
       <div style={{
         width: 28, height: 28, borderRadius: 8, display: 'flex',
         alignItems: 'center', justifyContent: 'center',
-        fontSize: 11, fontWeight: 900,
+        fontSize: yazi(11), fontWeight: 900,
         background: isWin  ? 'rgba(76,175,80,.2)'  : isLoss ? 'rgba(255,70,85,.2)'  : 'var(--surface-2)',
         border:     isWin  ? '1.5px solid #4CAF50' : isLoss ? '1.5px solid #FF4655' : '1.5px solid var(--text-6)',
-        color:      isWin  ? '#4CAF50'             : isLoss ? '#FF4655'             : 'var(--text-4)',
+        color:      isWin  ? metinTonu('#4ade80')          : isLoss ? metinTonu('#fb7185')          : 'var(--text-4)',
       }}>
         {isWin ? 'G' : isLoss ? 'M' : '—'}
       </div>
@@ -353,7 +353,7 @@ function MatchRow({ match, teamId, isMobile = false }) {
 
       {/* Game */}
       {!isMobile && (
-        <div style={{ fontSize: 10, color: 'var(--text-5)', whiteSpace: 'nowrap', textAlign: 'right' }}>
+        <div style={{ fontSize: yazi(10), color: 'var(--text-5)', whiteSpace: 'nowrap', textAlign: 'right' }}>
           {match.game?.name === 'Counter-Strike 2' ? 'CS2'
             : match.game?.name === 'League of Legends' ? 'LoL'
             : match.game?.name?.toLowerCase?.().includes('valorant') ? 'VAL'
@@ -363,7 +363,7 @@ function MatchRow({ match, teamId, isMobile = false }) {
 
       {/* Date */}
       {!isMobile && (
-        <div style={{ fontSize: 10, color: 'var(--text-6)', whiteSpace: 'nowrap', textAlign: 'right' }}>
+        <div style={{ fontSize: yazi(10), color: 'var(--text-5)', whiteSpace: 'nowrap', textAlign: 'right' }}>
           {new Date(match.scheduled_at).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' })}
         </div>
       )}
@@ -401,12 +401,12 @@ function ScoutPanel({ analytics, individual }) {
         }}>
           <div
             title="Kazanma oranı (%50), maç sayısı (%30, 100 maçta tavan) ve 3. oyun kazanma oranından (%20) hesaplanır"
-            style={{ fontSize: 11, color: 'var(--text-5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}
+            style={{ fontSize: yazi(11), color: 'var(--text-5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}
           >
             Takım puanı
           </div>
           <div style={{
-            fontSize: 38, fontWeight: 900, color: impactColor,
+            fontSize: 38, fontWeight: 900, color: metinTonu(impactColor),
             lineHeight: 1, fontVariantNumeric: 'tabular-nums',
           }}>
             {Math.round(impactScore)}
@@ -422,16 +422,16 @@ function ScoutPanel({ analytics, individual }) {
 
         {/* W/L record */}
         <div style={{ flex: '1 1 130px', background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--surface-2)', padding: '14px 16px' }}>
-          <div style={{ fontSize: 11, color: 'var(--text-5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10 }}>Galibiyet-Mağlubiyet</div>
+          <div style={{ fontSize: yazi(11), color: 'var(--text-5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10 }}>Galibiyet-Mağlubiyet</div>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 22, fontWeight: 900, color: '#4CAF50' }}>{wonMatches}</div>
-              <div style={{ fontSize: 10, color: 'var(--text-5)' }}>G</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--yesil-fg)' }}>{wonMatches}</div>
+              <div style={{ fontSize: yazi(10), color: 'var(--text-5)' }}>G</div>
             </div>
-            <div style={{ fontSize: 20, color: 'var(--line)', alignSelf: 'center' }}>/</div>
+            <div style={{ fontSize: 20, color: 'var(--text-5)', alignSelf: 'center' }}>/</div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 22, fontWeight: 900, color: '#FF4655' }}>{lostMatches}</div>
-              <div style={{ fontSize: 10, color: 'var(--text-5)' }}>M</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--canli-fg)' }}>{lostMatches}</div>
+              <div style={{ fontSize: yazi(10), color: 'var(--text-5)' }}>M</div>
             </div>
           </div>
           <ProgressBar
@@ -444,7 +444,7 @@ function ScoutPanel({ analytics, individual }) {
 
       {individual && (
         <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--surface-2)', padding: '14px 16px', marginBottom: 10 }}>
-          <div style={{ fontSize: 11, color: 'var(--text-5)', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ fontSize: yazi(11), color: 'var(--text-5)', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Target size={13} /> Bireysel performans
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(100px,1fr))', gap: 10, marginBottom: 12 }}>
@@ -462,10 +462,10 @@ function ScoutPanel({ analytics, individual }) {
 
       {/* Map win rates */}
       <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--surface-2)', padding: '14px 16px', marginBottom: 10 }}>
-        <div style={{ fontSize: 11, color: 'var(--text-5)', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ fontSize: yazi(11), color: 'var(--text-5)', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
           <MapIcon size={13} /> Serideki oyun sırasına göre kazanma
         </div>
-        <div style={{ fontSize: 11, color: 'var(--text-5)', margin: '-6px 0 12px', lineHeight: 1.5 }}>
+        <div style={{ fontSize: yazi(11), color: 'var(--text-5)', margin: '-6px 0 12px', lineHeight: 1.5 }}>
           Takım serilerin 1., 2. ve 3. oyununu ne sıklıkla kazanmış.
         </div>
         {[1, 2, 3].map(pos => {
@@ -491,14 +491,14 @@ function ScoutPanel({ analytics, individual }) {
         <div style={{ display: 'flex', gap: 10 }}>
           {avgWinLen && (
             <div style={{ flex: 1, background: 'var(--surface)', borderRadius: 10, border: '1px solid rgba(76,175,80,.2)', padding: '10px 14px', textAlign: 'center' }}>
-              <div style={{ fontSize: 10, color: 'var(--text-5)', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Clock size={11} /> Kazanılan oyun ort. süresi</div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: '#4CAF50' }}>{fmtDuration(Math.round(avgWinLen))}</div>
+              <div style={{ fontSize: yazi(10), color: 'var(--text-5)', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Clock size={11} /> Kazanılan oyun ort. süresi</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--yesil-fg)' }}>{fmtDuration(Math.round(avgWinLen))}</div>
             </div>
           )}
           {avgLossLen && (
             <div style={{ flex: 1, background: 'var(--surface)', borderRadius: 10, border: '1px solid rgba(255,70,85,.2)', padding: '10px 14px', textAlign: 'center' }}>
-              <div style={{ fontSize: 10, color: 'var(--text-5)', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Clock size={11} /> Kaybedilen oyun ort. süresi</div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: '#FF4655' }}>{fmtDuration(Math.round(avgLossLen))}</div>
+              <div style={{ fontSize: yazi(10), color: 'var(--text-5)', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Clock size={11} /> Kaybedilen oyun ort. süresi</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--canli-fg)' }}>{fmtDuration(Math.round(avgLossLen))}</div>
             </div>
           )}
         </div>
@@ -513,7 +513,7 @@ function SectionTitle({ Icon, label }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
       {Icon && <Icon size={15} color="var(--text-3)" />}
-      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-4)', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
+      <span style={{ fontSize: yazi(11), fontWeight: 700, color: 'var(--text-4)', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
         {label}
       </span>
       <div style={{ flex: 1, height: 1, background: 'var(--surface-2)' }} />
@@ -686,17 +686,17 @@ function CareerTimeline({ entries }) {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>{item.team}</div>
-                <div style={{ fontSize: 10, color: '#ffb7c0', letterSpacing: '.3px' }}>{dateLabel}</div>
+                <div style={{ fontSize: yazi(10), color: metinTonu('#ffb7c0'), letterSpacing: '.3px' }}>{dateLabel}</div>
               </div>
 
               {item.role && (
-                <div style={{ marginTop: 3, fontSize: 11, color: '#df9ea7' }}>
+                <div style={{ marginTop: 3, fontSize: yazi(11), color: metinTonu('#df9ea7') }}>
                   Rol: {item.role}
                 </div>
               )}
 
               {item.note && (
-                <div style={{ marginTop: 4, fontSize: 11, color: 'var(--text-2)' }}>
+                <div style={{ marginTop: 4, fontSize: yazi(11), color: 'var(--text-2)' }}>
                   {item.note}
                 </div>
               )}
@@ -846,8 +846,8 @@ function PlayerSignatureElements({ items = [] }) {
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
               <div style={{ marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 9, color: item.type === 'Weapon' ? '#ffd089' : '#9fe7ff', border: `1px solid ${item.type === 'Weapon' ? 'rgba(255,184,0,.35)' : 'rgba(90,200,255,.35)'}`, borderRadius: 999, padding: '1px 6px', background: item.type === 'Weapon' ? 'rgba(255,184,0,.12)' : 'rgba(90,200,255,.12)' }}>{item.type}</span>
-                {(item.count || 0) > 0 && <span style={{ fontSize: 10, color: 'var(--text-2)' }}>x{Math.round(item.count)}</span>}
+                <span style={{ fontSize: yazi(9), color: item.type === 'Weapon' ? metinTonu('#ffd089') : metinTonu('#9fe7ff'), border: `1px solid ${item.type === 'Weapon' ? 'rgba(255,184,0,.35)' : 'rgba(90,200,255,.35)'}`, borderRadius: 999, padding: '1px 6px', background: item.type === 'Weapon' ? 'rgba(255,184,0,.12)' : 'rgba(90,200,255,.12)' }}>{item.type}</span>
+                {(item.count || 0) > 0 && <span style={{ fontSize: yazi(10), color: 'var(--text-2)' }}>x{Math.round(item.count)}</span>}
               </div>
             </div>
           </div>
@@ -1001,7 +1001,7 @@ export default function PlayerPage() {
   )
 
   if (error || !player) return (
-    <div style={{ textAlign: 'center', padding: 80, color: '#FF4655' }}>
+    <div style={{ textAlign: 'center', padding: 80, color: 'var(--canli-fg)' }}>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={86} dim /></div>
       <div style={{ fontSize: 16, marginBottom: 20 }}>{error ?? 'Oyuncu bulunamadı'}</div>
       <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', background: FEXT.accentGrad, border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
@@ -1084,7 +1084,7 @@ export default function PlayerPage() {
             style={{
               background: followed ? 'rgba(255,215,0,.15)' : 'rgba(255,255,255,.06)',
               border: followed ? '1px solid rgba(255,215,0,.5)' : '1px solid var(--line)',
-              borderRadius: 8, color: followed ? '#FFD700' : 'var(--text-4)',
+              borderRadius: 8, color: followed ? 'var(--altin-fg)' : 'var(--text-4)',
               padding: '6px 14px', fontSize: 13, cursor: 'pointer', transition: 'all .15s', fontWeight: followed ? 700 : 400,
               display: 'inline-flex', alignItems: 'center', gap: 6,
             }}
@@ -1154,24 +1154,24 @@ export default function PlayerPage() {
                 <InitialsImage src={team.logo_url} name={team.name} width={28} height={28} borderRadius={6} />
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{team.name}</div>
-                  {team.location && <div style={{ fontSize: 10, color: 'var(--text-4)', display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={10} /> {team.location}</div>}
+                  {team.location && <div style={{ fontSize: yazi(10), color: 'var(--text-4)', display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={10} /> {team.location}</div>}
                 </div>
-                <span style={{ fontSize: 11, color: 'var(--text-5)', marginLeft: 'auto' }}>→</span>
+                <span style={{ fontSize: yazi(11), color: 'var(--text-5)', marginLeft: 'auto' }}>→</span>
               </KartLink>
             ) : (
-              <div style={{ fontSize: 12, color: 'var(--text-6)', fontStyle: 'italic' }}>Takım bilgisi yok (Free Agent?)</div>
+              <div style={{ fontSize: 12, color: 'var(--text-5)', fontStyle: 'italic' }}>Takım bilgisi yok (Free Agent?)</div>
             )}
 
             {formerTeams.length > 0 && (
               <div style={{ marginTop: 8, padding: '5px 10px', borderRadius: 8, background: 'rgba(255,184,0,.06)', border: '1px solid rgba(255,184,0,.18)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <TriangleAlert size={12} color="#FFB800" />
-                <span style={{ fontSize: 10, color: 'var(--text-3)' }}>Transfer geçmişi mevcut — kadro verisi eski olabilir</span>
+                <span style={{ fontSize: yazi(10), color: 'var(--text-3)' }}>Transfer geçmişi mevcut — kadro verisi eski olabilir</span>
               </div>
             )}
 
             {socials.length > 0 && (
               <div style={{ marginTop: 12 }}>
-                <div style={{ fontSize: 10, color: 'var(--text-4)', marginBottom: 6, letterSpacing: '.8px', textTransform: 'uppercase' }}>
+                <div style={{ fontSize: yazi(10), color: 'var(--text-4)', marginBottom: 6, letterSpacing: '.8px', textTransform: 'uppercase' }}>
                   Sosyal Medya
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -1210,7 +1210,7 @@ export default function PlayerPage() {
             {formerTeams.length > 0 && (
               <div style={{ marginTop: 10, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {formerTeams.map((teamName, idx) => (
-                  <span key={`${teamName}_${idx}`} style={{ fontSize: 10, color: '#f0c2c8', border: '1px solid rgba(200,16,46,.3)', borderRadius: 8, padding: '3px 7px', background: 'rgba(200,16,46,.08)' }}>
+                  <span key={`${teamName}_${idx}`} style={{ fontSize: yazi(10), color: metinTonu('#f0c2c8'), border: '1px solid rgba(200,16,46,.3)', borderRadius: 8, padding: '3px 7px', background: 'rgba(200,16,46,.08)' }}>
                     {teamName}
                   </span>
                 ))}
@@ -1306,7 +1306,7 @@ export default function PlayerPage() {
 
         {/* Hiç veri yoksa */}
         {!analytics && matches.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-6)' }}>
+          <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-5)' }}>
             <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><Inbox size={38} color="var(--text-6)" /></div>
             <div style={{ fontSize: 14 }}>Bu oyuncu için henüz istatistik verisi yok</div>
             <div style={{ fontSize: 12, marginTop: 6, color: 'var(--text-5)' }}>

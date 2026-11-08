@@ -1,0 +1,25 @@
+-- pg_net yanıt tablosunun bakımı (7 Kasım 2026)
+--
+-- net._http_response'a pg_net'in arka plan işçisi yazar ve pg_net.ttl'den
+-- (6 saat) eski yanıtları yine o siler. İşçi tablo istatistiği bildirmiyor:
+-- pg_stat_all_tables'ta tablo hiç ölü satır göstermiyor (n_tup_ins ~0), bu
+-- yüzden autovacuum bu tabloya hiç uğramıyor. Silinen yanıtların yeri geri
+-- kazanılmıyor, tablo (çoğu TOAST) her gün büyüyordu: 7 Kasım'da canlı veri
+-- ~2 MB iken tablo veritabanının yarısından fazlasını tutuyordu.
+--
+-- Sahip supabase_admin, ama PG17'de postgres rolünün bu tabloda MAINTAIN
+-- yetkisi var: VACUUM ve VACUUM FULL çalışır.
+--
+-- Tek seferlik (elle, şişmiş tabloyu küçültmek için; satır silmez, tabloyu
+-- kısa süre kilitler):
+--     VACUUM FULL net._http_response;
+--
+-- Kalıcı: saatlik düz VACUUM; boşalan yer yeniden kullanılır, tablo ~6 saatlik
+-- yanıt boyunda kalır. Saat başında koşan işlerle çakışmasın diye :13'te.
+-- Aynı adla yeniden çalıştırmak işi günceller.
+-- Kontrol: select pg_size_pretty(pg_total_relation_size('net._http_response'));
+--          select status, start_time from cron.job_run_details d
+--          join cron.job j using (jobid) where j.jobname = 'pg-net-vakum'
+--          order by start_time desc limit 5;
+
+SELECT cron.schedule('pg-net-vakum', '13 * * * *', 'VACUUM net._http_response');

@@ -16,6 +16,13 @@ const SURUM = (PLATFORM === 'web' ? '' : `${PLATFORM}-`) + (import.meta.env.VITE
 // Bizim kodumuzla ilgisi olmayan, düzeltilemeyen gürültü.
 const GURULTU_RE = /ResizeObserver loop|^Script error\.?$|Non-Error promise rejection captured/i
 const EKLENTI_RE = /(chrome|moz|safari-web|ms-browser)-extension:/i
+// Tarayıcı botlarının (GoogleOther, Googlebot WRS, başsız tarayıcılar) hataları: kendi
+// sınırlarıyla lazy parçayı çekemeyip "Failed to fetch dynamically imported module"
+// yazıyorlar (7 Kas: render hatalarının çoğu GoogleOther). Parça canlıda sağlam;
+// kullanıcı sorunu değil, sağlık raporunu kirletiyor.
+// "bot/" ve "bot;" kalıbı: Googlebot/2.1, bingbot/2.0, YandexBot/3.0; çıplak "bot" değil (CUBOT telefonları).
+const BOT_UA_RE = /bot[/;)]|crawler|spider|googleother|google-inspectiontool|headlesschrome|lighthouse/i
+const BOT_MU = typeof navigator !== 'undefined' && BOT_UA_RE.test(navigator.userAgent || '')
 
 const gonderilen = new Set()
 let sayac = null
@@ -47,7 +54,7 @@ const YEREL_ONIZLEME = typeof window !== 'undefined' && window.location.protocol
   && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)
 
 export function hataBildir(tur, mesaj, yigin) {
-  if (!import.meta.env.PROD || YEREL_ONIZLEME) return
+  if (!import.meta.env.PROD || YEREL_ONIZLEME || BOT_MU) return
   const metin = String(mesaj || '').trim()
   if (!metin || GURULTU_RE.test(metin)) return
   if (EKLENTI_RE.test(metin) || EKLENTI_RE.test(yigin || '')) return

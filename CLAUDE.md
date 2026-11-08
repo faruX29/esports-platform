@@ -64,6 +64,7 @@ python kadro.py --takim <id> [--gun 30]                   # Türk takımı kadro
 
 ## Altyapı gerçekleri
 - **Canlı skor** Postgres'te koşar: pg_cron `canli-senkron` dakikada bir (`backend/sql/canli_senkron.sql`). Sorun olursa: `cron.job_run_details`.
+- **pg_net yanıt tablosu** (`net._http_response`) autovacuum'suz: pg_net işçisi istatistik bildirmiyor, tablo şişip DB'yi 500 MB'a dayıyordu; pg_cron `pg-net-vakum` saatlik `VACUUM` (`pg_net_bakim.sql`), şişerse `VACUUM FULL` (postgres'te MAINTAIN var).
 - **Canlı skor istemciye** Realtime Broadcast ile gider: `matches` tetikleyicisi durum/skor/kazanan/saat değişince ifade başına tek mesajı herkese açık `maclar` konusuna atar (`backend/sql/canli_yayin.sql`). İstemcide tek ortak kanal: `subscribeToMatchesUpdates` (`supabaseClient.js`); olay `{eventType, new, old}`, yeniden bağlanınca `RESYNC`. Son mesajlar: `realtime.messages where topic='maclar'`.
 - **Ana sayfa verisi** tek RPC'den: `get_home_feed()` (`backend/sql/ana_sayfa_akisi.sql`, `utils/anaSayfaAkisi.js`); RPC yoksa eski sorgulara düşer. Periyodik yenileme `hooks/useYenileme.js` ile (gizli sekmede durur).
 - **GitHub Actions kısa cron'ları eliyor:** `*/5` fiilen saatlerce gecikir. Sık iş için pg_cron kullan.

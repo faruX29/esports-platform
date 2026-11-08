@@ -44,6 +44,7 @@ TAHMINSIZ_MAC = 5               # 48 saat içindeki tahminsiz maç
 HABER_SAAT = 48                 # en uzun olağan boşluk ~47 saat
 ISTEMCI_HATA_24S = 25           # CSP hariç
 DB_BOYUT_MB = 425               # ücretsiz plan sınırı 500 MB
+PG_NET_MB = 50                  # net._http_response; olağanı ~2-5 MB (pg-net-vakum saatlik, 7 Kasım)
 YEDEK_GUN = 8                   # haftalık yedek
 ANONIM_YENI_24S = 500           # 24 saatte açılan anonim oturum (Faz 6, ölçüm yok; bot şüphesi)
 BILDIRIM_BASARISIZ_24S = 10     # 3 denemede gidemeyen bildirim
@@ -278,6 +279,32 @@ def veritabani(rapor, db):
     rapor.bilgi(f'veritabanı boyutu: {mb} MB (ücretsiz plan sınırı 500 MB)')
     if mb > DB_BOYUT_MB:
         rapor.sorun(f'veritabanı {mb} MB; 500 MB sınırına yaklaşıyor (salt okuma moduna düşebilir)')
+    # pg_net işçisi istatistik bildirmediği için autovacuum bu tabloya uğramaz;
+    # şişerse pg-net-vakum işi durmuştur (backend/sql/pg_net_bakim.sql).
+    cur.execute("select pg_total_relation_size('net._http_response') / 1048576")
+    net_mb = int(cur.fetchone()[0])
+    cur.execute("""
+        select j.active, count(d.*) filter (where d.status = 'failed'),
+               max(d.end_time) filter (where d.status = 'succeeded')
+        from cron.job j
+        left join cron.job_run_details d on d.jobid = j.jobid and d.start_time > now() - interval '25 hours'
+        where j.jobname = 'pg-net-vakum'
+        group by j.active
+    """)
+    vakum = cur.fetchone()
+    if vakum is None:
+        rapor.sorun('pg_cron işi pg-net-vakum yok')
+        rapor.bilgi(f'pg_net yanıt tablosu: {net_mb} MB')
+    else:
+        aktif, hatali, son = vakum
+        rapor.bilgi(f'pg_net yanıt tablosu: {net_mb} MB; pg-net-vakum {"açık" if aktif else "KAPALI"}, '
+                    f'24 saatte {hatali} hata, son başarı {son or "yok"}')
+        if not aktif:
+            rapor.sorun('pg_cron işi pg-net-vakum kapalı')
+        if hatali:
+            rapor.sorun(f'pg_cron işi pg-net-vakum 24 saatte {hatali} kez hata verdi')
+    if net_mb > PG_NET_MB:
+        rapor.sorun(f'pg_net yanıt tablosu {net_mb} MB; pg-net-vakum işi çalışıyor mu? (pg_net_bakim.sql)')
 
 
 # ── GitHub Actions kontrolleri ───────────────────────────────────────────────

@@ -1,5 +1,6 @@
 ﻿psycopg[binary]==3.3.2
 requests==2.32.3
 python-dotenv==1.0.1
-google-genai>=1.0.0
+# Sabit: 3.0.0 varsayilan API'yi v1 yapti, gemini-2.5-flash orada sistem istemi ve JSON modunu reddediyor (400)
+google-genai==2.34.0
 pydantic>=2.0.0

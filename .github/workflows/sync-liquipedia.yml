@@ -59,7 +59,6 @@ jobs:
         # iş yine kırmızı biter ve alarm gider.
         if: ${{ !cancelled() }}
         timeout-minutes: 25
-        continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
@@ -121,7 +120,6 @@ jobs:
 
       - name: Generate match previews (yaklaşan S/A + B-tier büyük turnuva, 72s)
         timeout-minutes: 15
-        continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
@@ -129,8 +127,9 @@ jobs:
         run: python run.py --generate-previews --preview-hours 72
 
       - name: Generate tournament recaps (biten tier S/A turnuva sonuç özetleri)
+        # Önizleme adımı kırmızı bitse de özetler denensin; iş yine kırmızı biter, alarm gider.
+        if: ${{ !cancelled() }}
         timeout-minutes: 15
-        continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}

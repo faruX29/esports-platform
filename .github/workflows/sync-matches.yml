@@ -161,7 +161,6 @@ jobs:
       - name: Turk transfer haberi (LLM, bekleyen roster_changes)
         if: ${{ !cancelled() }}
         timeout-minutes: 10
-        continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}

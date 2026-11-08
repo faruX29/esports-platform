@@ -484,6 +484,15 @@ def main():
             f"doğru → %{result['accuracy_pct']}"
         )
 
+    # Üretim hatası tek tek yutuluyor; hiçbiri yazılamadıysa iş kırmızı bitsin ki alarm gitsin
+    # (8 Kas: SDK 3.0.0 her çağrıyı reddetti, 10 koşu yeşil bitti, 48 saat sonra fark edildi).
+    # Hiç deneme yoksa ya da en az biri yazıldıysa hata sayılmaz.
+    basarisiz_uretim = []
+
+    def _uretim_sonucu(ad, sonuc):
+        if sonuc["failed"] and not sonuc["generated"]:
+            basarisiz_uretim.append(ad)
+
     if args.generate_news:
         logger.info("\n" + "=" * 60)
         logger.info("📰 LLM NEWS GENERATION (Gemini)")
@@ -492,6 +501,7 @@ def main():
             llm = GeminiAdapter()
             generator = NewsGenerator(llm)
             result = generator.generate_pending(hours_back=args.news_hours)
+            _uretim_sonucu("maç haberi", result)
             logger.info(
                 f"✅ Haber üretimi tamamlandı — "
                 f"deneme: {result['attempted']} | "
@@ -500,6 +510,7 @@ def main():
             )
         except Exception as news_err:
             logger.error(f"❌ Haber üretimi başlatılamadı: {news_err}")
+            basarisiz_uretim.append("maç haberi")
         logger.info("=" * 60)
 
     if args.generate_transfers:
@@ -510,12 +521,14 @@ def main():
             llm = GeminiAdapter()
             generator = NewsGenerator(llm)
             result = generator.generate_transfers(limit=15)
+            _uretim_sonucu("transfer haberi", result)
             logger.info(
                 f"✅ Transfer haberi üretimi tamamlandı — "
                 f"deneme: {result['attempted']} | yazıldı: {result['generated']} | hata: {result['failed']}"
             )
         except Exception as tr_err:
             logger.error(f"❌ Transfer haberi üretimi başlatılamadı: {tr_err}")
+            basarisiz_uretim.append("transfer haberi")
         logger.info("=" * 60)
 
     if args.generate_tournament_recaps:
@@ -526,12 +539,14 @@ def main():
             llm = GeminiAdapter()
             generator = NewsGenerator(llm)
             result = generator.generate_tournament_recaps(days_back=21, limit=8)
+            _uretim_sonucu("turnuva özeti", result)
             logger.info(
                 f"✅ Turnuva recap üretimi tamamlandı — "
                 f"deneme: {result['attempted']} | yazıldı: {result['generated']} | hata: {result['failed']}"
             )
         except Exception as tr_err:
             logger.error(f"❌ Turnuva recap üretimi başlatılamadı: {tr_err}")
+            basarisiz_uretim.append("turnuva özeti")
         logger.info("=" * 60)
 
     if args.generate_weekly:
@@ -560,6 +575,7 @@ def main():
             llm = GeminiAdapter()
             generator = NewsGenerator(llm)
             result = generator.generate_previews(hours_ahead=args.preview_hours)
+            _uretim_sonucu("önizleme", result)
             logger.info(
                 f"✅ Önizleme üretimi tamamlandı — "
                 f"deneme: {result['attempted']} | "
@@ -568,7 +584,12 @@ def main():
             )
         except Exception as prev_err:
             logger.error(f"❌ Önizleme üretimi başlatılamadı: {prev_err}")
+            basarisiz_uretim.append("önizleme")
         logger.info("=" * 60)
+
+    if basarisiz_uretim:
+        logger.error(f"❌ Hiçbiri yazılamadı: {', '.join(basarisiz_uretim)}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

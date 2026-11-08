@@ -117,6 +117,7 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - Maç güncellemesinde skoru takımlarsız yazma → takım ve skor birlikte güncellenir, yoksa satırlar kayar.
 - Takımları satırdakiyle eşleşmeyen API yanıtıyla maçı güncelleme → yanlış maça skor yazılır.
 - ETL/iş akışı adımını `timeout-minutes` olmadan ekleme → sınırsız adım tüm işi rehin alır.
+- Harici SDK'yı `requirements.txt`'te `>=` ile bırakma ya da LLM üretim adımına `continue-on-error` koyma → `google-genai` 3.0.0 varsayılan API'yi `v1` yaptı, her Gemini çağrısı 400 aldı, koşular yeşil bitti; hiçbiri yazılamazsa `run.py` 1 ile çıkar, ETL alarmı gider.
 - Liquipedia `api.php` kullanma → kullanım şartlarına aykırı.
 - VLR.gg veya başka siteyi kazıma → izinsiz veri.
 - Türkçe karakterli `replace`'ten sonra `assert` atlama → eşleşmezse sessizce hiçbir şey yapmaz.

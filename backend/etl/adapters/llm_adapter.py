@@ -82,7 +82,7 @@ class GeminiAdapter(BaseLLMAdapter):
         except ImportError as exc:
             raise LLMAdapterError(
                 "google-genai package is not installed. "
-                "Run: pip install google-genai>=1.0.0"
+                "Run: pip install -r requirements.txt"
             ) from exc
         return genai.Client(api_key=self._api_key)
 

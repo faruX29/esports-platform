@@ -457,7 +457,7 @@ async function turkHaberiMi(ref, row) {
 }
 
 async function buildForNews(ref, origin, url) {
-  const sel = 'title,summary,hero_score,game_slug,tier,tournament_name,team_a_name,team_b_name,team_a_logo,team_b_logo,created_at,ekler,variant'
+  const sel = `${NEWS_LINK_SEL},summary,hero_score,game_slug,tier,tournament_name,team_a_name,team_b_name,team_a_logo,team_b_logo,created_at,ekler,variant`
   let query
   if (ref.type === 'transfer' || ref.type === 'haftalik') {
     query = `news_articles?id=eq.${encodeURIComponent(ref.id)}&select=${encodeURIComponent(sel)}&limit=1`
@@ -490,6 +490,10 @@ async function buildForNews(ref, origin, url) {
     const mac = await sbBul(`matches?id=eq.${ENC(ref.id)}&select=id&limit=1`)
     return mac ? { yonlendir: `/match/${mac.id}` } : YOK
   }
+  // Haber id'den bulunur, slug'ın geri kalanı önemsiz: başlık değişince (önizleme → sonuç)
+  // eski adres de 200 + kendine canonical dönüyordu, GSC'de "Google farklı standart seçti".
+  const guncelYol = newsPath(row)
+  if (guncelYol && SITE_ORIGIN + guncelYol !== url) return { kaliciYonlendir: guncelYol }
   const gm = gameMeta(row.game_slug)
   // Maçlardaki OG_FRESH_DAYS kuralı haberlere de (22 Eyl). Haberde tarih sınırı
   // YOKTU: 1.300+ haberin her biri bot geldiğinde ~1,7 sn CPU'luk kart üretiyordu
@@ -1233,6 +1237,12 @@ export default async function middleware(req) {
       if (seg) html = LIG_SLUG_RE.test(seg) ? await buildForLig(seg, SITE_ORIGIN, canon) : YOK
     }
 
+    if (html?.kaliciYonlendir) {
+      return new Response(null, {
+        status: 301,
+        headers: { location: SITE_ORIGIN + html.kaliciYonlendir, 'cache-control': 'public, max-age=86400' },
+      })
+    }
     if (html?.yonlendir) {
       return new Response(null, {
         status: 302,

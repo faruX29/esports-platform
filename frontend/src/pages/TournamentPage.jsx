@@ -33,6 +33,7 @@ import {
 } from 'lucide-react'
 import { FEXT, yazi, oyunMetni, metinTonu } from '../theme'
 import Mascot from '../components/Mascot'
+import YukleniyorFextopus from '../components/YukleniyorFextopus'
 import SeoHead from '../components/SeoHead'
 import { tournamentDisplayName, isGenericStageName, displayRegion } from '../utils/tournamentDisplay'
 import DragScroll from '../components/DragScroll'
@@ -1357,7 +1358,7 @@ export default function TournamentPage() {
   // ── Loading ───────────────────────────────────────────────────
   if (loading) return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '28px 20px' }}>
-      <Sk h="220px" r="20px" />
+      <div style={{ position: 'relative' }}><Sk h="220px" r="20px" /><YukleniyorFextopus /></div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginTop: 20 }}>
         {[1, 2, 3].map(i => <Sk key={i} h="120px" r="14px" />)}
       </div>
@@ -1367,7 +1368,7 @@ export default function TournamentPage() {
   // ── Error ─────────────────────────────────────────────────────
   if (error || !tournament) return (
     <div style={{ maxWidth: 600, margin: '60px auto', textAlign: 'center', color: 'var(--text-1)' }}>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={86} dim /></div>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={86} dim ifade="saskin" /></div>
       <div style={{ fontSize: 18, color: 'var(--canli-fg)', marginBottom: 8 }}>
         {error ?? 'Turnuva bulunamadı'}
       </div>

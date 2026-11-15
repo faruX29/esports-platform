@@ -190,7 +190,7 @@ export default function LigPage() {
 
   if (durum === 'hata') return (
     <div style={{ maxWidth: 600, margin: '60px auto', textAlign: 'center', color: 'var(--text-1)', padding: '0 16px' }}>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={86} dim /></div>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={86} dim ifade="mahcup" /></div>
       <div style={{ fontSize: 18, color: 'var(--canli-fg)', marginBottom: 8 }}>Lig yüklenemedi.</div>
       <button
         onClick={() => window.location.reload()}

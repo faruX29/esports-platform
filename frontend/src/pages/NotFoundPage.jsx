@@ -29,7 +29,7 @@ export default function NotFoundPage() {
     <div style={{ textAlign: 'center', padding: '80px 16px', minHeight: 'calc(100vh - 58px)' }}>
       <title>Sayfa bulunamadı | feXt</title>
       <meta name="robots" content="noindex, follow" />
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={86} dim /></div>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={86} dim ifade="saskin" /></div>
       <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-1)', marginBottom: 8 }}>Sayfa bulunamadı</h1>
       <p style={{ fontSize: 14, color: 'var(--text-4)', marginBottom: 22 }}>Aradığın sayfa yok ya da taşınmış olabilir. Takım, oyuncu ya da turnuva ara:</p>
 

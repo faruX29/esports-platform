@@ -44,7 +44,7 @@ export default class ErrorBoundary extends Component {
 
     return (
       <div style={{ maxWidth: 560, margin: '80px auto', padding: '0 20px', textAlign: 'center', color: 'var(--text-1)' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}><Mascot size={80} dim /></div>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}><Mascot size={80} dim ifade="mahcup" /></div>
         <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 10px' }}>Bir şeyler ters gitti</h1>
         <p style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.6, marginBottom: 22 }}>
           Bu sayfa yüklenirken beklenmedik bir hata oluştu. Sayfayı yenilemeyi ya da

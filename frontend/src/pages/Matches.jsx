@@ -1271,7 +1271,7 @@ function Matches() {
         <KartIskeleti adet={6} />
       ) : matches.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '50px 16px', color: 'var(--text-4)' }}>
-          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={88} dim /></div>
+          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={88} dim ifade={!filtreVar && activeTab === 'live' ? 'uykulu' : 'normal'} /></div>
           <h2 style={{ margin: 0, fontSize: 18, color: 'var(--text-3)' }}>
             {filtreVar ? 'Bu filtrelerle maç yok' : activeTab === 'live' ? 'Şu an canlı maç yok' : 'Maç bulunamadı'}
           </h2>

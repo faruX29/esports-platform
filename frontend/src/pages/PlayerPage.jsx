@@ -24,6 +24,7 @@ import { KartLink } from '../components/KartLink'
 import TurkishBadge from '../components/TurkishBadge'
 import { FEXT, yazi, metinTonu } from '../theme'
 import Mascot from '../components/Mascot'
+import YukleniyorFextopus from '../components/YukleniyorFextopus'
 import TrBadge from '../components/TrBadge'
 import SeoHead from '../components/SeoHead'
 import TakipYildizi from '../components/TakipYildizi'
@@ -989,7 +990,7 @@ export default function PlayerPage() {
   // ── Loading ────────────────────────────────────────────────────
   if (loading) return (
     <div style={{ maxWidth: 820, margin: '0 auto', padding: '28px 20px' }}>
-      <Sk h="220px" r="20px" />
+      <div style={{ position: 'relative' }}><Sk h="220px" r="20px" /><YukleniyorFextopus /></div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginTop: 20 }}>
         {[1,2,3,4].map(i => <Sk key={i} h="90px" r="14px" />)}
       </div>
@@ -1002,7 +1003,7 @@ export default function PlayerPage() {
 
   if (error || !player) return (
     <div style={{ textAlign: 'center', padding: 80, color: 'var(--canli-fg)' }}>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={86} dim /></div>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={86} dim ifade="saskin" /></div>
       <div style={{ fontSize: 16, marginBottom: 20 }}>{error ?? 'Oyuncu bulunamadı'}</div>
       <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', background: FEXT.accentGrad, border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
         ← Geri

@@ -107,6 +107,7 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - **SEO/bot HTML:** Googlebot UA ile iste, `?__og=1&cb=<rastgele>` ekleyip önbelleği atla. `<title>` middleware'deki varsayılan kabuk başlığıysa sayfa bozuktur. `__og=1` değersiz bot kontrolünü de atlar: GPTBot gibi `DEGERSIZ_BOT_RE` botunu yalnız `?cb=` ile dene (kabuk dönmeli).
 - **Frontend:** `npm run build` + `npm run lint`, sonra canlıda ekran görüntüsü.
 - **Animasyon:** gizli tarayıcı panelinde IntersectionObserver tetiklenmez; ekrana girince başlayanı konsolda `window.IntersectionObserver = undefined` + SPA içi gezinmeyle (`pushState` + `popstate`) zorla.
+- **Ölçüm/zamanlama:** panel gizliyken rAF, ResizeObserver ve CSS geçişleri de durur; konum/animasyon testini görünmez Chrome'da yap (`chrome --headless=new --remote-debugging-port=…` + Python `websockets` ile CDP `Runtime.evaluate`).
 - **Yerel dev:** `index.html` SW'yi dev'de de kaydeder, `/src/` modüllerini önbelleğe alır; "does not provide an export named" görürsen SW'yi kaldır + `caches.delete('fext-static-v1')`.
 - **Video:** ffmpeg ile kare çıkarıp bak.
 - **Uygulama:** USB'li telefona `adb install -r`, ekran `adb exec-out screencap -p`; web görünümüne

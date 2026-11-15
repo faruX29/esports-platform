@@ -32,6 +32,8 @@ import FextopusIcon from './components/FextopusIcon'
 import { tournamentDisplayName } from './utils/tournamentDisplay'
 import { normalizeGameId } from './utils/gameUtils'
 import { takimAra } from './utils/takimAra'
+import YukleniyorFextopus from './components/YukleniyorFextopus'
+import MacBasladiKarti from './components/MacBasladiKarti'
 import { Home, CalendarDays, Trophy, BarChart3, Newspaper, Radar, Flag, Search, X as XIcon, Shield, User, ArrowRight, CornerDownLeft } from 'lucide-react'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -569,6 +571,9 @@ function RealtimeToastBridge() {
   const { followedTeamIds } = useUser()
   const shownRef = useRef(new Map())
   const followedRef = useRef([])
+  const { pathname } = useLocation()
+  const yolRef = useRef(pathname)
+  useEffect(() => { yolRef.current = pathname }, [pathname])
   useEffect(() => { followedRef.current = (followedTeamIds || []).map(Number) }, [followedTeamIds])
   // Kanal yalnız takip edilen takım varken açık: bildirim yalnız onlar için.
   // Takipsiz ziyaretçi ana sayfa dışında hiç websocket açmaz (Realtime bağlantı kotası).
@@ -617,9 +622,11 @@ function RealtimeToastBridge() {
 
       // Realtime payload isim taşımaz → iki takımın adını çek (okunur metin için).
       let teamNames = new Map()
+      let takimlar = new Map()
       try {
         const ids = [aId, bId].filter(Number.isFinite)
-        const { data } = await supabase.from('teams').select('id,name').in('id', ids)
+        const { data } = await supabase.from('teams').select('id,name,acronym,logo_url').in('id', ids)
+        takimlar = new Map((data || []).map(t => [t.id, t]))
         teamNames = new Map((data || []).map(t => [t.id, t.name]))
       } catch { /* isim gelmezse "Takım A/B" fallback */ }
 
@@ -636,6 +643,17 @@ function RealtimeToastBridge() {
         for (const [key, ts] of shownRef.current.entries()) {
           if (ts < expiry) shownRef.current.delete(key)
         }
+      }
+
+      // Maç başladı: logolu kart, köşeden kayar, "İzle" maç sayfasını açar. O maçın sayfasındaysa gösterme.
+      if (notification.title === 'Maç başladı') {
+        if (yolRef.current !== `/match/${row.id}`) {
+          const mac = { id: row.id, team_a: takimlar.get(aId) || { id: aId, name: teamNames.get(aId) }, team_b: takimlar.get(bId) || { id: bId, name: teamNames.get(bId) } }
+          const takipId = followed.includes(aId) ? aId : bId
+          toast.custom(t => <MacBasladiKarti t={t} mac={mac} takipId={takipId} />, { id: `mac-basladi-${row.id}`, duration: 6000 })
+        }
+        triggerBrowserMatchNotification(notification)
+        return
       }
 
       const text = `${notification.title} · ${notification.message}`
@@ -773,7 +791,10 @@ function AppShell() {
       <Suspense fallback={(
         <div style={{ maxWidth: 1440, margin: '0 auto', padding: '18px 16px 26px' }}>
           <div style={{ height: 12, width: 190, borderRadius: 999, background: 'var(--surface-2)', marginBottom: 14 }} />
-          <div style={{ height: 170, borderRadius: 14, background: 'linear-gradient(90deg,var(--surface) 20%,var(--surface-2) 50%,var(--surface) 80%)', backgroundSize: '200% 100%', animation: 'appRouteLoad 1.3s ease-in-out infinite' }} />
+          <div style={{ position: 'relative' }}>
+            <div style={{ height: 170, borderRadius: 14, background: 'linear-gradient(90deg,var(--surface) 20%,var(--surface-2) 50%,var(--surface) 80%)', backgroundSize: '200% 100%', animation: 'appRouteLoad 1.3s ease-in-out infinite' }} />
+            <YukleniyorFextopus />
+          </div>
           <style>{`@keyframes appRouteLoad { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`}</style>
         </div>
       )}>

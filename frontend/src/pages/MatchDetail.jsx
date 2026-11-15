@@ -24,7 +24,7 @@ import { deriveWinnerTeamId, correctedScores }      from '../utils/matchResult'
 import { isUncertainPrediction, fextopusSonucu }    from '../utils/prediction'
 import { FlipNumber }                              from '../components/AnimatedNumber'
 import { Damga, SkorParlamasi }                   from '../components/Animasyon'
-import { useAcilisGecisi, useDegisimSayaci }       from '../hooks/useHareket'
+import { useAcilisGecisi, useDegisimSayaci, useGorununce } from '../hooks/useHareket'
 import { roundLabel }                               from '../utils/roundLabel'
 import { KartLink }                                 from '../components/KartLink'
 import TurkishBadge                                 from '../components/TurkishBadge'
@@ -33,8 +33,11 @@ import { adDili, ondalik }                          from '../utils/dil'
 import { tournamentDisplayName }                    from '../utils/tournamentDisplay'
 import { normalizeGameId }                          from '../utils/gameUtils'
 import Mascot from '../components/Mascot'
+import YukleniyorFextopus from '../components/YukleniyorFextopus'
 import FextopusIcon from '../components/FextopusIcon'
 import SeoHead from '../components/SeoHead'
+import { CanliFavicon, GeriSayim } from '../components/CanliSekme'
+import { useCanliSekmeBasligi } from '../hooks/useCanliSekmeBasligi'
 import TakipYildizi from '../components/TakipYildizi'
 import { takipEdildiBildir } from '../utils/takipBildir'
 import { yayinlariSirala, yayinPlatformu, dilAdi } from '../utils/yayin'
@@ -971,11 +974,14 @@ function HeroOlasilik({ pctA, aName, bName, belirsiz }) {
 /** Bitmiş maçta "Fextopus bildi / yanıldı" damgası (UX P2 A3). Başa baş tahminde yok
  *  (isabet tanımıyla aynı: 50/50 sayılmaz). */
 function FextopusHukmu({ match }) {
+  // Damga yere vururken (gecikme 350 ms + iniş) maskot: bildiyse yakın gözüyle kırpar, yanıldıysa mahcup.
+  const [ref, gorundu] = useGorununce(0.6)
   const sonuc = fextopusSonucu(match)
   if (!sonuc || sonuc.belirsiz) return null
   const renk = sonuc.bildi ? 'var(--success-fg)' : 'var(--danger-fg)'
   return (
-    <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center' }}>
+    <div ref={ref} style={{ marginTop: 12, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10 }}>
+      <Mascot size={40} ifade={sonuc.bildi ? 'normal' : 'mahcup'} kirp={sonuc.bildi && gorundu} kirpGecikme={650} />
       <Damga aci={-4} gecikme={350}>
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 14px', borderRadius: 8,
@@ -1424,6 +1430,9 @@ export default function MatchDetail() {
   /* ── Hook-safe derivations — must stay before any early return ── */
   // Skor değişince (canlı güncelleme, canlıdan bitişe geçiş) hero 1 sn parlar; başka maça geçiş saymaz
   const skorParlama = useDegisimSayaci(match ? `${match.team_a_score}-${match.team_b_score}` : null, match?.id)
+  // Canlıyken sekme başlığı skoru gösterir (A); erken dönüşlerden önce çağrılmalı.
+  const canliSkor = match ? correctedScores(match) : null
+  const canliBaslik = useCanliSekmeBasligi(match, canliSkor?.team_a_score, canliSkor?.team_b_score)
   const aId   = match?.team_a_id || match?.team_a?.id
   const bId   = match?.team_b_id || match?.team_b?.id
   const aName = match?.team_a?.name || '?'
@@ -1470,7 +1479,7 @@ export default function MatchDetail() {
   if (loadingMatch) return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 20px', color: 'var(--text-1)' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <Sk h="200px" r="20px" />
+        <div style={{ position: 'relative' }}><Sk h="200px" r="20px" /><YukleniyorFextopus /></div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}><Sk h="300px" r="18px" /><Sk h="300px" r="18px" /></div>
       </div>
       <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
@@ -1478,7 +1487,7 @@ export default function MatchDetail() {
   )
   if (error || !match) return (
     <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--text-1)' }}>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={86} dim /></div>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={86} dim ifade="saskin" /></div>
       <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-4)', marginBottom: 24 }}>{error || 'Maç bulunamadı.'}</div>
       <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', background: FEXT.accentGrad, border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>← Geri</button>
     </div>
@@ -1533,8 +1542,9 @@ export default function MatchDetail() {
   return (
     // UX P2 A8: iskeletten içeriğe süzülerek geçiş
     <div className="content-in" style={{ color: 'var(--text-1)', minHeight: '100vh', background: 'var(--bg)' }}>
+      <CanliFavicon aktif={isLive} />
       <SeoHead
-        title={sayfaBasligi}
+        title={canliBaslik || sayfaBasligi}
         description={`${aName} vs ${bName}${turnuvaAdi ? ` · ${turnuvaAdi}` : ''} — canlı skor, Fextopus tahmini, kadro ve maç istatistikleri. feXt.`}
         image={aLogo || bLogo || ''}
         type="article"
@@ -1616,7 +1626,9 @@ export default function MatchDetail() {
                   </div>
                 : <div style={{ fontSize: 26, fontWeight: 900, color: FEXT.accentText, letterSpacing: 3 }}>VS</div>
               }
-              <div style={{ fontSize: 12, fontWeight: 700, color: isLive ? 'var(--canli-fg)' : 'var(--yesil-fg)', marginTop: 4 }}>{isLive ? '● Canlı' : fmtTime(match.scheduled_at)}</div>
+              {(isLive || isFin)
+                ? <div style={{ fontSize: 12, fontWeight: 700, color: isLive ? 'var(--canli-fg)' : 'var(--yesil-fg)', marginTop: 4 }}>{isLive ? '● Canlı' : fmtTime(match.scheduled_at)}</div>
+                : <GeriSayim zaman={match.scheduled_at} varsayilan={fmtTime(match.scheduled_at)} style={{ fontSize: 12, fontWeight: 700, color: 'var(--yesil-fg)', marginTop: 4 }} />}
               <div style={{ fontSize: yazi(10), color: 'var(--text-5)', marginTop: 2 }}>{fmtDate(match.scheduled_at)}</div>
             </div>
 

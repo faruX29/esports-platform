@@ -76,11 +76,15 @@ function NavPill({ navLinks, ikonsuz }) {
       setPill({ left: el.offsetLeft, width: el.offsetWidth, ready: true })
     }
     measure()
-    // Yazı tipi geç yüklenirse genişlik kayar → bir frame sonra tekrar ölç.
-    const raf = window.requestAnimationFrame(measure)
+    // Link genişliği pencere değişmeden de değişir: fontlar dinamik import'la geç
+    // iner (önbelleksiz yenilemede — Ctrl+Shift+R — ilk ölçüm yedek fontla yapılıp
+    // kapsül kayık kalıyordu), aktif linkin kalınlığı .18 sn'de geçer. Her linki izle.
+    const row = rowRef.current
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null
+    row?.querySelectorAll('a').forEach(a => ro?.observe(a))
     window.addEventListener('resize', measure)
     return () => {
-      window.cancelAnimationFrame(raf)
+      ro?.disconnect()
       window.removeEventListener('resize', measure)
     }
   }, [location.pathname, navLinks, ikonsuz])

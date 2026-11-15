@@ -23,6 +23,7 @@ import {
 import { FEXT, yazi, metinTonu } from '../theme'
 import { LIQUIPEDIA_SON_TARIH } from '../components/LiquipediaCredit'
 import Mascot from '../components/Mascot'
+import YukleniyorFextopus from '../components/YukleniyorFextopus'
 import TakipYildizi from '../components/TakipYildizi'
 import { takipEdildiBildir } from '../utils/takipBildir'
 import SeoHead from '../components/SeoHead'
@@ -645,7 +646,7 @@ export default function TeamPage() {
   // ── Loading ────────────────────────────────────────────────────
   if (loading) return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '28px 20px' }}>
-      <Sk h="200px" r="20px" />
+      <div style={{ position: 'relative' }}><Sk h="200px" r="20px" /><YukleniyorFextopus /></div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginTop: 20 }}>
         {[1,2,3,4,5].map(i => <Sk key={i} h="130px" r="14px" />)}
       </div>
@@ -654,7 +655,7 @@ export default function TeamPage() {
 
   if (error || !team) return (
     <div style={{ textAlign: 'center', padding: '60px', color: 'var(--canli-fg)' }}>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={86} dim /></div>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Mascot size={86} dim ifade="saskin" /></div>
       <div style={{ fontSize: 16, marginBottom: 20 }}>{error ?? 'Takım bulunamadı'}</div>
       <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', background: FEXT.accentGrad, border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
         ← Geri
@@ -782,15 +783,19 @@ export default function TeamPage() {
               <div style={{ marginTop: 14 }}>
                 <div style={{ fontSize: yazi(10), color: 'var(--text-5)', marginBottom: 6, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
                   Son Form ({form.length} maç)
-                  {streak && streak.count >= 3 && (
+                  {/* Seri rozeti: yalnız galibiyet/mağlubiyet (beraberlik serisi eskiden "Mağlubiyet" yazıyordu). */}
+                  {streak && streak.count >= 3 && (streak.type === 'W' || streak.type === 'L') && (
                     <span style={{
-                      marginLeft: 10, fontSize: yazi(10), fontWeight: 800,
-                      color: streak.type === 'W' ? 'var(--yesil-fg)' : 'var(--canli-fg)',
-                      padding: '2px 8px', borderRadius: 6,
-                      background: streak.type === 'W' ? 'rgba(76,175,80,.15)' : 'rgba(255,70,85,.15)',
-                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      marginLeft: 10, fontSize: 12, fontWeight: 800, letterSpacing: 0, textTransform: 'none',
+                      color: streak.type === 'W' ? 'var(--altin-fg)' : 'var(--canli-fg)',
+                      padding: '3px 10px', borderRadius: 999,
+                      background: streak.type === 'W' ? 'rgba(255,170,60,.14)' : 'rgba(255,70,85,.14)',
+                      border: `1px solid ${streak.type === 'W' ? 'rgba(255,170,60,.35)' : 'rgba(255,70,85,.3)'}`,
+                      display: 'inline-flex', alignItems: 'center', gap: 5, verticalAlign: 'middle',
                     }}>
-                      <Flame size={11} /> {streak.count} {streak.type === 'W' ? 'Galibiyet' : 'Mağlubiyet'} serisi
+                      <Flame size={13} className={streak.type === 'W' ? 'tk-alev' : undefined} />
+                      {streak.count} maçtır {streak.type === 'W' ? 'kazanıyor' : 'kaybediyor'}
+                      <style>{`.tk-alev{transform-origin:50% 90%;animation:tkAlev 1.2s ease-in-out infinite}@keyframes tkAlev{0%,100%{transform:scale(1) rotate(-4deg)}50%{transform:scale(1.14,.94) rotate(4deg)}}@media (prefers-reduced-motion: reduce){.tk-alev{animation:none}}`}</style>
                     </span>
                   )}
                 </div>

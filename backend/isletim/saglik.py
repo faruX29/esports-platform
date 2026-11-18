@@ -204,6 +204,105 @@ def haberler(rapor, db):
         rapor.sorun(f'{HABER_SAAT} saattir haber üretilmedi')
 
 
+SITE = 'https://fextesports.com'
+BOT_UA = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'
+SON_SONUC_GUN = 4               # S/A/B seviyesinde son biten maç (sezon arasında da birkaç günde bir var)
+
+
+class _YonlendirmeYok(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *a, **k):
+        return None  # 301'i izleme; durum kodunu ve Location'ı oku
+
+
+def bot_iste(yol):
+    """Googlebot UA + önbellek atlatma (`__og=1&cb=`); (durum, Location, gövde)."""
+    ayrac = '&' if '?' in yol else '?'
+    url = f'{SITE}{yol}{ayrac}__og=1&cb={int(datetime.now().timestamp() * 1000)}'
+    istek = urllib.request.Request(url, headers={'User-Agent': BOT_UA})
+    try:
+        with urllib.request.build_opener(_YonlendirmeYok).open(istek, timeout=25) as r:
+            return r.status, '', r.read().decode('utf-8', 'replace')
+    except urllib.error.HTTPError as e:
+        return e.code, e.headers.get('Location', '') or '', e.read().decode('utf-8', 'replace')
+
+
+def bot_html(rapor, db):
+    """Botlara (Google) giden HTML: sayfa SPA kabuğuna düşmüş ya da asıl bölümü boş mu?
+    18 Kas: bir yıldır oynamayan takımın sayfası soğuk önbellekte boş gidiyordu, insan
+    tarafında hiçbir şey görünmüyordu. Örnekler her gün DB'den seçilir."""
+    cur = db.cursor()
+    ornek = []  # (ad, yol, beklenen durum, gövdede aranan, Location'da aranan)
+    # Bir yıldır oynamayan, çok maçlı takım (yanlış sorgu planının vurduğu tür)
+    cur.execute("""
+        select t, max(s) from (
+            select team_a_id t, scheduled_at s from matches where status = 'finished'
+            union all select team_b_id, scheduled_at from matches where status = 'finished') x
+        where t is not null group by t
+        having max(s) between now() - interval '600 days' and now() - interval '300 days' and count(*) >= 30
+        order by count(*) desc limit 1""")
+    r = cur.fetchone()
+    if r:
+        ornek.append(('Pasif takım', f'/team/{r[0]}', 200, '<h2>Son Maçlar</h2>', None))
+    cur.execute("""
+        select tt.team_id from turk_takimlar tt
+        where exists (select 1 from matches m where m.status = 'finished' and m.team_a_id = tt.team_id
+                      and m.scheduled_at > now() - interval '30 days')
+        order by tt.team_id limit 1""")
+    r = cur.fetchone()
+    if r:
+        ornek.append(('Aktif Türk takımı', f'/team/{r[0]}', 200, '<h2>Son Maçlar</h2>', None))
+    cur.execute("""
+        select t.id from tournaments t
+        where upper(left(t.tier, 1)) in ('S', 'A') and t.end_at < now()
+          and exists (select 1 from matches m where m.tournament_id = t.id and m.status = 'finished')
+        order by t.end_at desc limit 1""")
+    r = cur.fetchone()
+    if r:
+        ornek.append(('Biten S/A turnuva', f'/tournament/{r[0]}', 200, '<h3>Sonuçlar</h3>', None))
+    cur.execute("""
+        select match_id from news_articles
+        where match_id is not null and coalesce(content_type, '') not in ('transfer', 'haftalik', 'tournament')
+        order by created_at desc limit 1""")
+    r = cur.fetchone()
+    if r:
+        ornek.append(('Haber eski slug', f'/news/saglik-kontrolu-eski-slug-{r[0]}', 301, None, f'-{r[0]}'))
+    ornek += [
+        ('Lig sayfası', '/lig/worlds', 200, '<section>', None),
+        ('Sıralama', '/rankings', 200, '<h2>Öne çıkan takımlar</h2>', None),
+        ('Maç programı', '/matches', 200, '<h2>Son sonuçlar</h2>', None),
+        ('Olmayan takım', '/team/999999999', 404, 'noindex', None),
+    ]
+    for ad, yol, durum, aranan, konum in ornek:
+        try:
+            kod, yer, govde = bot_iste(yol)
+        except Exception as e:
+            rapor.sorun(f'bot HTML {ad} ({yol}) alınamadı: {type(e).__name__}')
+            continue
+        hata = []
+        if kod != durum:
+            hata.append(f'durum {kod}, beklenen {durum}')
+        if 'id="root"' in govde:
+            hata.append('SPA kabuğu döndü (middleware hata verdi ya da bot sanılmadı)')
+        if aranan and kod == durum and aranan not in govde:
+            hata.append(f'"{aranan}" yok (bölüm boş)')
+        if konum and konum not in yer:
+            hata.append(f'yönlendirme yanlış: {yer or "yok"}')
+        if hata:
+            rapor.sorun(f'bot HTML {ad} {yol}: ' + '; '.join(hata))
+        else:
+            rapor.bilgi(f'{ad} {yol}: {kod} tamam')
+
+    # Tazelik: S/A/B seviyesinde son biten maç (bot /matches "Son sonuçlar" bunu gösterir)
+    cur.execute("""
+        select now() - max(m.scheduled_at) from matches m join tournaments t on t.id = m.tournament_id
+        where m.status = 'finished' and upper(left(t.tier, 1)) in ('S', 'A', 'B')
+          and m.scheduled_at > now() - interval '30 days'""")
+    (fark,) = cur.fetchone()
+    rapor.bilgi(f'S/A/B seviyesinde son biten maç {sure(fark)}')
+    if fark is None or fark > timedelta(days=SON_SONUC_GUN):
+        rapor.sorun(f'{SON_SONUC_GUN} gündür S/A/B seviyesinde biten maç yok (senkron ya da sezon arası)')
+
+
 def istemci_hatalari(rapor, db):
     cur = db.cursor()
     cur.execute("""
@@ -399,6 +498,7 @@ def main():
         kontrol(rapor, 'Tarayıcı hataları', istemci_hatalari, db)
         kontrol(rapor, 'Hesaplar ve bildirimler', hesaplar_bildirimler, db)
         kontrol(rapor, 'Veritabanı', veritabani, db)
+        kontrol(rapor, "Bot HTML (Google'ın gördüğü)", bot_html, db)
     kontrol(rapor, 'GitHub Actions', is_akislari)
 
     simdi = datetime.now(TSI)

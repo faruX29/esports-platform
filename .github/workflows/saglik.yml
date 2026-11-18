@@ -1,7 +1,8 @@
 name: Gunluk saglik raporu
 
 # Canli skor (pg_cron), mac/tahmin/haber tazeligi, tarayici hatalari, veritabani
-# boyutu, sync-matches ve haftalik yedek kontrol edilir (backend/isletim/saglik.py).
+# boyutu, botlara giden HTML (Googlebot UA ile ornek sayfalar), sync-matches ve haftalik
+# yedek kontrol edilir (backend/isletim/saglik.py).
 # Esik asilirsa her gun "SORUN" e-postasi; sorun yoksa yalniz Pazartesi "her sey yolunda".
 # Rapor govdesi yalniz e-postada: repo PUBLIC, bu log herkese acik.
 on:

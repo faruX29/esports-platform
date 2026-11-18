@@ -157,6 +157,21 @@ async function sbFetchAll(path) {
   return Array.isArray(rows) ? rows : (rows ? [rows] : [])
 }
 
+// Sayfanın ASIL listesi için (takımın maçları, turnuvanın maçları): hata fırlatır →
+// middleware SPA'ya düşer. sbFetchAll hatayı [] yapar; o boş sayfa 24 sa önbellekte
+// Google'a gidiyordu (18 Kas: /team/1537 soğuk önbellekte 3 sn sınırına takıldı).
+async function sbListe(path) {
+  const base = process.env.VITE_SUPABASE_URL
+  const key = process.env.VITE_SUPABASE_ANON_KEY
+  if (!base || !key) throw new Error('supabase env yok')
+  const res = await fetch(`${base}/rest/v1/${path}`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+  })
+  if (!res.ok) throw new Error(`supabase ${res.status}`)
+  const rows = await res.json()
+  return Array.isArray(rows) ? rows : []
+}
+
 async function sbFetch(path) {
   const rows = await sbFetchAll(path)
   return rows[0] || null
@@ -318,12 +333,17 @@ ${ld}
 }
 
 // Maç listesi → SEO gövde linkleri (Googlebot iç linkleri takip eder → tarama derinliği)
+// Başlamamış maçta skor 0-0 gelir → "vs" (18 Kas denetimi: /matches "0-0" diyordu).
+// Tarih: sayfa "fikstür/program" vaat ediyor, tarihsiz liste vaadi tutmuyordu.
 function matchListHtml(origin, rows, heading) {
   if (!rows.length) return ''
   const items = rows.map(m => {
     const an = m.team_a?.name || '?', bn = m.team_b?.name || '?'
-    const sc = (m.team_a_score != null && m.team_b_score != null) ? ` ${m.team_a_score}-${m.team_b_score} ` : ' vs '
-    return `<li><a href="${origin}/match/${m.id}">${esc(an)}${sc}${esc(bn)}</a></li>`
+    const skorlu = m.status !== 'not_started' && m.team_a_score != null && m.team_b_score != null
+    const sc = skorlu ? ` ${m.team_a_score}-${m.team_b_score} ` : ' vs '
+    const tarih = trTarih(m.scheduled_at)
+    const canli = m.status === 'running' ? ' (canlı)' : ''
+    return `<li><a href="${origin}/match/${m.id}">${esc(an)}${sc}${esc(bn)}</a>${canli}${tarih ? ` — ${tarih}` : ''}</li>`
   }).join('')
   return `<h2>${esc(heading)}</h2><ul>${items}</ul>`
 }
@@ -569,14 +589,22 @@ function haberDizinDisi(ref, row, turk) {
 }
 
 const ENC = encodeURIComponent
-const MATCH_SEL = 'id,team_a_score,team_b_score,scheduled_at,team_a:teams!matches_team_a_id_fkey(name),team_b:teams!matches_team_b_id_fkey(name)'
+const MATCH_SEL = 'id,status,team_a_score,team_b_score,scheduled_at,team_a:teams!matches_team_a_id_fkey(name),team_b:teams!matches_team_b_id_fkey(name)'
 
 async function buildForTeam(id, origin, url) {
   const team = await sbBul(`teams?id=eq.${ENC(id)}&select=${ENC('name,logo_url,game:games(name,slug)')}&limit=1`)
   if (!team) return YOK
   const name = team.name || 'Takım'
   const gm = gameMeta(team.game?.slug)
-  const matches = await sbFetchAll(`matches?or=(team_a_id.eq.${ENC(id)},team_b_id.eq.${ENC(id)})&status=eq.finished&select=${ENC(MATCH_SEL)}&order=scheduled_at.desc&limit=10`)
+  // `or=(team_a_id…,team_b_id…)` + `limit=10` planlayıcıyı "biten maçlar, tarihe göre"
+  // indeksini geriye taramaya itiyordu: bir yıldır oynamayan takımda ~20 bin satır,
+  // soğuk önbellekte anon'un 3 sn sınırı aşılıp liste boş geliyordu (18 Kas, /team/1537).
+  // Her taraf ayrı, takım başına indeks (idx_matches_finished_form_a/b): ~6 tampon.
+  const tarafSorgu = taraf => sbListe(`matches?${taraf}=eq.${ENC(id)}&status=eq.finished&winner_id=not.is.null` +
+    `&select=${ENC(MATCH_SEL + ',winner_id')}&order=scheduled_at.desc.nullslast,id.desc&limit=10`)
+  const matches = (await Promise.all([tarafSorgu('team_a_id'), tarafSorgu('team_b_id')])).flat()
+    .sort((x, y) => String(y.scheduled_at || '').localeCompare(String(x.scheduled_at || '')) || y.id - x.id)
+    .slice(0, 10)
   // Başlık "Kadro, Maçlar ve İstatistikler" vaat ediyordu ama gövdede ne kadro
   // ne istatistik vardı: 77 kelime ve 10 linkin hepsi maça gidiyordu, oyuncu
   // sayfalarına TEK link yoktu (ölçüldü 12 Eylül 2026). Hem vaat tutmuyordu
@@ -585,15 +613,12 @@ async function buildForTeam(id, origin, url) {
   const kadro = await sbFetchAll(
     `players?team_pandascore_id=eq.${ENC(id)}&select=${ENC('id,nickname,role')}&limit=12`,
   )
-  // Galibiyet dökümü zaten çekilmiş maçlardan hesaplanır; ekstra sorgu yok.
+  // Galibiyet dökümü zaten çekilmiş maçlardan, winner_id ile (ad karşılaştırması aynı
+  // adlı rakipte ve ters yazılmış skorda yanılır); ekstra sorgu yok.
   let galip = 0, maglup = 0
   for (const m of matches) {
-    if (m.team_a_score == null || m.team_b_score == null) continue
-    const bizA = String(m.team_a?.name || '') === String(name)
-    const bizim = bizA ? m.team_a_score : m.team_b_score
-    const rakip = bizA ? m.team_b_score : m.team_a_score
-    if (bizim > rakip) galip++
-    else if (bizim < rakip) maglup++
+    if (String(m.winner_id) === String(id)) galip++
+    else maglup++
   }
   const dokum = (galip + maglup) > 0
     ? `Son ${galip + maglup} maçta ${galip} galibiyet, ${maglup} yenilgi.` : ''
@@ -614,8 +639,8 @@ async function buildForTeam(id, origin, url) {
         `${o.role ? ` — ${esc(o.role)}` : ''}</li>`).join('')}</ul>`
     : ''
   const body = `<h1>${esc(name)}</h1><p>${esc(desc)}</p>` +
-    `${kadroHtml}${matchListHtml(origin, matches, 'Son Maçlar')}`
-  return htmlDoc({ title, desc, url, img: '', type: 'profile', jsonLd, body })
+    `${kadroHtml}${matchListHtml(origin, matches, 'Son Maçlar')}${siteNavHtml(origin)}`
+  return htmlDoc({ title, desc, url, img: `${origin}${STATIC_OG}`, type: 'profile', jsonLd, body })
 }
 
 async function buildForPlayer(id, origin, url) {
@@ -736,26 +761,38 @@ async function buildForTournament(id, origin, url) {
   )
   if (!t) return YOK
   const name = turnuvaAdi(t, true) || t.name || 'Turnuva'
-  const matches = await sbFetchAll(`matches?tournament_id=eq.${ENC(id)}&select=${ENC(MATCH_SEL)}&order=scheduled_at.desc&limit=15`)
-  const title = `${name} — Fikstür, Puan Durumu ve Sonuçlar`
-  const desc = `${name} espor turnuvası: maç programı, sonuçlar ve puan durumu — feXt.`
-  // Event şeması yalnızca begin_at (startDate) varsa (turnuvaların ~%18'i tarihsiz →
-  // onlarda geçersiz Event basmaktansa hiç basma; sayfa yine çalışır).
-  const jsonLd = t.begin_at ? {
-    '@context': 'https://schema.org', '@type': 'SportsEvent', name, sport: 'Esports',
-    ...eventCommon(url, t.begin_at, desc, ''),
-    endDate: t.end_at || undefined, url,
-  } : null
+  // Başlık "Fikstür, Puan Durumu ve Sonuçlar" vaat ediyordu ama gövde tarihsiz son 15 maçtı
+  // (18 Kas denetimi). Artık aşamanın tüm maçları (puan durumu tamamından hesaplanır;
+  // idx_matches_tournament) + /lig ile aynı gövde. Ana liste: hata → SPA (sbListe).
   // Kalıcı lig sayfasına bağlantı: eski etkinlikte "Güncel: …", güncelde "Tüm aşamalar: …"
   // → Google "worlds fikstür" gibi sorguda eski aşamadan yeni lig sayfasına geçer.
   // Yan veri: hata olursa bağlantısız döner (sbFetch).
-  const lig = await sbFetch(`rpc/turnuva_ligi?p_tid=${ENC(id)}`).catch(() => null)
+  const [matches, lig] = await Promise.all([
+    sbListe(`matches?tournament_id=eq.${ENC(id)}&select=${ENC(LIG_MAC_SEL)}&order=scheduled_at.asc&limit=300`),
+    sbFetch(`rpc/turnuva_ligi?p_tid=${ENC(id)}`).catch(() => null),
+  ])
+  // Turnuvaların bir kısmında begin_at boş (TCL Summer 2025): tarih maçlardan
+  const macTarihleri = matches.map(m => m.scheduled_at).filter(Boolean)
+  const bas = t.begin_at || macTarihleri[0] || null
+  const son = t.end_at || (t.begin_at ? null : macTarihleri[macTarihleri.length - 1]) || null
+  const tarih = [...new Set([trTarih(bas), trTarih(son)].filter(Boolean))].join(' – ')
+  const title = `${name} — Fikstür, Puan Durumu ve Sonuçlar`
+  const desc = `${name} espor turnuvası: maç programı, sonuçlar ve puan durumu — feXt.`
+  // Event şeması yalnızca başlangıç tarihi varsa (turnuva ya da ilk maç);
+  // tarihsizde geçersiz Event basmaktansa hiç basma, sayfa yine çalışır.
+  const jsonLd = bas ? {
+    '@context': 'https://schema.org', '@type': 'SportsEvent', name, sport: 'Esports',
+    ...eventCommon(url, bas, desc, ''),
+    endDate: son || undefined, url,
+  } : null
   const ligLink = lig?.slug
     ? `<p><a href="${origin}/lig/${esc(lig.slug)}">${lig.guncel ? 'Tüm aşamalar' : 'Güncel'}: ` +
       `${esc([lig.ad, lig.yil].filter(Boolean).join(' '))} fikstür, puan durumu ve sonuçlar</a></p>`
     : ''
-  const body = `<h1>${esc(name)}</h1>${ligLink}<p>${esc(desc)}</p>${matchListHtml(origin, matches, 'Maçlar')}`
-  return htmlDoc({ title, desc, url, img: '', type: 'article', jsonLd, body })
+  const body = `<h1>${esc(name)}</h1>${ligLink}<p>${esc(desc)}</p>` +
+    (tarih ? `<p>Tarih: ${esc(tarih)}</p>` : '') +
+    asamaGovdeHtml(origin, t.name, matches) + siteNavHtml(origin)
+  return htmlDoc({ title, desc, url, img: `${origin}${STATIC_OG}`, type: 'article', jsonLd, body })
 }
 
 /* ── Kalıcı lig sayfası (/lig/<slug>) ──────────────────────────────────────
@@ -809,6 +846,17 @@ function puanDurumuHtml(maclar) {
   }</tbody></table>`
 }
 
+// Aşama gövdesi (lig sayfası + turnuva sayfası): puan durumu (eleme aşaması değilse),
+// fikstür ve sonuçlar. `am` LIG_MAC_SEL ile, tarihe göre ARTAN sıralı gelmeli.
+function asamaGovdeHtml(origin, asamaAdi, am) {
+  const fikstur = am.filter(m => m.status === 'not_started' || m.status === 'running')
+  const sonuc = am.filter(m => m.status === 'finished').reverse()
+  return (ELEME_ASAMA_RE.test(asamaAdi || '') ? '' : puanDurumuHtml(am)) +
+    (fikstur.length ? `<h3>Fikstür</h3><ul>${fikstur.map(m => ligMacLi(origin, m, m.status === 'running')).join('')}</ul>` : '') +
+    (sonuc.length ? `<h3>Sonuçlar</h3><ul>${sonuc.map(m => ligMacLi(origin, m, true)).join('')}</ul>` : '') +
+    (!am.length ? '<p>Bu aşamanın maçları henüz açıklanmadı.</p>' : '')
+}
+
 async function buildForLig(slug, origin, url) {
   const lig = await sbBul(`rpc/lig_sayfasi?p_slug=${ENC(slug)}`)
   if (!lig) return YOK
@@ -842,15 +890,10 @@ async function buildForLig(slug, origin, url) {
 
   const asamaHtml = turnuvalar.map(t => {
     const am = maclar.filter(m => m.tournament_id === t.id)
-    const fikstur = am.filter(m => m.status === 'not_started' || m.status === 'running')
-    const sonuc = am.filter(m => m.status === 'finished').reverse()
     const tarih = [...new Set([trTarih(t.begin_at), trTarih(t.end_at)].filter(Boolean))].join(' – ')
     return `<section><h2><a href="${origin}/tournament/${t.id}">${esc(t.name || 'Aşama')}</a></h2>` +
       (tarih ? `<p>${esc(tarih)}</p>` : '') +
-      (ELEME_ASAMA_RE.test(t.name || '') ? '' : puanDurumuHtml(am)) +
-      (fikstur.length ? `<h3>Fikstür</h3><ul>${fikstur.map(m => ligMacLi(origin, m, m.status === 'running')).join('')}</ul>` : '') +
-      (sonuc.length ? `<h3>Sonuçlar</h3><ul>${sonuc.map(m => ligMacLi(origin, m, true)).join('')}</ul>` : '') +
-      (!am.length ? '<p>Bu aşamanın maçları henüz açıklanmadı.</p>' : '') +
+      asamaGovdeHtml(origin, t.name, am) +
       `</section>`
   }).join('')
 
@@ -900,12 +943,12 @@ const STATIC_ROUTES = {
   },
   '/rankings': {
     title: 'Takım Sıralaması — Espor Güç Sıralaması',
-    desc: 'VALORANT, CS2 ve LoL takımlarının form ve galibiyet oranına göre sıralaması.',
+    desc: 'VALORANT, CS2 ve LoL takımlarının form, turnuva seviyesi ve güncelliğe göre güç sıralaması.',
     heading: 'Öne çıkan takımlar',
     feed: 'teams',
   },
   '/tournaments': {
-    title: 'Turnuvalar — Aktif ve Yaklaşan Espor Turnuvaları',
+    title: 'Turnuvalar — Devam Eden, Yaklaşan ve Biten Espor Turnuvaları',
     desc: 'Devam eden, yaklaşan ve biten S/A seviyesi espor turnuvaları ve Türk ligleri; eleme ağacı, fikstür ve puan durumu.',
     heading: 'Aktif turnuvalar',
     feed: 'tournaments',
@@ -1063,7 +1106,7 @@ async function staticFeedHtml(feed, origin) {
       const ids = (await sbFetchAll('turk_takimlar?select=team_id')).map(r => r.team_id).filter(Number.isFinite)
       if (!ids.length) return ''
       const liste = ids.join(',')
-      const TURK_MAC_SEL = MATCH_SEL + ',team_a_id,team_b_id,status'
+      const TURK_MAC_SEL = MATCH_SEL + ',team_a_id,team_b_id'
       const takimFiltresi = ENC(`(team_a_id.in.(${liste}),team_b_id.in.(${liste}))`)
       const simdi = Date.now()
       const son60 = `matches?or=${takimFiltresi}&status=eq.finished` +
@@ -1105,29 +1148,47 @@ async function staticFeedHtml(feed, origin) {
         }</ul>` : ''
       }).join('')
       return takimHtml +
-        // Başlamamış maçta skor 0-0 gelir; "vs" yazılsın
-        matchListHtml(origin, yaklasan.map(m => (m.status === 'not_started' ? { ...m, team_a_score: null, team_b_score: null } : m)), 'Yaklaşan Türk maçları') +
+        matchListHtml(origin, yaklasan, 'Yaklaşan Türk maçları') +
         matchListHtml(origin, son.slice(0, 20), 'Son sonuçlar') +
         haberHtml(haberler, 'Türk takımı haberleri') +
         haberHtml(haftalik, 'Türk Espor Haftası arşivi')
     }
 
     if (feed === 'matches') {
-      const rows = await sbFetchAll(
-        `matches?status=in.(running,not_started)&select=${ENC(MATCH_SEL)}&order=scheduled_at.asc&limit=25`,
-      )
-      return matchListHtml(origin, rows, 'Yaklaşan ve canlı maçlar')
+      // Başlık "Geçmiş" de vaat ediyor (18 Kas denetimi): son sonuçlar da listelenir.
+      const [rows, son] = await Promise.all([
+        sbFetchAll(`matches?status=in.(running,not_started)&select=${ENC(MATCH_SEL)}&order=scheduled_at.asc&limit=25`),
+        // Yalnız S/A/B: süzgeçsiz liste Bo1 alt lig maçlarıyla doluyordu (dizin dışı sayfalar)
+        sbFetchAll(`matches?status=eq.finished&tournament.tier=in.(S,s,A,a,B,b)` +
+          `&select=${ENC(MATCH_SEL + ',tournament:tournaments!inner(tier)')}&order=scheduled_at.desc.nullslast,id.desc&limit=15`),
+      ])
+      return matchListHtml(origin, rows, 'Yaklaşan ve canlı maçlar') + matchListHtml(origin, son, 'Son sonuçlar')
     }
     if (feed === 'teams') {
-      const rows = await sbFetchAll('teams?select=id,name&order=name.asc&limit=30')
+      // Eskiden `teams?order=name.asc&limit=30`: A-Z ilk 30 kayıt, başı boşluklu ve ":3",
+      // "???" gibi adlar en üstte, sıralamayla ilgisiz (18 Kas denetimi). Güç sıralaması
+      // tarayıcıda 3 oyun × ~12 bin maçtan hesaplanıyor; middleware her bot isteğinde
+      // koştuğu için burada tekrarlanmaz (CPU kotası). Bota elle seçilmiş öne çıkan
+      // takımlar (populer_takimlar: Türk takımları + dünya devleri), oyuna göre gruplu.
+      const [rows, turkler] = await Promise.all([sbFetchAll('rpc/populer_takimlar'), sbFetchAll('turk_takimlar?select=team_id')])
       if (!rows.length) return ''
-      return `<h2>Takımlar</h2><ul>${
-        rows.map(t => `<li><a href="${origin}/team/${t.id}">${esc(t.name)}</a></li>`).join('')
-      }</ul>`
+      const turkId = new Set(turkler.map(r => r.team_id)) // TEK KAYNAK (Aurora'nın ülkesi RU)
+      const gruplar = [['valorant', 'VALORANT'], ['csgo', 'CS2'], ['lol', 'League of Legends']]
+      const liste = gruplar.map(([slug, ad]) => {
+        const g = rows.filter(t => t.game?.slug === slug)
+        return g.length ? `<h3>${esc(ad)}</h3><ul>${
+          g.map(t => `<li><a href="${origin}/team/${t.id}">${esc(String(t.name).trim())}</a>` +
+            `${turkId.has(t.id) ? ' (Türk takımı)' : ''}</li>`).join('')
+        }</ul>` : ''
+      }).join('')
+      return `<h2>Öne çıkan takımlar</h2>` +
+        `<p>Güç sıralaması son 6 ayın maçlarından hesaplanır: form, turnuva seviyesi ve güncellik ` +
+        `ağırlıklı; her oyun ayrı sıralanır, Game Changers ayrı devre olduğu için sayılmaz.</p>${liste}`
     }
     if (feed === 'tournaments') {
       const [rows, ligler] = await Promise.all([
-        sbFetchAll(`tournaments?or=(tier.in.(S,s,A,a),turk_ligi.is.true)&select=${ENC('id,name,tier,league_name,event_name,display_name')}&order=begin_at.desc&limit=25`),
+        // nullslast: tarihi boş turnuva (TCL Summer 2025 gibi) DESC'te en başa çıkıyordu
+        sbFetchAll(`tournaments?or=(tier.in.(S,s,A,a),turk_ligi.is.true)&select=${ENC('id,name,tier,league_name,event_name,display_name')}&order=begin_at.desc.nullslast&limit=25`),
         sbFetchAll('rpc/lig_listesi'),
       ])
       const ligHtml = ligler.length

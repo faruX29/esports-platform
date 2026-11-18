@@ -163,6 +163,12 @@ _AD_KURALI = (
     # LLM rapor 'CS2' dese de kendi bilgisinden eski adı yazabilir.
     "\n\nOYUN ADI: Oyunu yalnız rapordaki 'Oyun:' satırının yazımıyla an (CS2, VALORANT, LoL). "
     "'CSGO', 'CS:GO', 'CS-GO' ASLA yazma; oyun Counter-Strike 2'dir."
+    # Yazım (18 Kas haftalık denetim): 22 başlıkta "Playoffları'nda", 96'sında "Playoff'larında";
+    # "United21 Season 58" başlıkta "Sezon 58" oldu. Üretim sonrası yazim_duzelt() de düzeltir.
+    "\n\nKESME İŞARETİ: Yalnız özel adın ekini ayırır (Gen.G'yi, T1'i, Worlds 2026'da). "
+    "'playoff' ortak addır, eki kesmeyle ayrılmaz: 'playofflarında', 'playoffa' yaz; "
+    "'Playoffları'nda' ve 'Playoff'larında' YANLIŞ. Rapordaki 'Season 58' gibi ifadeler adın "
+    "parçasıdır, 'Sezon 58' diye çevirme."
 )
 # Dolgu ve kaynaksız çıkarım (5 Kas kullanıcı raporu): 30 günde 231 haberin 35'inde
 # "yapay zeka tahmin motoru", önizlemelerde "merak konusu", "potansiyel", "moral
@@ -229,6 +235,35 @@ def dolgu_bul(metin, haric: frozenset = frozenset()) -> list[str]:
     if "AI" not in haric and _AI_RE.search(str(metin or "")):
         bulunan.append("AI")
     return bulunan
+
+
+# Üretim sonrası yazım düzeltmesi (istem kuralına uyulmasa da kayda doğru biçim girer).
+# "playoff" ortak ad: eki kesmeyle ayrılmaz (TDK) → "Playofflarında". Hem
+# "Playoff'larında" hem ekin ortasına kesme koyan "Playoffları'nda" yakalanır. İngilizce
+# çoğul "Playoffs" (aşama adı: "Playoffs'ta") eşleşmez: kesmeden önce yalnız Türkçe çoğul eki.
+# "Play-In'de" bilerek dışarıda: aşama adı olarak özel ad sayılır, "Play-Inde" okunmaz.
+_PLAYOFF_KESME_RE = re.compile(r"\b(play-?off)(l[ae]r[ıi]?)?['’]([a-zçğıöşü]+)", re.IGNORECASE)
+_SEZON_RE = re.compile(r"\b[Ss]ezon (\d+)\b")
+
+
+def yazim_duzelt(article: dict, rapor: str = "") -> dict:
+    """Başlık/özet/gövdede playoff kesmesini kaldırır; raporda 'Season N' geçiyorsa
+    LLM'in çevirdiği 'Sezon N'yi geri alır (özel adın parçası)."""
+    rapor_kucuk = str(rapor or "").lower()
+
+    def duz(s):
+        if not isinstance(s, str):
+            return s
+        s = _PLAYOFF_KESME_RE.sub(lambda m: m.group(1) + (m.group(2) or "") + m.group(3), s)
+        return _SEZON_RE.sub(
+            lambda m: f"Season {m.group(1)}" if f"season {m.group(1)}" in rapor_kucuk else m.group(0), s)
+
+    for k in ("title", "summary", "content"):
+        if k in article:
+            article[k] = duz(article[k])
+    if isinstance(article.get("paragraphs"), list):
+        article["paragraphs"] = [duz(p) for p in article["paragraphs"]]
+    return article
 
 
 def _makale_parcalari(article: dict) -> list[str]:
@@ -1477,7 +1512,7 @@ class NewsGenerator:
         haric = frozenset(dolgu_bul(user_prompt))
         bulunan = makale_dolgusu(article, haric)
         if not bulunan:
-            return article
+            return yazim_duzelt(article, user_prompt)
         logger.info("✍️  %s: dolgu var (%s), yeniden yazdırılıyor", ref_id, ", ".join(bulunan))
         duzeltme = (
             user_prompt
@@ -1495,7 +1530,7 @@ class NewsGenerator:
             logger.warning("✂️  %s: ikinci yanıtta da dolgu (%s), %d cümle çıkarıldı%s", ref_id,
                            ", ".join(kalan), atilan,
                            "; başlıkta kaldı" if dolgu_bul(article.get("title", ""), haric) else "")
-        return article
+        return yazim_duzelt(article, user_prompt)
 
     # "Please retry in 47 seconds." veya "retry in 47.3s" gibi API mesajlarını yakalar
     _RETRY_AFTER_RE = re.compile(r"retry\s+in\s+([\d.]+)\s*s", re.IGNORECASE)

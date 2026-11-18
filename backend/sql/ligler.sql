@@ -120,8 +120,16 @@ AS $$
     WITH l AS (
         SELECT * FROM ligler WHERE slug = p_slug AND aktif
     ),
+    -- Tarihi boş turnuvada (begin_at/start_date ikisi de NULL; TCL Summer 2025) tarih
+    -- maçlarından: yoksa "Önceki etkinlikler"de sona düşüp 12'lik sınırda kesiliyordu
+    -- (18 Kas). idx_matches_tournament; yalnız tarihsiz turnuvada sorulur.
     t AS (
-        SELECT tr.*, COALESCE(tr.begin_at, tr.start_date) AS bas, COALESCE(tr.end_at, tr.end_date) AS son
+        SELECT tr.*,
+               COALESCE(tr.begin_at, tr.start_date,
+                        (SELECT min(m.scheduled_at) FROM matches m WHERE m.tournament_id = tr.id)) AS bas,
+               COALESCE(tr.end_at, tr.end_date,
+                        CASE WHEN tr.begin_at IS NULL AND tr.start_date IS NULL
+                             THEN (SELECT max(m.scheduled_at) FROM matches m WHERE m.tournament_id = tr.id) END) AS son
         FROM l
         JOIN games g ON g.slug = l.oyun
         JOIN tournaments tr ON tr.game_id = g.id AND tr.league_name = l.league_name

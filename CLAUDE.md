@@ -78,6 +78,7 @@ python kadro.py --takim <id> [--gun 30]                   # Türk takımı kadro
 - `sync-live.yml` (adı "5-min", fiilen 2-6 saatte bir) pg_cron'un yapmadığı işleri yapar: hayalet yaklaşan maç, canlı maç istatistiği, 404 force-finish. Takılı "canlı" maçı (`/running`'den düşen) ve saati 30 dk geçmiş başlamamış maçı (iptal/ertelenen `/running`'e hiç girmez) artık pg_cron da `/matches/{id}` ile sorar (`canli_senkron.sql`). pg_cron var diye silme.
 - `sync-liquipedia.yml` adı yanıltıcı: Liquipedia senkronu kapalı, iş akışı artık içerik (önizleme, turnuva özeti, transfer haberi) üretiyor.
 - **Takım logosu yedeği:** PandaScore'u kesen ağlar ("Güvenli İnternet" filtresi) için logolar Supabase Storage `gorsel-yedek`'te; pg_cron `gorsel-yedek` → Edge Function `gorsel-yedek` kopyalar, site PandaScore açılmazsa yedeğe düşer (`utils/gorsel.js` `yedekGorsel`, `InitialsImage`, `imageGuard`). Yol kuralı (`/images/` sonrası, dosya adı `thumb_`) fonksiyonda ve `gorsel.js`'te aynı kalmalı.
+- **Sunucudan Auth çağrısı:** secret key'li istekte Auth captcha'yı **atlar** (admin kimliği) → Turnstile'ı Edge Function'da doğrula; Auth'ın IP sınırı için `Sb-Forwarded-For` (yalnız secret key + `security_sb_forwarded_for_enabled`). Edge Function'da gerçek IP `cf-connecting-ip` (sahte başlık ezilir/1000 ile reddedilir; `x-forwarded-for`'un ilk değerine güvenme) (`supabase/functions/giris`).
 
 ## Kod kuralları
 - UI metinleri ve kod yorumları Türkçe; çevredeki kodun dilini ve yoğunluğunu izle.

@@ -12,3 +12,6 @@ verify_jwt = false
 
 [functions.gorsel-yedek]
 verify_jwt = false
+
+[functions.giris]
+verify_jwt = false

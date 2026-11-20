@@ -13,7 +13,8 @@
 -- KAPSAM: yalnız DELTA — var olan maçın durumu, skoru, kazananı, saati,
 -- raw_data'sı. /running'den düşen (biten) maçın son hâlini (29 Ekim) ve
 -- saati geçip hiç başlamayan (iptal/ertelenen) maçı (6 Kasım) kendi
--- kaydından alır. Yeni maç/takım oluşturmaz; onlar Python ETL'in
+-- kaydından alır; PandaScore'da donmuş canlı maçı "Ertelendi" yazar (20
+-- Kasım, canli.durum). Yeni maç/takım oluşturmaz; onlar Python ETL'in
 -- işi. Takımları satırdakiyle eşleşmeyen maça DOKUNMAZ (30 Eylül skor
 -- karışması dersi).
 --
@@ -39,6 +40,35 @@ CREATE INDEX IF NOT EXISTS istek_bekleyen ON canli.istek (olusma) WHERE NOT isle
 -- Dolu ise istek tek maçın kendi kaydıdır (/matches/{id}), boşsa oyunun /running'i.
 ALTER TABLE canli.istek ADD COLUMN IF NOT EXISTS mac_id bigint;
 CREATE INDEX IF NOT EXISTS istek_mac ON canli.istek (mac_id, olusma) WHERE mac_id IS NOT NULL;
+
+-- ── Donmuş canlı maç (20 Kasım) ──────────────────────────────────────────
+-- PandaScore bazen maçı kapatmadan bırakıyor: /running'de kalıyor ama hiçbir
+-- haritasında hareket yok (19 Kas: Morrow-evermore 1. harita bitti, 2-3
+-- hiç başlamadı, 23 saat "canlı"). Maç /running'den düşmediği için yukarıdaki
+-- emniyet yolları onu hiç sormaz; site sonsuza dek CANLI gösterir.
+-- Kural: durum 'running' ama maçın ve haritalarının son hareketi (başlangıç/
+-- bitiş) 4 saatten eskiyse durum 'postponed' ("Ertelendi") yazılır. 120 günde
+-- 7157 biten maçın yalnız 5'inde 4 saati aşan boşluk var; en uzun harita ~4 sa.
+-- raw_data->>'status' 'running' kalır: "bizim ertelediğimiz" maçın işareti
+-- bu (iste() onu yarım saatte bir sorar, PandaScore bitirince sonuç yazılır).
+-- Durumu yazan iki yol da bunu kullanır: canli.isle() ve Python
+-- _upsert_matches (sync_matches.py). Kural değişirse yalnız burası değişir.
+CREATE OR REPLACE FUNCTION canli.durum(durum text, ham jsonb) RETURNS text
+LANGUAGE sql STABLE AS $$
+    SELECT CASE
+        WHEN durum = 'running'
+             AND greatest(
+                     nullif(ham->>'begin_at', '')::timestamptz,
+                     (SELECT max(COALESCE(nullif(x->>'end_at', ''),
+                                          nullif(x->>'begin_at', ''))::timestamptz)
+                      FROM jsonb_array_elements(
+                               CASE WHEN jsonb_typeof(ham->'games') = 'array'
+                                    THEN ham->'games' ELSE '[]'::jsonb END) x)
+                 ) < now() - interval '4 hours'
+        THEN 'postponed'
+        ELSE durum
+    END;
+$$;
 
 -- ── Token (Vault) ────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION canli.anahtar() RETURNS text
@@ -169,6 +199,33 @@ BEGIN
         INSERT INTO canli.istek (oyun, request_id, mac_id) VALUES (slug, rid, mid);
         sayi := sayi + 1;
     END LOOP;
+
+    -- Donmuş diye ertelediğimiz maç (canli.durum, 20 Kasım): PandaScore onu
+    -- bitirince /running'den düşer ama bizde 'postponed' olduğu için yukarıdaki
+    -- yollar sormaz; oyununda başka maç yoksa /running hiç istenmez bile.
+    -- Kendi kaydı sorulur. Kota: turda en çok 3, aynı maç 30 dakikada bir, 3 gün.
+    FOR mid, slug IN
+        SELECT m.id, g.slug
+        FROM matches m
+        JOIN games g ON g.id = m.game_id
+        WHERE m.status = 'postponed'
+          AND m.raw_data->>'status' = 'running'
+          AND m.scheduled_at > now() - interval '3 days'
+          AND NOT EXISTS (SELECT 1 FROM canli.istek t
+                          WHERE t.mac_id = m.id
+                            AND t.olusma > now() - interval '30 minutes')
+        ORDER BY m.scheduled_at
+        LIMIT 3
+    LOOP
+        SELECT net.http_get(
+            url     := 'https://api.pandascore.co/matches/' || mid,
+            headers := jsonb_build_object('Authorization', 'Bearer ' || tok,
+                                          'Accept', 'application/json'),
+            timeout_milliseconds := 8000
+        ) INTO rid;
+        INSERT INTO canli.istek (oyun, request_id, mac_id) VALUES (slug, rid, mid);
+        sayi := sayi + 1;
+    END LOOP;
     RETURN sayi;
 END;
 $$;
@@ -193,7 +250,8 @@ BEGIN
         IF k.status_code = 200 AND jsonb_typeof(k.content::jsonb) IN ('array', 'object') THEN
             WITH gelen AS (
                 SELECT (j->>'id')::bigint                AS mid,
-                       j->>'status'                      AS durum,
+                       -- donmuş canlı maç → 'postponed' (canli.durum)
+                       canli.durum(j->>'status', j)      AS durum,
                        nullif(j->>'winner_id','')::bigint AS kazanan,
                        COALESCE(nullif(j->>'scheduled_at',''),
                                 nullif(j->>'begin_at',''))::timestamptz AS saat,
@@ -228,6 +286,8 @@ BEGIN
                               WHERE (x->>'team_id')::bigint = m.team_b_id)
                   AND (m.status IS DISTINCT FROM gelen.durum
                        OR m.raw_data->'results' IS DISTINCT FROM gelen.ham->'results'
+                       -- donmuş maç işaretini (raw_data->>'status') güncel tut
+                       OR m.raw_data->>'status' IS DISTINCT FROM gelen.ham->>'status'
                        -- ertelenen maç: durum aynı (not_started), yalnız saat değişir
                        OR m.scheduled_at IS DISTINCT FROM COALESCE(gelen.saat, m.scheduled_at))
                 RETURNING 1
@@ -265,7 +325,8 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION canli.iste(), canli.isle(), canli.tik(), canli.anahtar() FROM public;
+REVOKE ALL ON FUNCTION canli.iste(), canli.isle(), canli.tik(), canli.anahtar(),
+                        canli.durum(text, jsonb) FROM public;
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- ELLE YAPILACAK İKİ ADIM (Supabase → SQL Editor)

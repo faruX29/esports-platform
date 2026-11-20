@@ -158,7 +158,7 @@ def canli_senkron(rapor, db):
                    if liste_disi else ''))
     if len(liste_disi) > LISTE_DISI_CANLI:
         rapor.sorun(f"{len(liste_disi)} maç /running'den düştüğü halde \"canlı\" kaldı "
-                    '(pg_cron /matches/{id} yolu çalışmıyor; canli.istek.mac_id ve yanıt kodlarına bak)')
+                    '(pg_cron /matches/<id> yolu çalışmıyor; canli.istek.mac_id ve yanıt kodlarına bak)')
 
 
 def mac_verisi(rapor, db):
@@ -184,7 +184,28 @@ def mac_verisi(rapor, db):
     rapor.bilgi(f'{TAKILI_CANLI_SAAT} saattir canlı görünen: {takili}; 12 saati geçip başlamadı görünen: {gecikmis}')
     rapor.bilgi(f'48 saat içindeki maç: {yaklasan}, tahminsiz: {tahminsiz}')
     if takili:
-        rapor.sorun(f'{takili} maç {TAKILI_CANLI_SAAT} saattir "canlı" görünüyor (pg_cron /matches/{id} yolu ve sync-live --fix-orphans bitiremedi)')
+        # PandaScore'da donmuş maç (4 saat hareketsiz) zaten 'postponed' yazılır (canli.durum);
+        # buraya düşen maç ya hâlâ hareketli (çok uzun maç) ya da senkron yolları çalışmıyor.
+        cur.execute("""
+            select id from matches where status = 'running'
+              and coalesce(begin_at, scheduled_at) < now() - make_interval(hours => %s)
+            order by scheduled_at limit 10
+        """, (TAKILI_CANLI_SAAT,))
+        idler = ', '.join(str(r[0]) for r in cur.fetchall())
+        rapor.sorun(f'{takili} maç {TAKILI_CANLI_SAAT} saattir "canlı" görünüyor ({idler}); '
+                    'pg_cron /matches/<id> yolu, canli.durum ve sync-live --fix-orphans bitiremedi')
+
+    # PandaScore'un kapatmadığı, 4 saattir hareketsiz canlı maç "Ertelendi" gösterilir
+    # (20 Kasım, sql/canli_senkron.sql canli.durum); PandaScore bitirince pg_cron sonucu yazar.
+    cur.execute("""
+        select id from matches
+        where status = 'postponed' and raw_data->>'status' = 'running'
+          and scheduled_at > now() - interval '7 days'
+        order by scheduled_at
+    """)
+    donmus = [r[0] for r in cur.fetchall()]
+    rapor.bilgi(f'PandaScore\'da donmuş, "Ertelendi" gösterilen canlı maç (7 gün): {len(donmus)}'
+                + (' (' + ', '.join(map(str, donmus[:10])) + ')' if donmus else ''))
     if gecikmis > GECIKMIS_BASLAMADI:
         rapor.sorun(f'{gecikmis} maç saati 12 saati geçtiği halde "başlamadı" görünüyor')
     if tahminsiz > TAHMINSIZ_MAC:

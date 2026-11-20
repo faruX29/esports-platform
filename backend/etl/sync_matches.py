@@ -344,7 +344,9 @@ class MatchSyncer:
                             )
                             VALUES (
                                 %s, %s, %s, %s, %s,
-                                %s, %s, %s, %s, %s,
+                                -- durum: PandaScore'da donmuş canlı maç → 'postponed'
+                                -- (canli.durum, sql/canli_senkron.sql; pg_cron da onu kullanır)
+                                %s, canli.durum(%s, %s::jsonb), %s, %s, %s,
                                 %s, %s, %s, %s, %s,
                                 CURRENT_TIMESTAMP
                             )
@@ -385,7 +387,7 @@ class MatchSyncer:
                                 team_b_id,
                                 tournament_id,
                                 scheduled_dt,
-                                match['status'],
+                                match['status'], stored_raw,
                                 match.get('serie_id'),
                                 match.get('winner_id'),
                                 match.get('team_a_score'),

@@ -430,7 +430,7 @@ export default function LigPage() {
                   background: 'var(--surface)', border: '1px solid var(--line-2)',
                   color: 'var(--text-2)', textDecoration: 'none',
                 }}>
-                  {tournamentDisplayName({ league_name: lig.league_name, event_name: g.etkinlik }, { withStage: false })}
+                  {tournamentDisplayName({ league_name: g.league_name || lig.league_name, event_name: g.etkinlik }, { withStage: false })}
                 </Link>
               ))}
             </div>

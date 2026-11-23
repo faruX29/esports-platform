@@ -68,10 +68,13 @@ INSERT INTO public.ligler (slug, ad, oyun, league_name, etkinlik_desen, haric_de
     ('emea-masters',    'EMEA Masters',        'lol',      'EMEA Masters',            NULL, 'qualifier', 19),
     ('vct-champions',   'VCT Champions',       'valorant', 'VCT', '^champions \d{4}', NULL, 20),
     ('vct-masters',     'VCT Masters',         'valorant', 'VCT', '^masters ',        NULL, 21),
-    ('vct-emea',        'VCT EMEA',            'valorant', 'VCT', '^emea (kickoff|stage)',     NULL, 22),
-    ('vct-americas',    'VCT Americas',        'valorant', 'VCT', '^americas (kickoff|stage)', NULL, 23),
-    ('vct-pacific',     'VCT Pacific',         'valorant', 'VCT', '^pacific (kickoff|stage)',  NULL, 24),
-    ('vct-china',       'VCT China',           'valorant', 'VCT', '^china (kickoff|stage)',    NULL, 25),
+    -- Yalnız partner ligi ("EMEA Kickoff 2027", "EMEA Stage 1 2026"). Kasım 2026'da
+    -- "EMEA Kickoff: Türkiye - Qualifier 2027" gibi bölge elemeleri de aynı ön eki
+    -- taşıdı ve C/D seviyeli eleme, lig sayfasının güncel etkinliği oldu (23 Kas).
+    ('vct-emea',        'VCT EMEA',            'valorant', 'VCT', '^emea (kickoff|stage)( \d)? \d{4}$',     NULL, 22),
+    ('vct-americas',    'VCT Americas',        'valorant', 'VCT', '^americas (kickoff|stage)( \d)? \d{4}$', NULL, 23),
+    ('vct-pacific',     'VCT Pacific',         'valorant', 'VCT', '^pacific (kickoff|stage)( \d)? \d{4}$',  NULL, 24),
+    ('vct-china',       'VCT China',           'valorant', 'VCT', '^china (kickoff|stage)( \d)? \d{4}$',    NULL, 25),
     ('vcl-turkiye',     'VCL Türkiye Birlik',  'valorant', 'VCL', '^t(ü|u)rkiye',              'qualifier', 6),
     ('vcl-emea',        'VCL EMEA',            'valorant', 'VCL', '^emea: (kickoff|stage)',    NULL, 26),
     ('iem',             'IEM',                 'csgo',     'IEM',                     NULL, 'qualifier', 30),
@@ -95,6 +98,28 @@ ALTER TABLE public.ligler ADD COLUMN IF NOT EXISTS turk boolean NOT NULL DEFAULT
 UPDATE public.ligler SET turk = true
 WHERE slug IN ('tcl', 'vcl-turkiye', 'tesfed') AND NOT turk;
 
+-- Birden çok organizatöre yayılan lig (CS2 Major: PGL Major, IEM "Cologne Major",
+-- StarLadder Major, BLAST.tv Major, Perfect World Major ...). ad_desen doluysa
+-- league_name aranmaz; desen "<league_name> <event_name>" metnine uygulanır.
+-- Etkinlikler (league_name, event_name) çiftiyle gruplanır (lig_sayfasi).
+ALTER TABLE public.ligler ADD COLUMN IF NOT EXISTS ad_desen text;
+ALTER TABLE public.ligler ALTER COLUMN league_name DROP NOT NULL;
+ALTER TABLE public.ligler DROP CONSTRAINT IF EXISTS ligler_lig_ya_da_desen;
+ALTER TABLE public.ligler ADD CONSTRAINT ligler_lig_ya_da_desen
+    CHECK (league_name IS NOT NULL OR ad_desen IS NOT NULL);
+
+-- 23 Kasım 2026: CS2 Major (PGL Major Singapore hiçbir lige bağlı değildi) ve VCT
+-- Türkiye elemeleri (yukarıdaki sıkılaşan vct-emea deseni artık bunları almıyor).
+-- Major'ın sırası IEM/PGL'den küçük: Cologne Major'ın turnuva sayfası buraya bağlanır,
+-- /lig/iem yine Cologne Major'ı önceki etkinliklerinde gösterir.
+INSERT INTO public.ligler (slug, ad, oyun, league_name, ad_desen, etkinlik_desen, haric_desen, sira, turk) VALUES
+    ('cs2-major',             'CS2 Major',             'csgo',     NULL,  '\mmajor\M', NULL, 'qualifier|rmr|last chance', 29, false),
+    ('vct-turkiye-elemeleri', 'VCT Türkiye Elemeleri', 'valorant', 'VCT', NULL, '^emea kickoff: t(ü|u)rkiye', NULL, 8, true)
+ON CONFLICT (slug) DO UPDATE SET
+    ad = EXCLUDED.ad, oyun = EXCLUDED.oyun, league_name = EXCLUDED.league_name, ad_desen = EXCLUDED.ad_desen,
+    etkinlik_desen = EXCLUDED.etkinlik_desen, haric_desen = EXCLUDED.haric_desen, sira = EXCLUDED.sira,
+    turk = EXCLUDED.turk;
+
 -- 3) Eşleme kuralı (tek yer) ----------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.lig_eslesir(l public.ligler, p_oyun text, p_lig text, p_etkinlik text)
 RETURNS boolean
@@ -103,7 +128,8 @@ SET search_path = public
 AS $$
     SELECT l.aktif
        AND l.oyun = p_oyun
-       AND l.league_name = p_lig
+       AND CASE WHEN l.ad_desen IS NULL THEN l.league_name = p_lig
+                ELSE COALESCE(p_lig, '') || ' ' || COALESCE(p_etkinlik, '') ~* l.ad_desen END
        AND (l.etkinlik_desen IS NULL OR COALESCE(p_etkinlik, '') ~* l.etkinlik_desen)
        AND (l.haric_desen    IS NULL OR COALESCE(p_etkinlik, '') !~* l.haric_desen)
 $$;
@@ -132,13 +158,16 @@ AS $$
                              THEN (SELECT max(m.scheduled_at) FROM matches m WHERE m.tournament_id = tr.id) END) AS son
         FROM l
         JOIN games g ON g.slug = l.oyun
-        JOIN tournaments tr ON tr.game_id = g.id AND tr.league_name = l.league_name
+        JOIN tournaments tr ON tr.game_id = g.id
+                           AND (tr.league_name = l.league_name OR l.ad_desen IS NOT NULL)
         WHERE lig_eslesir(l, g.slug, tr.league_name, tr.event_name)
     ),
+    -- Etkinlik = (league_name, event_name): çok organizatörlü ligde "Major 2018" hem
+    -- ELEAGUE'de hem FACEIT'te var.
     e AS (
-        SELECT event_name, MIN(bas) AS bas, MAX(son) AS son,
+        SELECT league_name, event_name, MIN(bas) AS bas, MAX(son) AS son,
                (ARRAY_AGG(id ORDER BY bas NULLS LAST, id))[1] AS ilk_turnuva
-        FROM t GROUP BY event_name
+        FROM t GROUP BY league_name, event_name
     ),
     sec AS (
         SELECT * FROM e
@@ -152,7 +181,7 @@ AS $$
         'ad', l.ad,
         'oyun', l.oyun,
         'turk', l.turk,
-        'league_name', l.league_name,
+        'league_name', COALESCE(s.league_name, l.league_name),
         'etkinlik', s.event_name,
         'yil', COALESCE(substring(s.event_name FROM '(\d{4})\D*$'), to_char(s.bas, 'YYYY')),
         'baslangic', s.bas,
@@ -164,12 +193,14 @@ AS $$
                        'league_name', t.league_name, 'event_name', t.event_name,
                        'display_name', t.display_name)
                    ORDER BY t.bas NULLS LAST, t.name)
-            FROM t WHERE t.event_name IS NOT DISTINCT FROM s.event_name
+            FROM t WHERE t.league_name IS NOT DISTINCT FROM s.league_name
+                     AND t.event_name IS NOT DISTINCT FROM s.event_name
         ), '[]'::jsonb),
         'gecmis', COALESCE((
-            SELECT jsonb_agg(jsonb_build_object('etkinlik', x.event_name, 'baslangic', x.bas, 'turnuva_id', x.ilk_turnuva)
+            SELECT jsonb_agg(jsonb_build_object('league_name', x.league_name, 'etkinlik', x.event_name,
+                                                'baslangic', x.bas, 'turnuva_id', x.ilk_turnuva)
                    ORDER BY x.bas DESC NULLS LAST)
-            FROM (SELECT * FROM e WHERE e.event_name IS DISTINCT FROM s.event_name
+            FROM (SELECT * FROM e WHERE (e.league_name, e.event_name) IS DISTINCT FROM (s.league_name, s.event_name)
                   ORDER BY bas DESC NULLS LAST LIMIT 12) x
         ), '[]'::jsonb)
     )
@@ -219,7 +250,7 @@ AS $$
         FROM ligler l
         JOIN games g ON g.slug = l.oyun
         WHERE l.turk AND g.id = t.game_id
-          AND l.league_name = t.league_name   -- ucuz ön süzgeç: desen yalnız aday satırda
+          AND (l.league_name = t.league_name OR l.ad_desen IS NOT NULL)  -- ucuz ön süzgeç: desen yalnız aday satırda
           AND lig_eslesir(l, g.slug, t.league_name, t.event_name)
     )
 $$;

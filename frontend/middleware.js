@@ -900,7 +900,7 @@ async function buildForLig(slug, origin, url) {
   const gecmis = Array.isArray(lig.gecmis) ? lig.gecmis : []
   const gecmisHtml = gecmis.length
     ? `<h2>Önceki etkinlikler</h2><ul>${gecmis.map(g =>
-      `<li><a href="${origin}/tournament/${ENC(g.turnuva_id)}">${esc(turnuvaAdi({ league_name: lig.league_name, event_name: g.etkinlik }, false))}</a></li>`,
+      `<li><a href="${origin}/tournament/${ENC(g.turnuva_id)}">${esc(turnuvaAdi({ league_name: g.league_name || lig.league_name, event_name: g.etkinlik }, false))}</a></li>`,
     ).join('')}</ul>`
     : ''
 

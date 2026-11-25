@@ -1156,8 +1156,13 @@ async function staticFeedHtml(feed, origin) {
 
     if (feed === 'matches') {
       // Başlık "Geçmiş" de vaat ediyor (18 Kas denetimi): son sonuçlar da listelenir.
+      // Saati 6 sa'ten çok geçmiş not_started maç "Yaklaşan" değildir (25 Kas denetimi: PandaScore'un
+      // kapatmadığı 22 Kas maçı listenin başındaydı); /turk-takimlari ile aynı sınır. Canlı maç süreden
+      // bağımsız kalır (donmuşu canli.durum() 4 sa'te "Ertelendi" yapar).
+      const yaklasanSiniri = new Date(Date.now() - 6 * 3600000).toISOString()
       const [rows, son] = await Promise.all([
-        sbFetchAll(`matches?status=in.(running,not_started)&select=${ENC(MATCH_SEL)}&order=scheduled_at.asc&limit=25`),
+        sbFetchAll(`matches?or=${ENC(`(status.eq.running,and(status.eq.not_started,scheduled_at.gte.${yaklasanSiniri}))`)}` +
+          `&select=${ENC(MATCH_SEL)}&order=scheduled_at.asc&limit=25`),
         // Yalnız S/A/B: süzgeçsiz liste Bo1 alt lig maçlarıyla doluyordu (dizin dışı sayfalar)
         sbFetchAll(`matches?status=eq.finished&tournament.tier=in.(S,s,A,a,B,b)` +
           `&select=${ENC(MATCH_SEL + ',tournament:tournaments!inner(tier)')}&order=scheduled_at.desc.nullslast,id.desc&limit=15`),
@@ -1324,10 +1329,11 @@ export default async function middleware(req) {
       return new Response(html, {
         headers: {
           'content-type': 'text/html; charset=utf-8',
-          // Bot SEO snapshot'ı gerçek-zamanlı olmak zorunda değil → uzun paylaşımlı
-          // cache: aynı URL tekrar taranınca fonksiyon yeniden çalışmaz (Vercel CPU/
-          // Origin Transfer tasarrufu). Google zaten periyodik yeniden tarar.
-          'cache-control': 'public, max-age=1800, s-maxage=86400, stale-while-revalidate=604800',
+          // Kısa tutulur: Vercel middleware yanıtını önbelleğe almaz (her istekte koşar),
+          // uzun s-maxage CPU kazandırmıyordu; yalnız araya giren paylaşımlı önbellekler
+          // (yapay zekâ ajanlarının getirme katmanı gibi) "1 gün + 7 gün bayat" iznine uyup
+          // biten maçı günlerce "Yaklaşan 0-0" sunuyordu (25 Kas denetimi). En fazla ~40 dk.
+          'cache-control': 'public, max-age=300, s-maxage=600, stale-while-revalidate=1800',
         },
       })
     }

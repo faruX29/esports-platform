@@ -142,7 +142,7 @@ Projede otomatik test yok. Değişiklik şöyle doğrulanır:
 - Başlıktan üretilen adreste canonical'ı istek URL'sinden kurup eski slug'ı 200 bırakma → haber id'den bulunur, başlık değişince (önizleme → sonuç) aynı içerik iki adreste kalır (GSC "Google farklı standart seçti"); güncel slug'dan farklıysa 301 (`buildForNews`).
 - Önbelleğe giren yanıtta (`api/sitemap.js` gibi `s-maxage`/`stale-while-revalidate`) veri hatasını boş 200'e çevirme → boş sonuç günlerce sunulur (maç sitemap'i Google'a 0 URL gitti); fırlat, 503 + `no-store` dön.
 - Her sayfa açılışında çağrılan RPC'de `matches`'ı tam taratma (ör. `cross join lateral` + `any()`, pencere fonksiyonu) → önbellek soğukken saniyeler sürer; takım başına `limit`'li indeks araması yaz, `explain (analyze, buffers)` ile doğrula (`get_teams_recent_form.sql`).
-- Middleware yanıtına `s-maxage` koyup CPU'yu koruduğunu sanma → middleware önbellekten önce her istekte koşar.
+- Middleware yanıtına `s-maxage` koyup CPU'yu koruduğunu sanma → middleware önbellekten önce her istekte koşar; uzun `s-maxage`/`stale-while-revalidate` yalnız dış önbelleklere (yapay zekâ getirme katmanı) günlerce bayat bot HTML'i sundurur (25 Kas: biten maç "Yaklaşan 0-0"); bot HTML'i ≤ ~40 dk.
 - Paylaşılan/e-postaya giden linki `window.location.origin` ile kurma → uygulamada `app.fextesports.com` olur; `disariKok()`.
 - Capacitor eklentisini web koduna statik import etme → web paketine girer; `UYGULAMA` koşulu + dinamik import.
 - Uygulamada `supabase.auth.signOut` öncesi push token'ını bırakmadan çıkış akışı yazma → çıkılan telefon bildirim almaya devam eder.
